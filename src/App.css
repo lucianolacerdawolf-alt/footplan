@@ -29,25 +29,25 @@
 }
 
 .setup-team-card {
-  flex: 1; max-width: 240px; background: var(--code-bg); border: 1px solid var(--border);
-  border-radius: 10px; padding: 14px;
+  flex: 0 0 auto; width: 210px; background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px;
 }
 .setup-team-card.home { border-top: 3px solid #3b82f6; }
 .setup-team-card.away { border-top: 3px solid #ef4444; }
 
-.setup-team-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.setup-team-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .setup-team-crest {
-  width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; font-size: 15px; font-weight: 800; color: #fff; font-family: var(--mono); flex-shrink: 0;
+  width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 13px; font-weight: 800; color: #fff; font-family: var(--mono); flex-shrink: 0;
 }
 .home .setup-team-crest { background: linear-gradient(135deg, #3b82f6, #2563eb); }
 .away .setup-team-crest { background: linear-gradient(135deg, #ef4444, #dc2626); }
-.setup-team-header h2 { font-size: 18px; margin: 0; color: var(--text-h); }
-.setup-team-sub { font-size: 11px; opacity: 0.45; font-weight: 600; }
+.setup-team-header h2 { font-size: 15px; margin: 0; color: var(--text-h); }
+.setup-team-sub { font-size: 10px; opacity: 0.45; font-weight: 600; }
 
-.setup-squad-badges { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; }
-.setup-controls { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-.setup-select { display: flex; flex-direction: column; gap: 2px; }
+.setup-squad-badges { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
+.setup-controls { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
+.setup-select { display: flex; flex-direction: column; gap: 1px; }
 .setup-select label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.45; }
 .setup-select select {
   padding: 5px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
@@ -163,7 +163,7 @@
 
 /* Squad panel (ao lado das taticas) */
 .squad-panel {
-  flex: 1; max-width: 240px; background: var(--code-bg); border: 1px solid var(--border);
+  flex: 1; min-width: 240px; background: var(--code-bg); border: 1px solid var(--border);
   border-radius: 10px; padding: 10px; font-size: 11px;
 }
 .squad-section-title {
