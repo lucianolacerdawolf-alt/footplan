@@ -78,17 +78,14 @@ function baseCoords(team: Team, side: 'home' | 'away'): PlayerCoord[] {
 
 // ---------------------------------------------------------------------------
 // =============================================================================
-// Movimentação tática — baseada no time, não na bola
-// A bola segue o portador, não o contrário
+// Movimentação tática — BLOCO (linhas movem juntas, não proporcionais)
 // =============================================================================
 type Shift = { dx: number; dy: number; angle: number };
 
 function tacticalShift(
   event: MatchEvent | null,
   homeTeamId: string,
-  player: PlayerCoord,
-  actionX: number,  // ponto focal da ação (centro do time atacante, não a bola)
-  actionY: number
+  player: PlayerCoord
 ): Shift {
   if (!event) return { dx: 0, dy: 0, angle: 0 };
 
@@ -98,55 +95,50 @@ function tacticalShift(
     (isHome && eventTeam === homeTeamId) || (!isHome && eventTeam !== homeTeamId)
   );
 
-  // Distância ao ponto focal da ação
-  const adx = actionX - player.x;
-  const ady = actionY - player.y;
-  const dist = Math.sqrt(adx * adx + ady * ady);
-  const proximity = 1 - Math.min(dist / 45, 1);
-
-  const posFactor =
-    player.position === 'GK' ? 0.12 :
-    player.position === 'DEF' ? 0.4 :
-    player.position === 'MID' ? 0.65 :
-    1.0;
-
   const s = seed(event.description + player.id);
-  const jx = (s - 0.5) * 0.5;
-  const jy = (seed(event.description + 'y' + player.id) - 0.5) * 1.0;
+  const jx = (s - 0.5) * 0.6;
+  const jy = (seed(event.description + 'y' + player.id) - 0.5) * 1.2;
 
-  let maxDx = 0, maxDy = 0;
+  // --- Deslocamento POR LINHA (bloco, não proporcional) ---
+  // Cada linha tem um fator fixo: GK = 0, DEF = base, MID = base+delta, FWD = base+2*delta
+  const posIdx = player.position === 'GK' ? 0 : player.position === 'DEF' ? 1 : player.position === 'MID' ? 2 : 3;
+
+  let baseDx = 0, lineDelta = 0, baseDy = 0;
   const dir = iHaveBall ? 1 : -1;
 
   switch (event.type) {
     case 'possession':
-      maxDx = iHaveBall ? 3 : 2.5;
-      maxDy = iHaveBall ? 4 : 1.5;
+      baseDx = iHaveBall ? 2.5 : 2; lineDelta = 0.6; baseDy = iHaveBall ? 3 : 1.5;
       break;
     case 'attack':
+      baseDx = iHaveBall ? 5 : 3.5; lineDelta = 1.0; baseDy = iHaveBall ? 2 : 1;
+      break;
     case 'miss':
     case 'post':
-      maxDx = iHaveBall ? 6 : 4.5;
-      maxDy = iHaveBall ? 2.5 : 1.2;
+      // Pós-chute: time atacante ainda na área, time defensor aliviado
+      baseDx = iHaveBall ? 3 : 2; lineDelta = 0.5; baseDy = iHaveBall ? 1.5 : 1;
       break;
     case 'goal':
-      maxDx = iHaveBall ? 8 : 3;
-      maxDy = iHaveBall ? 5 : 3;
+      baseDx = iHaveBall ? 6 : 2; lineDelta = 1.5; baseDy = iHaveBall ? 4 : 2;
       break;
     case 'save':
-      maxDx = iHaveBall ? 3 : 5;
-      maxDy = iHaveBall ? 1.5 : 3;
+      baseDx = iHaveBall ? 2 : 4; lineDelta = 0.5; baseDy = iHaveBall ? 1 : 2.5;
       break;
     default:
-      maxDx = 1; maxDy = 1;
+      baseDx = 0.5; lineDelta = 0.2; baseDy = 0.5;
   }
 
-  const shiftX = maxDx * proximity * posFactor * dir + jx;
+  // Cada linha anda junta (baseDx + posIdx * lineDelta)
+  const shiftX = (baseDx + posIdx * lineDelta) * dir + jx;
+
+  // Y: laterais abrem, centro fecha (sutil)
   const yOff = player.y - 35;
   const ySign = yOff > 0 ? 1 : -1;
   const yFactor = Math.min(Math.abs(yOff) / 25, 1);
-  const shiftY = maxDy * yFactor * ySign * (0.5 + s * 0.5) + jy;
+  const shiftY = baseDy * yFactor * ySign * (0.4 + s * 0.6) + jy;
 
-  const angle = dist > 0.5 ? Math.atan2(ady, adx) * (180 / Math.PI) * 0.04 : 0;
+  // Ângulo sutil pra direção do ataque
+  const angle = dir * 0.5 + jx * 0.5;
 
   return { dx: shiftX, dy: shiftY, angle };
 }
@@ -187,9 +179,17 @@ function getBallCarrier(
       return teamPlayers[Math.floor(s * teamPlayers.length)];
     case 'goal':
     case 'miss':
-    case 'post':
-      // Bola já foi chutada — sem portador
-      return null;
+    case 'post': {
+      // Chute: o atacante mais avançado chutou
+      const fwds2 = teamPlayers.filter(p => p.position === 'FWD');
+      if (fwds2.length > 0) {
+        const isHome2 = teamPlayers[0].team === 'home';
+        return isHome2
+          ? fwds2.reduce((a, b) => a.x > b.x ? a : b)
+          : fwds2.reduce((a, b) => a.x < b.x ? a : b);
+      }
+      return teamPlayers[0];
+    }
     case 'save':
       // Goleiro do time que defendeu
       const gk = allPlayers.find(p => p.position === 'GK' && (
@@ -232,16 +232,18 @@ function ballFromCarrier(
       return { x: 60, y: 35, visible: true };
 
     case 'goal':
-      // Bola na rede
-      return { x: isHome ? 118.5 : 1.5, y: 33 + r * 4, visible: true };
-
     case 'miss':
-      // Passou perto do gol
-      return { x: isHome ? 108 + r * 6 : 12 - r * 6, y: 25 + r * 20, visible: true };
-
     case 'post':
-      // Na trave
-      return { x: isHome ? 116 : 4, y: 30 + r * 10, visible: true };
+      // Chute: bola SAI do portador em direção ao gol
+      if (carrier) {
+        const shotDir = isHome ? 1 : -1;
+        // Posição do chute = entre o portador e o gol (intermediária/área)
+        const shotX = carrierX + shotDir * (6 + r * 10); // distância do chute
+        const shotY = carrierY + (r - 0.5) * 6;
+        const clampedX = isHome ? Math.min(shotX, 114) : Math.max(shotX, 6);
+        return { x: clampedX, y: Math.max(8, Math.min(62, shotY)), visible: true };
+      }
+      return { x: isHome ? 100 : 20, y: 35, visible: true };
 
     case 'save':
       // Perto do goleiro
@@ -274,23 +276,10 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
     const allPlayers = [...homeBase, ...awayBase];
     const shifts = new Map<string, Shift>();
 
-    // Ponto focal: centro entre a posição-base dos atacantes do time com posse
-    let actionX = 60, actionY = 35;
-    if (currentEvent?.teamId) {
-      const teamPlayers = allPlayers.filter(p => {
-        const isHome = p.team === 'home';
-        return currentEvent.teamId === homeTeam.id ? isHome : !isHome;
-      });
-      if (teamPlayers.length > 0) {
-        actionX = teamPlayers.reduce((s, p) => s + p.x, 0) / teamPlayers.length;
-        actionY = teamPlayers.reduce((s, p) => s + p.y, 0) / teamPlayers.length;
-      }
-    }
-
     // Passo 1: posição alvo = base + tático
     const nodes: { id: string; x: number; y: number; tx: number; ty: number }[] = [];
     for (const p of allPlayers) {
-      const s = tacticalShift(currentEvent, homeTeam.id, p, actionX, actionY);
+      const s = tacticalShift(currentEvent, homeTeam.id, p);
       const tx = p.x + s.dx;
       const ty = p.y + s.dy;
       nodes.push({ id: p.id, x: tx, y: ty, tx, ty });
