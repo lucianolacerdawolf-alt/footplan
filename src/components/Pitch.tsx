@@ -240,11 +240,11 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
       shifts.set(p.id, tacticalShift(currentEvent, homeTeam.id, p, ball.x, ball.y));
     }
 
-    // Passo 2: repulsão iterativa (3 passes) para evitar sobreposição
-    const MIN_DIST = 4.5; // distância mínima entre centros no viewBox
-    const REPULSE_STRENGTH = 0.6;
+    // Passo 2: repulsão iterativa (5 passes) para evitar sobreposição
+    const MIN_DIST = 7;
+    const REPULSE_STRENGTH = 1.2;
 
-    for (let iter = 0; iter < 3; iter++) {
+    for (let iter = 0; iter < 5; iter++) {
       for (let i = 0; i < allPlayers.length; i++) {
         for (let j = i + 1; j < allPlayers.length; j++) {
           const pi = allPlayers[i];
@@ -265,14 +265,12 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
             const overlap = (MIN_DIST - dist) / 2;
             const nx = dx / dist;
             const ny = dy / dist;
-
-            // Empurra ambos na direção oposta, proporcional à sobreposição
-            // Jogadores do mesmo time se repelem menos (mantêm formação)
-            const sameTeam = pi.team === pj.team ? 0.5 : 1.0;
+            // Jogadores do mesmo time se repelem menos (mantêm compactação)
+            const sameTeam = pi.team === pj.team ? 0.35 : 1.0;
             const force = overlap * REPULSE_STRENGTH * sameTeam;
 
-            shifts.set(pi.id, { ...si, dx: si.dx + nx * force, dy: si.dy + ny * force });
-            shifts.set(pj.id, { ...sj, dx: sj.dx - nx * force, dy: sj.dy - ny * force });
+            shifts.set(pi.id, { ...shifts.get(pi.id)!, dx: shifts.get(pi.id)!.dx + nx * force, dy: shifts.get(pi.id)!.dy + ny * force });
+            shifts.set(pj.id, { ...shifts.get(pj.id)!, dx: shifts.get(pj.id)!.dx - nx * force, dy: shifts.get(pj.id)!.dy - ny * force });
           }
         }
       }
