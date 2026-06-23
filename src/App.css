@@ -29,8 +29,8 @@
 }
 
 .setup-team-card {
-  flex: 1; max-width: 380px; background: var(--code-bg); border: 1px solid var(--border);
-  border-radius: 10px; padding: 18px;
+  flex: 1; max-width: 240px; background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px;
 }
 .setup-team-card.home { border-top: 3px solid #3b82f6; }
 .setup-team-card.away { border-top: 3px solid #ef4444; }
@@ -50,10 +50,11 @@
 .setup-select { display: flex; flex-direction: column; gap: 2px; }
 .setup-select label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.45; }
 .setup-select select {
-  padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg);
-  color: var(--text-h); font-size: 13px; font-family: var(--sans); cursor: pointer; outline: none; transition: border-color 0.2s;
+  padding: 5px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
+  color: var(--text-h); font-size: 11px; font-family: var(--sans); cursor: pointer; outline: none; transition: border-color 0.2s;
 }
 .setup-select select:focus { border-color: var(--accent); }
+.setup-select label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.45; }
 
 .setup-players { margin-top: 4px; }
 .setup-players summary { font-size: 12px; font-weight: 600; cursor: pointer; padding: 3px 0; opacity: 0.55; }
@@ -162,8 +163,8 @@
 
 /* Squad panel (ao lado das taticas) */
 .squad-panel {
-  background: var(--code-bg); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px; font-size: 12px;
+  flex: 1; max-width: 240px; background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px; font-size: 11px;
 }
 .squad-section-title {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -192,11 +193,12 @@
 
 /* Setup layout columns */
 .setup-layout {
-  display: flex; align-items: flex-start; justify-content: center; gap: 10px; padding: 8px 12px;
+  display: flex; align-items: flex-start; justify-content: center; gap: 8px; padding: 6px 8px;
 }
-@media (max-width: 960px) { .setup-layout { flex-direction: column; align-items: center; } }
-.setup-left, .setup-right { flex: 1; max-width: 440px; display: flex; flex-direction: column; gap: 8px; }
-.setup-center { display: flex; align-items: center; justify-content: center; padding-top: 40px; }
+@media (max-width: 1100px) { .setup-layout { flex-direction: column; align-items: center; } }
+@media (max-width: 600px) { .setup-left, .setup-right { flex-direction: column; } }
+.setup-left, .setup-right { flex: 1; max-width: 520px; display: flex; flex-direction: row; gap: 8px; align-items: flex-start; }
+.setup-center { display: flex; align-items: center; justify-content: center; padding-top: 40px; min-width: 40px; }
 .setup-vs-col { display: flex; align-items: center; justify-content: center; }
 
 /* Uniform toggle */
