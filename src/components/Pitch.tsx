@@ -29,7 +29,7 @@ function seed(str: string): number {
 // Posições base (viewBox 120x70, horizontal)
 // ---------------------------------------------------------------------------
 const Y_SLOTS: Record<number, number[]> = {
-  1: [35], 2: [18, 52], 3: [12, 35, 58], 4: [7, 24, 46, 63], 5: [5, 18, 35, 52, 65],
+  1: [35], 2: [15, 55], 3: [9, 35, 61], 4: [5, 20, 50, 65], 5: [3, 15, 35, 55, 67],
 };
 const X_ZONES = {
   home: { GK: 6, DEF: 23, MID: 46, FWD: 68 },
@@ -77,9 +77,12 @@ function baseCoords(team: Team, side: 'home' | 'away'): PlayerCoord[] {
 
 // ---------------------------------------------------------------------------
 // =============================================================================
-// Movimentação tática PROPORCIONAL à distância da ação
-// Principio: jogador perto da bola mexe mais, longe ancora a formação.
-// Isso evita compressão e sobreposição — o time "estica" como sanfona.
+// Movimentação tática — SUTIL e PROPORCIONAL
+// Princípios:
+//  1. Amplitudes REALISTAS (2-5px, não 16px) — times não deformam 13% do campo
+//  2. Jogador perto da ação mexe mais, longe ancora (efeito sanfona)
+//  3. Repulsão LEVE como lubrificante, não como força corretiva
+//  4. Y-spread: laterais abrem, volantes fecham conforme fase
 // =============================================================================
 type Shift = { dx: number; dy: number; angle: number };
 
@@ -99,68 +102,71 @@ function tacticalShift(
   );
   const theyHaveBall = eventTeam !== null && !iHaveBall;
 
-  // --- Distância do jogador à bola (normalizada 0~1) ---
+  // --- Distância do jogador à bola (0=colado, 1=longe) ---
   const bdx = ballX - player.x;
   const bdy = ballY - player.y;
   const distToBall = Math.sqrt(bdx * bdx + bdy * bdy);
-  const distNorm = Math.min(distToBall / 50, 1); // 0=colado, 1=muito longe
+  const proximity = 1 - Math.min(distToBall / 40, 1);
 
-  // --- Parâmetros por tipo de evento ---
-  let maxShift = 0;      // deslocamento máximo no eixo X (para o jogador mais próximo)
-  let ySpread = 0;       // abertura lateral máxima
-  const dir = iHaveBall ? 1 : -1; // direção: positivo = avança, negativo = recua
+  // --- Fator por posição ---
+  const posFactor =
+    player.position === 'GK' ? 0.15 :
+    player.position === 'DEF' ? 0.45 :
+    player.position === 'MID' ? 0.7 :
+    1.0; // FWD
+
   const s = seed(event.description + player.id);
-  const jitter = (s - 0.5) * 1.5;
+  const jitterX = (s - 0.5) * 0.6;
+  const jitterY = (seed(event.description + 'y' + player.id) - 0.5) * 1.2;
+
+  // --- Amplitudes máximas REALISTAS por evento ---
+  let maxDx = 0;
+  let maxDy = 0;
+  const dir = iHaveBall ? 1 : -1;
 
   switch (event.type) {
     case 'possession':
-      maxShift = iHaveBall ? 6 : 5;
-      ySpread = iHaveBall ? 5 : 2;
+      maxDx = iHaveBall ? 3 : 2.5;
+      maxDy = iHaveBall ? 4 : 1.8;
       break;
     case 'attack':
     case 'miss':
     case 'post':
-      maxShift = iHaveBall ? 18 : 12;
-      ySpread = iHaveBall ? 4 : 1.5;
+      maxDx = iHaveBall ? 7 : 5;
+      maxDy = iHaveBall ? 3 : 1.5;
       break;
     case 'goal':
-      maxShift = iHaveBall ? 22 : 6;
-      ySpread = iHaveBall ? 10 : 7;
+      maxDx = iHaveBall ? 10 : 4;
+      maxDy = iHaveBall ? 6 : 4;
       break;
     case 'save':
-      maxShift = theyHaveBall ? 14 : 8;
-      ySpread = theyHaveBall ? 5 : 2;
-      break;
-    case 'kickoff':
-      maxShift = 1;
-      ySpread = 1;
+      maxDx = theyHaveBall ? 6 : 4;
+      maxDy = theyHaveBall ? 4 : 2;
       break;
     default:
-      maxShift = 1;
-      ySpread = 1;
+      maxDx = 1;
+      maxDy = 1;
   }
 
-  // --- Cálculo proporcional ---
-  // Quanto mais perto da bola, mais mexe (1 - distNorm)
-  // GK mexe menos (×0.3), DEF menos (×0.5), MID normal (×0.75), FWD mais (×1.0)
-  const posFactor = player.position === 'GK' ? 0.25 : player.position === 'DEF' ? 0.5 : player.position === 'MID' ? 0.75 : 1.0;
-  const proximity = 1 - distNorm; // 1 = colado na bola, 0 = longe
-  const shiftX = maxShift * proximity * posFactor * dir + jitter * 0.8;
+  // --- Eixo X: proporcional à proximidade da bola ---
+  const shiftX = maxDx * proximity * posFactor * dir + jitterX;
 
-  // Y: abre/fecha conforme distância ao centro (y=35)
+  // --- Eixo Y: jogadores centrais compactam, laterais abrem ---
   const yCenter = 35;
   const yOffset = player.y - yCenter;
   const ySign = yOffset > 0 ? 1 : -1;
-  const yProximity = 1 - Math.min(Math.abs(yOffset) / 30, 1); // jogadores centrais abrem mais
-  const shiftY = ySpread * yProximity * ySign * (0.5 + s * 0.5) + jitter * 0.5;
+  const yDist = Math.abs(yOffset);
+  // Mais longe do centro = abre mais (laterais). Centro = compacta.
+  const yFactor = Math.min(yDist / 25, 1);
+  const shiftY = maxDy * yFactor * ySign * (0.6 + s * 0.4) + jitterY;
 
-  // --- Atração sutil à bola (apenas jogadores próximos) ---
-  const attractStrength = (iHaveBall ? 0.3 : 0.15) * (1 - distNorm);
-  const ballDx = distToBall > 0.5 ? (bdx / distToBall) * attractStrength * 3 : 0;
-  const ballDy = distToBall > 0.5 ? (bdy / distToBall) * attractStrength * 3 : 0;
+  // --- Micro-atração à bola (só jogadores próximos) ---
+  const pullStr = (iHaveBall ? 0.2 : 0.08) * proximity;
+  const ballDx = distToBall > 0.5 ? (bdx / distToBall) * pullStr * 2 : 0;
+  const ballDy = distToBall > 0.5 ? (bdy / distToBall) * pullStr * 2 : 0;
 
-  // --- Rotação sutil em direção à bola ---
-  const angle = Math.atan2(bdy, bdx) * (180 / Math.PI) * 0.06;
+  // --- Rotação sutil ---
+  const angle = Math.atan2(bdy, bdx) * (180 / Math.PI) * 0.05;
 
   return {
     dx: shiftX + ballDx,
@@ -218,11 +224,12 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
       shifts.set(p.id, tacticalShift(currentEvent, homeTeam.id, p, ball.x, ball.y));
     }
 
-    // Passo 2: repulsão iterativa (6 passes) — safety net
-    const MIN_DIST = 8;
-    const REPULSE_STRENGTH = 1.5;
+    // Passo 2: micro-repulsão (2 passes leves)
+    // Só evita sobreposição extrema, não redefine posições
+    const MIN_DIST = 6;
+    const REPULSE = 0.4;
 
-    for (let iter = 0; iter < 6; iter++) {
+    for (let iter = 0; iter < 2; iter++) {
       for (let i = 0; i < allPlayers.length; i++) {
         for (let j = i + 1; j < allPlayers.length; j++) {
           const pi = allPlayers[i];
@@ -243,8 +250,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
             const overlap = (MIN_DIST - dist) / 2;
             const nx = dx / dist;
             const ny = dy / dist;
-            const sameTeam = pi.team === pj.team ? 0.3 : 1.0;
-            const force = overlap * REPULSE_STRENGTH * sameTeam;
+            const force = overlap * REPULSE;
 
             shifts.set(pi.id, { ...shifts.get(pi.id)!, dx: shifts.get(pi.id)!.dx + nx * force, dy: shifts.get(pi.id)!.dy + ny * force });
             shifts.set(pj.id, { ...shifts.get(pj.id)!, dx: shifts.get(pj.id)!.dx - nx * force, dy: shifts.get(pj.id)!.dy - ny * force });
@@ -279,7 +285,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
          className={`player-group ${!hasShift && phase === 'idle' ? 'idle-sway' : ''}`}
          style={{
            transform: `translate(${shift.dx}px, ${shift.dy}px) rotate(${shift.angle}deg)`,
-           transition: 'transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1.2)',
+           transition: 'transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1.2)',
            transformOrigin: `${p.x}px ${p.y}px`,
          }}>
         <circle cx={p.x} cy={p.y} r="3"
