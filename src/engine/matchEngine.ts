@@ -85,6 +85,19 @@ function getPlayersByPosition(players: Player[], pos: Position): Player[] {
   return players.filter(p => p.position === pos);
 }
 
+/** Retorna apenas os titulares (primeiros N por posição conforme formação) */
+function getStarters(team: Team): Player[] {
+  const counts = FORMATION_COUNTS[team.strategy.formation] ?? { DEF: 4, MID: 3, FWD: 3 };
+  const starters: Player[] = [];
+  const gk = getPlayersByPosition(team.squad, 'GK');
+  starters.push(...gk.slice(0, 1));
+  for (const pos of ['DEF', 'MID', 'FWD'] as const) {
+    const players = getPlayersByPosition(team.squad, pos);
+    starters.push(...players.slice(0, counts[pos] ?? 3));
+  }
+  return starters;
+}
+
 function getGoalkeeper(players: Player[]): Player {
   return players.find(p => p.position === 'GK')!;
 }
@@ -98,8 +111,8 @@ function calculatePossession(
   teamA: Team, teamB: Team,
   fatigueA: Map<string, number>, fatigueB: Map<string, number>
 ): 'A' | 'B' {
-  const midsA = getPlayersByPosition(teamA.squad, 'MID');
-  const midsB = getPlayersByPosition(teamB.squad, 'MID');
+  const midsA = getPlayersByPosition(getStarters(teamA), 'MID');
+  const midsB = getPlayersByPosition(getStarters(teamB), 'MID');
   const modA = MENTALITY_MODIFIERS[teamA.strategy.mentality];
   const modB = MENTALITY_MODIFIERS[teamB.strategy.mentality];
 
@@ -146,13 +159,13 @@ function resolveAttack(
   const defLineMult = DEFENSIVE_LINE_MOD[defendingTeam.strategy.defensiveLine].defenseCompact;
   const defWidthMult = WIDTH_MOD[defendingTeam.strategy.width].defenseNarrow;
 
-  const fwds = getPlayersByPosition(attackingTeam.squad, 'FWD');
-  const mids = getPlayersByPosition(attackingTeam.squad, 'MID');
+  const fwds = getPlayersByPosition(getStarters(attackingTeam), 'FWD');
+  const mids = getPlayersByPosition(getStarters(attackingTeam), 'MID');
   const attackers = pickRandom([...fwds, ...mids], 3);
 
-  const defenders = getPlayersByPosition(defendingTeam.squad, 'DEF');
+  const defenders = getPlayersByPosition(getStarters(defendingTeam), 'DEF');
   const chosenDef = pickRandom(defenders, 3);
-  const gk = getGoalkeeper(defendingTeam.squad);
+  const gk = getGoalkeeper(getStarters(defendingTeam));
   const gkFatigue = fatigueDef.get(gk.id) ?? 0;
 
   const attackPower = attackers.reduce((sum, p) => {
@@ -177,7 +190,7 @@ function resolveShot(
   fatigueAtk: Map<string, number>, fatigueDef: Map<string, number>
 ): { result: 'goal' | 'post' | 'save' | 'miss'; scorer: Player; goalkeeper: Player } {
   const modAtk = MENTALITY_MODIFIERS[attackingStrategy];
-  const gk = getGoalkeeper(defendingTeam.squad);
+  const gk = getGoalkeeper(getStarters(defendingTeam));
   const gkFatigue = fatigueDef.get(gk.id) ?? 0;
   const atkFatigue = fatigueAtk.get(attacker.id) ?? 0;
 
@@ -195,7 +208,7 @@ function applyFatigue(team: Team, fatigueMap: Map<string, number>): void {
   const baseFatigue = INTENSITY_FATIGUE[team.strategy.intensity];
   const mod = MENTALITY_MODIFIERS[team.strategy.mentality];
 
-  for (const player of team.squad) {
+  for (const player of getStarters(team)) {
     if (player.position === 'GK') continue;
     const fatigueGain = baseFatigue * mod.staminaLossMultiplier * (1 - player.attributes.stamina / 200);
     const current = fatigueMap.get(player.id) ?? 0;
@@ -220,8 +233,8 @@ export interface MatchState {
 export function createMatchState(home: Team, away: Team): MatchState {
   const fatigueHome = new Map<string, number>();
   const fatigueAway = new Map<string, number>();
-  home.squad.forEach(p => fatigueHome.set(p.id, 0));
-  away.squad.forEach(p => fatigueAway.set(p.id, 0));
+  getStarters(home).forEach(p => fatigueHome.set(p.id, 0));
+  getStarters(away).forEach(p => fatigueAway.set(p.id, 0));
   return {
     fatigueHome, fatigueAway,
     homeScore: 0, awayScore: 0,

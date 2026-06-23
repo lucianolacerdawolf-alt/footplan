@@ -404,8 +404,15 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
 
         {/* Flash do gol */}
         {isGoal && (
-          <circle cx={goalTeamId === homeTeam.id ? 119 : 1} cy={35} r="4"
-            fill="rgba(255,255,100,0.35)" className="goal-flash" />
+          <>
+            <circle cx={goalTeamId === homeTeam.id ? 119 : 1} cy={35} r="4"
+              fill="rgba(255,255,100,0.35)" className="goal-flash" />
+            <text x="60" y="32" textAnchor="middle" fill="#FFD700" fontSize="14"
+              fontWeight="900" fontFamily="system-ui" className="goal-text"
+              stroke="#fff" strokeWidth="0.5" paintOrder="stroke">
+              GOL!
+            </text>
+          </>
         )}
 
         {/* Jogadores */}

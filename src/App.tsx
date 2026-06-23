@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { Team } from './engine/types';
+import type { GameMode } from './components/TeamSelectionScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SetupScreen from './components/SetupScreen';
 import MatchScreen from './components/MatchScreen';
@@ -11,10 +12,12 @@ function App() {
   const [screen, setScreen] = useState<Screen>('select');
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
+  const [gameMode, setGameMode] = useState<GameMode>('cpu');
 
-  const handleTeamsSelected = useCallback((home: Team, away: Team) => {
+  const handleTeamsSelected = useCallback((home: Team, away: Team, mode: GameMode) => {
     setHomeTeam(home);
     setAwayTeam(away);
+    setGameMode(mode);
     setScreen('setup');
   }, []);
 
@@ -35,7 +38,15 @@ function App() {
   }, []);
 
   if (screen === 'setup' && homeTeam && awayTeam) {
-    return <SetupScreen homeTeam={homeTeam} awayTeam={awayTeam} onStartMatch={handleStartMatch} onBack={handleBackToSelect} />;
+    return (
+      <SetupScreen
+        homeTeam={homeTeam}
+        awayTeam={awayTeam}
+        onStartMatch={handleStartMatch}
+        onBack={handleBackToSelect}
+        lockAway={gameMode === 'cpu'}
+      />
+    );
   }
 
   if (screen === 'match' && homeTeam && awayTeam) {

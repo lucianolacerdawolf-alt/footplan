@@ -8,6 +8,7 @@ interface Props {
   awayTeam: Team;
   onStartMatch: (home: Team, away: Team) => void;
   onBack: () => void;
+  lockAway?: boolean;  // vs CPU: não pode mexer no time adversário
 }
 
 const FORMATIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'];
@@ -16,7 +17,7 @@ const INTENSITIES: Intensity[] = ['low', 'medium', 'high'];
 const DEF_LINES: DefensiveLine[] = ['high', 'normal', 'low'];
 const WIDTHS: Width[] = ['narrow', 'normal', 'wide'];
 
-export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack }: Props) {
+export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
@@ -38,13 +39,13 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       p.attributes.vision + p.attributes.positioning) / 8, 0) / team.squad.length
   );
 
-  const renderCard = (team: Team, onStrategy: (s: Strategy) => void, side: 'home' | 'away') => (
-    <div className={`setup-team-card ${side}`} style={{ borderTopColor: team.color }}>
+  const renderCard = (team: Team, onStrategy: (s: Strategy) => void, side: 'home' | 'away', disabled = false) => (
+    <div className={`setup-team-card ${side} ${disabled ? 'locked' : ''}`} style={{ borderTopColor: team.color }}>
       <div className="setup-team-header">
         <div className="setup-team-crest" style={{ background: team.color }}>{team.abbreviation}</div>
         <div>
           <h2>{team.name}</h2>
-          <span className="setup-team-sub">{team.strategy.formation} · {avgOvr(team)} OVR</span>
+          <span className="setup-team-sub">{team.strategy.formation} · {avgOvr(team)} OVR {disabled ? '🔒 CPU' : ''}</span>
         </div>
       </div>
 
@@ -58,7 +59,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       <div className="setup-controls">
         <div className="setup-select">
           <label>Formação</label>
-          <select value={team.strategy.formation} onChange={e => onStrategy({ ...team.strategy, formation: e.target.value as Formation })}>
+          <select value={team.strategy.formation} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, formation: e.target.value as Formation })}>
             {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
         </div>
@@ -91,8 +92,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       <details className="setup-players">
         <summary>Ver elenco ({team.squad.length} jogadores)</summary>
         <div className="setup-players-grid">
-          {team.squad.map(p => (
-            <div key={p.id} className="setup-player-row">
+          {team.squad.map((p, i) => (
+            <div key={p.id} className={`setup-player-row ${i >= 11 ? 'bench' : ''}`}>
               <span className="p-num">#{p.number}</span>
               <span className="p-name">{p.name}</span>
               <span className={`p-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -118,7 +119,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       <div className="setup-teams">
         {renderCard(homeTeam, updateHome, 'home')}
         <div className="setup-vs"><div className="setup-vs-circle">VS</div></div>
-        {renderCard(awayTeam, updateAway, 'away')}
+        {renderCard(awayTeam, updateAway, 'away', lockAway)}
       </div>
 
       <div className="setup-action">

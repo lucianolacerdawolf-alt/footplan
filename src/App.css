@@ -63,6 +63,7 @@
   font-size: 12px; border-bottom: 1px solid var(--border);
 }
 .setup-player-row:last-child { border-bottom: none; }
+.setup-player-row.bench { opacity: 0.55; font-style: italic; }
 .p-num { font-weight: 700; min-width: 20px; color: var(--accent); font-size: 11px; }
 .p-name { flex: 1; color: var(--text-h); font-weight: 500; }
 .p-pos { font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 3px; min-width: 26px; text-align: center; }
@@ -140,6 +141,24 @@
 .tile-ovr { font-size: 11px; font-weight: 700; color: var(--accent); }
 
 .select-action { text-align: center; padding: 16px; }
+
+/* Mode selector */
+.mode-selector {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 4px 16px 10px;
+}
+.mode-label { font-size: 12px; font-weight: 700; opacity: 0.5; }
+.mode-btn {
+  padding: 5px 14px; font-size: 12px; font-weight: 600; font-family: var(--sans);
+  border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+  background: var(--code-bg); color: var(--text-h); transition: all 0.15s;
+}
+.mode-btn.active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+.mode-btn:hover:not(.active) { border-color: var(--accent); }
+
+/* Locked team card */
+.setup-team-card.locked { opacity: 0.75; }
+.setup-team-card.locked select { pointer-events: none; }
 
 /* Uniform toggle */
 .uniform-toggle { display: flex; gap: 3px; margin-top: 6px; }
@@ -277,6 +296,17 @@
   0% { r: 2; opacity: 0.9; }
   50% { r: 8; opacity: 0.5; }
   100% { r: 18; opacity: 0; }
+}
+
+.goal-text {
+  animation: goalBoom 0.8s ease-out;
+  transform-origin: center;
+}
+@keyframes goalBoom {
+  0% { opacity: 0; transform: scale(0.2); }
+  30% { opacity: 1; transform: scale(1.3); }
+  60% { opacity: 1; transform: scale(1.0); }
+  100% { opacity: 0; transform: scale(1.2); }
 }
 
 /* Sway idle (jogadores "respiram" quando parados) */

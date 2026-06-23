@@ -316,9 +316,45 @@ const wolves: Player[] = [
 // ---------------------------------------------------------------------------
 // Times montados
 // ---------------------------------------------------------------------------
+
+// --- Bench player generator ---
+function genBench(prefix: string, squad: Player[], level: number): Player[] {
+  // level: 1=top 4, 2=top8, 3=mid, 4=bottom
+  const baseOvr = level === 1 ? 84 : level === 2 ? 80 : level === 3 ? 76 : 72;
+  const benchNames: { name: string; pos: Player['position'] }[] = [
+    { name: 'Backup GK', pos: 'GK' },
+    { name: 'Reserva DEF', pos: 'DEF' },
+    { name: 'Reserva DEF 2', pos: 'DEF' },
+    { name: 'Reserva MID', pos: 'MID' },
+    { name: 'Reserva MID 2', pos: 'MID' },
+    { name: 'Reserva FWD', pos: 'FWD' },
+    { name: 'Reserva FWD 2', pos: 'FWD' },
+  ];
+  const maxNum = Math.max(...squad.map(p => p.number), 20);
+  return benchNames.map((bn, i) => {
+    const variation = (Math.random() - 0.5) * 6;
+    const ovr = Math.round(baseOvr + variation - i * 2);
+    const r = () => Math.max(1, Math.min(99, ovr + Math.round((Math.random() - 0.5) * 12)));
+    return p(`${prefix}-b${i}`, bn.name, maxNum + i + 1, bn.pos,
+      r(), r(), r(), r(), r(), r(), r(), r());
+  });
+}
+
+function teamLevel(squad: Player[]): number {
+  const avg = squad.reduce((s, p) => s + (p.attributes.speed + p.attributes.stamina + p.attributes.passing +
+    p.attributes.finishing + p.attributes.tackling + p.attributes.dribbling +
+    p.attributes.vision + p.attributes.positioning) / 8, 0) / squad.length;
+  if (avg > 83) return 1;
+  if (avg > 79) return 2;
+  if (avg > 75) return 3;
+  return 4;
+}
+
 function makeTeam(id: string, name: string, abbr: string, color: string, secondary: string, squad: Player[]): Team {
+  const level = teamLevel(squad);
+  const fullSquad = [...squad, ...genBench(id, squad, level)];
   return {
-    id, name, abbreviation: abbr, color, secondaryColor: secondary, squad,
+    id, name, abbreviation: abbr, color, secondaryColor: secondary, squad: fullSquad,
     strategy: { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
   };
 }

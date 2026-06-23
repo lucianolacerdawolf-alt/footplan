@@ -3,8 +3,10 @@ import type { Team } from '../engine/types';
 import { premierLeagueTeams } from '../data/premierLeague';
 import { cloneTeam } from '../engine/mockData';
 
+export type GameMode = 'cpu' | 'player';
+
 interface Props {
-  onConfirm: (home: Team, away: Team) => void;
+  onConfirm: (home: Team, away: Team, mode: GameMode) => void;
 }
 
 type Uniform = 'home' | 'away';
@@ -14,6 +16,7 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
   const [awayId, setAwayId] = useState<string | null>(null);
   const [homeUniform, setHomeUniform] = useState<Uniform>('home');
   const [awayUniform, setAwayUniform] = useState<Uniform>('away');
+  const [mode, setMode] = useState<GameMode>('cpu');
 
   const homeTeam = premierLeagueTeams.find(t => t.id === homeId) ?? null;
   const awayTeam = premierLeagueTeams.find(t => t.id === awayId) ?? null;
@@ -35,7 +38,7 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
     if (awayUniform === 'away') {
       [a.color, a.secondaryColor] = [a.secondaryColor, a.color];
     }
-    onConfirm(h, a);
+    onConfirm(h, a, mode);
   };
 
   const getAvgOvr = (team: Team) => {
@@ -108,6 +111,16 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
         {renderSlot(homeTeam, homeUniform, setHomeUniform, 'home', 'CASA')}
         <div className="select-vs">VS</div>
         {renderSlot(awayTeam, awayUniform, setAwayUniform, 'away', 'FORA')}
+      </div>
+
+      <div className="mode-selector">
+        <span className="mode-label">Modo:</span>
+        <button className={`mode-btn ${mode === 'cpu' ? 'active' : ''}`} onClick={() => setMode('cpu')}>
+          🎮 vs CPU
+        </button>
+        <button className={`mode-btn ${mode === 'player' ? 'active' : ''}`} onClick={() => setMode('player')}>
+          👥 2 Jogadores
+        </button>
       </div>
 
       <div className="team-grid">
