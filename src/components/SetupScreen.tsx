@@ -17,6 +17,39 @@ const INTENSITIES: Intensity[] = ['low', 'medium', 'high'];
 const DEF_LINES: DefensiveLine[] = ['high', 'normal', 'low'];
 const WIDTHS: Width[] = ['narrow', 'normal', 'wide'];
 
+const FORMATION_COUNTS: Record<Formation, { DEF: number; MID: number; FWD: number }> = {
+  '4-3-3':   { DEF: 4, MID: 3, FWD: 3 },
+  '4-4-2':   { DEF: 4, MID: 4, FWD: 2 },
+  '3-5-2':   { DEF: 3, MID: 5, FWD: 2 },
+  '4-2-3-1': { DEF: 4, MID: 5, FWD: 1 },
+  '5-3-2':   { DEF: 5, MID: 3, FWD: 2 },
+};
+
+/** Reorganiza titulares/reservas conforme a formação */
+function rebalanceSquad(team: Team, formation: Formation): Team {
+  const counts = FORMATION_COUNTS[formation];
+  const squad = [...team.squad];
+  // Separa por posição (todos os jogadores)
+  const gk = squad.filter(p => p.position === 'GK');
+  const defs = squad.filter(p => p.position === 'DEF');
+  const mids = squad.filter(p => p.position === 'MID');
+  const fwds = squad.filter(p => p.position === 'FWD');
+  // Monta titulares: 1 GK + N DEF + N MID + N FWD
+  const starters = [
+    ...gk.slice(0, 1),
+    ...defs.slice(0, counts.DEF),
+    ...mids.slice(0, counts.MID),
+    ...fwds.slice(0, counts.FWD),
+  ];
+  const bench = [
+    ...gk.slice(1),
+    ...defs.slice(counts.DEF),
+    ...mids.slice(counts.MID),
+    ...fwds.slice(counts.FWD),
+  ];
+  return { ...team, squad: [...starters, ...bench], strategy: { ...team.strategy, formation } };
+}
+
 function playerOvr(p: { attributes: { speed: number; stamina: number; passing: number; finishing: number; tackling: number; dribbling: number; vision: number; positioning: number } }) {
   return Math.round((p.attributes.speed + p.attributes.stamina + p.attributes.passing +
     p.attributes.finishing + p.attributes.tackling + p.attributes.dribbling +
@@ -38,8 +71,20 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [homeSelected, setHomeSelected] = useState<string | null>(null);
   const [awaySelected, setAwaySelected] = useState<string | null>(null);
 
-  const updateHome = useCallback((s: Strategy) => setHomeTeam(prev => ({ ...prev, strategy: s })), []);
-  const updateAway = useCallback((s: Strategy) => setAwayTeam(prev => ({ ...prev, strategy: s })), []);
+  const updateHome = useCallback((s: Strategy) => {
+    if (s.formation !== homeTeam.strategy.formation) {
+      setHomeTeam(prev => rebalanceSquad(prev, s.formation));
+    } else {
+      setHomeTeam(prev => ({ ...prev, strategy: s }));
+    }
+  }, [homeTeam.strategy.formation]);
+  const updateAway = useCallback((s: Strategy) => {
+    if (s.formation !== awayTeam.strategy.formation) {
+      setAwayTeam(prev => rebalanceSquad(prev, s.formation));
+    } else {
+      setAwayTeam(prev => ({ ...prev, strategy: s }));
+    }
+  }, [awayTeam.strategy.formation]);
 
   // Swap: troca um reserva (idx >= 11) com um titular (idx < 11) da mesma posição
   const swapPlayers = (team: Team, setTeam: (t: Team) => void, benchIdx: number, starterIdx: number) => {
@@ -64,23 +109,27 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
     handleSwap: (benchIdx: number, starterIdx: number) => void,
     locked: boolean
   ) => {
-    const starters = team.squad.slice(0, 11);
-    const bench = team.squad.slice(11);
+    const counts = FORMATION_COUNTS[team.strategy.formation];
+    const starterCount = 1 + counts.DEF + counts.MID + counts.FWD;
+    const starters = team.squad.slice(0, starterCount);
+    const bench = team.squad.slice(starterCount);
+
+    // Helper pra achar o índice real no squad a partir de um jogador do bench
+    const realIdx = (playerId: string) => team.squad.findIndex(p => p.id === playerId);
+
     return (
       <div className="squad-panel">
         <div className="squad-section">
-          <div className="squad-section-title">Titulares</div>
+          <div className="squad-section-title">Titulares ({starterCount})</div>
           {starters.map((p, i) => (
             <div
               key={p.id}
               className={`squad-row starter ${selected && !locked ? 'clickable' : ''}`}
               onClick={() => {
-                if (locked) return;
-                if (selected) {
-                  const benchIdx = team.squad.findIndex(sp => sp.id === selected);
-                  if (benchIdx >= 11 && team.squad[benchIdx].position === p.position) {
-                    handleSwap(benchIdx, i);
-                  }
+                if (locked || !selected) return;
+                const bi = realIdx(selected);
+                if (bi >= starterCount && team.squad[bi].position === p.position) {
+                  handleSwap(bi, i);
                 }
               }}
             >
@@ -93,7 +142,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         </div>
         {bench.length > 0 && (
           <div className="squad-section bench-section">
-            <div className="squad-section-title">Reservas</div>
+            <div className="squad-section-title">Reservas ({bench.length})</div>
             {bench.map((p) => {
               const isSelected = p.id === selected;
               return (
@@ -118,7 +167,11 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
     );
   };
 
-  const countByPos = (team: Team, pos: string) => team.squad.slice(0, 11).filter(p => p.position === pos).length;
+  const countByPos = (team: Team, pos: string) => {
+    const counts = FORMATION_COUNTS[team.strategy.formation];
+    const starterCount = 1 + counts.DEF + counts.MID + counts.FWD;
+    return team.squad.slice(0, starterCount).filter(p => p.position === pos).length;
+  };
 
   const renderCard = (team: Team, onStrategy: (s: Strategy) => void, side: 'home' | 'away', disabled = false) => (
     <div className={`setup-team-card ${side} ${disabled ? 'locked' : ''}`} style={{ borderTopColor: team.color }}>
