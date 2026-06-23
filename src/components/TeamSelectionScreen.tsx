@@ -72,7 +72,12 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
            style={team ? { borderColor: color, background: bg } : undefined}>
         {team ? (
           <>
-            <span className="slot-abbr" style={{ color }}>{team.abbreviation}</span>
+            <svg className="slot-crest" viewBox="0 0 50 50">
+              <circle cx="25" cy="25" r="22" fill={displayColor(team, uniform)} />
+              <circle cx="25" cy="25" r="22" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+              <text x="25" y="28" textAnchor="middle" fill="#fff" fontSize="16" fontWeight="800"
+                fontFamily="system-ui">{team.abbreviation}</text>
+            </svg>
             <span className="slot-name">{team.name}</span>
             <span className="slot-ovr">{getAvgOvr(team)} OVR</span>
             <div className="uniform-toggle">
@@ -138,7 +143,12 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
               onClick={() => handleTeamClick(team.id)}
               disabled={!!homeId && !!awayId && !isSelected}
             >
-              <span className="tile-abbr" style={isSelected ? { color } : undefined}>{team.abbreviation}</span>
+              <svg className="tile-crest" viewBox="0 0 40 40">
+                <circle cx="20" cy="20" r="18" fill={color} />
+                <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+                <text x="20" y="22" textAnchor="middle" fill="#fff" fontSize="13" fontWeight="800"
+                  fontFamily="system-ui" letterSpacing="0">{team.abbreviation}</text>
+              </svg>
               <span className="tile-name">{team.name}</span>
               <span className="tile-ovr">{getAvgOvr(team)}</span>
             </button>

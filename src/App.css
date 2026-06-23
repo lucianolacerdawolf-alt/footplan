@@ -113,6 +113,7 @@
 .select-slot.away-slot.filled { border-color: #ef4444; background: rgba(239,68,68,0.06); }
 .select-slot:hover { border-color: var(--accent); }
 .slot-abbr { font-size: 22px; font-weight: 800; color: var(--text-h); font-family: var(--mono); }
+.slot-crest { width: 50px; height: 50px; flex-shrink: 0; }
 .slot-name { font-size: 14px; font-weight: 600; color: var(--text); }
 .slot-ovr { font-size: 12px; font-weight: 700; color: var(--accent); }
 .slot-empty { font-size: 14px; font-weight: 700; opacity: 0.4; letter-spacing: 1px; }
@@ -126,7 +127,7 @@
 @media (max-width: 550px) { .team-grid { grid-template-columns: repeat(3, 1fr); } }
 
 .team-tile {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
   padding: 12px 8px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--code-bg); cursor: pointer; transition: all 0.15s;
   font-family: var(--sans);
@@ -137,6 +138,7 @@
 .team-tile.picked-home { border-color: #3b82f6; background: rgba(59,130,246,0.06); }
 .team-tile.picked-away { border-color: #ef4444; background: rgba(239,68,68,0.06); }
 .tile-abbr { font-size: 18px; font-weight: 800; color: var(--text-h); font-family: var(--mono); }
+.tile-crest { width: 40px; height: 40px; flex-shrink: 0; }
 .tile-name { font-size: 11px; font-weight: 600; color: var(--text); text-align: center; line-height: 1.2; }
 .tile-ovr { font-size: 12px; font-weight: 700; color: var(--accent); }
 
