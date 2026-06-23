@@ -84,7 +84,7 @@ type Shift = { dx: number; dy: number; angle: number };
 
 function tacticalShift(
   event: MatchEvent | null,
-  homeTeamId: string,
+  team: Team,
   player: PlayerCoord
 ): Shift {
   if (!event) return { dx: 0, dy: 0, angle: 0 };
@@ -92,15 +92,17 @@ function tacticalShift(
   const isHome = player.team === 'home';
   const eventTeam = event.teamId;
   const iHaveBall = eventTeam !== null && (
-    (isHome && eventTeam === homeTeamId) || (!isHome && eventTeam !== homeTeamId)
+    (isHome && eventTeam === team.id) || (!isHome && eventTeam !== team.id)
   );
+
+  // Modificadores visuais da estratégia
+  const dlMod = team.strategy.defensiveLine === 'high' ? 0.8 : team.strategy.defensiveLine === 'low' ? -0.8 : 0;
+  const wMod = team.strategy.width === 'wide' ? 1.3 : team.strategy.width === 'narrow' ? 0.7 : 1.0;
 
   const s = seed(event.description + player.id);
   const jx = (s - 0.5) * 0.6;
   const jy = (seed(event.description + 'y' + player.id) - 0.5) * 1.2;
 
-  // --- Deslocamento POR LINHA (bloco, não proporcional) ---
-  // Cada linha tem um fator fixo: GK = 0, DEF = base, MID = base+delta, FWD = base+2*delta
   const posIdx = player.position === 'GK' ? 0 : player.position === 'DEF' ? 1 : player.position === 'MID' ? 2 : 3;
 
   let baseDx = 0, lineDelta = 0, baseDy = 0;
@@ -115,7 +117,6 @@ function tacticalShift(
       break;
     case 'miss':
     case 'post':
-      // Pós-chute: time atacante ainda na área, time defensor aliviado
       baseDx = iHaveBall ? 3 : 2; lineDelta = 0.5; baseDy = iHaveBall ? 1.5 : 1;
       break;
     case 'goal':
@@ -128,16 +129,16 @@ function tacticalShift(
       baseDx = 0.5; lineDelta = 0.2; baseDy = 0.5;
   }
 
-  // Cada linha anda junta (baseDx + posIdx * lineDelta)
-  const shiftX = (baseDx + posIdx * lineDelta) * dir + jx;
+  // Linha defensiva: alta empurra time pra frente, baixa recua
+  const dlOffset = dlMod * (iHaveBall ? 1 : -1) * (1 + posIdx * 0.3);
+  const shiftX = (baseDx + posIdx * lineDelta + dlOffset) * dir + jx;
 
-  // Y: laterais abrem, centro fecha (sutil)
+  // Amplitude: wide = mais abertura lateral, narrow = compacto
   const yOff = player.y - 35;
   const ySign = yOff > 0 ? 1 : -1;
   const yFactor = Math.min(Math.abs(yOff) / 25, 1);
-  const shiftY = baseDy * yFactor * ySign * (0.4 + s * 0.6) + jy;
+  const shiftY = baseDy * yFactor * ySign * wMod * (0.4 + s * 0.6) + jy;
 
-  // Ângulo sutil pra direção do ataque
   const angle = dir * 0.5 + jx * 0.5;
 
   return { dx: shiftX, dy: shiftY, angle };
@@ -279,7 +280,8 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
     // Passo 1: posição alvo = base + tático
     const nodes: { id: string; x: number; y: number; tx: number; ty: number }[] = [];
     for (const p of allPlayers) {
-      const s = tacticalShift(currentEvent, homeTeam.id, p);
+      const team = p.team === 'home' ? homeTeam : awayTeam;
+      const s = tacticalShift(currentEvent, team, p);
       const tx = p.x + s.dx;
       const ty = p.y + s.dy;
       nodes.push({ id: p.id, x: tx, y: ty, tx, ty });

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Team, MatchResult, MatchEvent as MatchEventType, Strategy, Mentality, Intensity, Formation } from '../engine/types';
-import { MENTALITY_LABELS, INTENSITY_LABELS } from '../engine/types';
+import type { Team, MatchResult, MatchEvent as MatchEventType, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width } from '../engine/types';
+import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { simularPrimeiroTempo, simularSegundoTempo, type MatchState } from '../engine/matchEngine';
 import { cloneTeam } from '../engine/mockData';
 import CommentaryFeed from './CommentaryFeed';
@@ -11,6 +11,8 @@ const REPLAY_MS = 1000;
 const FORMATIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'];
 const MENTALITIES: Mentality[] = ['possession', 'counter-attack', 'high-press', 'defensive'];
 const INTENSITIES: Intensity[] = ['low', 'medium', 'high'];
+const DEF_LINES: DefensiveLine[] = ['high', 'normal', 'low'];
+const WIDTHS: Width[] = ['narrow', 'normal', 'wide'];
 
 interface Props {
   homeTeam: Team;
@@ -230,6 +232,12 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>
                       {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
                     </select>
+                    <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>
+                      {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
+                    </select>
+                    <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>
+                      {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
+                    </select>
                   </div>
                   <span className="halftime-vs">vs</span>
                   <div className="halftime-team">
@@ -242,6 +250,12 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     </select>
                     <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>
                       {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
+                    </select>
+                    <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>
+                      {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
+                    </select>
+                    <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>
+                      {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
                     </select>
                   </div>
                 </div>

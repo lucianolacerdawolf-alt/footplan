@@ -50,11 +50,28 @@ export interface Player {
 // =============================================================================
 // ESTRATÉGIA / TÁTICA
 // =============================================================================
+export type DefensiveLine = 'high' | 'normal' | 'low';
+export type Width = 'narrow' | 'normal' | 'wide';
+
 export interface Strategy {
   formation: Formation;
   mentality: Mentality;
   intensity: Intensity;
+  defensiveLine: DefensiveLine;
+  width: Width;
 }
+
+export const DEFENSIVE_LINE_LABELS: Record<DefensiveLine, string> = {
+  'high': 'Alta',
+  'normal': 'Normal',
+  'low': 'Baixa',
+};
+
+export const WIDTH_LABELS: Record<Width, string> = {
+  'narrow': 'Estreito',
+  'normal': 'Normal',
+  'wide': 'Amplo',
+};
 
 export const MENTALITY_LABELS: Record<Mentality, string> = {
   'possession': 'Posse de Bola',

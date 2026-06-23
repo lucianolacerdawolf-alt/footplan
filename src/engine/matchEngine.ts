@@ -18,7 +18,7 @@
 // O cansaço reduz atributos em até 50%. RNG garante imprevisibilidade.
 // =============================================================================
 
-import type { Team, Player, MatchEvent, MatchResult, Mentality, Intensity, Position } from './types';
+import type { Team, Player, MatchEvent, MatchResult, Mentality, Intensity, Position, Formation, DefensiveLine, Width } from './types';
 import {
   generateKickoff, generatePossession, generateAttack, generateGoal,
   generateMiss, generatePost, generateSave, generateHalftime,
@@ -51,6 +51,29 @@ const ATK_CHANCE: Record<Mentality, number> = {
   'possession': 0.70, 'counter-attack': 0.55, 'high-press': 0.75, 'defensive': 0.35,
 };
 
+// --- Formação: quantos jogadores por linha ---
+const FORMATION_COUNTS: Record<Formation, Record<string, number>> = {
+  '4-3-3':   { DEF: 4, MID: 3, FWD: 3 },
+  '4-4-2':   { DEF: 4, MID: 4, FWD: 2 },
+  '3-5-2':   { DEF: 3, MID: 5, FWD: 2 },
+  '4-2-3-1': { DEF: 4, MID: 5, FWD: 1 },
+  '5-3-2':   { DEF: 5, MID: 3, FWD: 2 },
+};
+
+// --- Linha defensiva: ajusta a altura base do time ---
+const DEFENSIVE_LINE_MOD: Record<DefensiveLine, { possessionBias: number; defenseCompact: number }> = {
+  'high':   { possessionBias: 1.10, defenseCompact: 0.90 },
+  'normal': { possessionBias: 1.00, defenseCompact: 1.00 },
+  'low':    { possessionBias: 0.90, defenseCompact: 1.10 },
+};
+
+// --- Amplitude: ajusta o espalhamento ---
+const WIDTH_MOD: Record<Width, { possessionSpread: number; defenseNarrow: number }> = {
+  'wide':   { possessionSpread: 1.10, defenseNarrow: 0.90 },
+  'normal': { possessionSpread: 1.00, defenseNarrow: 1.00 },
+  'narrow': { possessionSpread: 0.90, defenseNarrow: 1.10 },
+};
+
 // ---------------------------------------------------------------------------
 // Utilidades
 // ---------------------------------------------------------------------------
@@ -80,17 +103,27 @@ function calculatePossession(
   const modA = MENTALITY_MODIFIERS[teamA.strategy.mentality];
   const modB = MENTALITY_MODIFIERS[teamB.strategy.mentality];
 
+  // Formação: mais meias = mais poder de posse
+  const countA = FORMATION_COUNTS[teamA.strategy.formation]?.MID ?? 3;
+  const countB = FORMATION_COUNTS[teamB.strategy.formation]?.MID ?? 3;
+  const formMultA = countA / 3;
+  const formMultB = countB / 3;
+
+  // Linha defensiva e amplitude
+  const dlA = DEFENSIVE_LINE_MOD[teamA.strategy.defensiveLine].possessionBias;
+  const dlB = DEFENSIVE_LINE_MOD[teamB.strategy.defensiveLine].possessionBias;
+
   const powerA = midsA.reduce((sum, p) => {
     const f = fatigueA.get(p.id) ?? 0;
     return sum + effective(p.attributes.passing, f) * modA.passing
                + effective(p.attributes.vision, f) * modA.vision;
-  }, 0) * rng(0.7, 1.3);
+  }, 0) * formMultA * dlA * rng(0.7, 1.3);
 
   const powerB = midsB.reduce((sum, p) => {
     const f = fatigueB.get(p.id) ?? 0;
     return sum + effective(p.attributes.passing, f) * modB.passing
                + effective(p.attributes.vision, f) * modB.vision;
-  }, 0) * rng(0.7, 1.3);
+  }, 0) * formMultB * dlB * rng(0.7, 1.3);
 
   return powerA >= powerB ? 'A' : 'B';
 }
@@ -101,6 +134,17 @@ function resolveAttack(
 ): { won: boolean; attacker: Player | null } {
   const modAtk = MENTALITY_MODIFIERS[attackingTeam.strategy.mentality];
   const modDef = MENTALITY_MODIFIERS[defendingTeam.strategy.mentality];
+
+  // Formação: mais atacantes = mais poder ofensivo, mais defensores = mais poder defensivo
+  const fwdCount = FORMATION_COUNTS[attackingTeam.strategy.formation]?.FWD ?? 3;
+  const midCount = FORMATION_COUNTS[attackingTeam.strategy.formation]?.MID ?? 3;
+  const defCount = FORMATION_COUNTS[defendingTeam.strategy.formation]?.DEF ?? 4;
+  const atkFormMult = (fwdCount / 3) * 0.7 + (midCount / 3) * 0.3; // ataque pesa FWD 70%, MID 30%
+  const defFormMult = defCount / 4;
+
+  // Linha defensiva e amplitude
+  const defLineMult = DEFENSIVE_LINE_MOD[defendingTeam.strategy.defensiveLine].defenseCompact;
+  const defWidthMult = WIDTH_MOD[defendingTeam.strategy.width].defenseNarrow;
 
   const fwds = getPlayersByPosition(attackingTeam.squad, 'FWD');
   const mids = getPlayersByPosition(attackingTeam.squad, 'MID');
@@ -115,7 +159,7 @@ function resolveAttack(
     const f = fatigueAtk.get(p.id) ?? 0;
     return sum + effective(p.attributes.speed, f) * modAtk.speed
                + effective(p.attributes.dribbling, f) * modAtk.dribbling;
-  }, 0) * rng(0.7, 1.3);
+  }, 0) * atkFormMult * rng(0.7, 1.3);
 
   const defensePower = (
     chosenDef.reduce((sum, p) => {
@@ -123,7 +167,7 @@ function resolveAttack(
       return sum + effective(p.attributes.tackling, f) * modDef.tackling
                  + effective(p.attributes.positioning, f) * modDef.positioning;
     }, 0) + effective(gk.attributes.positioning, gkFatigue) * modDef.positioning
-  ) * rng(0.7, 1.3);
+  ) * defFormMult * defLineMult * defWidthMult * rng(0.7, 1.3);
 
   return { won: attackPower > defensePower, attacker: attackPower > defensePower ? attackers[0] : null };
 }

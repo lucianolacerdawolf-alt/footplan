@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import type { Team, Strategy, Mentality, Intensity, Formation } from '../engine/types';
-import { MENTALITY_LABELS, INTENSITY_LABELS } from '../engine/types';
+import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width } from '../engine/types';
+import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../engine/mockData';
 
 interface Props {
@@ -13,16 +13,18 @@ interface Props {
 const FORMATIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'];
 const MENTALITIES: Mentality[] = ['possession', 'counter-attack', 'high-press', 'defensive'];
 const INTENSITIES: Intensity[] = ['low', 'medium', 'high'];
+const DEF_LINES: DefensiveLine[] = ['high', 'normal', 'low'];
+const WIDTHS: Width[] = ['narrow', 'normal', 'wide'];
 
 export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
-    if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium' };
+    if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
     return t;
   });
   const [awayTeam, setAwayTeam] = useState<Team>(() => {
     const t = cloneTeam(initialAway);
-    if (!t.strategy) t.strategy = { formation: '4-4-2', mentality: 'counter-attack', intensity: 'medium' };
+    if (!t.strategy) t.strategy = { formation: '4-4-2', mentality: 'counter-attack', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
     return t;
   });
 
@@ -70,6 +72,18 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           <label>Intensidade</label>
           <select value={team.strategy.intensity} onChange={e => onStrategy({ ...team.strategy, intensity: e.target.value as Intensity })}>
             {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
+          </select>
+        </div>
+        <div className="setup-select">
+          <label>Linha Defensiva</label>
+          <select value={team.strategy.defensiveLine} onChange={e => onStrategy({ ...team.strategy, defensiveLine: e.target.value as DefensiveLine })}>
+            {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
+          </select>
+        </div>
+        <div className="setup-select">
+          <label>Amplitude</label>
+          <select value={team.strategy.width} onChange={e => onStrategy({ ...team.strategy, width: e.target.value as Width })}>
+            {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
           </select>
         </div>
       </div>

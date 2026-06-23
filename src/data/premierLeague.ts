@@ -319,7 +319,7 @@ const wolves: Player[] = [
 function makeTeam(id: string, name: string, abbr: string, color: string, secondary: string, squad: Player[]): Team {
   return {
     id, name, abbreviation: abbr, color, secondaryColor: secondary, squad,
-    strategy: { formation: '4-3-3', mentality: 'possession', intensity: 'medium' },
+    strategy: { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
   };
 }
 

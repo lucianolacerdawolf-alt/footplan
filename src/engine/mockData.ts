@@ -207,6 +207,8 @@ export const timeAguias: Team = {
     formation: '4-3-3',
     mentality: 'possession',
     intensity: 'medium',
+    defensiveLine: 'normal',
+    width: 'normal',
   },
 };
 
@@ -221,6 +223,8 @@ export const timeLeoes: Team = {
     formation: '4-4-2',
     mentality: 'counter-attack',
     intensity: 'medium',
+    defensiveLine: 'normal',
+    width: 'normal',
   },
 };
 
