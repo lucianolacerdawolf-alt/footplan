@@ -95,6 +95,7 @@ export interface Team {
   abbreviation: string;
   color: string;            // cor primária (hex)
   secondaryColor: string;   // cor secundária / away (hex)
+  logoUrl: string;          // URL do escudo oficial
   squad: Player[];
   strategy: Strategy;
 }

@@ -536,34 +536,36 @@ const wolvesBench: Player[] = [
 // ---------------------------------------------------------------------------
 // Times montados (XI + Bench)
 // ---------------------------------------------------------------------------
-function makeFullTeam(id: string, name: string, abbr: string, color: string, secondary: string, xi: Player[], bench: Player[]): Team {
+function makeFullTeam(id: string, name: string, abbr: string, color: string, secondary: string, logoId: string, xi: Player[], bench: Player[]): Team {
   return {
-    id, name, abbreviation: abbr, color, secondaryColor: secondary, squad: [...xi, ...bench],
+    id, name, abbreviation: abbr, color, secondaryColor: secondary,
+    logoUrl: `https://resources.premierleague.com/premierleague/badges/${logoId}.png`,
+    squad: [...xi, ...bench],
     strategy: { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
   };
 }
 
 export const premierLeagueTeams: Team[] = [
-  makeFullTeam('arsenal', 'Arsenal', 'ARS', '#EF0107', '#FFFFFF', arsenalXI, arsenalBench),
-  makeFullTeam('aston-villa', 'Aston Villa', 'AVL', '#670E36', '#95BFE5', astonVillaXI, astonVillaBench),
-  makeFullTeam('bournemouth', 'Bournemouth', 'BOU', '#DA291C', '#000000', bournemouthXI, bournemouthBench),
-  makeFullTeam('brentford', 'Brentford', 'BRE', '#E30613', '#FFFFFF', brentfordXI, brentfordBench),
-  makeFullTeam('brighton', 'Brighton', 'BRI', '#0057AD', '#FFFFFF', brightonXI, brightonBench),
-  makeFullTeam('chelsea', 'Chelsea', 'CHE', '#034694', '#FFFFFF', chelseaXI, chelseaBench),
-  makeFullTeam('crystal-palace', 'Crystal Palace', 'CRY', '#1B458F', '#C4122E', crystalPalaceXI, crystalPalaceBench),
-  makeFullTeam('everton', 'Everton', 'EVE', '#003399', '#FFFFFF', evertonXI, evertonBench),
-  makeFullTeam('fulham', 'Fulham', 'FUL', '#FFFFFF', '#000000', fulhamXI, fulhamBench),
-  makeFullTeam('ipswich', 'Ipswich Town', 'IPS', '#0033A0', '#FFFFFF', ipswichXI, ipswichBench),
-  makeFullTeam('leicester', 'Leicester City', 'LEI', '#003090', '#FFFFFF', leicesterXI, leicesterBench),
-  makeFullTeam('liverpool', 'Liverpool', 'LIV', '#C8102E', '#00B2A9', liverpoolXI, liverpoolBench),
-  makeFullTeam('man-city', 'Manchester City', 'MCI', '#6CABDD', '#1C2C4C', manCityXI, manCityBench),
-  makeFullTeam('man-utd', 'Manchester United', 'MUN', '#DA291C', '#000000', manUtdXI, manUtdBench),
-  makeFullTeam('newcastle', 'Newcastle United', 'NEW', '#241F20', '#FFFFFF', newcastleXI, newcastleBench),
-  makeFullTeam('nottm-forest', 'Nottingham Forest', 'NFO', '#DD0000', '#FFFFFF', nottmForestXI, nottmForestBench),
-  makeFullTeam('southampton', 'Southampton', 'SOU', '#D71920', '#FFFFFF', southamptonXI, southamptonBench),
-  makeFullTeam('tottenham', 'Tottenham', 'TOT', '#132257', '#FFFFFF', tottenhamXI, tottenhamBench),
-  makeFullTeam('west-ham', 'West Ham United', 'WHU', '#7A263A', '#95BFE5', westHamXI, westHamBench),
-  makeFullTeam('wolves', 'Wolverhampton', 'WOL', '#FDB913', '#000000', wolvesXI, wolvesBench),
+  makeFullTeam('arsenal', 'Arsenal', 'ARS', '#EF0107', '#FFFFFF', 't3', arsenalXI, arsenalBench),
+  makeFullTeam('aston-villa', 'Aston Villa', 'AVL', '#670E36', '#95BFE5', 't7', astonVillaXI, astonVillaBench),
+  makeFullTeam('bournemouth', 'Bournemouth', 'BOU', '#DA291C', '#000000', 't91', bournemouthXI, bournemouthBench),
+  makeFullTeam('brentford', 'Brentford', 'BRE', '#E30613', '#FFFFFF', 't94', brentfordXI, brentfordBench),
+  makeFullTeam('brighton', 'Brighton', 'BRI', '#0057AD', '#FFFFFF', 't36', brightonXI, brightonBench),
+  makeFullTeam('chelsea', 'Chelsea', 'CHE', '#034694', '#FFFFFF', 't8', chelseaXI, chelseaBench),
+  makeFullTeam('crystal-palace', 'Crystal Palace', 'CRY', '#1B458F', '#C4122E', 't31', crystalPalaceXI, crystalPalaceBench),
+  makeFullTeam('everton', 'Everton', 'EVE', '#003399', '#FFFFFF', 't11', evertonXI, evertonBench),
+  makeFullTeam('fulham', 'Fulham', 'FUL', '#FFFFFF', '#000000', 't54', fulhamXI, fulhamBench),
+  makeFullTeam('ipswich', 'Ipswich Town', 'IPS', '#0033A0', '#FFFFFF', 't40', ipswichXI, ipswichBench),
+  makeFullTeam('leicester', 'Leicester City', 'LEI', '#003090', '#FFFFFF', 't13', leicesterXI, leicesterBench),
+  makeFullTeam('liverpool', 'Liverpool', 'LIV', '#C8102E', '#00B2A9', 't14', liverpoolXI, liverpoolBench),
+  makeFullTeam('man-city', 'Manchester City', 'MCI', '#6CABDD', '#1C2C4C', 't43', manCityXI, manCityBench),
+  makeFullTeam('man-utd', 'Manchester United', 'MUN', '#DA291C', '#000000', 't1', manUtdXI, manUtdBench),
+  makeFullTeam('newcastle', 'Newcastle United', 'NEW', '#241F20', '#FFFFFF', 't4', newcastleXI, newcastleBench),
+  makeFullTeam('nottm-forest', 'Nottingham Forest', 'NFO', '#DD0000', '#FFFFFF', 't17', nottmForestXI, nottmForestBench),
+  makeFullTeam('southampton', 'Southampton', 'SOU', '#D71920', '#FFFFFF', 't20', southamptonXI, southamptonBench),
+  makeFullTeam('tottenham', 'Tottenham', 'TOT', '#132257', '#FFFFFF', 't6', tottenhamXI, tottenhamBench),
+  makeFullTeam('west-ham', 'West Ham United', 'WHU', '#7A263A', '#95BFE5', 't21', westHamXI, westHamBench),
+  makeFullTeam('wolves', 'Wolverhampton', 'WOL', '#FDB913', '#000000', 't39', wolvesXI, wolvesBench),
 ];
 
 export function getTeamById(id: string): Team | undefined {

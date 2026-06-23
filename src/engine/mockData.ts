@@ -202,6 +202,7 @@ export const timeAguias: Team = {
   abbreviation: 'AGV',
   color: '#2563eb',
   secondaryColor: '#facc15',
+  logoUrl: '',
   squad: aguiasSquad,
   strategy: {
     formation: '4-3-3',
@@ -218,6 +219,7 @@ export const timeLeoes: Team = {
   abbreviation: 'LEO',
   color: '#dc2626',
   secondaryColor: '#ffffff',
+  logoUrl: '',
   squad: leoesSquad,
   strategy: {
     formation: '4-4-2',

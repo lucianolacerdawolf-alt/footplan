@@ -38,10 +38,12 @@
 .setup-team-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .setup-team-crest {
   width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; font-size: 13px; font-weight: 800; color: #fff; font-family: var(--mono); flex-shrink: 0;
+  justify-content: center; flex-shrink: 0; overflow: hidden;
+  background: var(--bg);
 }
-.home .setup-team-crest { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-.away .setup-team-crest { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.crest-img { width: 100%; height: 100%; object-fit: contain; }
+.home .setup-team-crest { background: transparent; }
+.away .setup-team-crest { background: transparent; }
 .setup-team-header h2 { font-size: 15px; margin: 0; color: var(--text-h); }
 .setup-team-sub { font-size: 10px; opacity: 0.45; font-weight: 600; }
 

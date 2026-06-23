@@ -176,7 +176,9 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   const renderCard = (team: Team, onStrategy: (s: Strategy) => void, side: 'home' | 'away', disabled = false) => (
     <div className={`setup-team-card ${side} ${disabled ? 'locked' : ''}`} style={{ borderTopColor: team.color }}>
       <div className="setup-team-header">
-        <div className="setup-team-crest" style={{ background: team.color }}>{team.abbreviation}</div>
+        <div className="setup-team-crest">
+          <img src={team.logoUrl} alt={team.name} className="crest-img" />
+        </div>
         <div>
           <h2>{team.name}</h2>
           <span className="setup-team-sub">{team.strategy.formation} · {Math.round(team.squad.slice(0, 11).reduce((s, p) => s + playerOvr(p), 0) / 11)} OVR {disabled ? '🔒 CPU' : ''}</span>
