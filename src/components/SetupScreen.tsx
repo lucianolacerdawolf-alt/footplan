@@ -179,7 +179,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         <div className="setup-team-crest" style={{ background: team.color }}>{team.abbreviation}</div>
         <div>
           <h2>{team.name}</h2>
-          <span className="setup-team-sub">{team.strategy.formation} · {playerOvr(team.squad[0])} - {playerOvr(team.squad[10])} OVR {disabled ? '🔒 CPU' : ''}</span>
+          <span className="setup-team-sub">{team.strategy.formation} · {Math.round(team.squad.slice(0, 11).reduce((s, p) => s + playerOvr(p), 0) / 11)} OVR {disabled ? '🔒 CPU' : ''}</span>
         </div>
       </div>
 

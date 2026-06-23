@@ -42,12 +42,13 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
   };
 
   const getAvgOvr = (team: Team) => {
-    const sum = team.squad.reduce((acc, p) =>
+    const starters = team.squad.slice(0, 11);
+    const sum = starters.reduce((acc, p) =>
       acc + (p.attributes.speed + p.attributes.stamina + p.attributes.passing +
         p.attributes.finishing + p.attributes.tackling + p.attributes.dribbling +
         p.attributes.vision + p.attributes.positioning) / 8, 0
     );
-    return Math.round(sum / team.squad.length);
+    return Math.round(sum / starters.length);
   };
 
   const displayColor = (team: Team, uniform: Uniform) =>
