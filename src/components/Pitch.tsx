@@ -78,12 +78,8 @@ function baseCoords(team: Team, side: 'home' | 'away'): PlayerCoord[] {
 
 // ---------------------------------------------------------------------------
 // =============================================================================
-// Movimentação tática — SUTIL e PROPORCIONAL
-// Princípios:
-//  1. Amplitudes REALISTAS (2-5px, não 16px) — times não deformam 13% do campo
-//  2. Jogador perto da ação mexe mais, longe ancora (efeito sanfona)
-//  3. Repulsão LEVE como lubrificante, não como força corretiva
-//  4. Y-spread: laterais abrem, volantes fecham conforme fase
+// Movimentação tática — baseada no time, não na bola
+// A bola segue o portador, não o contrário
 // =============================================================================
 type Shift = { dx: number; dy: number; angle: number };
 
@@ -91,8 +87,8 @@ function tacticalShift(
   event: MatchEvent | null,
   homeTeamId: string,
   player: PlayerCoord,
-  ballX: number,
-  ballY: number
+  actionX: number,  // ponto focal da ação (centro do time atacante, não a bola)
+  actionY: number
 ): Shift {
   if (!event) return { dx: 0, dy: 0, angle: 0 };
 
@@ -101,103 +97,162 @@ function tacticalShift(
   const iHaveBall = eventTeam !== null && (
     (isHome && eventTeam === homeTeamId) || (!isHome && eventTeam !== homeTeamId)
   );
-  const theyHaveBall = eventTeam !== null && !iHaveBall;
 
-  // --- Distância do jogador à bola (0=colado, 1=longe) ---
-  const bdx = ballX - player.x;
-  const bdy = ballY - player.y;
-  const distToBall = Math.sqrt(bdx * bdx + bdy * bdy);
-  const proximity = 1 - Math.min(distToBall / 40, 1);
+  // Distância ao ponto focal da ação
+  const adx = actionX - player.x;
+  const ady = actionY - player.y;
+  const dist = Math.sqrt(adx * adx + ady * ady);
+  const proximity = 1 - Math.min(dist / 45, 1);
 
-  // --- Fator por posição ---
   const posFactor =
-    player.position === 'GK' ? 0.15 :
-    player.position === 'DEF' ? 0.45 :
-    player.position === 'MID' ? 0.7 :
-    1.0; // FWD
+    player.position === 'GK' ? 0.12 :
+    player.position === 'DEF' ? 0.4 :
+    player.position === 'MID' ? 0.65 :
+    1.0;
 
   const s = seed(event.description + player.id);
-  const jitterX = (s - 0.5) * 0.6;
-  const jitterY = (seed(event.description + 'y' + player.id) - 0.5) * 1.2;
+  const jx = (s - 0.5) * 0.5;
+  const jy = (seed(event.description + 'y' + player.id) - 0.5) * 1.0;
 
-  // --- Amplitudes máximas REALISTAS por evento ---
-  let maxDx = 0;
-  let maxDy = 0;
+  let maxDx = 0, maxDy = 0;
   const dir = iHaveBall ? 1 : -1;
 
   switch (event.type) {
     case 'possession':
       maxDx = iHaveBall ? 3 : 2.5;
-      maxDy = iHaveBall ? 4 : 1.8;
+      maxDy = iHaveBall ? 4 : 1.5;
       break;
     case 'attack':
     case 'miss':
     case 'post':
-      maxDx = iHaveBall ? 7 : 5;
-      maxDy = iHaveBall ? 3 : 1.5;
+      maxDx = iHaveBall ? 6 : 4.5;
+      maxDy = iHaveBall ? 2.5 : 1.2;
       break;
     case 'goal':
-      maxDx = iHaveBall ? 10 : 4;
-      maxDy = iHaveBall ? 6 : 4;
+      maxDx = iHaveBall ? 8 : 3;
+      maxDy = iHaveBall ? 5 : 3;
       break;
     case 'save':
-      maxDx = theyHaveBall ? 6 : 4;
-      maxDy = theyHaveBall ? 4 : 2;
+      maxDx = iHaveBall ? 3 : 5;
+      maxDy = iHaveBall ? 1.5 : 3;
       break;
     default:
-      maxDx = 1;
-      maxDy = 1;
+      maxDx = 1; maxDy = 1;
   }
 
-  // --- Eixo X: proporcional à proximidade da bola ---
-  const shiftX = maxDx * proximity * posFactor * dir + jitterX;
+  const shiftX = maxDx * proximity * posFactor * dir + jx;
+  const yOff = player.y - 35;
+  const ySign = yOff > 0 ? 1 : -1;
+  const yFactor = Math.min(Math.abs(yOff) / 25, 1);
+  const shiftY = maxDy * yFactor * ySign * (0.5 + s * 0.5) + jy;
 
-  // --- Eixo Y: jogadores centrais compactam, laterais abrem ---
-  const yCenter = 35;
-  const yOffset = player.y - yCenter;
-  const ySign = yOffset > 0 ? 1 : -1;
-  const yDist = Math.abs(yOffset);
-  // Mais longe do centro = abre mais (laterais). Centro = compacta.
-  const yFactor = Math.min(yDist / 25, 1);
-  const shiftY = maxDy * yFactor * ySign * (0.6 + s * 0.4) + jitterY;
+  const angle = dist > 0.5 ? Math.atan2(ady, adx) * (180 / Math.PI) * 0.04 : 0;
 
-  // --- Micro-atração à bola (só jogadores próximos) ---
-  const pullStr = (iHaveBall ? 0.2 : 0.08) * proximity;
-  const ballDx = distToBall > 0.5 ? (bdx / distToBall) * pullStr * 2 : 0;
-  const ballDy = distToBall > 0.5 ? (bdy / distToBall) * pullStr * 2 : 0;
-
-  // --- Rotação sutil ---
-  const angle = Math.atan2(bdy, bdx) * (180 / Math.PI) * 0.05;
-
-  return {
-    dx: shiftX + ballDx,
-    dy: shiftY + ballDy,
-    angle,
-  };
+  return { dx: shiftX, dy: shiftY, angle };
 }
 
-// ---------------------------------------------------------------------------
-// Bola
-// ---------------------------------------------------------------------------
-function ballPos(
-  event: MatchEvent | null, homeTeamId: string, phase: string, eventSeed: number
+// =============================================================================
+// Portador da bola — quem está com ela agora
+// =============================================================================
+function getBallCarrier(
+  event: MatchEvent | null,
+  homeTeamId: string,
+  allPlayers: PlayerCoord[]
+): PlayerCoord | null {
+  if (!event || !event.teamId) return null;
+
+  const teamPlayers = allPlayers.filter(p => {
+    const isHome = p.team === 'home';
+    return event.teamId === homeTeamId ? isHome : !isHome;
+  });
+
+  if (teamPlayers.length === 0) return null;
+
+  const s = seed(event.description + 'carrier');
+
+  switch (event.type) {
+    case 'possession':
+      // Um meia ou atacante conduz
+      const mids = teamPlayers.filter(p => p.position === 'MID' || p.position === 'FWD');
+      return mids.length > 0 ? mids[Math.floor(s * mids.length)] : teamPlayers[0];
+    case 'attack':
+      // O atacante mais avançado (maior x para home, menor para away)
+      const fwds = teamPlayers.filter(p => p.position === 'FWD');
+      if (fwds.length > 0) {
+        const isHome = teamPlayers[0].team === 'home';
+        return isHome
+          ? fwds.reduce((a, b) => a.x > b.x ? a : b)
+          : fwds.reduce((a, b) => a.x < b.x ? a : b);
+      }
+      return teamPlayers[Math.floor(s * teamPlayers.length)];
+    case 'goal':
+    case 'miss':
+    case 'post':
+      // Bola já foi chutada — sem portador
+      return null;
+    case 'save':
+      // Goleiro do time que defendeu
+      const gk = allPlayers.find(p => p.position === 'GK' && (
+        (p.team === 'home' && event.teamId !== homeTeamId) ||
+        (p.team === 'away' && event.teamId === homeTeamId)
+      ));
+      return gk ?? null;
+    default:
+      return teamPlayers[Math.floor(s * teamPlayers.length)];
+  }
+}
+
+// =============================================================================
+// Posição da bola — deriva do portador
+// =============================================================================
+function ballFromCarrier(
+  event: MatchEvent | null,
+  carrier: PlayerCoord | null,
+  carrierX: number,  // posição final do portador (após d3-force)
+  carrierY: number,
+  homeTeamId: string,
+  eventSeed: number
 ): { x: number; y: number; visible: boolean } {
-  if (!event || phase === 'idle') return { x: 60, y: 35, visible: true };
+  if (!event) return { x: 60, y: 35, visible: true };
+
   const r = eventSeed;
   const isHome = event.teamId === homeTeamId;
+
   switch (event.type) {
-    case 'kickoff': return { x: 60, y: 35, visible: true };
+    case 'kickoff':
+      return { x: 60, y: 35, visible: true };
+
     case 'possession':
-      return { x: isHome ? 52 + r * 10 : 66 - r * 10, y: 25 + r * 20, visible: true };
-    case 'attack': case 'miss': case 'post':
-      return { x: isHome ? 82 + r * 10 : 38 - r * 10, y: 25 + r * 20, visible: true };
+    case 'attack':
+      // Bola nos pés do portador, levemente à frente
+      if (carrier) {
+        const dir = isHome ? 1.5 : -1.5;
+        return { x: carrierX + dir + (r - 0.5), y: carrierY + (r - 0.5) * 0.8, visible: true };
+      }
+      return { x: 60, y: 35, visible: true };
+
     case 'goal':
-      return { x: isHome ? 118 + r : 2 - r, y: 33 + r * 4, visible: true };
+      // Bola na rede
+      return { x: isHome ? 118.5 : 1.5, y: 33 + r * 4, visible: true };
+
+    case 'miss':
+      // Passou perto do gol
+      return { x: isHome ? 108 + r * 6 : 12 - r * 6, y: 25 + r * 20, visible: true };
+
+    case 'post':
+      // Na trave
+      return { x: isHome ? 116 : 4, y: 30 + r * 10, visible: true };
+
     case 'save':
-      return { x: isHome ? 108 : 12, y: 33 + (r - 0.5) * 6, visible: true };
-    case 'halftime': case 'fulltime':
+      // Perto do goleiro
+      return { x: isHome ? 108 : 12, y: 33 + (r - 0.5) * 8, visible: true };
+
+    case 'halftime':
+    case 'fulltime':
       return { x: 60, y: 35, visible: false };
-    default: return { x: 60, y: 35, visible: true };
+
+    default:
+      return { x: 60, y: 35, visible: true };
   }
 }
 
@@ -210,58 +265,72 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
 
   const eventId = currentEvent ? currentEvent.minute + '|' + currentEvent.type + '|' + currentEvent.description : '';
   const eventSeed = useMemo(() => seed(eventId), [eventId]);
-  const ball = ballPos(currentEvent, homeTeam.id, phase, eventSeed);
 
   const isGoal = currentEvent?.type === 'goal' && phase !== 'done';
   const goalTeamId = isGoal ? currentEvent!.teamId : null;
 
-  // --- Calcula posições finais com d3-force (colisão + atração ao alvo) ---
-  const allShifts = useMemo(() => {
+  // --- Calcula posições dos jogadores (d3-force) + bola (do portador) ---
+  const { allShifts, ball } = useMemo(() => {
     const allPlayers = [...homeBase, ...awayBase];
     const shifts = new Map<string, Shift>();
 
-    // Passo 1: posição alvo = base + tático + atração à bola
-    const nodes: { id: string; x: number; y: number; tx: number; ty: number }[] = [];
+    // Ponto focal: centro entre a posição-base dos atacantes do time com posse
+    let actionX = 60, actionY = 35;
+    if (currentEvent?.teamId) {
+      const teamPlayers = allPlayers.filter(p => {
+        const isHome = p.team === 'home';
+        return currentEvent.teamId === homeTeam.id ? isHome : !isHome;
+      });
+      if (teamPlayers.length > 0) {
+        actionX = teamPlayers.reduce((s, p) => s + p.x, 0) / teamPlayers.length;
+        actionY = teamPlayers.reduce((s, p) => s + p.y, 0) / teamPlayers.length;
+      }
+    }
 
+    // Passo 1: posição alvo = base + tático
+    const nodes: { id: string; x: number; y: number; tx: number; ty: number }[] = [];
     for (const p of allPlayers) {
-      const s = tacticalShift(currentEvent, homeTeam.id, p, ball.x, ball.y);
+      const s = tacticalShift(currentEvent, homeTeam.id, p, actionX, actionY);
       const tx = p.x + s.dx;
       const ty = p.y + s.dy;
       nodes.push({ id: p.id, x: tx, y: ty, tx, ty });
-      // Guarda o ângulo (rotação visual) separado
       shifts.set(p.id, { dx: 0, dy: 0, angle: s.angle });
     }
 
-    // Passo 2: d3-force — resolve colisões e mantém perto do alvo
+    // Passo 2: d3-force — colisão + atração ao alvo
     const sim = forceSimulation(nodes)
-      .force('collide', forceCollide(3.5))          // raio de colisão (um pouco maior q o visual)
-      .force('x', forceX((d: any) => d.tx).strength(0.12))  // atrai pro X alvo
-      .force('y', forceY((d: any) => d.ty).strength(0.12))  // atrai pro Y alvo
-      .alpha(1)
-      .stop();
-
-    // Roda 120 ticks pra estabilizar
+      .force('collide', forceCollide(3.5))
+      .force('x', forceX((d: any) => d.tx).strength(0.15))
+      .force('y', forceY((d: any) => d.ty).strength(0.15))
+      .alpha(1).stop();
     for (let i = 0; i < 120; i++) sim.tick();
 
-    // Passo 3: boundary — mantém dentro do campo
+    // Clamp
     for (const node of nodes) {
       node.x = Math.max(2, Math.min(118, node.x));
       node.y = Math.max(3, Math.min(67, node.y));
     }
 
-    // Passo 4: extrai delta entre posição final e base
+    // Extrai shifts
     for (const p of allPlayers) {
       const node = nodes.find(n => n.id === p.id)!;
       const s = shifts.get(p.id)!;
-      shifts.set(p.id, {
-        dx: node.x - p.x,
-        dy: node.y - p.y,
-        angle: s.angle,
-      });
+      shifts.set(p.id, { dx: node.x - p.x, dy: node.y - p.y, angle: s.angle });
     }
 
-    return shifts;
-  }, [homeBase, awayBase, currentEvent, ball.x, ball.y, homeTeam.id]);
+    // Portador da bola
+    const carrier = getBallCarrier(currentEvent, homeTeam.id, allPlayers);
+    let carrierX = 60, carrierY = 35;
+    if (carrier) {
+      const node = nodes.find(n => n.id === carrier.id);
+      if (node) { carrierX = node.x; carrierY = node.y; }
+    }
+
+    // Posição da bola a partir do portador
+    const ballPos = ballFromCarrier(currentEvent, carrier, carrierX, carrierY, homeTeam.id, eventSeed);
+
+    return { allShifts: shifts, ball: ballPos };
+  }, [homeBase, awayBase, currentEvent, eventSeed, homeTeam.id]);
 
   // Renderiza um jogador com shift calculado
   const renderPlayer = (p: PlayerCoord) => {
