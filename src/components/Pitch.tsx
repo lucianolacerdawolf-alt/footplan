@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { forceSimulation, forceCollide, forceX, forceY } from 'd3-force';
 import type { Team, MatchEvent, Formation } from '../engine/types';
 
 interface Props {
@@ -214,62 +215,49 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
   const isGoal = currentEvent?.type === 'goal' && phase !== 'done';
   const goalTeamId = isGoal ? currentEvent!.teamId : null;
 
-  // --- Calcula TODOS os shifts com repulsão anti-sobreposição ---
+  // --- Calcula posições finais com d3-force (colisão + atração ao alvo) ---
   const allShifts = useMemo(() => {
     const allPlayers = [...homeBase, ...awayBase];
     const shifts = new Map<string, Shift>();
 
-    // Passo 1: shift tático individual + atração à bola
+    // Passo 1: posição alvo = base + tático + atração à bola
+    const nodes: { id: string; x: number; y: number; tx: number; ty: number }[] = [];
+
     for (const p of allPlayers) {
-      shifts.set(p.id, tacticalShift(currentEvent, homeTeam.id, p, ball.x, ball.y));
+      const s = tacticalShift(currentEvent, homeTeam.id, p, ball.x, ball.y);
+      const tx = p.x + s.dx;
+      const ty = p.y + s.dy;
+      nodes.push({ id: p.id, x: tx, y: ty, tx, ty });
+      // Guarda o ângulo (rotação visual) separado
+      shifts.set(p.id, { dx: 0, dy: 0, angle: s.angle });
     }
 
-    // Passo 2: micro-repulsão (2 passes leves)
-    // Só evita sobreposição extrema, não redefine posições
-    const MIN_DIST = 6;
-    const REPULSE = 0.4;
+    // Passo 2: d3-force — resolve colisões e mantém perto do alvo
+    const sim = forceSimulation(nodes)
+      .force('collide', forceCollide(3.5))          // raio de colisão (um pouco maior q o visual)
+      .force('x', forceX((d: any) => d.tx).strength(0.12))  // atrai pro X alvo
+      .force('y', forceY((d: any) => d.ty).strength(0.12))  // atrai pro Y alvo
+      .alpha(1)
+      .stop();
 
-    for (let iter = 0; iter < 2; iter++) {
-      for (let i = 0; i < allPlayers.length; i++) {
-        for (let j = i + 1; j < allPlayers.length; j++) {
-          const pi = allPlayers[i];
-          const pj = allPlayers[j];
-          const si = shifts.get(pi.id)!;
-          const sj = shifts.get(pj.id)!;
+    // Roda 120 ticks pra estabilizar
+    for (let i = 0; i < 120; i++) sim.tick();
 
-          const ax = pi.x + si.dx;
-          const ay = pi.y + si.dy;
-          const bx = pj.x + sj.dx;
-          const by = pj.y + sj.dy;
-
-          const dx = ax - bx;
-          const dy = ay - by;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-
-          if (dist < MIN_DIST && dist > 0.01) {
-            const overlap = (MIN_DIST - dist) / 2;
-            const nx = dx / dist;
-            const ny = dy / dist;
-            const force = overlap * REPULSE;
-
-            shifts.set(pi.id, { ...shifts.get(pi.id)!, dx: shifts.get(pi.id)!.dx + nx * force, dy: shifts.get(pi.id)!.dy + ny * force });
-            shifts.set(pj.id, { ...shifts.get(pj.id)!, dx: shifts.get(pj.id)!.dx - nx * force, dy: shifts.get(pj.id)!.dy - ny * force });
-          }
-        }
-      }
+    // Passo 3: boundary — mantém dentro do campo
+    for (const node of nodes) {
+      node.x = Math.max(2, Math.min(118, node.x));
+      node.y = Math.max(3, Math.min(67, node.y));
     }
 
-    // Passo 3: manter jogadores dentro do campo
+    // Passo 4: extrai delta entre posição final e base
     for (const p of allPlayers) {
+      const node = nodes.find(n => n.id === p.id)!;
       const s = shifts.get(p.id)!;
-      const fx = p.x + s.dx;
-      const fy = p.y + s.dy;
-      let { dx, dy } = s;
-      if (fx < 2) dx += (2 - fx) * 0.5;
-      if (fx > 118) dx -= (fx - 118) * 0.5;
-      if (fy < 3) dy += (3 - fy) * 0.5;
-      if (fy > 67) dy -= (fy - 67) * 0.5;
-      shifts.set(p.id, { ...s, dx, dy });
+      shifts.set(p.id, {
+        dx: node.x - p.x,
+        dy: node.y - p.y,
+        angle: s.angle,
+      });
     }
 
     return shifts;
