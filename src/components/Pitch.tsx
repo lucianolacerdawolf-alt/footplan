@@ -76,9 +76,11 @@ function baseCoords(team: Team, side: 'home' | 'away'): PlayerCoord[] {
 }
 
 // ---------------------------------------------------------------------------
-// Deslocamento tático + atração à bola
-// Combina movimento tático (time) com atração individual à bola
-// ---------------------------------------------------------------------------
+// =============================================================================
+// Movimentação tática PROPORCIONAL à distância da ação
+// Principio: jogador perto da bola mexe mais, longe ancora a formação.
+// Isso evita compressão e sobreposição — o time "estica" como sanfona.
+// =============================================================================
 type Shift = { dx: number; dy: number; angle: number };
 
 function tacticalShift(
@@ -88,33 +90,6 @@ function tacticalShift(
   ballX: number,
   ballY: number
 ): Shift {
-  // --- Atração à bola (todos eventos) ---
-  const bdx = ballX - player.x;
-  const bdy = ballY - player.y;
-  const dist = Math.sqrt(bdx * bdx + bdy * bdy) + 1; // evita div por zero
-  const distNorm = Math.min(dist / 25, 1); // 0=perto, 1=longe (25 = raio de influência)
-
-  // Jogador atrai mais se está próximo da bola e o tipo de evento pede
-  let attractionMul = 0;
-  if (event) {
-    const isHome = player.team === 'home';
-    const iHaveBall = event.teamId !== null && (
-      (isHome && event.teamId === homeTeamId) || (!isHome && event.teamId !== homeTeamId)
-    );
-    switch (event.type) {
-      case 'possession': attractionMul = iHaveBall ? 0.25 : 0.10; break;
-      case 'attack': case 'miss': case 'post':
-        attractionMul = iHaveBall ? 0.35 : 0.15; break;
-      case 'goal': attractionMul = 0.25; break;
-      case 'save': attractionMul = 0.20; break;
-      default: attractionMul = 0.05;
-    }
-  }
-  const attractPower = attractionMul * (1 - distNorm);
-  const ballDx = (bdx / dist) * attractPower * 6;
-  const ballDy = (bdy / dist) * attractPower * 6;
-  const angle = Math.atan2(bdy, bdx) * (180 / Math.PI) * 0.08; // rotação sutil
-
   if (!event) return { dx: 0, dy: 0, angle: 0 };
 
   const isHome = player.team === 'home';
@@ -123,72 +98,75 @@ function tacticalShift(
     (isHome && eventTeam === homeTeamId) || (!isHome && eventTeam !== homeTeamId)
   );
   const theyHaveBall = eventTeam !== null && !iHaveBall;
-  const pos = player.position;
-  const s = seed(event.description + player.id);
-  const jitter = (s - 0.5) * 2; // variação individual estável
 
-  let dx = 0, dy = 0;
+  // --- Distância do jogador à bola (normalizada 0~1) ---
+  const bdx = ballX - player.x;
+  const bdy = ballY - player.y;
+  const distToBall = Math.sqrt(bdx * bdx + bdy * bdy);
+  const distNorm = Math.min(distToBall / 50, 1); // 0=colado, 1=muito longe
+
+  // --- Parâmetros por tipo de evento ---
+  let maxShift = 0;      // deslocamento máximo no eixo X (para o jogador mais próximo)
+  let ySpread = 0;       // abertura lateral máxima
+  const dir = iHaveBall ? 1 : -1; // direção: positivo = avança, negativo = recua
+  const s = seed(event.description + player.id);
+  const jitter = (s - 0.5) * 1.5;
 
   switch (event.type) {
     case 'possession':
-      if (iHaveBall) {
-        if (pos === 'GK') { dx = 1; dy = jitter * 0.2; }
-        else if (pos === 'DEF') { dx = 2 + jitter * 0.4; dy = (s - 0.5) * 4; }       // laterais abrem
-        else if (pos === 'MID') { dx = 3.5 + jitter * 0.6; dy = (s - 0.5) * 2.5; }    // meias triangulam
-        else { dx = 4.5 + jitter * 0.8; dy = (s - 0.5) * 5; }                         // atacantes buscam espaço
-      } else if (theyHaveBall) {
-        if (pos === 'GK') { dx = 0; dy = jitter * 0.3; }
-        else if (pos === 'DEF') { dx = -1.5 - jitter * 0.3; dy = (s - 0.5) * 1.5; }   // compactam
-        else if (pos === 'MID') { dx = -2.5 - jitter * 0.5; dy = (s - 0.5) * 1.5; }
-        else { dx = -3 - jitter * 0.5; dy = (s - 0.5) * 2; }
-      }
+      maxShift = iHaveBall ? 6 : 5;
+      ySpread = iHaveBall ? 5 : 2;
       break;
-
     case 'attack':
     case 'miss':
     case 'post':
-      if (iHaveBall) {
-        if (pos === 'GK') { dx = 3; dy = jitter * 0.3; }
-        else if (pos === 'DEF') { dx = 7 + jitter * 0.5; dy = (s - 0.5) * 2; }        // sobem até o meio
-        else if (pos === 'MID') { dx = 10 + jitter; dy = (s - 0.5) * 3; }              // apoiam na entrada da área
-        else { dx = 16 + jitter * 1.5; dy = (s - 0.5) * 4; }                           // dentro da área
-      } else if (theyHaveBall) {
-        if (pos === 'GK') { dx = -2; dy = jitter * 0.5; }
-        else if (pos === 'DEF') { dx = -7 - jitter * 0.8; dy = (s - 0.5) * 1; }        // linha de defesa recua
-        else if (pos === 'MID') { dx = -9 - jitter; dy = (s - 0.5) * 1.5; }            // fecha espaços
-        else { dx = -10 - jitter; dy = (s - 0.5) * 2; }                                // atacantes ajudam a marcar
-      }
+      maxShift = iHaveBall ? 18 : 12;
+      ySpread = iHaveBall ? 4 : 1.5;
       break;
-
     case 'goal':
-      if (iHaveBall) {
-        if (pos === 'GK') { dx = 5; dy = jitter * 2; }
-        else { dx = 18 + jitter * 6; dy = (s - 0.5) * 8; }                             // geral correndo pro gol
-      } else if (theyHaveBall) {
-        if (pos === 'GK') { dx = -1; dy = -jitter; }
-        else { dx = -4 + jitter * 3; dy = (s - 0.5) * 6; }                             // frustração, espalham
-      }
+      maxShift = iHaveBall ? 22 : 6;
+      ySpread = iHaveBall ? 10 : 7;
       break;
-
     case 'save':
-      if (theyHaveBall) {
-        if (pos === 'FWD') { dx = 13 + jitter; dy = (s - 0.5) * 5; }                   // atacante na pequena área
-        else if (pos === 'MID') { dx = 8 + jitter; dy = (s - 0.5) * 3; }
-        else if (pos === 'DEF') { dx = 5 + jitter; dy = (s - 0.5) * 1.5; }
-        else { dx = 2; dy = jitter; }
-      } else if (iHaveBall) {
-        if (pos === 'GK') { dx = -2; dy = jitter; }                                     // goleiro fez a defesa
-        else { dx = -6 - jitter * 0.5; dy = (s - 0.5) * 1; }                           // time compacta aliviado
-      }
+      maxShift = theyHaveBall ? 14 : 8;
+      ySpread = theyHaveBall ? 5 : 2;
       break;
-
     case 'kickoff':
-      dx = jitter * 0.5;
-      dy = jitter * 0.5;
+      maxShift = 1;
+      ySpread = 1;
       break;
+    default:
+      maxShift = 1;
+      ySpread = 1;
   }
 
-  return { dx: dx + ballDx, dy: dy + ballDy, angle };
+  // --- Cálculo proporcional ---
+  // Quanto mais perto da bola, mais mexe (1 - distNorm)
+  // GK mexe menos (×0.3), DEF menos (×0.5), MID normal (×0.75), FWD mais (×1.0)
+  const posFactor = player.position === 'GK' ? 0.25 : player.position === 'DEF' ? 0.5 : player.position === 'MID' ? 0.75 : 1.0;
+  const proximity = 1 - distNorm; // 1 = colado na bola, 0 = longe
+  const shiftX = maxShift * proximity * posFactor * dir + jitter * 0.8;
+
+  // Y: abre/fecha conforme distância ao centro (y=35)
+  const yCenter = 35;
+  const yOffset = player.y - yCenter;
+  const ySign = yOffset > 0 ? 1 : -1;
+  const yProximity = 1 - Math.min(Math.abs(yOffset) / 30, 1); // jogadores centrais abrem mais
+  const shiftY = ySpread * yProximity * ySign * (0.5 + s * 0.5) + jitter * 0.5;
+
+  // --- Atração sutil à bola (apenas jogadores próximos) ---
+  const attractStrength = (iHaveBall ? 0.3 : 0.15) * (1 - distNorm);
+  const ballDx = distToBall > 0.5 ? (bdx / distToBall) * attractStrength * 3 : 0;
+  const ballDy = distToBall > 0.5 ? (bdy / distToBall) * attractStrength * 3 : 0;
+
+  // --- Rotação sutil em direção à bola ---
+  const angle = Math.atan2(bdy, bdx) * (180 / Math.PI) * 0.06;
+
+  return {
+    dx: shiftX + ballDx,
+    dy: shiftY + ballDy,
+    angle,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -240,11 +218,11 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
       shifts.set(p.id, tacticalShift(currentEvent, homeTeam.id, p, ball.x, ball.y));
     }
 
-    // Passo 2: repulsão iterativa (5 passes) para evitar sobreposição
-    const MIN_DIST = 7;
-    const REPULSE_STRENGTH = 1.2;
+    // Passo 2: repulsão iterativa (6 passes) — safety net
+    const MIN_DIST = 8;
+    const REPULSE_STRENGTH = 1.5;
 
-    for (let iter = 0; iter < 5; iter++) {
+    for (let iter = 0; iter < 6; iter++) {
       for (let i = 0; i < allPlayers.length; i++) {
         for (let j = i + 1; j < allPlayers.length; j++) {
           const pi = allPlayers[i];
@@ -265,8 +243,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
             const overlap = (MIN_DIST - dist) / 2;
             const nx = dx / dist;
             const ny = dy / dist;
-            // Jogadores do mesmo time se repelem menos (mantêm compactação)
-            const sameTeam = pi.team === pj.team ? 0.35 : 1.0;
+            const sameTeam = pi.team === pj.team ? 0.3 : 1.0;
             const force = overlap * REPULSE_STRENGTH * sameTeam;
 
             shifts.set(pi.id, { ...shifts.get(pi.id)!, dx: shifts.get(pi.id)!.dx + nx * force, dy: shifts.get(pi.id)!.dy + ny * force });
@@ -305,11 +282,11 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
            transition: 'transform 0.6s cubic-bezier(0.25, 0.1, 0.25, 1.2)',
            transformOrigin: `${p.x}px ${p.y}px`,
          }}>
-        <circle cx={p.x} cy={p.y} r="2.6"
+        <circle cx={p.x} cy={p.y} r="3"
           fill={p.position === 'GK' ? 'url(#gkGrad)' : `url(#${gradId})`}
-          stroke="#fff" strokeWidth="0.2" filter="url(#glow)" />
-        <text x={p.x} y={p.y + 0.5} textAnchor="middle" fill="#fff"
-          fontSize="1.3" fontWeight="bold" fontFamily="system-ui">{p.number}</text>
+          stroke="#fff" strokeWidth="0.22" filter="url(#glow)" />
+        <text x={p.x} y={p.y + 0.55} textAnchor="middle" fill="#fff"
+          fontSize="1.4" fontWeight="bold" fontFamily="system-ui">{p.number}</text>
       </g>
     );
   };
