@@ -160,6 +160,45 @@
 .setup-team-card.locked { opacity: 0.75; }
 .setup-team-card.locked select { pointer-events: none; }
 
+/* Squad panel (ao lado das taticas) */
+.squad-panel {
+  background: var(--code-bg); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px; font-size: 12px;
+}
+.squad-section-title {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; opacity: 0.45; margin-bottom: 4px;
+}
+.squad-section { margin-bottom: 6px; }
+.bench-section { border-top: 1px dashed var(--border); padding-top: 6px; }
+.squad-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 3px 6px; border-radius: 4px; border-bottom: 1px solid var(--border);
+}
+.squad-row:last-child { border-bottom: none; }
+.squad-row.clickable { cursor: pointer; transition: background 0.15s; }
+.squad-row.clickable:hover { background: var(--social-bg); }
+.squad-row.bench { opacity: 0.65; font-style: italic; }
+.squad-row.bench.selected {
+  opacity: 1; font-style: normal;
+  background: var(--accent-bg); border: 1px solid var(--accent);
+  border-radius: 4px; margin: -1px;
+}
+.squad-row.bench.clickable:hover { opacity: 0.9; }
+.sq-num { font-weight: 700; min-width: 20px; color: var(--accent); font-size: 11px; }
+.sq-name { flex: 1; color: var(--text-h); font-weight: 500; }
+.sq-pos { font-size: 10px; font-weight: 700; padding: 1px 4px; border-radius: 3px; min-width: 26px; text-align: center; }
+.sq-ovr { font-size: 11px; font-weight: 700; color: var(--accent); }
+
+/* Setup layout columns */
+.setup-layout {
+  display: flex; align-items: flex-start; justify-content: center; gap: 10px; padding: 8px 12px;
+}
+@media (max-width: 960px) { .setup-layout { flex-direction: column; align-items: center; } }
+.setup-left, .setup-right { flex: 1; max-width: 440px; display: flex; flex-direction: column; gap: 8px; }
+.setup-center { display: flex; align-items: center; justify-content: center; padding-top: 40px; }
+.setup-vs-col { display: flex; align-items: center; justify-content: center; }
+
 /* Uniform toggle */
 .uniform-toggle { display: flex; gap: 3px; margin-top: 6px; }
 .uni-btn {
@@ -264,6 +303,22 @@
 }
 .halftime-team select:focus { border-color: var(--accent); }
 .halftime-vs { font-size: 11px; font-weight: 600; opacity: 0.4; padding-top: 16px; }
+
+/* Halftime squad swaps */
+.ht-squad-details { width: 100%; margin-top: 8px; }
+.ht-squad-details summary { font-size: 11px; font-weight: 600; cursor: pointer; opacity: 0.6; padding: 2px 0; }
+.ht-squad-grid { display: flex; gap: 10px; margin-top: 6px; }
+.ht-squad-col { flex: 1; }
+.ht-squad-row {
+  display: flex; align-items: center; gap: 4px; padding: 2px 5px;
+  border-radius: 3px; border-bottom: 1px solid var(--border); font-size: 11px;
+  cursor: pointer; transition: background 0.15s;
+}
+.ht-squad-row:hover { background: var(--social-bg); }
+.ht-squad-row.picked { background: var(--accent-bg); border: 1px solid var(--accent); margin: -1px; }
+.ht-swap-targets { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--border); }
+.ht-squad-row.clickable { opacity: 0.8; }
+.ht-squad-row.clickable:hover { opacity: 1; }
 
 /* =============================================================================
    PITCH

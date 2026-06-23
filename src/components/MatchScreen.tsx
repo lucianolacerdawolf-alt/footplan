@@ -8,6 +8,12 @@ import Pitch from './Pitch';
 
 const REPLAY_MS = 1000;
 
+function playerOvr(p: { attributes: { speed: number; stamina: number; passing: number; finishing: number; tackling: number; dribbling: number; vision: number; positioning: number } }) {
+  return Math.round((p.attributes.speed + p.attributes.stamina + p.attributes.passing +
+    p.attributes.finishing + p.attributes.tackling + p.attributes.dribbling +
+    p.attributes.vision + p.attributes.positioning) / 8);
+}
+
 const FORMATIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'];
 const MENTALITIES: Mentality[] = ['possession', 'counter-attack', 'high-press', 'defensive'];
 const INTENSITIES: Intensity[] = ['low', 'medium', 'high'];
@@ -41,6 +47,16 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [showOverlay, setShowOverlay] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'simulating' | 'halftime' | 'done'>('idle');
   const [started, setStarted] = useState(false);
+
+  // Swap no intervalo
+  const [htHomePick, setHtHomePick] = useState<string | null>(null);
+  const [htAwayPick, setHtAwayPick] = useState<string | null>(null);
+
+  const swapSquad = (team: Team, setTeam: (t: Team) => void, benchIdx: number, starterIdx: number) => {
+    const squad = [...team.squad];
+    [squad[benchIdx], squad[starterIdx]] = [squad[starterIdx], squad[benchIdx]];
+    setTeam({ ...team, squad });
+  };
 
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const eventsRef = useRef<MatchEventType[]>([]);
@@ -259,6 +275,58 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     </select>
                   </div>
                 </div>
+
+                {/* Squad swaps */}
+                <details className="ht-squad-details">
+                  <summary>Substituições</summary>
+                  <div className="ht-squad-grid">
+                    {[['home', home, setHome, htHomePick, setHtHomePick] as const,
+                      ['away', away, setAway, htAwayPick, setHtAwayPick] as const].map(([side, team, setTeam, pick, setPick]) => (
+                      <div key={side} className="ht-squad-col">
+                        <strong style={{ color: side === 'home' ? home.color : away.color, fontSize: 11 }}>
+                          {side === 'home' ? home.abbreviation : away.abbreviation}
+                        </strong>
+                        {team.squad.slice(11).map((p) => {
+                          const isPicked = p.id === pick;
+                          return (
+                            <div key={p.id}
+                              className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+                              onClick={() => {
+                                if (isPicked) { setPick(null); return; }
+                                setPick(p.id);
+                              }}>
+                              <span className="sq-num">#{p.number}</span>
+                              <span className="sq-name">{p.name}</span>
+                              <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                              <span className="sq-ovr">{playerOvr(p)}</span>
+                            </div>
+                          );
+                        })}
+                        {pick && (
+                          <div className="ht-swap-targets">
+                            <span style={{ fontSize: 10, opacity: 0.5 }}>Trocar com:</span>
+                            {team.squad.slice(0, 11).map((p, i) => {
+                              const benchPlayer = team.squad.find(sp => sp.id === pick);
+                              if (!benchPlayer || benchPlayer.position !== p.position) return null;
+                              return (
+                                <div key={p.id} className="ht-squad-row clickable"
+                                  onClick={() => {
+                                    swapSquad(team, setTeam, team.squad.findIndex(sp => sp.id === pick), i);
+                                    setPick(null);
+                                  }}>
+                                  <span className="sq-num">#{p.number}</span>
+                                  <span className="sq-name">{p.name}</span>
+                                  <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                                  <span className="sq-ovr">{playerOvr(p)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </details>
 
                 <button className="simulate-btn" onClick={runSecondHalf}>
                   Iniciar 2º Tempo
