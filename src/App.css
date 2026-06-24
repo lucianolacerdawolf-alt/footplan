@@ -93,11 +93,13 @@
 .team-select-screen {
   max-width: 1050px; margin: 0 auto; padding-bottom: 16px;
   min-height: 100vh;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(45,138,62,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 80%, rgba(59,130,246,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse at 20% 70%, rgba(220,38,38,0.04) 0%, transparent 50%),
-    linear-gradient(180deg, var(--bg) 0%, var(--code-bg) 100%);
+  position: relative;
+}
+.team-select-screen::before {
+  content: '';
+  position: fixed; inset: 0; z-index: -1;
+  background: url('/fundo.png') center/cover no-repeat;
+  opacity: 0.25;
 }
 
 .select-instruction {
