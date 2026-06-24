@@ -5,14 +5,14 @@
 /* --- Header --- */
 .app-header {
   text-align: center;
-  padding: 18px 16px 6px;
+  padding: 12px 16px 2px;
 }
 .app-header h1 {
-  font-size: 34px; margin: 0 0 2px; letter-spacing: -0.5px;
+  font-size: 30px; margin: 0 0 1px; letter-spacing: -0.5px;
   background: linear-gradient(135deg, #3b82f6, #22c55e);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
 }
-.app-header .subtitle { font-size: 12px; color: var(--text); opacity: 0.5; }
+.app-header .subtitle { font-size: 11px; color: var(--text); opacity: 0.5; }
 
 /* =============================================================================
    SETUP SCREEN
@@ -90,7 +90,7 @@
 /* =============================================================================
    TEAM SELECTION SCREEN
    ============================================================================= */
-.team-select-screen { max-width: 900px; margin: 0 auto; padding-bottom: 24px; }
+.team-select-screen { max-width: 1050px; margin: 0 auto; padding-bottom: 16px; }
 
 .select-instruction {
   text-align: center; font-size: 16px; font-weight: 700; color: var(--accent);
@@ -98,8 +98,8 @@
 }
 
 .select-summary {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 8px 12px;
 }
 .select-vs {
   font-size: 18px; font-weight: 800; color: var(--accent); font-family: var(--mono);
@@ -115,22 +115,22 @@
 .select-slot.away-slot.filled { border-color: #ef4444; background: rgba(239,68,68,0.06); }
 .select-slot:hover { border-color: var(--accent); }
 .slot-abbr { font-size: 22px; font-weight: 800; color: var(--text-h); font-family: var(--mono); }
-.slot-crest { width: 50px; height: 50px; flex-shrink: 0; }
+.slot-crest { width: 60px; height: 60px; flex-shrink: 0; }
 .slot-name { font-size: 14px; font-weight: 600; color: var(--text); }
 .slot-ovr { font-size: 12px; font-weight: 700; color: var(--accent); }
 .slot-empty { font-size: 14px; font-weight: 700; opacity: 0.4; letter-spacing: 1px; }
 
 /* Grid de times */
 .team-grid {
-  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
-  padding: 6px 16px; max-width: 880px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px;
+  padding: 4px 8px; max-width: 1000px; margin: 0 auto;
 }
 @media (max-width: 750px) { .team-grid { grid-template-columns: repeat(4, 1fr); } }
 @media (max-width: 550px) { .team-grid { grid-template-columns: repeat(3, 1fr); } }
 
 .team-tile {
   display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 12px 8px; border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 6px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--code-bg); cursor: pointer; transition: all 0.15s;
   font-family: var(--sans);
 }
@@ -140,11 +140,11 @@
 .team-tile.picked-home { border-color: #3b82f6; background: rgba(59,130,246,0.06); }
 .team-tile.picked-away { border-color: #ef4444; background: rgba(239,68,68,0.06); }
 .tile-abbr { font-size: 18px; font-weight: 800; color: var(--text-h); font-family: var(--mono); }
-.tile-crest { width: 40px; height: 40px; flex-shrink: 0; }
+.tile-crest { width: 48px; height: 48px; flex-shrink: 0; }
 .tile-name { font-size: 11px; font-weight: 600; color: var(--text); text-align: center; line-height: 1.2; }
 .tile-ovr { font-size: 12px; font-weight: 700; color: var(--accent); }
 
-.select-action { text-align: center; padding: 16px; }
+.select-action { text-align: center; padding: 10px; }
 
 /* Mode selector */
 .mode-selector {
