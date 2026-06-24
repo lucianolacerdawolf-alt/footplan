@@ -93,13 +93,9 @@
 .team-select-screen {
   max-width: 1050px; margin: 0 auto; padding-bottom: 16px;
   min-height: 100vh;
-  position: relative;
-}
-.team-select-screen::before {
-  content: '';
-  position: fixed; inset: 0; z-index: -1;
-  background: url('/fundo.png') center/cover no-repeat;
-  opacity: 0.25;
+  background: 
+    linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)),
+    url('/fundo.png') center/cover fixed no-repeat;
 }
 
 .select-instruction {
