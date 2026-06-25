@@ -340,13 +340,14 @@ function rngFallback(random: RandomFn, min: number, max: number): number {
 
 // Real football goal timing distribution: few early, peak near halftime + end
 function goalTimingMultiplier(minute: number): number {
-  if (minute <= 4) return 0.70;
-  if (minute <= 10) return 0.90;
-  if (minute <= 30) return 0.98;
-  if (minute <= 45) return 1.05;
-  if (minute <= 55) return 0.95;
-  if (minute <= 75) return 1.02;
-  return 1.08;
+  if (minute <= 4) return 0.50;    // ritmo de estudo
+  if (minute <= 15) return 0.72;   // poucos gols no início
+  if (minute <= 30) return 0.90;
+  if (minute <= 45) return 1.02;   // leve pico pré-intervalo
+  if (minute <= 55) return 0.82;   // volta morna do intervalo
+  if (minute <= 70) return 0.95;
+  if (minute <= 80) return 1.12;   // começa a acelerar
+  return 1.28;                      // pico: desespero tático + fadiga defensiva
 }
 
 // ---------------------------------------------------------------------------

@@ -145,7 +145,7 @@ describe('simularPartida', () => {
     const aggressiveHome = { ...home, strategy: { ...home.strategy, mentality: 'high-press' as const } };
 
     let defensiveShots = 0, aggressiveShots = 0;
-    for (let seed = 0; seed < 30; seed++) {
+    for (let seed = 0; seed < 50; seed++) {
       defensiveShots += simularPartida(defensiveHome, away, seededRng(seed)).homeStats.shots;
       aggressiveShots += simularPartida(aggressiveHome, away, seededRng(seed)).homeStats.shots;
     }
