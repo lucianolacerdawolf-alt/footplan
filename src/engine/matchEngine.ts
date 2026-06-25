@@ -18,7 +18,7 @@
 // O cansaço reduz atributos em até 50%. RNG garante imprevisibilidade.
 // =============================================================================
 
-import type { Team, Player, MatchEvent, MatchResult, PenaltyResult, Mentality, RandomFn } from './types';
+import type { Team, Player, MatchEvent, MatchResult, PenaltyResult, RandomFn } from './types';
 import {
   generateKickoff, generatePossession, generatePass, generateTackle,
   generateAttack, generateGoal, generateMiss, generatePost, generateSave,
@@ -28,121 +28,17 @@ import {
   generateExtraTimeKickoff, generateExtraTimeMidpoint,
   generatePenaltyKick, generatePenaltyWin,
 } from './commentary';
-import { FORMATION_COUNTS } from './constants';
 import {
   CYCLE_MINUTES, FIRST_HALF_CYCLES, TOTAL_CYCLES, ET_HALF_CYCLE, ET_END_CYCLE,
-  MAX_EVENTS_PER_CYCLE, HOME_ADVANTAGE,
-  MENTALITY_MODIFIERS, INTENSITY_FATIGUE, ATK_CHANCE, DEFENSIVE_LINE_MOD, WIDTH_MOD,
+  MAX_EVENTS_PER_CYCLE, ATK_CHANCE,
 } from './matchConfig';
 import {
   effective, getPlayersByPosition, getGoalkeeper, pickRandom, getStarters,
-  makeRng, computeStats,
+  makeRng, computeStats, applyFatigue,
 } from './matchHelpers';
-
-function calculatePossession(
-  teamA: Team, teamB: Team,
-  fatigueA: Map<string, number>, fatigueB: Map<string, number>,
-  cards: Map<string, 'yellow' | 'red'>, random: RandomFn
-): 'A' | 'B' {
-  const rng = makeRng(random);
-  const midsA = getPlayersByPosition(getStarters(teamA, cards), 'MID');
-  const midsB = getPlayersByPosition(getStarters(teamB, cards), 'MID');
-  const modA = MENTALITY_MODIFIERS[teamA.strategy.mentality];
-  const modB = MENTALITY_MODIFIERS[teamB.strategy.mentality];
-  const countA = FORMATION_COUNTS[teamA.strategy.formation]?.MID ?? 3;
-  const countB = FORMATION_COUNTS[teamB.strategy.formation]?.MID ?? 3;
-  const formMultA = countA / 3;
-  const formMultB = countB / 3;
-  const dlA = DEFENSIVE_LINE_MOD[teamA.strategy.defensiveLine].possessionBias;
-  const dlB = DEFENSIVE_LINE_MOD[teamB.strategy.defensiveLine].possessionBias;
-
-  const powerA = midsA.reduce((sum, p) => {
-    const f = fatigueA.get(p.id) ?? 0;
-    return sum + effective(p.attributes.passing, f) * modA.passing
-               + effective(p.attributes.vision, f) * modA.vision;
-  }, 0) * formMultA * dlA * rng(0.7, 1.3);
-
-  const powerB = midsB.reduce((sum, p) => {
-    const f = fatigueB.get(p.id) ?? 0;
-    return sum + effective(p.attributes.passing, f) * modB.passing
-               + effective(p.attributes.vision, f) * modB.vision;
-  }, 0) * formMultB * dlB * rng(0.7, 1.3);
-
-  return powerA >= powerB ? 'A' : 'B';
-}
-
-function resolveAttack(
-  attackingTeam: Team, defendingTeam: Team,
-  fatigueAtk: Map<string, number>, fatigueDef: Map<string, number>,
-  cards: Map<string, 'yellow' | 'red'>, random: RandomFn,
-  isHomeAttack: boolean = false
-): { won: boolean; attacker: Player | null } {
-  const rng = makeRng(random);
-  const modAtk = MENTALITY_MODIFIERS[attackingTeam.strategy.mentality];
-  const modDef = MENTALITY_MODIFIERS[defendingTeam.strategy.mentality];
-  const fwdCount = FORMATION_COUNTS[attackingTeam.strategy.formation]?.FWD ?? 3;
-  const midCount = FORMATION_COUNTS[attackingTeam.strategy.formation]?.MID ?? 3;
-  const defCount = FORMATION_COUNTS[defendingTeam.strategy.formation]?.DEF ?? 4;
-  const atkFormMult = (fwdCount / 3) * 0.7 + (midCount / 3) * 0.3;
-  const defFormMult = defCount / 4;
-  const defLineMult = DEFENSIVE_LINE_MOD[defendingTeam.strategy.defensiveLine].defenseCompact;
-  const defWidthMult = WIDTH_MOD[defendingTeam.strategy.width].defenseNarrow;
-  const moraleMod = 1 + ((attackingTeam.morale ?? 0) / 100);
-  const homeMod = isHomeAttack ? HOME_ADVANTAGE : 1;
-
-  const fwds = getPlayersByPosition(getStarters(attackingTeam, cards), 'FWD');
-  const mids = getPlayersByPosition(getStarters(attackingTeam, cards), 'MID');
-  const attackers = pickRandom([...fwds, ...mids], 3, random);
-  const defenders = getPlayersByPosition(getStarters(defendingTeam, cards), 'DEF');
-  const chosenDef = pickRandom(defenders, 3, random);
-
-  const attackPower = attackers.reduce((sum, p) => {
-    const f = fatigueAtk.get(p.id) ?? 0;
-    return sum + effective(p.attributes.speed, f) * modAtk.speed
-               + effective(p.attributes.dribbling, f) * modAtk.dribbling;
-  }, 0) * atkFormMult * moraleMod * homeMod * rng(0.7, 1.3);
-
-  // GK contribui apenas em resolveShot (não desarma no meio-campo)
-  const defensePower = chosenDef.reduce((sum, p) => {
-    const f = fatigueDef.get(p.id) ?? 0;
-    return sum + effective(p.attributes.tackling, f) * modDef.tackling
-               + effective(p.attributes.positioning, f) * modDef.positioning;
-  }, 0) * defFormMult * defLineMult * defWidthMult * rng(0.7, 1.3);
-
-  return { won: attackPower > defensePower, attacker: attackPower > defensePower ? attackers[0] : null };
-}
-
-function resolveShot(
-  attacker: Player, defendingTeam: Team, attackingStrategy: Mentality,
-  fatigueAtk: Map<string, number>, fatigueDef: Map<string, number>,
-  cards: Map<string, 'yellow' | 'red'>, random: RandomFn
-): { result: 'goal' | 'post' | 'save' | 'miss'; scorer: Player; goalkeeper: Player } {
-  const rng = makeRng(random);
-  const modAtk = MENTALITY_MODIFIERS[attackingStrategy];
-  const gk = getGoalkeeper(getStarters(defendingTeam, cards));
-  const gkFatigue = fatigueDef.get(gk.id) ?? 0;
-  const atkFatigue = fatigueAtk.get(attacker.id) ?? 0;
-
-  const shotPower = effective(attacker.attributes.finishing, atkFatigue) * modAtk.finishing * rng(0.8, 1.2);
-  const gkPower = effective(gk.attributes.positioning, gkFatigue) * rng(0.8, 1.2);
-
-  if (shotPower > gkPower) return { result: 'goal', scorer: attacker, goalkeeper: gk };
-  const ratio = shotPower / gkPower;
-  if (ratio > 0.80) return { result: 'post', scorer: attacker, goalkeeper: gk };
-  if (ratio > 0.50) return { result: 'save', scorer: attacker, goalkeeper: gk };
-  return { result: 'miss', scorer: attacker, goalkeeper: gk };
-}
-
-function applyFatigue(team: Team, fatigueMap: Map<string, number>, cards: Map<string, 'yellow' | 'red'>): void {
-  const baseFatigue = INTENSITY_FATIGUE[team.strategy.intensity];
-  const mod = MENTALITY_MODIFIERS[team.strategy.mentality];
-  for (const player of getStarters(team, cards)) {
-    if (player.position === 'GK') continue;
-    const fatigueGain = baseFatigue * mod.staminaLossMultiplier * (1 - player.attributes.stamina / 200);
-    const current = fatigueMap.get(player.id) ?? 0;
-    fatigueMap.set(player.id, Math.min(100, current + fatigueGain));
-  }
-}
+import { calculatePossession } from './calculatePossession';
+import { resolveAttack } from './resolveAttack';
+import { resolveShot } from './resolveShot';
 
 // ---------------------------------------------------------------------------
 // Estado da partida

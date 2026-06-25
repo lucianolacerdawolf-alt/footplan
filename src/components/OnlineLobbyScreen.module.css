@@ -1,0 +1,165 @@
+.screen {
+  max-width: 720px; margin: 0 auto; padding: 12px 16px 32px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.header {
+  display: flex; align-items: center; gap: 14px;
+}
+.title {
+  font-size: 22px; font-weight: 900; font-family: var(--mono); flex: 1;
+}
+.status {
+  font-size: 12px; font-weight: 700; color: #22c55e; font-family: var(--mono);
+}
+
+.backBtn {
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; font-size: 13px; font-weight: 700; color: var(--text);
+  cursor: pointer; font-family: var(--mono);
+  transition: border-color 0.15s;
+}
+.backBtn:hover { border-color: var(--accent); }
+
+.errorBox {
+  display: flex; align-items: center; gap: 12px;
+  background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px; padding: 12px 16px;
+  font-size: 13px; font-weight: 600; color: #fca5a5;
+}
+.retryBtn {
+  background: transparent; border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 6px;
+  padding: 4px 12px; font-size: 11px; font-weight: 700; color: #fca5a5;
+  cursor: pointer; font-family: var(--mono);
+}
+
+/* Connection phase */
+.connectSection {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.connectCard {
+  background: var(--code-bg); border: 1.5px solid var(--border); border-radius: 14px;
+  padding: 24px; display: flex; flex-direction: column; gap: 12px;
+}
+.cardTitle {
+  font-size: 18px; font-weight: 800; font-family: var(--mono); margin: 0;
+}
+.cardDesc {
+  font-size: 13px; opacity: 0.5; font-weight: 500;
+}
+.joinRow {
+  display: flex; gap: 8px;
+}
+.joinInput {
+  flex: 1; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px;
+  padding: 10px 14px; font-size: 15px; font-family: var(--mono); color: var(--text-h);
+  outline: none;
+}
+.joinInput:focus { border-color: var(--accent); }
+.joinInput::placeholder { opacity: 0.4; }
+
+.primaryBtn {
+  background: var(--accent-bg); border: 1px solid var(--accent-border); border-radius: 8px;
+  padding: 10px 20px; font-size: 14px; font-weight: 800; color: var(--accent);
+  cursor: pointer; font-family: var(--mono);
+  transition: opacity 0.15s;
+}
+.primaryBtn:hover:not(:disabled) { opacity: 0.85; }
+.primaryBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.divider {
+  display: flex; align-items: center; gap: 14px;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+.dividerText {
+  font-size: 11px; font-weight: 700; opacity: 0.35; text-transform: uppercase; font-family: var(--mono);
+}
+
+/* Lobby phase */
+.lobbySection {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.roomBox {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 16px; flex-wrap: wrap;
+}
+.roomLabel { font-size: 12px; font-weight: 700; opacity: 0.5; font-family: var(--mono); }
+.roomCode {
+  font-size: 20px; font-weight: 900; font-family: var(--mono); color: var(--accent);
+  letter-spacing: 1px; user-select: all;
+}
+.copyBtn {
+  background: var(--accent-bg); border: 1px solid var(--accent-border); border-radius: 6px;
+  padding: 4px 12px; font-size: 11px; font-weight: 700; color: var(--accent);
+  cursor: pointer; font-family: var(--mono);
+}
+
+.vsSection {
+  display: flex; align-items: center; gap: 16px;
+  justify-content: center;
+}
+.teamSlot {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  flex: 1; max-width: 200px;
+  background: var(--code-bg); border: 1.5px solid var(--border); border-radius: 12px;
+  padding: 16px 12px; min-height: 100px;
+}
+.teamSlot.filled { border-color: var(--accent-border); }
+.slotLabel {
+  font-size: 10px; font-weight: 700; opacity: 0.4; text-transform: uppercase;
+  font-family: var(--mono); text-align: center;
+}
+.pickedTeam {
+  display: flex; align-items: center; gap: 8px;
+  border-left: 3px solid; padding-left: 8px;
+}
+.teamLogo { width: 40px; height: 40px; object-fit: contain; }
+.teamAbbr { font-size: 16px; font-weight: 900; font-family: var(--mono); color: var(--text-h); }
+.hint { font-size: 11px; opacity: 0.35; font-weight: 500; text-align: center; }
+.vsText { font-size: 18px; font-weight: 900; opacity: 0.2; font-family: var(--mono); }
+
+.teamGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 8px;
+}
+.teamBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 10px; border-radius: 10px;
+  border: 1.5px solid; background: var(--code-bg);
+  cursor: pointer; transition: opacity 0.15s, border-color 0.15s;
+}
+.teamBtn:hover:not(:disabled) { border-color: var(--accent) !important; }
+.teamBtn:disabled { opacity: 0.2; cursor: not-allowed; }
+.teamTaken { opacity: 0.25; }
+.teamLogoSmall { width: 24px; height: 24px; object-fit: contain; }
+.teamBtnAbbr { font-size: 13px; font-weight: 800; font-family: var(--mono); color: var(--text-h); }
+
+.startBtn {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: none; border-radius: 12px; padding: 16px 32px;
+  font-size: 18px; font-weight: 900; color: #fff; cursor: pointer;
+  font-family: var(--mono); transition: opacity 0.15s;
+  align-self: center;
+}
+.startBtn:hover { opacity: 0.9; }
+
+.waitingBox {
+  text-align: center; padding: 20px;
+  font-size: 14px; font-weight: 700; opacity: 0.45; font-family: var(--mono);
+}
+
+@media (max-width: 640px) {
+  .screen { padding: 12px 10px 24px; gap: 12px; }
+  .title { font-size: 18px; }
+  .vsSection { gap: 10px; }
+  .teamSlot { padding: 12px 8px; }
+  .teamGrid { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  .teamBtn { padding: 8px 6px; gap: 4px; }
+  .teamLogoSmall { width: 20px; height: 20px; }
+  .teamBtnAbbr { font-size: 11px; }
+  .startBtn { padding: 14px 24px; font-size: 16px; }
+}

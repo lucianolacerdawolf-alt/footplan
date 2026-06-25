@@ -5,6 +5,7 @@
 
 import type { Team, Player, MatchEvent, Position, RandomFn, TeamStats } from './types';
 import { FORMATION_COUNTS } from './constants';
+import { INTENSITY_FATIGUE, MENTALITY_MODIFIERS } from './matchConfig';
 
 /** Aplica redução por fadiga (0-100): cada 100% de fadiga = 50% do atributo. */
 export function effective(attr: number, fatigue: number): number {
@@ -56,4 +57,15 @@ export function computeStats(events: MatchEvent[], teamId: string, opponentId: s
     if (e.type === 'redCard' && e.teamId === teamId) redCards++;
   }
   return { shots, shotsOnTarget, fouls, yellowCards, redCards };
+}
+
+export function applyFatigue(team: Team, fatigueMap: Map<string, number>, cards: Map<string, 'yellow' | 'red'>): void {
+  const baseFatigue = INTENSITY_FATIGUE[team.strategy.intensity];
+  const mod = MENTALITY_MODIFIERS[team.strategy.mentality];
+  for (const player of getStarters(team, cards)) {
+    if (player.position === 'GK') continue;
+    const fatigueGain = baseFatigue * mod.staminaLossMultiplier * (1 - player.attributes.stamina / 200);
+    const current = fatigueMap.get(player.id) ?? 0;
+    fatigueMap.set(player.id, Math.min(100, current + fatigueGain));
+  }
 }

@@ -29,7 +29,7 @@ body {
   margin: 0;
   background:
     linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)),
-    url('/fundo.png') center/cover fixed no-repeat;
+    var(--bg-image) center/cover fixed no-repeat;
   background-color: var(--bg);
 }
 

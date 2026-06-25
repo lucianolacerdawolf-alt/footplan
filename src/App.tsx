@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import type { Team, MatchResult } from './engine/types';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import type { Team, MatchResult, RandomFn } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { TournamentMode } from './components/TournamentSetupScreen';
 import type { LeagueState, BracketState, BracketMatch, LeagueFixture, PlayableStage } from './engine/tournament';
@@ -13,15 +13,20 @@ import MatchStatsScreen from './components/MatchStatsScreen';
 import TournamentSetupScreen from './components/TournamentSetupScreen';
 import LeagueScreen from './components/LeagueScreen';
 import BracketScreen from './components/BracketScreen';
+import AchievementsScreen from './components/AchievementsScreen';
+import OnlineLobbyScreen from './components/OnlineLobbyScreen';
 import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
 import { usePersistedState } from './hooks/usePersistedState';
+import { useAchievements } from './hooks/useAchievements';
+import type { AchievementEvalInput } from './hooks/useAchievements';
+import { SeededRng } from './engine/rng';
 import Toast from './components/Toast';
 import { premierLeagueTeams } from './data/premierLeague';
 import './App.css';
 
-type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket';
-type MatchContext = 'regular' | 'league' | 'bracket';
+type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
 
 function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -43,6 +48,15 @@ function App() {
 
   const { history, clearHistory } = useMatchHistory();
   const { record: recordH2H } = useH2H();
+  const achievements = useAchievements();
+  const onlineRngRef = useRef<SeededRng | null>(null);
+
+  const evaluateAchievements = useCallback((input: AchievementEvalInput) => {
+    const newlyUnlocked = achievements.evaluate(input);
+    for (const ach of newlyUnlocked) {
+      setToastMsg(`🏆 Conquista desbloqueada: ${ach.name}`);
+    }
+  }, [achievements]);
 
   // ── Partida única ─────────────────────────────────────────────────────────
   const handleTeamsSelected = useCallback((home: Team, away: Team, mode: GameMode) => {
@@ -86,7 +100,34 @@ function App() {
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     setLastResult(result);
     setScreen('stats');
-  }, [recordH2H]);
+    const userIsHome = homeTeam?.id === result.homeTeam.id;
+    const userTeamId = userIsHome ? result.homeTeam.id : result.awayTeam.id;
+    evaluateAchievements({
+      result, userTeamId, matchContext: 'regular',
+    });
+  }, [recordH2H, evaluateAchievements, homeTeam]);
+
+  // ── Online ─────────────────────────────────────────────────────────────────
+  const handleStartOnlineMatch = useCallback((home: Team, away: Team, seed: number) => {
+    const rng = new SeededRng(seed);
+    onlineRngRef.current = rng;
+    setHomeTeam(home);
+    setAwayTeam(away);
+    setMatchContext('online');
+    setIsKnockout(false);
+    setScreen('match');
+  }, []);
+
+  const handleOnlineMatchResult = useCallback((result: MatchResult) => {
+    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
+    setLastResult(result);
+    setScreen('stats');
+    const userIsHome = homeTeam?.id === result.homeTeam.id;
+    const userTeamId = userIsHome ? result.homeTeam.id : result.awayTeam.id;
+    evaluateAchievements({
+      result, userTeamId, matchContext: 'regular',
+    });
+  }, [recordH2H, evaluateAchievements, homeTeam]);
 
   // ── Torneio: setup ────────────────────────────────────────────────────────
   const handleEditBracketTactics = useCallback(() => {
@@ -232,11 +273,16 @@ function App() {
       }
       return injured;
     });
-    setLeagueState({ ...leagueState, fixtures: newFixtures, teams: newTeams });
+    const updatedState: typeof leagueState = { ...leagueState, fixtures: newFixtures, teams: newTeams };
+    setLeagueState(updatedState);
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     setLastResult(result);
     setScreen('stats');
-  }, [leagueState, pendingLeagueFixture, recordH2H]);
+    evaluateAchievements({
+      result, userTeamId: leagueState.userTeamId, matchContext: 'league',
+      leagueState: updatedState,
+    });
+  }, [leagueState, pendingLeagueFixture, recordH2H, evaluateAchievements]);
 
   // ── Copa ──────────────────────────────────────────────────────────────────
   const handlePlayBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
@@ -334,7 +380,11 @@ function App() {
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     setLastResult(result);
     setScreen('stats');
-  }, [bracketState, pendingBracketStage, pendingBracketIdx, recordH2H]);
+    evaluateAchievements({
+      result, userTeamId: bracketState.userTeamId, matchContext: 'bracket',
+      bracketState: finalState,
+    });
+  }, [bracketState, pendingBracketStage, pendingBracketIdx, recordH2H, evaluateAchievements]);
 
   // ── Roteamento pós-stats ──────────────────────────────────────────────────
   const handleContinueTournament = useCallback(() => {
@@ -401,10 +451,14 @@ function App() {
         onSingleMatch={() => setScreen('select')}
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
+        onAchievements={() => setScreen('achievements')}
+        onOnline={() => setScreen('online-lobby')}
       />
     );
   } else if (screen === 'select') {
     content = <TeamSelectionScreen onConfirm={handleTeamsSelected} onTournament={() => setScreen('home')} />;
+  } else if (screen === 'online-lobby') {
+    content = <OnlineLobbyScreen onStartMatch={handleStartOnlineMatch} onBack={goHome} />;
   } else if (screen === 'tournament-setup') {
     content = <TournamentSetupScreen mode={tournamentMode} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
   } else if (screen === 'league' && leagueState) {
@@ -453,17 +507,21 @@ function App() {
       />
     );
   } else if (screen === 'match' && homeTeam && awayTeam) {
+    const onlineRngFn: RandomFn | undefined = matchContext === 'online' && onlineRngRef.current
+      ? () => onlineRngRef.current!.next()
+      : undefined;
     content = (
       <MatchScreen
         homeTeam={homeTeam}
         awayTeam={awayTeam}
-        onBack={() => setScreen('setup')}
-        onViewStats={handleViewStatsFromMatch}
+        onBack={() => setScreen(matchContext === 'online' ? 'online-lobby' : 'setup')}
+        onViewStats={matchContext === 'online' ? handleOnlineMatchResult : handleViewStatsFromMatch}
         isKnockout={isKnockout}
+        rng={onlineRngFn}
       />
     );
   } else if (screen === 'stats' && lastResult) {
-    const isTournament = matchContext !== 'regular';
+    const isTournament = matchContext !== 'regular' && matchContext !== 'online';
     content = (
       <MatchStatsScreen
         result={lastResult}
@@ -474,12 +532,21 @@ function App() {
         continueLabel={matchContext === 'league' ? 'Continuar Premier League' : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
       />
     );
+  } else if (screen === 'achievements') {
+    content = (
+      <AchievementsScreen
+        achievements={achievements.getAll()}
+        onBack={goHome}
+      />
+    );
   } else {
     content = (
       <HomeScreen
         onSingleMatch={() => setScreen('select')}
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
+        onAchievements={() => setScreen('achievements')}
+        onOnline={() => setScreen('online-lobby')}
       />
     );
   }

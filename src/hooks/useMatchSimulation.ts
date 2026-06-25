@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Team, MatchResult, MatchEvent } from '../engine/types';
+import type { Team, MatchResult, MatchEvent, RandomFn } from '../engine/types';
 import { simularPrimeiroTempo, simularSegundoTempo, type MatchState } from '../engine/matchEngine';
 import { cloneTeam } from '../utils/teamUtils';
 import { sfx } from '../utils/audio';
@@ -15,7 +15,7 @@ function combineFatigue(home: Map<string, number>, away: Map<string, number>): R
   return out;
 }
 
-export function useMatchSimulation(initialHomeId: string, speedRef?: { current: number }) {
+export function useMatchSimulation(initialHomeId: string, speedRef?: { current: number }, rng?: RandomFn) {
   const getHalfDuration = () => BASE_HALF_DURATION_MS / (speedRef?.current ?? 1);
   const [result, setResult] = useState<MatchResult | null>(null);
   const [simulating, setSimulating] = useState(false);
@@ -35,6 +35,8 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const hScoreRef = useRef(0);
   const aScoreRef = useRef(0);
   const engineStateRef = useRef<MatchState | null>(null);
+  const rngRef = useRef(rng);
+  rngRef.current = rng;
 
   useEffect(() => () => {
     if (replayRef.current) clearInterval(replayRef.current);
@@ -141,7 +143,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
-      const { state } = simularPrimeiroTempo(cloneTeam(home), cloneTeam(away));
+      const { state } = simularPrimeiroTempo(cloneTeam(home), cloneTeam(away), rngRef.current);
       engineStateRef.current = state;
       setFatigueMap(combineFatigue(state.fatigueHome, state.fatigueAway));
 
@@ -163,7 +165,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
-      const matchResult = simularSegundoTempo(cloneTeam(home), cloneTeam(away), engineStateRef.current!);
+      const matchResult = simularSegundoTempo(cloneTeam(home), cloneTeam(away), engineStateRef.current!, rngRef.current);
       setResult(matchResult);
       setFatigueMap(combineFatigue(engineStateRef.current!.fatigueHome, engineStateRef.current!.fatigueAway));
 

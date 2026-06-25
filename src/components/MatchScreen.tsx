@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult } from '../engine/types';
+import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
@@ -16,9 +16,10 @@ interface Props {
   onBack: () => void;
   onViewStats: (result: MatchResult) => void;
   isKnockout?: boolean;
+  rng?: RandomFn;
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng }: Props) {
   const [home, setHome] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     t.strategy = { ...initialHome.strategy };
@@ -54,7 +55,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
-  } = useMatchSimulation(initialHome.id, speedRef);
+  } = useMatchSimulation(initialHome.id, speedRef, rng);
 
   const showSubToast = (outName: string, inName: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);

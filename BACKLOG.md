@@ -8,19 +8,7 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
-### 🟢 `public/fundo.png` tem 5.5 MB
-
-**Por que sobrou:** depende de ferramenta externa (compressor de imagem).
-
-**O que envolve:**
-- Rodar `cwebp -q 70 public/fundo.png -o public/fundo.webp` (precisa instalar `cwebp`)
-- OU subir em TinyPNG / Squoosh.app, baixar versão otimizada
-- Ajustar `src/index.css` linha 47: trocar `url('/fundo.png')` → `/fundo.webp`
-- Deletar `fundo.png` original
-
-**Posso retomar quando:** você gerar o arquivo otimizado e colocar na pasta. Eu ajusto o CSS e removo o antigo.
-
-**Ganho esperado:** carregamento inicial muito mais rápido (5.5 MB → ~150 KB), especialmente no mobile/3G.
+*(vazio)*
 
 ---
 
@@ -61,24 +49,6 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 **Risco:** alto. Esse arquivo orquestra 8 telas e ~20 transições. Bug aqui quebra navegação inteira.
 
 **Posso retomar quando:** você quiser pagar a dívida técnica. Sugestão: fazer com testes E2E (Playwright) cobrindo os 4 fluxos principais (partida única vs CPU, vs player, liga completa, copa completa) antes de mexer.
-
----
-
-### 🟡 `matchEngine.ts` ainda em 484 linhas
-
-**Por que sobrou:** próxima quebra (`resolveAttack`/`resolveShot`/`calculatePossession`) é cosmética com risco médio.
-
-**O que envolve:**
-- Mover `resolveAttack` (37 linhas) pra `engine/resolveAttack.ts`
-- Mover `resolveShot` (22 linhas) pra `engine/resolveShot.ts`
-- Mover `calculatePossession` (30 linhas) pra `engine/calculatePossession.ts`
-- Mover `applyFatigue` (10 linhas) pra `matchHelpers.ts`
-- Resolver imports — essas funções dependem de `MENTALITY_MODIFIERS`, `FORMATION_COUNTS`, `DEFENSIVE_LINE_MOD`, `WIDTH_MOD`, `effective`, `getStarters`, `getPlayersByPosition`, `getGoalkeeper`, `pickRandom`, `makeRng`
-- matchEngine cairia pra ~280 linhas
-
-**Risco:** baixo-médio. Mover funções puras é seguro, mas pode introduzir bug silencioso (ex: trocar ordem de argumento) que passe nos testes de invariante mas mude estatísticas.
-
-**Posso retomar quando:** quiser. Sugestão: rodar `calibration.test.ts` antes e depois pra confirmar que a média de gols não mudou.
 
 ---
 
@@ -125,23 +95,6 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 📦 Features que ficaram da Fase 5 (não implementadas)
 
-### 🔴 5.1 Conquistas / Achievements
-
-**Por que sobrou:** feature grande, baixa prioridade em jogo single-player.
-
-**O que envolve:**
-- `engine/achievements.ts` com tipo `Achievement { id, name, description, icon, condition: (state) => boolean, unlockedAt?: Date }`
-- Lista hardcoded: "Ganhar Copa invicto", "Hat-trick em uma partida", "10 jogos sem perder", "Ganhar liga", "Marcar 3+ gols em 5 jogos seguidos", "Aplicar 5-0", etc
-- Hook `useAchievements` persistindo em `fp:achievements`
-- Avaliar conquistas após cada partida (em `handleLeagueMatchResult`, `handleBracketMatchResult`, `handleViewStats`)
-- Toast "🏆 Conquista desbloqueada: X" quando desbloqueia
-- Tela `AchievementsScreen` listando todas (desbloqueadas + bloqueadas com hint)
-- Botão "Conquistas" no HomeScreen
-
-**Posso retomar quando:** quiser dar mais loop de engajamento. Provavelmente faz mais sentido depois de implementar temporadas múltiplas (5.2 abaixo).
-
----
-
 ### 🔴 5.2 Mercado de transferências
 
 **Por que sobrou:** precisa de **infraestrutura de temporadas múltiplas** primeiro — hoje a liga acaba e a opção é "Nova Temporada", que zera tudo.
@@ -165,6 +118,9 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - Fase 2: tela pós-jogo (Man of the Match, notas, scorers, cartões)
 - Fase 3: tutorial, lesões, limite de 3 substituições
 - Fase 4: refactor `usePersistedState`, `PlayableStage` centralizado, testes de calibração
+- Fase 5.1: sistema de conquistas (15 achievements, `engine/achievements.ts`, `useAchievements`, `AchievementsScreen`, avaliação pós-partida com toast)
+- Otimização: `fundo.png` 5.5 MB → `fundo.webp` 32 KB (WebP qualidade 70)
+- Refactor `matchEngine.ts`: `resolveAttack`, `resolveShot`, `calculatePossession`, `applyFatigue` extraídos pra módulos próprios (380 linhas finais)
 - Fase 5.3: tema escuro fixo
 - Fase 5.4: ajustes mobile
 - Calibração: gols 1.4 → 2.74 por partida
@@ -186,4 +142,4 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - Mando de campo no engine (+8% no ataque do mandante, teste de regressão incluído)
 - H2H detalhado: `H2HRecord.log` com até 5 jogos completos (data + placar), exibido em `<details>` expansível no SetupScreen
 - 29 testes novos: `tournament.test.ts` (16) e `playerRating.test.ts` (13). Total: 79 testes
-- Refactor parcial do `matchEngine.ts`: constantes movidas pra `matchConfig.ts` (52 linhas), helpers puros pra `matchHelpers.ts` (59 linhas). matchEngine reduziu de 562 → 484 linhas
+- Refactor completo do `matchEngine.ts`: constantes → `matchConfig.ts`, helpers → `matchHelpers.ts`, `resolveAttack`/`resolveShot`/`calculatePossession` → módulos próprios. matchEngine: 562 → 380 linhas
