@@ -124,12 +124,22 @@ export type RandomFn = () => number;
 // =============================================================================
 // RESULTADO DA PARTIDA
 // =============================================================================
+export interface TeamStats {
+  shots: number;
+  shotsOnTarget: number;
+  fouls: number;
+  yellowCards: number;
+  redCards: number;
+}
+
 export interface MatchResult {
   homeTeam: Team;
   awayTeam: Team;
   homeScore: number;
   awayScore: number;
   events: MatchEvent[];
-  homePossession: number;   // percentual de posse do time da casa
+  homePossession: number;
   awayPossession: number;
+  homeStats: TeamStats;
+  awayStats: TeamStats;
 }

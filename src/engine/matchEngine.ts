@@ -18,7 +18,7 @@
 // O cansaço reduz atributos em até 50%. RNG garante imprevisibilidade.
 // =============================================================================
 
-import type { Team, Player, MatchEvent, MatchResult, Mentality, Intensity, Position, DefensiveLine, Width, RandomFn } from './types';
+import type { Team, Player, MatchEvent, MatchResult, TeamStats, Mentality, Intensity, Position, DefensiveLine, Width, RandomFn } from './types';
 import {
   generateKickoff, generatePossession, generatePass, generateTackle,
   generateAttack, generateGoal, generateMiss, generatePost, generateSave,
@@ -202,6 +202,22 @@ function applyFatigue(team: Team, fatigueMap: Map<string, number>, cards: Map<st
     const current = fatigueMap.get(player.id) ?? 0;
     fatigueMap.set(player.id, Math.min(100, current + fatigueGain));
   }
+}
+
+// ---------------------------------------------------------------------------
+// Computa estatísticas de um time a partir dos eventos
+// ---------------------------------------------------------------------------
+function computeStats(events: MatchEvent[], teamId: string, opponentId: string): TeamStats {
+  let shots = 0, shotsOnTarget = 0, fouls = 0, yellowCards = 0, redCards = 0;
+  for (const e of events) {
+    if ((e.type === 'goal' || e.type === 'miss' || e.type === 'post') && e.teamId === teamId) shots++;
+    if (e.type === 'save' && e.teamId === opponentId) { shots++; shotsOnTarget++; }
+    if (e.type === 'goal' && e.teamId === teamId) shotsOnTarget++;
+    if (e.type === 'foul' && e.teamId === opponentId) fouls++;
+    if (e.type === 'yellowCard' && e.teamId === teamId) yellowCards++;
+    if (e.type === 'redCard' && e.teamId === teamId) redCards++;
+  }
+  return { shots, shotsOnTarget, fouls, yellowCards, redCards };
 }
 
 // ---------------------------------------------------------------------------
@@ -398,6 +414,8 @@ export function simularSegundoTempo(home: Team, away: Team, prevState: MatchStat
     events: prevState.events,
     homePossession: totalCycles > 0 ? Math.round((prevState.homePossessionWins / totalCycles) * 100) : 50,
     awayPossession: totalCycles > 0 ? Math.round((prevState.awayPossessionWins / totalCycles) * 100) : 50,
+    homeStats: computeStats(prevState.events, home.id, away.id),
+    awayStats: computeStats(prevState.events, away.id, home.id),
   };
 }
 

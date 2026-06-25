@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width } from '../engine/types';
+import { useState, useEffect, useRef } from 'react';
+import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
 import { useMatchSimulation } from '../hooks/useMatchSimulation';
+import { useMatchHistory } from '../hooks/useMatchHistory';
 import CommentaryFeed from './CommentaryFeed';
 import Pitch from './Pitch';
 import { playerOvr } from '../utils/playerOvr';
@@ -12,9 +13,10 @@ interface Props {
   homeTeam: Team;
   awayTeam: Team;
   onBack: () => void;
+  onViewStats: (result: MatchResult) => void;
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats }: Props) {
   const [home, setHome] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     t.strategy = { ...initialHome.strategy };
@@ -28,6 +30,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   const [htHomePick, setHtHomePick] = useState<string | null>(null);
   const [htAwayPick, setHtAwayPick] = useState<string | null>(null);
+  const [subToast, setSubToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { addMatch } = useMatchHistory();
 
   const {
     result, simulating, replayEvents, currentEvent,
@@ -36,11 +42,26 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     runFirstHalf, runSecondHalf,
   } = useMatchSimulation(initialHome.id);
 
+  const showSubToast = (outName: string, inName: string) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setSubToast(`↕ ${inName} entra · ${outName} sai`);
+    toastTimerRef.current = setTimeout(() => setSubToast(null), 2500);
+  };
+
   const swapSquad = (team: Team, setTeam: (t: Team) => void, benchIdx: number, starterIdx: number) => {
     const squad = [...team.squad];
+    const outPlayer = squad[starterIdx].name;
+    const inPlayer = squad[benchIdx].name;
     [squad[benchIdx], squad[starterIdx]] = [squad[starterIdx], squad[benchIdx]];
     setTeam({ ...team, squad });
+    showSubToast(outPlayer, inPlayer);
   };
+
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
+
+  useEffect(() => {
+    if (phase === 'done' && result) addMatch(result);
+  }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateHome = (s: Strategy) => setHome(prev => ({ ...prev, strategy: s }));
   const updateAway = (s: Strategy) => setAway(prev => ({ ...prev, strategy: s }));
@@ -206,6 +227,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   </div>
                 </details>
 
+                {subToast && (
+                  <div className="sub-toast">{subToast}</div>
+                )}
+
                 <button className="simulate-btn" onClick={() => runSecondHalf(home, away)}>
                   Iniciar 2º Tempo
                 </button>
@@ -215,9 +240,14 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         </div>
 
         {phase !== 'halftime' && (
-          <button className="simulate-btn" onClick={() => runFirstHalf(home, away)} disabled={simulating}>
-            {simulating ? 'Simulando...' : started ? 'Simular Novamente' : 'Simular Partida'}
-          </button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button className="simulate-btn" onClick={() => runFirstHalf(home, away)} disabled={simulating}>
+              {simulating ? 'Simulando...' : started ? 'Simular Novamente' : 'Simular Partida'}
+            </button>
+            {phase === 'done' && result && (
+              <button className="stats-btn" onClick={() => onViewStats(result!)}>📊 Estatísticas</button>
+            )}
+          </div>
         )}
       </div>
 
