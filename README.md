@@ -1,6 +1,8 @@
 # ⚽ FootPlan — Simulador Tático de Futebol
 
-Simulador de partidas com foco em **escolhas estratégicas** e **simulação baseada em dados**. Escolha entre os 20 clubes da Premier League 2025/26, monte suas táticas e dispute partidas avulsas, uma temporada completa de pontos corridos ou uma copa eliminatória — tudo no navegador, sem backend.
+Simulador de partidas com foco em **escolhas estratégicas** e **simulação baseada em dados**. Escolha entre os 20 clubes da Premier League 2025/26, monte suas táticas e dispute partidas avulsas, uma temporada completa de pontos corridos, uma copa eliminatória, ou jogue **online contra um amigo via P2P** — tudo no navegador, sem backend.
+
+🌐 **Jogue agora:** [lucianolacerdawolf-alt.github.io/footplan](https://lucianolacerdawolf-alt.github.io/footplan/)
 
 ---
 
@@ -8,8 +10,9 @@ Simulador de partidas com foco em **escolhas estratégicas** e **simulação bas
 
 | Modo | Descrição |
 |------|-----------|
+| **Jogar Online** | P2P via WebRTC (PeerJS). Crie uma sala (código de 4 letras), compartilhe com um amigo e jogem em tempo real com simulação determinística por seed. |
 | **Partida Única** | Escolha 2 times, configure as táticas e jogue uma partida avulsa (vs CPU ou hot-seat). |
-| **Premier League** | Temporada completa: 20 times, 38 rodadas, 10 jogos por rodada. Você controla seu time e simula os demais. Estado salvo automaticamente. |
+| **Premier League** | Temporada completa: 20 times, 38 rodadas, 10 jogos por rodada. Você controla seu time e simula os demais. Estado salvo automaticamente. Estatísticas da temporada em tempo real. |
 | **FA Cup** | Copa eliminatória de 16 times (você + 15 sorteados). Oitavas → Quartas → Semis → Final. Prorrogação e pênaltis em caso de empate. |
 
 ---
@@ -17,45 +20,80 @@ Simulador de partidas com foco em **escolhas estratégicas** e **simulação bas
 ## ✨ Features Principais
 
 ### Tática e Plantel
-- **5 ajustes táticos** por time: formação (5 opções), mentalidade, intensidade, linha defensiva e amplitude
+- **5 ajustes táticos** com impacto real no motor: formação (5 opções), mentalidade, intensidade, linha defensiva e amplitude
+- **Pré-jogo**: faixa de análise tática comparando seu time com o adversário
+- **Pós-jogo**: breakdown tático mostrando os bônus/penalidades aplicados a cada time
 - **Substituições e escalação manual** no SetupScreen
-- **Tutorial interativo** na primeira partida explicando cada controle
-- **Botão "Editar Táticas"** disponível entre rodadas em Liga e Copa
+- **Substituições durante o 2º tempo**: botão ⏸ pausa o replay e abre o modal de substituição (time do jogador por padrão, com toggle para ver o adversário)
+- **5 substituições** por time (limite oficial da PL)
+- **Tutorial interativo** na primeira partida
+- **Botão "Editar Táticas"** disponível entre rodadas
+
+### Impacto Tático Real
+Cada escolha do jogador afeta diretamente a simulação:
+
+| Configuração | Efeito |
+|---|---|
+| **4-2-3-1** | +15% ataque, +5% posse, -5% defesa |
+| **5-3-2** | +15% defesa, -10% ataque |
+| **Intensidade Alta** | +6% desarmes, mas +40% faltas e +50% lesões |
+| **Linha Alta** | 30% chance de impedimento, mas +12% vulnerável a contra-ataque |
+| **Jogo Aberto** | +8% ataque, defesa menos compacta |
 
 ### Simulação
-- **Slider de velocidade do replay** (1x / 2x / 4x) — preferência persistida
-- **Intervalo interativo** — trocar formação e fazer até **3 substituições** por time
+- **Comentário tático no 1º minuto** explicando o confronto entre as formações
+- **Diagrama de formação** antes do apito inicial
+- **Timing realista de gols**: poucos gols no início (ritmo de estudo), pico nos 80'-90' (desespero tático + fadiga)
+- **Pausa dramática de 2s no gol** com explosão da torcida
+- **Slider de velocidade** (2x / 3x / 4x) com tempos calibrados: 2x=1min30s, 3x=1min, 4x=45s por tempo
+- **Intervalo interativo** — trocar formação e fazer substituições
 - **Prorrogação e pênaltis** nos torneios eliminatórios
-- **CPU varia tática entre rodadas** — adversários não jogam sempre igual
-- **Sons** via Web Audio API (apito inicial/final, gol)
+- **CPU varia tática entre rodadas**
 
-### Gestão de Plantel
-- **Fadiga acumulada** durante a partida, reduzida entre rodadas
-- **Lesões pós-partida** (1-3 rodadas fora) — substituto da mesma posição promovido automaticamente
-- **Sistema de moral** (-10 a +10) — afeta o desempenho ofensivo
+### Motor de Simulação Avançado
+- **Momentum**: gols dão +30 de impulso, decai 8/ciclo; time atrás nos minutos finais ganha urgência (+18% ataques)
+- **Lesões durante a partida**: 8% após faltas + chance aleatória; replay pausa automaticamente
+- **Escanteios → gol de cabeça** (10% de chance)
+- **Pênaltis durante o jogo** (3% das faltas)
+- **Piso defensivo**: todo time tem defesa mínima, evitando goleadas irreais
+- **Compressão de atributos** para evitar distorções em gaps extremos de OVR
+- **Feedback sonoro**: torcida contínua (murmúrio), explosão no gol, reação em falta/cartão/trave
+
+### Som
+- **Torcida ambiente** durante toda a partida (murmúrio procedural via Web Audio API)
+- Explosão no gol, apito de falta, reação a cartões, gasp em bola na trave
+- **Zero arquivos de áudio** — tudo gerado proceduralmente
 
 ### Pós-jogo (MatchStatsScreen)
-- **Man of the Match** destacado com nota colorida
-- **Notas dos jogadores** (escala 4.0–10.0) baseadas em gols, cartões e resultado
+- **Man of the Match** com nota colorida
+- **Notas dos jogadores** (escala 4.0–10.0)
 - **Lista de gols** com marcador e minuto
-- **Histórico de cartões** amarelos e vermelhos
+- **Histórico de cartões**
 - **Estatísticas completas**: posse, chutes, no alvo, faltas, cartões
+- **Breakdown tático**: ficha do que cada time usou e os bônus aplicados
+
+### Conquistas (Achievements)
+- **15 conquistas** desbloqueáveis: Estreia, Hat-Trick, Muralha, Goleada, Virada Épica, Campeão, Rei da Copa, Invencível, Embalado, etc.
+- **Toast** “🏆 Conquista desbloqueada!” ao conquistar
+- **Tela dedicada** mostrando todas (desbloqueadas + bloqueadas)
+- Persistência em `fp:achievements`
 
 ### Hub de Torneio
-- **LeagueScreen**: tabela de classificação em 2 colunas, zonas coloridas (Champions, Europa, Conference, Rebaixamento), badge de jogadores cansados/lesionados, botão "Simular Todos" para outros jogos da rodada
-- **BracketScreen**: mostra apenas a fase atual (Oitavas/Quartas/Semis/Final), botão único **"Simular Outros"** processa todos os jogos não-usuário de uma vez
-- **Histórico H2H**: confrontos passados (V/E/D, gols, últimos 5 jogos) exibidos no SetupScreen
+- **LeagueScreen**: tabela de classificação com zonas coloridas (Champions, Europa, Conference, Rebaixamento), estatísticas da temporada (total de gols, média, % casa/empate, seus gols, clean sheets)
+- **BracketScreen**: mostra apenas a fase atual, botão único "Simular Outros"
+- **Histórico H2H**: confrontos passados exibidos no SetupScreen
 
 ### Persistência
-- Liga e Copa **salvam progresso automaticamente** em localStorage
-- Ao voltar ao menu e clicar no mesmo torneio, **modal pergunta** se quer continuar ou começar nova temporada
-- Toast "✓ Progresso salvo" notifica cada gravação
-- Histórico de partidas (modo avulso), seleção de times e preferências também persistidos
+- Liga e Copa salvam automaticamente em localStorage
+- Modal "Continuar?" ao retornar para um torneio em andamento
+- Toast "✓ Progresso salvo"
+- Histórico de partidas, seleção de times, conquistas e preferências persistidos
 
 ### UI/UX
 - **Tema escuro** como padrão
 - **Mobile-responsive** (breakpoint 640px)
-- **Transição fade** entre telas (180ms)
+- **Transição fade** entre telas
+- Layout compacto com botões próximos aos títulos
 
 ---
 
@@ -63,17 +101,15 @@ Simulador de partidas com foco em **escolhas estratégicas** e **simulação bas
 
 ```
 HomeScreen
+├── Jogar Online → OnlineLobbyScreen → SetupScreen → MatchScreen → MatchStatsScreen
 ├── Partida Única → TeamSelectionScreen → SetupScreen → MatchScreen → MatchStatsScreen
-├── Premier League → [Modal Continuar?] → TournamentSetupScreen
-│                                        ↓
-│                                    SetupScreen → LeagueScreen ⇄ SetupScreen
-│                                                       ↓
-│                                                  MatchScreen → MatchStatsScreen → LeagueScreen
-└── FA Cup → [Modal Continuar?] → TournamentSetupScreen
-                                  ↓
-                              SetupScreen → BracketScreen ⇄ SetupScreen
-                                                 ↓
-                                            MatchScreen → MatchStatsScreen → BracketScreen
+├── Premier League → [Modal Continuar?] → TournamentSetupScreen → SetupScreen → LeagueScreen
+│                                                                          ↓
+│                                               MatchScreen → MatchStatsScreen → LeagueScreen
+├── FA Cup → [Modal Continuar?] → TournamentSetupScreen → SetupScreen → BracketScreen
+│                                                                         ↓
+│                                               MatchScreen → MatchStatsScreen → BracketScreen
+└── Conquistas → AchievementsScreen
 ```
 
 ---
@@ -81,52 +117,34 @@ HomeScreen
 ## ⚙️ Motor de Simulação
 
 ### Estrutura da Partida
-- **1º Tempo**: 45 ciclos de ~1 min cada (0–45')
-- **Intervalo**: overlay para trocar táticas e fazer substituições (max 3)
-- **2º Tempo**: mais 45 ciclos (45'–90')
-- **Prorrogação** (mata-mata em empate): 2 × 7 ciclos (90'–104')
+- **1º Tempo**: 44 ciclos (~2 min cada, 0–88')
+- **Intervalo**: overlay para trocar táticas e fazer substituições
+- **2º Tempo**: mais 44 ciclos (45'–90')
+- **Prorrogação** (mata-mata): 2 × 7 ciclos
 - **Pênaltis** (empate após prorrogação): 5 cobranças + morte súbita
 
-### Cálculo de Gol — Duas Verificações
-
-**1. Ataque vs Defesa**
+### Fórmulas
 ```
-Ataque = Σ(atacantes: Velocidade + Drible) × modMentalidade × moral × RNG(0.7–1.3)
-Defesa = Σ(defensores: Desarme + Posicionamento) × modFormação × linha × amplitude × RNG(0.7–1.3)
+Ataque  = Σ(Velocidade + Drible) × mentalidade × formação × moral × momentum × RNG
+Defesa  = Σ(Desarme + Posicionamento) × formação × linha × amplitude × RNG + BASE_DEFENSE
+Chute   = Finalização × mentalidade × RNG(0.65–1.35)
+DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 ```
 
-**2. Finalização vs Goleiro** (se passou da defesa)
-```
-Chute    = Finalização × modMentalidade × RNG(0.8–1.2)
-DefesaGK = PosicionamentoGK × RNG(0.8–1.2)
-```
-- `Chute > DefesaGK` → **GOL** ⚽
-- `Chute ≤ 80%` → **Na trave** 😱
-- `Chute ≤ 50%` → **Defesa do goleiro** 🛡️
-- Abaixo → **Para fora** ↗️
+### Distribuição de Gols (calibrada com dados reais PL 2025/26)
 
-> **Calibração**: ~2.74 gols/jogo em times equiparados (alinhado com Premier League ~2.85). Travada por teste automatizado.
+| Minutos | Multiplicador | Comportamento |
+|---------|--------------|---------------|
+| 0'-4' | 0.50× | Ritmo de estudo |
+| 4'-15' | 0.72× | Menor incidência |
+| 15'-30' | 0.90× | Aquecendo |
+| 30'-45' | 1.02× | Leve pico pré-intervalo |
+| 45'-55' | 0.82× | Volta morna |
+| 55'-70' | 0.95× | Normal |
+| 70'-80' | 1.12× | Acelerando |
+| **80'-90'** | **1.28×** | **Pico: desespero + fadiga** |
 
-### Modificadores por Mentalidade
-
-| Mentalidade | Passe | Visão | Veloc | Drible | Desarme | Posic | Finaliz | Cansaço |
-|------------|-------|-------|-------|--------|---------|-------|---------|---------|
-| Posse de Bola | +20% | +20% | -10% | 0% | -10% | -5% | +5% | 1.1× |
-| Contra-Ataque | -15% | -5% | +25% | +10% | -15% | -10% | -5% | 0.9× |
-| Pressão Alta | -5% | 0% | +5% | 0% | +20% | +15% | -5% | **1.35×** |
-| Retranca | -10% | -15% | -10% | -15% | +30% | +35% | -20% | 0.7× |
-
-### Sistemas de Plantel
-
-- **Cansaço por intensidade** (por ciclo): Baixa +2, Média +4, Alta +7 (escalado por mentalidade)
-- **Recuperação entre rodadas**: -60 pontos de fadiga (capado em 0)
-- **Lesão pós-partida**: 15% de chance para o time do usuário; jogador sorteado dos titulares fica 1-3 rodadas fora
-- **Moral**: vitória +2, derrota -2 (capado em ±10); multiplica força ofensiva em `1 + (moral/100)`
-
-### Simulação Rápida (CPU vs CPU)
-- `simularPartidaRapida` — executa o motor sem gerar replay visual
-- `simularRodadaAuto` — simula todos os outros jogos de uma rodada
-- `simularBracketMatch` — simula um confronto eliminatório (incluindo prorrogação e pênaltis)
+> **Calibração**: ~2.2–2.7 gols/jogo em times equiparados. Travada por teste automatizado com 1000 partidas.
 
 ---
 
@@ -136,12 +154,13 @@ DefesaGK = PosicionamentoGK × RNG(0.8–1.2)
 |--------|-------|
 | **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Testes** | Vitest 3 (50 testes — engine, calibração, utils) |
-| **Estilo** | CSS Modules para componentes + App.css/index.css globais |
+| **Testes** | Vitest 3 (79 testes) |
+| **Estilo** | CSS Modules + App.css/index.css globais |
 | **Renderização** | SVG (campo tático) + HTML/CSS |
-| **Áudio** | Web Audio API (sem arquivos externos) |
-| **Estado** | React Hooks (useState, useReducer-like patterns via hooks) |
+| **Áudio** | Web Audio API (sons procedurais, zero arquivos) |
+| **Estado** | React Hooks |
 | **Persistência** | localStorage via `useLocalStorage` e `usePersistedState` |
+| **Multiplayer** | PeerJS (WebRTC P2P) |
 
 ---
 
@@ -150,39 +169,51 @@ DefesaGK = PosicionamentoGK × RNG(0.8–1.2)
 ```
 src/
 ├── engine/
-│   ├── types.ts             # Player, Team, Strategy, MatchEvent, MatchResult, PenaltyResult
-│   ├── matchEngine.ts       # Motor de simulação minuto a minuto
-│   ├── tournament.ts        # Liga, Copa, fadiga, lesões, randomização CPU
-│   ├── playerRating.ts      # Cálculo de nota 4-10 e Man of the Match
-│   ├── commentary.ts        # Gerador de frases de comentário
-│   ├── steering.ts          # Movimentação dos jogadores no campo SVG
-│   ├── constants.ts         # FORMATIONS, FORMATION_COUNTS, etc
-│   └── __tests__/           # matchEngine.test.ts + calibration.test.ts
+│   ├── types.ts              # Player, Team, Strategy, MatchEvent, MatchResult
+│   ├── matchEngine.ts        # Motor de simulação com momentum, lesões, timing
+│   ├── matchConfig.ts        # Constantes de tuning (ATK_CHANCE, BASE_DEFENSE, etc)
+│   ├── matchHelpers.ts       # effective(), compressAttr(), getStarters()
+│   ├── resolveAttack.ts      # Resolução ataque vs defesa
+│   ├── resolveShot.ts        # Resolução finalização vs goleiro
+│   ├── calculatePossession.ts# Cálculo de posse de bola
+│   ├── commentary.ts         # Narração (gols, faltas, cartões, lesões, pênaltis)
+│   ├── tacticalCommentary.ts # Comentário tático contextual
+│   ├── tournament.ts         # Liga, Copa, fadiga, lesões, CPU tática
+│   ├── playerRating.ts       # Notas 4-10 e Man of the Match
+│   ├── steering.ts           # Movimentação dos jogadores no SVG
+│   ├── rng.ts                # RNG com seed (SeededRng para multiplayer)
+│   ├── achievements.ts       # 15 conquistas com condições
+│   ├── constants.ts          # FORMATIONS, FORMATION_COUNTS
+│   └── __tests__/            # 4 suítes de teste (79 testes)
 ├── data/
-│   └── premierLeague.ts     # 20 times com elencos completos
+│   └── premierLeague.ts      # 20 times da PL 2025/26 com elencos reais
 ├── components/
-│   ├── HomeScreen           # Menu principal
-│   ├── TeamSelectionScreen  # Seleção partida única
-│   ├── TournamentSetupScreen# Seleção time para torneio
-│   ├── SetupScreen          # Táticas + escalação + H2H
-│   ├── MatchScreen          # Campo, replay, intervalo, slider velocidade
-│   ├── Pitch                # Campo SVG + steering
-│   ├── CommentaryFeed       # Feed de comentários
-│   ├── MatchStatsScreen     # Pós-jogo: MOTM, notas, gols, cartões, stats
-│   ├── LeagueScreen         # Hub Premier League
-│   ├── BracketScreen        # Hub FA Cup
-│   ├── TutorialOverlay      # Tutorial 5 passos (primeira partida)
-│   └── Toast                # Notificações
+│   ├── HomeScreen            # Menu principal
+│   ├── OnlineLobbyScreen     # Criar/entrar sala, seleção de time, código 4 letras
+│   ├── TeamSelectionScreen   # Seleção partida única
+│   ├── TournamentSetupScreen # Seleção time para torneio
+│   ├── SetupScreen           # Táticas + escalação + H2H + análise tática
+│   ├── MatchScreen           # Campo, replay, pausa/subs, intervalo, formação
+│   ├── Pitch                 # Campo SVG com bola animada e steering
+│   ├── CommentaryFeed        # Feed de comentários
+│   ├── MatchStatsScreen      # Pós-jogo: MOTM, notas, gols, cartões, stats, tática
+│   ├── LeagueScreen          # Hub Premier League + stats da temporada
+│   ├── BracketScreen         # Hub FA Cup
+│   ├── AchievementsScreen    # Grade de conquistas
+│   ├── TutorialOverlay       # Tutorial interativo
+│   └── Toast                 # Notificações
 ├── hooks/
-│   ├── useMatchSimulation   # Loop central do replay com speed control
-│   ├── useMatchHistory      # Histórico de partidas
-│   ├── useH2H               # Histórico head-to-head entre times
-│   ├── useLocalStorage      # Hook genérico
-│   └── usePersistedState    # Persistência + callback de pós-mount
+│   ├── useMatchSimulation    # Loop do replay com pause/resume e som
+│   ├── usePeerConnection     # PeerJS: criar sala, conectar, enviar/receber
+│   ├── useAchievements       # Persistência e avaliação de conquistas
+│   ├── useMatchHistory       # Histórico de partidas
+│   ├── useH2H                # Head-to-head entre times
+│   ├── useLocalStorage       # Hook genérico
+│   └── usePersistedState     # Persistência + callback pós-mount
 ├── utils/
-│   ├── teamUtils.ts         # cloneTeam
-│   ├── audio.ts             # sfx: whistleStart, goal, whistleEnd
-│   └── playerOvr.ts         # Cálculo de OVR
+│   ├── teamUtils.ts          # cloneTeam
+│   ├── audio.ts              # sfx: torcida, gol, falta, cartão, trave
+│   └── playerOvr.ts          # Cálculo de OVR
 └── App.tsx / App.css / index.css / main.tsx
 ```
 
@@ -193,22 +224,19 @@ src/
 ```bash
 npm install
 npm run dev      # http://localhost:5173
-npm run build
-npm run test
-npm run preview
+npm run build    # gera dist/
+npm run test     # 79 testes
 ```
 
 ---
 
 ## 🧪 Testes
 
-```bash
-npm run test
-```
-
-**50 testes** cobrindo:
-- `matchEngine.test.ts` — invariantes (placar não negativo, posse soma 100, determinismo, cartões/expulsões)
-- `calibration.test.ts` — 1000-jogo loops garantindo média de gols 2.0–3.5, dominância de OVR alto, faixa de empates 10–45%, distribuição de placares
+**79 testes** cobrindo:
+- `matchEngine.test.ts` — invariantes, determinismo, cartões/expulsões, OVR
+- `calibration.test.ts` — 1000 partidas: média de gols, dominância OVR, empates, mando de campo, distribuição de placares
+- `tournament.test.ts` — fadiga, lesões, calendário, chaveamento, classificação
+- `playerRating.test.ts` — notas, MOTM, artilheiros, cartões
 - `playerOvr.test.ts` — cálculo de overall
 
 ---
@@ -217,21 +245,21 @@ npm run test
 
 | Chave | Conteúdo |
 |---|---|
-| `fp:leagueState` | Estado completo da liga em andamento |
-| `fp:bracketState` | Estado completo da copa em andamento |
+| `fp:leagueState` | Estado completo da liga |
+| `fp:bracketState` | Estado completo da copa |
+| `fp:achievements` | Conquistas desbloqueadas + contador de partidas |
 | `fp:history` | Últimas 20 partidas avulsas |
 | `fp:h2h` | Confrontos diretos entre times |
-| `fp:homeId` / `fp:awayId` | Times selecionados (partida única) |
-| `fp:homeUniform` / `fp:awayUniform` | Uniformes |
+| `fp:homeId` / `fp:awayId` | Times selecionados |
 | `fp:mode` | Modo (cpu/player) |
-| `fp:tutorialSeen` | Flag do tutorial (1 = já visto) |
-| `fp:replaySpeed` | Velocidade do replay (1, 2 ou 4) |
+| `fp:tutorialSeen` | Flag do tutorial |
+| `fp:replaySpeed` | Velocidade do replay (1-4) |
 
 ---
 
 ## 🗺 Backlog
 
-Veja [`BACKLOG.md`](./BACKLOG.md) para o que ainda está pendente: bugs conhecidos, melhorias de gameplay e refactors planejados.
+Veja [`BACKLOG.md`](./BACKLOG.md) para o que ainda está pendente.
 
 ---
 
