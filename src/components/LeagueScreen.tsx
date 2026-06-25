@@ -16,36 +16,49 @@ function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
 }
 
+function getZoneColor(pos: number): string {
+  if (pos <= 4) return '#1d9bf0';
+  if (pos === 5) return '#e85d04';
+  if (pos === 6) return '#38a169';
+  if (pos >= 18) return '#e53e3e';
+  return 'transparent';
+}
+
 function StandingsTable({ standings, teams, userTeamId }: { standings: Standing[]; teams: Team[]; userTeamId: string }) {
   return (
     <table className={styles.table}>
       <thead>
         <tr>
+          <th className={styles.thZone} />
           <th className={styles.thPos}>#</th>
-          <th className={styles.thTeam}>Time</th>
+          <th className={styles.thTeam}>Clube</th>
+          <th className={styles.thPts}>Pts</th>
           <th>J</th><th>V</th><th>E</th><th>D</th>
-          <th>GP</th><th>GC</th><th>SG</th><th className={styles.thPts}>Pts</th>
+          <th>GP</th><th>GC</th><th className={styles.thSg}>SG</th>
         </tr>
       </thead>
       <tbody>
         {standings.map((s, i) => {
+          const pos = i + 1;
           const team = teamById(teams, s.teamId);
           const isUser = s.teamId === userTeamId;
+          const sg = s.goalsFor - s.goalsAgainst;
           return (
             <tr key={s.teamId} className={`${styles.row} ${isUser ? styles.rowUser : ''}`}>
-              <td className={styles.tdPos}>{i + 1}</td>
+              <td className={styles.tdZone} style={{ background: getZoneColor(pos) }} />
+              <td className={styles.tdPos}>{pos}</td>
               <td className={styles.tdTeam}>
                 <img src={team.logoUrl} alt={team.abbreviation} className={styles.tableCrest} />
-                <span style={{ color: team.color }}>{team.abbreviation}</span>
+                <span className={styles.teamName} style={{ color: team.color }}>{team.abbreviation}</span>
               </td>
+              <td className={styles.tdPts}>{s.points}</td>
               <td>{s.played}</td>
               <td>{s.won}</td>
               <td>{s.drawn}</td>
               <td>{s.lost}</td>
               <td>{s.goalsFor}</td>
               <td>{s.goalsAgainst}</td>
-              <td>{s.goalsFor - s.goalsAgainst >= 0 ? '+' : ''}{s.goalsFor - s.goalsAgainst}</td>
-              <td className={styles.tdPts}>{s.points}</td>
+              <td className={sg >= 0 ? styles.sgPos : styles.sgNeg}>{sg > 0 ? '+' : ''}{sg}</td>
             </tr>
           );
         })}
@@ -184,6 +197,12 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
           <div className={styles.sectionLabel}>Classificação</div>
           <div className={styles.standingsScroll}>
             <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
+          </div>
+          <div className={styles.zoneLegend}>
+            <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions League
+            <span className={styles.zoneDot} style={{ background: '#e85d04' }} />Europa League
+            <span className={styles.zoneDot} style={{ background: '#38a169' }} />Conference League
+            <span className={styles.zoneDot} style={{ background: '#e53e3e' }} />Rebaixamento
           </div>
         </div>
       </div>
