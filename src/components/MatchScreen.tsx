@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
@@ -55,7 +55,30 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
+    paused, pauseReplay, resumeReplay, setInjuryCallback,
   } = useMatchSimulation(initialHome.id, speedRef, rng);
+
+  const [injuredIds, setInjuredIds] = useState<string[]>([]);
+  const [injuryToast, setInjuryToast] = useState<string | null>(null);
+  const injuryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleInjury = useCallback((playerId: string) => {
+    setInjuredIds(prev => prev.includes(playerId) ? prev : [...prev, playerId]);
+    const homep = home.squad.find(p => p.id === playerId);
+    const awayp = away.squad.find(p => p.id === playerId);
+    const player = homep ?? awayp;
+    if (player) {
+      if (injuryTimerRef.current) clearTimeout(injuryTimerRef.current);
+      setInjuryToast(`🤕 ${player.name} lesionado! Pausa para substituir.`);
+      injuryTimerRef.current = setTimeout(() => setInjuryToast(null), 5000);
+      pauseReplay();
+    }
+  }, [home.squad, away.squad, pauseReplay]);
+
+  useEffect(() => {
+    setInjuryCallback(handleInjury);
+    return () => setInjuryCallback(null);
+  }, [setInjuryCallback, handleInjury]);
 
   const showSubToast = (outName: string, inName: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -141,12 +164,20 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     <div className="match-screen">
       {/* Topbar */}
       <header className="match-topbar">
-        <button className="back-btn" onClick={onBack} disabled={simulating}>
+        <button className="back-btn" onClick={onBack} disabled={simulating && !paused}>
           &larr; Voltar
         </button>
         <span className="match-title">{home.abbreviation} vs {away.abbreviation}</span>
         <span className="match-formations">{home.strategy.formation} x {away.strategy.formation}</span>
         <div className="speed-control" role="group" aria-label="Velocidade do replay">
+          {phase === 'simulating' && started && (
+            <button
+              className="speed-btn"
+              onClick={paused ? resumeReplay : pauseReplay}
+              title={paused ? 'Retomar' : 'Pausar'}
+              aria-label={paused ? 'Retomar replay' : 'Pausar replay'}
+            >{paused ? '▶' : '⏸'}</button>
+          )}
           {[1, 2, 4].map(s => (
             <button
               key={s}
@@ -359,6 +390,98 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
                 <button className="simulate-btn" onClick={() => runSecondHalf(home, away)}>
                   Iniciar 2º Tempo
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Substitution modal on pause (2nd half) */}
+          {paused && (
+            <div className="halftime-overlay">
+              <div className="halftime-inner">
+                <div className="halftime-title">
+                  {injuryToast ? injuryToast : 'Jogo Pausado'}
+                </div>
+
+                <details className="ht-squad-details" open>
+                  <summary>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span></summary>
+                  <div className="ht-squad-grid">
+                    {([
+                      ['home', home, setHome, htHomePick, setHtHomePick],
+                      ['away', away, setAway, htAwayPick, setHtAwayPick],
+                    ] as const).map(([side, team, setTeam, pick, setPick]) => {
+                      const benchPlayers = team.squad.slice(11);
+                      const starters = team.squad.slice(0, 11);
+                      const pickIdx = team.squad.findIndex(sp => sp.id === pick);
+                      const pickIsBench = pickIdx >= 11;
+                      const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
+                      return (
+                        <div key={side} className="ht-squad-col">
+                          <strong style={{ color: side === 'home' ? home.color : away.color, fontSize: 11 }}>
+                            {side === 'home' ? home.abbreviation : away.abbreviation}
+                          </strong>
+                          <div className="ht-sub-group-label">Titulares</div>
+                          {starters.map((p, i) => {
+                            const isPicked = p.id === pick;
+                            const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
+                            const isInjured = injuredIds.includes(p.id);
+                            return (
+                              <div key={p.id}
+                                className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
+                                style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
+                                onClick={() => {
+                                  if (isInjured && pick && pickIsBench && team.squad[pickIdx].position === p.position) {
+                                    swapSquad(team, setTeam, pickIdx, i, side);
+                                    setPick(null);
+                                    setInjuredIds(prev => prev.filter(id => id !== p.id));
+                                  } else if (pick && pickIsBench && team.squad[pickIdx].position === p.position && !isInjured) {
+                                    swapSquad(team, setTeam, pickIdx, i, side);
+                                    setPick(null);
+                                  } else {
+                                    setPick(isPicked ? null : p.id);
+                                  }
+                                }}>
+                                <span className="sq-num">#{p.number}</span>
+                                <span className="sq-name">{p.name}</span>
+                                <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                                <span className="sq-ovr">{playerOvr(p)}</span>
+                              </div>
+                            );
+                          })}
+                          <div className="ht-sub-group-label">Reservas</div>
+                          {benchPlayers.map((p) => {
+                            const isPicked = p.id === pick;
+                            const bi = team.squad.findIndex(sp => sp.id === p.id);
+                            return (
+                              <div key={p.id}
+                                className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+                                onClick={() => {
+                                  if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
+                                    swapSquad(team, setTeam, pickIdx, bi, side);
+                                    setPick(null);
+                                  } else {
+                                    setPick(isPicked ? null : p.id);
+                                  }
+                                }}>
+                                <span className="sq-num">#{p.number}</span>
+                                <span className="sq-name">{p.name}</span>
+                                <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                                <span className="sq-ovr">{playerOvr(p)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+
+                {subToast && (
+                  <div className="sub-toast">{subToast}</div>
+                )}
+
+                <button className="simulate-btn" onClick={resumeReplay}>
+                  ▶ Retomar Jogo
                 </button>
               </div>
             </div>

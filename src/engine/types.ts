@@ -25,6 +25,8 @@ export type EventType =
   | 'offside'
   | 'yellowCard'
   | 'redCard'
+  | 'injury'
+  | 'penalty'
   | 'halftime'
   | 'fulltime'
   | 'extraTimeKickoff'

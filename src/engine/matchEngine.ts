@@ -27,6 +27,7 @@ import {
   generateYellowCard, generateRedCard, generateContextual,
   generateExtraTimeKickoff, generateExtraTimeMidpoint,
   generatePenaltyKick, generatePenaltyWin,
+  generateInjury, generateMatchPenalty, generateCornerGoal, generateMomentumShift,
 } from './commentary';
 import {
   CYCLE_MINUTES, FIRST_HALF_CYCLES, TOTAL_CYCLES, ET_HALF_CYCLE, ET_END_CYCLE,
@@ -52,6 +53,9 @@ export interface MatchState {
   awayPossessionWins: number;
   events: MatchEvent[];
   cards: Map<string, 'yellow' | 'red'>;
+  momentumHome: number;
+  momentumAway: number;
+  injured: Set<string>;
 }
 
 export function createMatchState(home: Team, away: Team): MatchState {
@@ -65,6 +69,9 @@ export function createMatchState(home: Team, away: Team): MatchState {
     homePossessionWins: 0, awayPossessionWins: 0,
     events: [],
     cards: new Map(),
+    momentumHome: 0,
+    momentumAway: 0,
+    injured: new Set(),
   };
 }
 
@@ -81,6 +88,15 @@ function simularBloco(
   random: RandomFn
 ): void {
   const isHome = (team: Team) => team.id === home.id;
+  const applyMomentum = (scoringSide: 'A' | 'B') => {
+    if (scoringSide === 'A') {
+      state.momentumHome = Math.min(100, state.momentumHome + 30);
+      state.momentumAway = Math.max(-100, state.momentumAway - 30);
+    } else {
+      state.momentumAway = Math.min(100, state.momentumAway + 30);
+      state.momentumHome = Math.max(-100, state.momentumHome - 30);
+    }
+  };
 
   if (includeKickoff) {
     state.events.push({ minute: 0, type: 'kickoff', description: generateKickoff(home.name, away.name), teamId: null });
@@ -91,6 +107,12 @@ function simularBloco(
 
   for (let cycle = startCycle; cycle < endCycle; cycle++) {
     const minute = cycle * CYCLE_MINUTES;
+
+    // Decay momentum toward 0
+    state.momentumHome += state.momentumHome > 0 ? -7 : state.momentumHome < 0 ? 7 : 0;
+    state.momentumAway += state.momentumAway > 0 ? -7 : state.momentumAway < 0 ? 7 : 0;
+    if (Math.abs(state.momentumHome) < 8) state.momentumHome = 0;
+    if (Math.abs(state.momentumAway) < 8) state.momentumAway = 0;
 
     applyFatigue(home, state.fatigueHome, state.cards);
     applyFatigue(away, state.fatigueAway, state.cards);
@@ -114,10 +136,15 @@ function simularBloco(
       cycleEvents++;
     }
 
+    // Momentum bonus for trailing team in last 15 minutes
+    const isLate = minute >= 75;
+    const trailing = (isHome(possTeam) && state.homeScore < state.awayScore) ||
+                     (!isHome(possTeam) && state.awayScore < state.homeScore);
+
     // Passe
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.6) {
-      const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards), 'MID'),
-                        ...getPlayersByPosition(getStarters(possTeam, state.cards), 'FWD')];
+      const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'MID'),
+                        ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
       if (eligible.length >= 2) {
         const [a, b] = pickRandom(eligible, 2, random);
         state.events.push({ minute, type: 'pass', description: generatePass(possTeam.name, a, b), teamId: possTeam.id });
@@ -127,8 +154,8 @@ function simularBloco(
 
     // Desarme
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.45) {
-      const eligible = [...getPlayersByPosition(getStarters(defTeam, state.cards), 'DEF'),
-                        ...getPlayersByPosition(getStarters(defTeam, state.cards), 'MID')];
+      const eligible = [...getPlayersByPosition(getStarters(defTeam, state.cards, state.injured), 'DEF'),
+                        ...getPlayersByPosition(getStarters(defTeam, state.cards, state.injured), 'MID')];
       if (eligible.length > 0) {
         const tackler = pickRandom(eligible, 1, random)[0];
         state.events.push({ minute, type: 'tackle', description: generateTackle(defTeam.name, tackler), teamId: defTeam.id });
@@ -139,9 +166,12 @@ function simularBloco(
     // Ataque
     const atkFatigue = possessionWinner === 'A' ? state.fatigueHome : state.fatigueAway;
     const defFatigue = possessionWinner === 'A' ? state.fatigueAway : state.fatigueHome;
+    const atkMomentum = isHome(possTeam) ? state.momentumHome : state.momentumAway;
+    const momentumMod = 1 + (atkMomentum / 250) + (trailing && isLate ? 0.08 : 0);
+    const urgencyMod = trailing && isLate ? 1.2 : 1;
 
-    if (random() < ATK_CHANCE[possTeam.strategy.mentality]) {
-      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A');
+    if (random() < ATK_CHANCE[possTeam.strategy.mentality] * urgencyMod) {
+      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A', momentumMod, state.injured);
 
       if (atkResult.won && atkResult.attacker) {
         if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.18 && defTeam.strategy.defensiveLine === 'high') {
@@ -162,6 +192,12 @@ function simularBloco(
           if (shot.result === 'goal') {
             state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id, scorer: shot.scorer.name });
             if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
+            applyMomentum(possessionWinner);
+            // Momentum narration (30% chance)
+            if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.3) {
+              state.events.push({ minute, type: 'possession', description: generateMomentumShift(possTeam.name), teamId: possTeam.id });
+              cycleEvents++;
+            }
           } else if (shot.result === 'post') {
             state.events.push({ minute, type: 'post', description: generatePost(possTeam.name, shot.scorer), teamId: possTeam.id });
           } else if (shot.result === 'save') {
@@ -172,9 +208,30 @@ function simularBloco(
           cycleEvents++;
         }
 
+        // Corner (after save or miss)
         if (cycleEvents < MAX_EVENTS_PER_CYCLE && (shot.result === 'save' || shot.result === 'miss') && random() < 0.4) {
           state.events.push({ minute, type: 'corner', description: generateCorner(possTeam.name), teamId: possTeam.id });
           cycleEvents++;
+
+          // Corner → goal chance (10%)
+          if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.10) {
+            const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'DEF'),
+                              ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
+            if (eligible.length > 0) {
+              const header = pickRandom(eligible, 1, random)[0];
+              const gk = getGoalkeeper(getStarters(defTeam, state.cards, state.injured));
+              const headerPower = effective(header.attributes.positioning, atkFatigue.get(header.id) ?? 0) * 1.2 +
+                                  effective(header.attributes.finishing, atkFatigue.get(header.id) ?? 0) * 0.5;
+              const gkPower = effective(gk.attributes.positioning, defFatigue.get(gk.id) ?? 0) * rngFallback(random, 0.8, 1.2);
+              if (headerPower * rngFallback(random, 0.7, 1.3) > gkPower) {
+                const newScore = `${state.homeScore}-${state.awayScore}`;
+                state.events.push({ minute, type: 'goal', description: generateCornerGoal(possTeam.name, header, minute, newScore), teamId: possTeam.id, scorer: header.name });
+                if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
+                applyMomentum(possessionWinner);
+                cycleEvents++;
+              }
+            }
+          }
         }
       }
     }
@@ -183,12 +240,45 @@ function simularBloco(
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.15) {
       const foulerTeam = random() < 0.5 ? home : away;
       const otherTeam  = foulerTeam.id === home.id ? away : home;
-      const eligible = getPlayersByPosition(getStarters(foulerTeam, state.cards), 'DEF');
+      const eligible = getPlayersByPosition(getStarters(foulerTeam, state.cards, state.injured), 'DEF');
       if (eligible.length > 0) {
         const fouler = pickRandom(eligible, 1, random)[0];
         state.events.push({ minute, type: 'foul', description: generateFoul(foulerTeam.name, fouler), teamId: otherTeam.id });
         cycleEvents++;
 
+        // Foul → penalty chance (3%)
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.03) {
+          const penaltyTakers = [...getPlayersByPosition(getStarters(otherTeam, state.cards, state.injured), 'FWD'),
+                                  ...getPlayersByPosition(getStarters(otherTeam, state.cards, state.injured), 'MID')]
+            .sort((a, b) => (b.attributes.finishing + b.attributes.positioning) - (a.attributes.finishing + a.attributes.positioning));
+          if (penaltyTakers.length > 0) {
+            const taker = penaltyTakers[0];
+            const gk = getGoalkeeper(getStarters(foulerTeam, state.cards, state.injured));
+            const shotPwr = effective(taker.attributes.finishing, state.fatigueHome.get(taker.id) ?? state.fatigueAway.get(taker.id) ?? 0) * rngFallback(random, 0.7, 1.3);
+            const savePwr = effective(gk.attributes.positioning, state.fatigueHome.get(gk.id) ?? state.fatigueAway.get(gk.id) ?? 0) * rngFallback(random, 0.8, 1.2);
+            const scored = shotPwr * 1.35 > savePwr;
+            state.events.push({ minute, type: 'penalty', description: generateMatchPenalty(otherTeam.name, taker, scored, gk), teamId: otherTeam.id, scorer: taker.name });
+            if (scored) {
+              if (isHome(otherTeam)) state.homeScore++; else state.awayScore++;
+              applyMomentum(isHome(otherTeam) ? 'A' : 'B');
+            }
+            cycleEvents++;
+          }
+        }
+
+        // Injury chance after foul (8%)
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.08) {
+          const vicTeam = foulerTeam.id === home.id ? away : home;
+          const victims = getStarters(vicTeam, state.cards, state.injured).filter(p => p.position !== 'GK');
+          if (victims.length > 0) {
+            const victim = victims[Math.floor(random() * victims.length)];
+            state.injured.add(victim.id);
+            state.events.push({ minute, type: 'injury', description: generateInjury(vicTeam.name, victim), teamId: vicTeam.id, playerId: victim.id });
+            cycleEvents++;
+          }
+        }
+
+        // Cards
         const existingCard = state.cards.get(fouler.id);
         if (!existingCard && random() < 0.25 && cycleEvents < MAX_EVENTS_PER_CYCLE) {
           state.events.push({ minute, type: 'yellowCard', description: generateYellowCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
@@ -201,11 +291,27 @@ function simularBloco(
         }
       }
     }
+
+    // Random injury (0.3% per cycle)
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.003) {
+      const unlucky = random() < 0.5 ? home : away;
+      const victims = getStarters(unlucky, state.cards, state.injured).filter(p => p.position !== 'GK');
+      if (victims.length > 0) {
+        const victim = victims[Math.floor(random() * victims.length)];
+        state.injured.add(victim.id);
+        state.events.push({ minute, type: 'injury', description: generateInjury(unlucky.name, victim), teamId: unlucky.id, playerId: victim.id });
+        cycleEvents++;
+      }
+    }
   }
 
   if (includeHalftime) {
     state.events.push({ minute: 45, type: 'halftime', description: generateHalftime(state.homeScore, state.awayScore), teamId: null });
   }
+}
+
+function rngFallback(random: RandomFn, min: number, max: number): number {
+  return min + random() * (max - min);
 }
 
 // ---------------------------------------------------------------------------
@@ -247,17 +353,17 @@ export function simularPartida(home: Team, away: Team, random: RandomFn = Math.r
 // ---------------------------------------------------------------------------
 // Pênaltis
 // ---------------------------------------------------------------------------
-function simularPenaltisInterno(home: Team, away: Team, cards: Map<string, 'yellow' | 'red'>, random: RandomFn): PenaltyResult {
+function simularPenaltisInterno(home: Team, away: Team, cards: Map<string, 'yellow' | 'red'>, injured: Set<string>, random: RandomFn): PenaltyResult {
   const rng = makeRng(random);
   const getShooters = (team: Team): Player[] =>
-    [...getStarters(team, cards)]
+    [...getStarters(team, cards, injured)]
       .filter(p => p.position !== 'GK')
       .sort((a, b) => b.attributes.finishing - a.attributes.finishing);
 
   const homeShooters = getShooters(home);
   const awayShooters = getShooters(away);
-  const homeGK = getGoalkeeper(getStarters(home, cards));
-  const awayGK = getGoalkeeper(getStarters(away, cards));
+  const homeGK = getGoalkeeper(getStarters(home, cards, injured));
+  const awayGK = getGoalkeeper(getStarters(away, cards, injured));
 
   const kicks: Array<{ teamId: string; scored: boolean }> = [];
   let homeScore = 0, awayScore = 0;
@@ -323,7 +429,7 @@ export function resolveKnockoutTiebreak(
 
   if (state.homeScore !== state.awayScore) return { wentToExtraTime: true, extraTimeHomeScore, extraTimeAwayScore };
 
-  const penaltyResult = simularPenaltisInterno(home, away, state.cards, random);
+  const penaltyResult = simularPenaltisInterno(home, away, state.cards, state.injured, random);
   const winner = penaltyResult.winner === 'home' ? home : away;
   const loser = penaltyResult.winner === 'home' ? away : home;
   state.events.push({
@@ -333,7 +439,7 @@ export function resolveKnockoutTiebreak(
   });
   penaltyResult.kicks.forEach((kick, idx) => {
     const teamObj = kick.teamId === home.id ? home : away;
-    const shooters = [...getStarters(teamObj, state.cards)]
+    const shooters = [...getStarters(teamObj, state.cards, state.injured)]
       .filter(p => p.position !== 'GK')
       .sort((a, b) => b.attributes.finishing - a.attributes.finishing);
     const shooter = shooters[Math.floor(idx / 2) % shooters.length];

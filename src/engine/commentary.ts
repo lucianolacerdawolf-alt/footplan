@@ -240,6 +240,51 @@ export function generateRedCard(teamName: string, player: Player): string {
 }
 
 // =============================================================================
+// Lesão / Pênalti em jogo / Escanteio perigoso
+// =============================================================================
+
+export function generateInjury(teamName: string, player: Player): string {
+  return rng([
+    `🤕 ${player.name} (${teamName}) sentiu! Parece lesão muscular.`,
+    `🩹 Problema para ${teamName}! ${player.name} caiu no gramado e pede atendimento.`,
+    `⚠️ ${player.name} (${teamName}) não tem condições de continuar. Será substituído.`,
+    `🤕 Jogo parado! ${player.name} torceu o tornozelo e precisa sair.`,
+  ]);
+}
+
+export function generateMatchPenalty(teamName: string, player: Player, scored: boolean, keeper: Player): string {
+  return scored
+    ? rng([
+        `⚽ PÊNALTI! ${player.name} converte para ${teamName}! ${keeper.name} não alcançou.`,
+        `⚽ É GOL DE PÊNALTI! ${player.name} bate com categoria e desloca ${keeper.name}.`,
+        `⚽ ${player.name} não tremeu! Pênalti bem batido para ${teamName}.`,
+      ])
+    : rng([
+        `❌ Pênalti desperdiçado! ${keeper.name} defende a cobrança de ${player.name}!`,
+        `🧤 ${keeper.name} pega o pênalti de ${player.name}! ${teamName} perde chance de ouro.`,
+        `❌ ${player.name} bate mal e ${keeper.name} defende com segurança.`,
+        `😱 ${player.name} isola o pênalti! Por cima do travessão.`,
+      ]);
+}
+
+export function generateCornerGoal(teamName: string, scorer: Player, _minute: number, score: string): string {
+  return rng([
+    `⚽ GOL DE CABEÇA! ${scorer.name} sobe mais alto e marca para ${teamName}! ${score}`,
+    `⚽ GOOOOOOL! Após escanteio, ${scorer.name} desvia e balança as redes! ${score}`,
+    `⚽ Bola parada fatal! ${scorer.name} (${teamName}) aproveita o escanteio e marca! ${score}`,
+    `⚽ GOL! ${scorer.name} cabeceia certeiro após cobrança de escanteio! ${score}`,
+  ]);
+}
+
+export function generateMomentumShift(teamName: string): string {
+  return rng([
+    `${teamName} cresceu no jogo após o lance anterior!`,
+    `A torcida vai à loucura! ${teamName} embalado no momento.`,
+    `${teamName} sente o momento e parte pra cima com tudo.`,
+  ]);
+}
+
+// =============================================================================
 // Comentários contextuais (momento da partida)
 // =============================================================================
 

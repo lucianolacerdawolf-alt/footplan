@@ -29,6 +29,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const [clockSeconds, setClockSeconds] = useState(0);
   const [fatigueMap, setFatigueMap] = useState<Record<string, number>>({});
   const [expelledIds, setExpelledIds] = useState<string[]>([]);
+  const [paused, setPaused] = useState(false);
 
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,10 +38,22 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const engineStateRef = useRef<MatchState | null>(null);
   const rngRef = useRef(rng);
   rngRef.current = rng;
+  const pausedRef = useRef(false);
+  const injuryCbRef = useRef<((playerId: string) => void) | null>(null);
 
   useEffect(() => () => {
     if (replayRef.current) clearInterval(replayRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
+
+  const pauseReplay = useCallback(() => {
+    pausedRef.current = true;
+    setPaused(true);
+  }, []);
+
+  const resumeReplay = useCallback(() => {
+    pausedRef.current = false;
+    setPaused(false);
   }, []);
 
   const startReplay = useCallback((
@@ -49,14 +62,17 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     initialHomeScore: number,
     initialAwayScore: number,
     onHalftime: () => void,
-    onDone: () => void
+    onDone: () => void,
   ) => {
     if (replayRef.current) clearInterval(replayRef.current);
+    pausedRef.current = false;
+    setPaused(false);
 
     const queue = [...events];
     const startTime = Date.now();
     const halfDurationMs = getHalfDuration();
     const maxSec = halfOffsetSec + HALF_SECONDS;
+    let pauseAccumMs = 0;
 
     hScoreRef.current = initialHomeScore;
     aScoreRef.current = initialAwayScore;
@@ -72,7 +88,12 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     }
 
     replayRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime;
+      if (pausedRef.current) {
+        pauseAccumMs += CLOCK_TICK_MS;
+        return;
+      }
+
+      const elapsed = Date.now() - startTime - pauseAccumMs;
       const inGameSec = Math.min(HALF_SECONDS, Math.floor((elapsed / halfDurationMs) * HALF_SECONDS));
       const effectiveSec = halfOffsetSec + inGameSec;
 
@@ -108,8 +129,20 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
           sfx.goal();
         }
 
+        if (evt.type === 'penalty' && evt.scorer) {
+          if (evt.description.includes('⚽')) {
+            if (evt.teamId === initialHomeId) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
+            else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
+            sfx.goal();
+          }
+        }
+
         if (evt.type === 'redCard' && evt.playerId) {
           setExpelledIds(prev => [...prev, evt.playerId!]);
+        }
+
+        if (evt.type === 'injury' && evt.playerId) {
+          injuryCbRef.current?.(evt.playerId);
         }
 
         setCurrentEvent(evt);
@@ -186,10 +219,15 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     }, 150);
   }, [startReplay]);
 
+  const setInjuryCallback = useCallback((cb: ((playerId: string) => void) | null) => {
+    injuryCbRef.current = cb;
+  }, []);
+
   return {
     result, simulating, replayEvents, currentEvent,
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
+    paused, pauseReplay, resumeReplay, setInjuryCallback,
   };
 }

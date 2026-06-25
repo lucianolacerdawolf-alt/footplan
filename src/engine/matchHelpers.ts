@@ -32,10 +32,10 @@ export const makeRng = (random: RandomFn) => (min: number, max: number) => min +
  * Retorna os titulares de um time conforme a formação,
  * filtrando jogadores expulsos (cards.get(id) === 'red').
  */
-export function getStarters(team: Team, cards?: Map<string, 'yellow' | 'red'>): Player[] {
+export function getStarters(team: Team, cards?: Map<string, 'yellow' | 'red'>, injured?: Set<string>): Player[] {
   const counts = FORMATION_COUNTS[team.strategy.formation] ?? { DEF: 4, MID: 3, FWD: 3 };
   const starters: Player[] = [];
-  const active = (p: Player) => !cards || cards.get(p.id) !== 'red';
+  const active = (p: Player) => (!cards || cards.get(p.id) !== 'red') && (!injured || !injured.has(p.id));
   const gk = getPlayersByPosition(team.squad, 'GK').filter(active);
   starters.push(...gk.slice(0, 1));
   for (const pos of ['DEF', 'MID', 'FWD'] as const) {
