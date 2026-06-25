@@ -182,7 +182,9 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
         {/* Coluna direita — tabela */}
         <div className={styles.standingsCol}>
           <div className={styles.sectionLabel}>Classificação</div>
-          <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
+          <div className={styles.standingsScroll}>
+            <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
+          </div>
         </div>
       </div>
     </div>
