@@ -5,6 +5,8 @@ import { cloneTeam } from '../utils/teamUtils';
 import { sfx } from '../utils/audio';
 
 const BASE_HALF_DURATION_MS = 120000;
+const CLOCK_TICK_MS = 50;
+const HALF_SECONDS = 45 * 60;
 const SPEED_DURATIONS: Record<number, number> = {
   1: 120000,   // 2 min
   2: 90000,    // 1 min 30s
@@ -22,7 +24,6 @@ function combineFatigue(home: Map<string, number>, away: Map<string, number>): R
 }
 
 export function useMatchSimulation(initialHomeId: string, speedRef?: { current: number }, rng?: RandomFn) {
-  const getHalfDuration = () => SPEED_DURATIONS[speedRef?.current ?? 1] ?? BASE_HALF_DURATION_MS;
   const [result, setResult] = useState<MatchResult | null>(null);
   const [simulating, setSimulating] = useState(false);
   const [replayEvents, setReplayEvents] = useState<MatchEvent[]>([]);
@@ -76,7 +77,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     const queue = [...events];
     const startTime = Date.now();
-    const halfDurationMs = getHalfDuration();
     const maxSec = halfOffsetSec + HALF_SECONDS;
     let pauseAccumMs = 0;
 
@@ -100,7 +100,8 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
       }
 
       const elapsed = Date.now() - startTime - pauseAccumMs;
-      const inGameSec = Math.min(HALF_SECONDS, Math.floor((elapsed / halfDurationMs) * HALF_SECONDS));
+      const duration = SPEED_DURATIONS[speedRef?.current ?? 1] ?? BASE_HALF_DURATION_MS;
+      const inGameSec = Math.min(HALF_SECONDS, Math.floor((elapsed / duration) * HALF_SECONDS));
       const effectiveSec = halfOffsetSec + inGameSec;
 
       setClockSeconds(effectiveSec);
@@ -171,7 +172,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
         setReplayEvents(prev => [...prev, evt]);
       }
 
-      if (elapsed >= halfDurationMs) {
+      if (elapsed >= duration) {
         if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
         setClockSeconds(maxSec);
         onDone();
