@@ -10,7 +10,7 @@ Simulador de partidas de futebol com foco em **escolhas estratégicas** e **simu
 |------|-----------|
 | **Partida Única** | Escolha 2 times, configure as táticas e jogue uma partida avulsa. |
 | **Premier League** | Temporada completa com os 20 times em pontos corridos (38 rodadas × 10 jogos). Você controla seu time e simula os demais. |
-| **FA Cup** | Copa eliminatória com 8 times (você + 7 sorteados). Quartas de Final → Semifinais → Final. Empates vão para prorrogação e pênaltis. |
+| **FA Cup** | Copa eliminatória com 16 times (você + 15 sorteados). Oitavas → Quartas → Semifinais → Final. Empates vão para prorrogação e pênaltis. |
 
 ---
 
@@ -25,14 +25,14 @@ HomeScreen
 
 | Tela | Descrição |
 |------|-----------|
-| **HomeScreen** | Menu principal com 3 modos de jogo. |
-| **TeamSelectionScreen** | Escolha 2 times. Toggle HOME/AWAY de uniforme. Conflito de cores detectado automaticamente. Seleção persistida via localStorage. |
-| **TournamentSetupScreen** | Escolha seu time para Premier League ou FA Cup. Mesmo visual da tela de seleção. |
+| **HomeScreen** | Menu principal com 3 modos de jogo. Navegação via botão topo-esquerdo (← Menu Principal) em todas as telas. |
+| **TeamSelectionScreen** | Escolha 2 times. Toggle HOME/AWAY de uniforme. Conflito de cores detectado automaticamente. Botão "Montar Táticas" aparece no topo-direito ao selecionar os dois times. Seleção persistida via localStorage. |
+| **TournamentSetupScreen** | Escolha seu time para Premier League ou FA Cup. Mesmo visual da tela de seleção. Botão de início aparece no topo-direito ao selecionar o time. |
 | **SetupScreen** | Formação, mentalidade e intensidade para cada time. Exibe elenco completo com OVR por posição. |
 | **MatchScreen** | Campo SVG animado, placar, relógio, feed de comentários, intervalo interativo com troca de táticas. Suporte a prorrogação e pênaltis nos modos eliminatórios. |
-| **MatchStatsScreen** | Estatísticas completas (posse, chutes, faltas, cartões). Histórico de partidas (modo partida única). |
-| **LeagueScreen** | Hub da temporada: jogo do usuário, outros jogos, "Simular Todos", tabela de classificação colapsável. |
-| **BracketScreen** | Hub da copa: chaveamento completo com todos os confrontos, placar e indicador de vencedor por fase. |
+| **MatchStatsScreen** | Estatísticas completas (posse, chutes, faltas, cartões). Histórico de partidas (modo partida única). Botão "Continuar" retorna ao hub do torneio; "Escolher Times" apenas em partida única. |
+| **LeagueScreen** | Hub da temporada: layout 2 colunas — jogos à esquerda (Jogar ou Simular para o seu jogo, Simular Todos para os demais), tabela de classificação à direita com scroll. |
+| **BracketScreen** | Hub da copa: chaveamento completo (Oitavas, Quartas, Semis, Final) com todos os confrontos, placar, indicador de vencedor e botões Jogar/Simular por fase. |
 
 ---
 
@@ -97,8 +97,8 @@ DefesaGK = PosicionamentoGK × RNG(0.8–1.2)
 - Classificação de desempate: pontos → saldo de gols → gols pró
 
 ### FA Cup (Eliminatória)
-- 8 times (usuário + 7 sorteados da Premier League)
-- Fases: Quartas de Final (4 jogos) → Semifinais (2 jogos) → Final (1 jogo)
+- 16 times (usuário + 15 sorteados da Premier League)
+- Fases: Oitavas de Final (8 jogos) → Quartas de Final (4 jogos) → Semifinais (2 jogos) → Final (1 jogo)
 - Empates resolvidos com prorrogação (2 × 7 ciclos) e, se necessário, pênaltis
 - Progresso automático para a próxima fase quando todos os jogos são concluídos
 
