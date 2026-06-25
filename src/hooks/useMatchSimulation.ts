@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Team, MatchResult, MatchEvent } from '../engine/types';
 import { simularPrimeiroTempo, simularSegundoTempo, type MatchState } from '../engine/matchEngine';
-import { cloneTeam } from '../engine/mockData';
+import { cloneTeam } from '../utils/teamUtils';
 
 const HALF_DURATION_MS = 120000;
 const CLOCK_TICK_MS = 50;

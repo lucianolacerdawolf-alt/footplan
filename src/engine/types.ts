@@ -13,11 +13,18 @@ export type Intensity = 'low' | 'medium' | 'high';
 export type EventType =
   | 'kickoff'
   | 'possession'
+  | 'pass'
+  | 'tackle'
   | 'attack'
   | 'goal'
   | 'miss'
   | 'post'
   | 'save'
+  | 'corner'
+  | 'foul'
+  | 'offside'
+  | 'yellowCard'
+  | 'redCard'
   | 'halftime'
   | 'fulltime';
 
@@ -108,7 +115,11 @@ export interface MatchEvent {
   type: EventType;
   description: string;
   teamId: string | null; // time que gerou o evento (null para eventos neutros)
+  playerId?: string;     // jogador envolvido (preenchido em redCard/yellowCard)
 }
+
+/** Função de aleatoriedade injetável — permite simulações determinísticas */
+export type RandomFn = () => number;
 
 // =============================================================================
 // RESULTADO DA PARTIDA

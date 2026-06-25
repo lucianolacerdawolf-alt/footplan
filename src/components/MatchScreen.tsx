@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
-import { cloneTeam } from '../engine/mockData';
+import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
 import { useMatchSimulation } from '../hooks/useMatchSimulation';
 import CommentaryFeed from './CommentaryFeed';

@@ -1,6 +1,6 @@
 import type { Team } from '../engine/types';
 import { premierLeagueTeams } from '../data/premierLeague';
-import { cloneTeam } from '../engine/mockData';
+import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 

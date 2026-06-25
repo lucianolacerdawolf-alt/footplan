@@ -18,7 +18,7 @@
 // O cansaço reduz atributos em até 50%. RNG garante imprevisibilidade.
 // =============================================================================
 
-import type { Team, Player, MatchEvent, MatchResult, Mentality, Intensity, Position, DefensiveLine, Width } from './types';
+import type { Team, Player, MatchEvent, MatchResult, Mentality, Intensity, Position, DefensiveLine, Width, RandomFn } from './types';
 import {
   generateKickoff, generatePossession, generatePass, generateTackle,
   generateAttack, generateGoal, generateMiss, generatePost, generateSave,
@@ -33,9 +33,7 @@ const FIRST_HALF_CYCLES = 22;  // ciclos 0-21 → minutos 0-42 + evento interval
 const TOTAL_CYCLES = 45;
 const MAX_EVENTS_PER_CYCLE = 6;
 
-function rng(min: number, max: number): number {
-  return min + Math.random() * (max - min);
-}
+const makeRng = (random: RandomFn) => (min: number, max: number) => min + random() * (max - min);
 
 const MENTALITY_MODIFIERS: Record<Mentality, {
   passing: number; vision: number; speed: number; dribbling: number;
@@ -78,33 +76,37 @@ function getPlayersByPosition(players: Player[], pos: Position): Player[] {
   return players.filter(p => p.position === pos);
 }
 
-function getStarters(team: Team): Player[] {
-  const counts = FORMATION_COUNTS[team.strategy.formation] ?? { DEF: 4, MID: 3, FWD: 3 };
-  const starters: Player[] = [];
-  const gk = getPlayersByPosition(team.squad, 'GK');
-  starters.push(...gk.slice(0, 1));
-  for (const pos of ['DEF', 'MID', 'FWD'] as const) {
-    const players = getPlayersByPosition(team.squad, pos);
-    starters.push(...players.slice(0, counts[pos] ?? 3));
-  }
-  return starters;
-}
 
 function getGoalkeeper(players: Player[]): Player {
   return players.find(p => p.position === 'GK')!;
 }
 
-function pickRandom<T>(arr: T[], count: number): T[] {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+function pickRandom<T>(arr: T[], count: number, random: RandomFn): T[] {
+  const shuffled = [...arr].sort(() => random() - 0.5);
   return shuffled.slice(0, Math.min(count, arr.length));
+}
+
+function getStarters(team: Team, cards?: Map<string, 'yellow' | 'red'>): Player[] {
+  const counts = FORMATION_COUNTS[team.strategy.formation] ?? { DEF: 4, MID: 3, FWD: 3 };
+  const starters: Player[] = [];
+  const active = (p: Player) => !cards || cards.get(p.id) !== 'red';
+  const gk = getPlayersByPosition(team.squad, 'GK').filter(active);
+  starters.push(...gk.slice(0, 1));
+  for (const pos of ['DEF', 'MID', 'FWD'] as const) {
+    const players = getPlayersByPosition(team.squad, pos).filter(active);
+    starters.push(...players.slice(0, counts[pos] ?? 3));
+  }
+  return starters;
 }
 
 function calculatePossession(
   teamA: Team, teamB: Team,
-  fatigueA: Map<string, number>, fatigueB: Map<string, number>
+  fatigueA: Map<string, number>, fatigueB: Map<string, number>,
+  cards: Map<string, 'yellow' | 'red'>, random: RandomFn
 ): 'A' | 'B' {
-  const midsA = getPlayersByPosition(getStarters(teamA), 'MID');
-  const midsB = getPlayersByPosition(getStarters(teamB), 'MID');
+  const rng = makeRng(random);
+  const midsA = getPlayersByPosition(getStarters(teamA, cards), 'MID');
+  const midsB = getPlayersByPosition(getStarters(teamB, cards), 'MID');
   const modA = MENTALITY_MODIFIERS[teamA.strategy.mentality];
   const modB = MENTALITY_MODIFIERS[teamB.strategy.mentality];
   const countA = FORMATION_COUNTS[teamA.strategy.formation]?.MID ?? 3;
@@ -131,8 +133,10 @@ function calculatePossession(
 
 function resolveAttack(
   attackingTeam: Team, defendingTeam: Team,
-  fatigueAtk: Map<string, number>, fatigueDef: Map<string, number>
+  fatigueAtk: Map<string, number>, fatigueDef: Map<string, number>,
+  cards: Map<string, 'yellow' | 'red'>, random: RandomFn
 ): { won: boolean; attacker: Player | null } {
+  const rng = makeRng(random);
   const modAtk = MENTALITY_MODIFIERS[attackingTeam.strategy.mentality];
   const modDef = MENTALITY_MODIFIERS[defendingTeam.strategy.mentality];
   const fwdCount = FORMATION_COUNTS[attackingTeam.strategy.formation]?.FWD ?? 3;
@@ -143,12 +147,12 @@ function resolveAttack(
   const defLineMult = DEFENSIVE_LINE_MOD[defendingTeam.strategy.defensiveLine].defenseCompact;
   const defWidthMult = WIDTH_MOD[defendingTeam.strategy.width].defenseNarrow;
 
-  const fwds = getPlayersByPosition(getStarters(attackingTeam), 'FWD');
-  const mids = getPlayersByPosition(getStarters(attackingTeam), 'MID');
-  const attackers = pickRandom([...fwds, ...mids], 3);
-  const defenders = getPlayersByPosition(getStarters(defendingTeam), 'DEF');
-  const chosenDef = pickRandom(defenders, 3);
-  const gk = getGoalkeeper(getStarters(defendingTeam));
+  const fwds = getPlayersByPosition(getStarters(attackingTeam, cards), 'FWD');
+  const mids = getPlayersByPosition(getStarters(attackingTeam, cards), 'MID');
+  const attackers = pickRandom([...fwds, ...mids], 3, random);
+  const defenders = getPlayersByPosition(getStarters(defendingTeam, cards), 'DEF');
+  const chosenDef = pickRandom(defenders, 3, random);
+  const gk = getGoalkeeper(getStarters(defendingTeam, cards));
   const gkFatigue = fatigueDef.get(gk.id) ?? 0;
 
   const attackPower = attackers.reduce((sum, p) => {
@@ -170,10 +174,12 @@ function resolveAttack(
 
 function resolveShot(
   attacker: Player, defendingTeam: Team, attackingStrategy: Mentality,
-  fatigueAtk: Map<string, number>, fatigueDef: Map<string, number>
+  fatigueAtk: Map<string, number>, fatigueDef: Map<string, number>,
+  cards: Map<string, 'yellow' | 'red'>, random: RandomFn
 ): { result: 'goal' | 'post' | 'save' | 'miss'; scorer: Player; goalkeeper: Player } {
+  const rng = makeRng(random);
   const modAtk = MENTALITY_MODIFIERS[attackingStrategy];
-  const gk = getGoalkeeper(getStarters(defendingTeam));
+  const gk = getGoalkeeper(getStarters(defendingTeam, cards));
   const gkFatigue = fatigueDef.get(gk.id) ?? 0;
   const atkFatigue = fatigueAtk.get(attacker.id) ?? 0;
 
@@ -187,10 +193,10 @@ function resolveShot(
   return { result: 'miss', scorer: attacker, goalkeeper: gk };
 }
 
-function applyFatigue(team: Team, fatigueMap: Map<string, number>): void {
+function applyFatigue(team: Team, fatigueMap: Map<string, number>, cards: Map<string, 'yellow' | 'red'>): void {
   const baseFatigue = INTENSITY_FATIGUE[team.strategy.intensity];
   const mod = MENTALITY_MODIFIERS[team.strategy.mentality];
-  for (const player of getStarters(team)) {
+  for (const player of getStarters(team, cards)) {
     if (player.position === 'GK') continue;
     const fatigueGain = baseFatigue * mod.staminaLossMultiplier * (1 - player.attributes.stamina / 200);
     const current = fatigueMap.get(player.id) ?? 0;
@@ -235,201 +241,134 @@ function simularBloco(
   state: MatchState,
   includeKickoff: boolean,
   includeHalftime: boolean,
-  includeSecondHalfKickoff: boolean
+  includeSecondHalfKickoff: boolean,
+  random: RandomFn
 ): void {
   const isHome = (team: Team) => team.id === home.id;
 
   if (includeKickoff) {
-    state.events.push({
-      minute: 0, type: 'kickoff',
-      description: generateKickoff(home.name, away.name),
-      teamId: null,
-    });
+    state.events.push({ minute: 0, type: 'kickoff', description: generateKickoff(home.name, away.name), teamId: null });
   }
-
   if (includeSecondHalfKickoff) {
-    state.events.push({
-      minute: 45, type: 'kickoff',
-      description: generateSecondHalf(),
-      teamId: null,
-    });
+    state.events.push({ minute: 45, type: 'kickoff', description: generateSecondHalf(), teamId: null });
   }
 
   for (let cycle = startCycle; cycle < endCycle; cycle++) {
     const minute = cycle * CYCLE_MINUTES;
 
-    applyFatigue(home, state.fatigueHome);
-    applyFatigue(away, state.fatigueAway);
+    applyFatigue(home, state.fatigueHome, state.cards);
+    applyFatigue(away, state.fatigueAway, state.cards);
 
     let cycleEvents = 0;
 
-    // --- Comentário contextual (minutos chave) ---
     if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
-      const diff = state.homeScore - state.awayScore;
-      const ctx = generateContextual(minute, diff, home.name, away.name);
-      if (ctx) {
-        state.events.push({ minute, type: 'possession', description: ctx, teamId: null });
-        cycleEvents++;
-      }
+      const ctx = generateContextual(minute, state.homeScore - state.awayScore, home.name, away.name);
+      if (ctx) { state.events.push({ minute, type: 'possession', description: ctx, teamId: null }); cycleEvents++; }
     }
 
-    // Posse
-    const possessionWinner = calculatePossession(home, away, state.fatigueHome, state.fatigueAway);
+    const possessionWinner = calculatePossession(home, away, state.fatigueHome, state.fatigueAway, state.cards, random);
     if (possessionWinner === 'A') state.homePossessionWins++;
     else state.awayPossessionWins++;
 
     const possTeam = possessionWinner === 'A' ? home : away;
-    const defTeam = possessionWinner === 'A' ? away : home;
+    const defTeam  = possessionWinner === 'A' ? away : home;
 
     if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
-      state.events.push({
-        minute, type: 'possession',
-        description: generatePossession(possTeam.name),
-        teamId: possTeam.id,
-      });
+      state.events.push({ minute, type: 'possession', description: generatePossession(possTeam.name), teamId: possTeam.id });
       cycleEvents++;
     }
 
-    // Passe entre jogadores do time com posse
-    if (cycleEvents < MAX_EVENTS_PER_CYCLE && Math.random() < 0.6) {
-      const mids = getPlayersByPosition(getStarters(possTeam), 'MID');
-      const fwds = getPlayersByPosition(getStarters(possTeam), 'FWD');
-      const eligible = [...mids, ...fwds].filter(p => !state.cards.has(p.id) || state.cards.get(p.id) !== 'red');
+    // Passe
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.6) {
+      const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards), 'MID'),
+                        ...getPlayersByPosition(getStarters(possTeam, state.cards), 'FWD')];
       if (eligible.length >= 2) {
-        const [a, b] = pickRandom(eligible, 2);
-        state.events.push({
-          minute, type: 'pass',
-          description: generatePass(possTeam.name, a, b),
-          teamId: possTeam.id,
-        });
+        const [a, b] = pickRandom(eligible, 2, random);
+        state.events.push({ minute, type: 'pass', description: generatePass(possTeam.name, a, b), teamId: possTeam.id });
         cycleEvents++;
       }
     }
 
-    // Desarme do time sem posse
-    if (cycleEvents < MAX_EVENTS_PER_CYCLE && Math.random() < 0.45) {
-      const defs = getPlayersByPosition(getStarters(defTeam), 'DEF');
-      const mids = getPlayersByPosition(getStarters(defTeam), 'MID');
-      const eligible = [...defs, ...mids].filter(p => !state.cards.has(p.id) || state.cards.get(p.id) !== 'red');
+    // Desarme
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.45) {
+      const eligible = [...getPlayersByPosition(getStarters(defTeam, state.cards), 'DEF'),
+                        ...getPlayersByPosition(getStarters(defTeam, state.cards), 'MID')];
       if (eligible.length > 0) {
-        const tackler = pickRandom(eligible, 1)[0];
-        state.events.push({
-          minute, type: 'tackle',
-          description: generateTackle(defTeam.name, tackler),
-          teamId: defTeam.id,
-        });
+        const tackler = pickRandom(eligible, 1, random)[0];
+        state.events.push({ minute, type: 'tackle', description: generateTackle(defTeam.name, tackler), teamId: defTeam.id });
         cycleEvents++;
       }
     }
 
     // Ataque
-    const atkTeam = possTeam;
     const atkFatigue = possessionWinner === 'A' ? state.fatigueHome : state.fatigueAway;
     const defFatigue = possessionWinner === 'A' ? state.fatigueAway : state.fatigueHome;
 
-    if (Math.random() < ATK_CHANCE[atkTeam.strategy.mentality]) {
-      const atkResult = resolveAttack(atkTeam, defTeam, atkFatigue, defFatigue);
+    if (random() < ATK_CHANCE[possTeam.strategy.mentality]) {
+      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random);
 
       if (atkResult.won && atkResult.attacker) {
-        // Verifica impedimento (mais comum em pressão alta)
-        if (cycleEvents < MAX_EVENTS_PER_CYCLE && Math.random() < 0.18 && defTeam.strategy.defensiveLine === 'high') {
-          state.events.push({
-            minute, type: 'offside',
-            description: generateOffside(atkTeam.name, atkResult.attacker),
-            teamId: atkTeam.id,
-          });
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.18 && defTeam.strategy.defensiveLine === 'high') {
+          state.events.push({ minute, type: 'offside', description: generateOffside(possTeam.name, atkResult.attacker), teamId: possTeam.id });
           cycleEvents++;
-          // Não prossegue com a finalização
           continue;
         }
 
         if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
-          state.events.push({
-            minute, type: 'attack',
-            description: generateAttack(atkTeam.name, atkResult.attacker),
-            teamId: atkTeam.id,
-          });
+          state.events.push({ minute, type: 'attack', description: generateAttack(possTeam.name, atkResult.attacker), teamId: possTeam.id });
           cycleEvents++;
         }
 
-        const shot = resolveShot(atkResult.attacker, defTeam, atkTeam.strategy.mentality, atkFatigue, defFatigue);
+        const shot = resolveShot(atkResult.attacker, defTeam, possTeam.strategy.mentality, atkFatigue, defFatigue, state.cards, random);
 
         if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
           const scoreStr = `${state.homeScore}-${state.awayScore}`;
           if (shot.result === 'goal') {
-            state.events.push({ minute, type: 'goal', description: generateGoal(atkTeam.name, shot.scorer, minute, scoreStr), teamId: atkTeam.id });
-            if (isHome(atkTeam)) state.homeScore++;
-            else state.awayScore++;
+            state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id });
+            if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
           } else if (shot.result === 'post') {
-            state.events.push({ minute, type: 'post', description: generatePost(atkTeam.name, shot.scorer), teamId: atkTeam.id });
+            state.events.push({ minute, type: 'post', description: generatePost(possTeam.name, shot.scorer), teamId: possTeam.id });
           } else if (shot.result === 'save') {
             state.events.push({ minute, type: 'save', description: generateSave(defTeam.name, shot.goalkeeper), teamId: defTeam.id });
           } else {
-            state.events.push({ minute, type: 'miss', description: generateMiss(atkTeam.name, shot.scorer), teamId: atkTeam.id });
+            state.events.push({ minute, type: 'miss', description: generateMiss(possTeam.name, shot.scorer), teamId: possTeam.id });
           }
           cycleEvents++;
         }
 
-        // Escanteio após defesa ou para fora
-        if (cycleEvents < MAX_EVENTS_PER_CYCLE && (shot.result === 'save' || shot.result === 'miss') && Math.random() < 0.4) {
-          state.events.push({
-            minute, type: 'corner',
-            description: generateCorner(atkTeam.name),
-            teamId: atkTeam.id,
-          });
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && (shot.result === 'save' || shot.result === 'miss') && random() < 0.4) {
+          state.events.push({ minute, type: 'corner', description: generateCorner(possTeam.name), teamId: possTeam.id });
           cycleEvents++;
         }
       }
     }
 
-    // Faltas e cartões (chance baixa, não todo ciclo)
-    if (cycleEvents < MAX_EVENTS_PER_CYCLE && Math.random() < 0.15) {
-      const foulerTeam = Math.random() < 0.5 ? home : away;
-      const otherTeam = foulerTeam.id === home.id ? away : home;
-      const defs = getPlayersByPosition(getStarters(foulerTeam), 'DEF');
-      const eligible = defs.filter(p => !state.cards.has(p.id) || state.cards.get(p.id) !== 'red');
+    // Faltas e cartões
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.15) {
+      const foulerTeam = random() < 0.5 ? home : away;
+      const otherTeam  = foulerTeam.id === home.id ? away : home;
+      const eligible = getPlayersByPosition(getStarters(foulerTeam, state.cards), 'DEF');
       if (eligible.length > 0) {
-        const fouler = pickRandom(eligible, 1)[0];
-        state.events.push({
-          minute, type: 'foul',
-          description: generateFoul(foulerTeam.name, fouler),
-          teamId: otherTeam.id, // falta beneficia o outro time
-        });
+        const fouler = pickRandom(eligible, 1, random)[0];
+        state.events.push({ minute, type: 'foul', description: generateFoul(foulerTeam.name, fouler), teamId: otherTeam.id });
         cycleEvents++;
 
-        // Cartão (raro)
         const existingCard = state.cards.get(fouler.id);
-        if (!existingCard && Math.random() < 0.25) {
-          if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
-            state.events.push({
-              minute, type: 'yellowCard',
-              description: generateYellowCard(foulerTeam.name, fouler),
-              teamId: foulerTeam.id,
-            });
-            state.cards.set(fouler.id, 'yellow');
-            cycleEvents++;
-          }
-        } else if (existingCard === 'yellow' && Math.random() < 0.3) {
-          if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
-            state.events.push({
-              minute, type: 'redCard',
-              description: generateRedCard(foulerTeam.name, fouler),
-              teamId: foulerTeam.id,
-            });
-            state.cards.set(fouler.id, 'red');
-            cycleEvents++;
-          }
+        if (!existingCard && random() < 0.25 && cycleEvents < MAX_EVENTS_PER_CYCLE) {
+          state.events.push({ minute, type: 'yellowCard', description: generateYellowCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
+          state.cards.set(fouler.id, 'yellow');
+          cycleEvents++;
+        } else if (existingCard === 'yellow' && random() < 0.3 && cycleEvents < MAX_EVENTS_PER_CYCLE) {
+          state.events.push({ minute, type: 'redCard', description: generateRedCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
+          state.cards.set(fouler.id, 'red');
+          cycleEvents++;
         }
       }
     }
   }
 
   if (includeHalftime) {
-    state.events.push({
-      minute: 45, type: 'halftime',
-      description: generateHalftime(state.homeScore, state.awayScore),
-      teamId: null,
-    });
+    state.events.push({ minute: 45, type: 'halftime', description: generateHalftime(state.homeScore, state.awayScore), teamId: null });
   }
 }
 
@@ -437,17 +376,16 @@ function simularBloco(
 // API PÚBLICA
 // ---------------------------------------------------------------------------
 
-export function simularPrimeiroTempo(home: Team, away: Team): { state: MatchState } {
+export function simularPrimeiroTempo(home: Team, away: Team, random: RandomFn = Math.random): { state: MatchState } {
   const state = createMatchState(home, away);
-  simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, true, true, false);
+  simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, true, true, false, random);
   return { state };
 }
 
-export function simularSegundoTempo(home: Team, away: Team, prevState: MatchState): MatchResult {
-  simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, prevState, false, false, true);
+export function simularSegundoTempo(home: Team, away: Team, prevState: MatchState, random: RandomFn = Math.random): MatchResult {
+  simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, prevState, false, false, true, random);
 
   const totalCycles = prevState.homePossessionWins + prevState.awayPossessionWins;
-
   prevState.events.push({
     minute: 90, type: 'fulltime',
     description: generateFulltime(home.name, away.name, prevState.homeScore, prevState.awayScore),
@@ -463,7 +401,7 @@ export function simularSegundoTempo(home: Team, away: Team, prevState: MatchStat
   };
 }
 
-export function simularPartida(home: Team, away: Team): MatchResult {
-  const { state } = simularPrimeiroTempo(home, away);
-  return simularSegundoTempo(home, away, state);
+export function simularPartida(home: Team, away: Team, random: RandomFn = Math.random): MatchResult {
+  const { state } = simularPrimeiroTempo(home, away, random);
+  return simularSegundoTempo(home, away, state, random);
 }
