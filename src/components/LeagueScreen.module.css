@@ -12,10 +12,10 @@
 .leagueTitle { font-size: 13px; font-weight: 800; font-family: var(--mono); opacity: 0.7; }
 .roundLabel { font-size: 18px; font-weight: 900; font-family: var(--mono); }
 
-/* Layout de 2 colunas — jogos mais fino, classificação mais larga */
+/* Layout de 2 colunas — jogos fino, classificação larga com scroll */
 .body {
   display: grid;
-  grid-template-columns: 2fr 3fr;
+  grid-template-columns: 5fr 8fr;
   gap: 16px;
   align-items: start;
 }
@@ -25,7 +25,11 @@
 }
 
 .fixturesCol { display: flex; flex-direction: column; gap: 12px; }
-.standingsCol { display: flex; flex-direction: column; gap: 6px; }
+.standingsCol {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 80vh; overflow-y: auto;
+  position: sticky; top: 12px;
+}
 
 .section { display: flex; flex-direction: column; gap: 6px; }
 .sectionLabel { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.45; }
