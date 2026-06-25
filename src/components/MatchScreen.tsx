@@ -64,6 +64,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [subsAway, setSubsAway] = useState(0);
   const MAX_SUBS = 3;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showOpponent, setShowOpponent] = useState(false);
 
   const [speed, setSpeed] = useState<number>(() => {
     try { return Number(localStorage.getItem('fp:replaySpeed')) || 1; } catch { return 1; }
@@ -464,22 +465,41 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   {injuryToast ? injuryToast : 'Jogo Pausado'}
                 </div>
 
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 4 }}>
+                  <button
+                    className={`speed-btn ${!showOpponent ? 'active' : ''}`}
+                    onClick={() => setShowOpponent(false)}
+                    style={{ fontSize: 12, padding: '4px 14px' }}
+                  >
+                    Seu Time ({home.abbreviation})
+                  </button>
+                  <button
+                    className={`speed-btn ${showOpponent ? 'active' : ''}`}
+                    onClick={() => setShowOpponent(true)}
+                    style={{ fontSize: 12, padding: '4px 14px' }}
+                  >
+                    Adversário ({away.abbreviation})
+                  </button>
+                </div>
+
                 <details className="ht-squad-details" open>
-                  <summary>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span></summary>
+                  <summary>Substituições · <span style={{ color: showOpponent ? away.color : home.color }}>{showOpponent ? away.abbreviation : home.abbreviation} {showOpponent ? subsAway : subsHome}/{MAX_SUBS}</span></summary>
                   <div className="ht-squad-grid">
-                    {([
-                      ['home', home, setHome, htHomePick, setHtHomePick],
-                      ['away', away, setAway, htAwayPick, setHtAwayPick],
-                    ] as const).map(([side, team, setTeam, pick, setPick]) => {
+                    {(() => {
+                      const side = showOpponent ? 'away' : 'home';
+                      const team = showOpponent ? away : home;
+                      const setTeam = showOpponent ? setAway : setHome;
+                      const pick = showOpponent ? htAwayPick : htHomePick;
+                      const setPick = showOpponent ? setHtAwayPick : setHtHomePick;
                       const benchPlayers = team.squad.slice(11);
                       const starters = team.squad.slice(0, 11);
                       const pickIdx = team.squad.findIndex(sp => sp.id === pick);
                       const pickIsBench = pickIdx >= 11;
                       const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
                       return (
-                        <div key={side} className="ht-squad-col">
-                          <strong style={{ color: side === 'home' ? home.color : away.color, fontSize: 11 }}>
-                            {side === 'home' ? home.abbreviation : away.abbreviation}
+                        <div className="ht-squad-col">
+                          <strong style={{ color: showOpponent ? away.color : home.color, fontSize: 11 }}>
+                            {showOpponent ? away.abbreviation : home.abbreviation}
                           </strong>
                           <div className="ht-sub-group-label">Titulares</div>
                           {starters.map((p, i) => {
@@ -533,7 +553,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                           })}
                         </div>
                       );
-                    })}
+                    })()}
                   </div>
                 </details>
 
