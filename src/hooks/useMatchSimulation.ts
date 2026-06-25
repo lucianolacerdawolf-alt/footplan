@@ -26,6 +26,7 @@ export function useMatchSimulation(initialHomeId: string) {
   const [started, setStarted] = useState(false);
   const [clockSeconds, setClockSeconds] = useState(0);
   const [fatigueMap, setFatigueMap] = useState<Record<string, number>>({});
+  const [expelledIds, setExpelledIds] = useState<string[]>([]);
 
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -100,6 +101,10 @@ export function useMatchSimulation(initialHomeId: string) {
           else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
         }
 
+        if (evt.type === 'redCard' && evt.playerId) {
+          setExpelledIds(prev => [...prev, evt.playerId!]);
+        }
+
         setCurrentEvent(evt);
         setReplayEvents(prev => [...prev, evt]);
       }
@@ -126,6 +131,7 @@ export function useMatchSimulation(initialHomeId: string) {
     setPhase('simulating');
     setClockSeconds(0);
     setFatigueMap({});
+    setExpelledIds([]);
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
@@ -175,7 +181,7 @@ export function useMatchSimulation(initialHomeId: string) {
   return {
     result, simulating, replayEvents, currentEvent,
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
-    fatigueMap, engineStateRef,
+    fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
   };
 }

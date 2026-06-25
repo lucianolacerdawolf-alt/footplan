@@ -21,6 +21,7 @@ interface Props {
     homeScore: number; awayScore: number;
   } | null;
   fatigueMap?: Record<string, number>;
+  expelledIds?: string[];
 }
 
 interface PlayerCoord {
@@ -146,7 +147,8 @@ function ballPos(
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result, halftime, fatigueMap }: Props) {
+export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result, halftime, fatigueMap, expelledIds }: Props) {
+  const expelledSet = useMemo(() => new Set(expelledIds ?? []), [expelledIds]);
   // Coordenadas base
   const homeBase = useMemo(() => buildBaseCoords(homeTeam, 'home'), [homeTeam.id, homeTeam.strategy.formation]);
   const awayBase = useMemo(() => buildBaseCoords(awayTeam, 'away'), [awayTeam.id, awayTeam.strategy.formation]);
@@ -164,9 +166,11 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
   const homeTeamRef = useRef(homeTeam);
   const awayTeamRef = useRef(awayTeam);
   const eventRef = useRef(currentEvent);
+  const expelledSetRef = useRef(expelledSet);
   homeTeamRef.current = homeTeam;
   awayTeamRef.current = awayTeam;
   eventRef.current = currentEvent;
+  expelledSetRef.current = expelledSet;
 
   const eventId = currentEvent ? currentEvent.minute + '|' + currentEvent.type + '|' + currentEvent.description : '';
   const eventSeed = useMemo(() => seed(eventId), [eventId]);
@@ -217,7 +221,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
       const defLine = (v: string) => v === 'high' ? 1.5 : v === 'low' ? -1.5 : 0;
       const width = (v: string) => v === 'wide' ? 1.3 : v === 'narrow' ? 0.7 : 1.0;
 
-      const active = [...players.values()].filter(p => p.position !== 'GK');
+      const active = [...players.values()].filter(p => p.position !== 'GK' && !expelledSetRef.current.has(p.id));
 
       updatePlayers(
         players, active, event,
@@ -405,8 +409,8 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
         {/* Jogadores */}
         {phase !== 'done' && (
           <>
-            {homeBase.map(renderPlayer)}
-            {awayBase.map(renderPlayer)}
+            {homeBase.filter(p => !expelledSet.has(p.id)).map(renderPlayer)}
+            {awayBase.filter(p => !expelledSet.has(p.id)).map(renderPlayer)}
 
             {/* Bola */}
             <g filter="url(#shadow)">

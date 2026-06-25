@@ -32,7 +32,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const {
     result, simulating, replayEvents, currentEvent,
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
-    fatigueMap,
+    fatigueMap, expelledIds,
     runFirstHalf, runSecondHalf,
   } = useMatchSimulation(initialHome.id);
 
@@ -89,6 +89,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             result={pitchResult}
             halftime={phase === 'halftime' ? { homeScore, awayScore } : null}
             fatigueMap={fatigueMap}
+            expelledIds={expelledIds}
           />
 
           {/* Intervalo */}
