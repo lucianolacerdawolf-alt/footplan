@@ -1,29 +1,29 @@
 .screen {
-  max-width: 520px; margin: 0 auto; padding: 12px 16px 32px;
-  display: flex; flex-direction: column; gap: 14px;
+  max-width: 760px; margin: 0 auto; padding: 12px 24px 40px;
+  display: flex; flex-direction: column; gap: 18px;
 }
 
 .header {
   display: flex; align-items: center; gap: 10px;
 }
 .headerCenter { flex: 1; display: flex; justify-content: center; }
-.title { font-size: 18px; font-weight: 900; font-family: var(--mono); }
+.title { font-size: 22px; font-weight: 900; font-family: var(--mono); }
 
 /* Stage */
 .stageBlock {
-  display: flex; flex-direction: column; gap: 8px;
-  opacity: 0.45; transition: opacity 0.2s;
+  display: flex; flex-direction: column; gap: 12px;
+  opacity: 1; transition: opacity 0.2s;
 }
 .stageBlockActive { opacity: 1; }
 .stageLabel {
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
   opacity: 0.5; padding: 0 2px;
 }
 
 /* Match card */
 .matchCard {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px; border-radius: 10px;
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 20px; border-radius: 12px;
   border: 1px solid var(--border); background: var(--code-bg);
   flex-wrap: wrap;
 }
@@ -33,36 +33,36 @@
 }
 .matchCardDone { opacity: 0.75; }
 
-.matchTeams { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.matchTeams { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
 .matchTeam {
-  display: flex; align-items: center; gap: 5px; flex: 1;
-  font-size: 12px; font-weight: 700; font-family: var(--mono);
+  display: flex; align-items: center; gap: 8px; flex: 1;
+  font-size: 15px; font-weight: 700; font-family: var(--mono);
   transition: opacity 0.2s;
 }
 .matchTeamAway { justify-content: flex-end; }
 .winner { opacity: 1 !important; }
 .loser { opacity: 0.35; }
-.matchCrest { width: 24px; height: 24px; object-fit: contain; }
-.tbd { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; opacity: 0.3; }
+.matchCrest { width: 36px; height: 36px; object-fit: contain; }
+.tbd { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; opacity: 0.3; }
 
-.matchMiddle { flex-shrink: 0; text-align: center; min-width: 70px; }
-.matchVs { font-size: 11px; opacity: 0.4; }
-.matchScore { font-size: 13px; font-weight: 900; font-family: var(--mono); }
+.matchMiddle { flex-shrink: 0; text-align: center; min-width: 90px; }
+.matchVs { font-size: 14px; opacity: 0.4; }
+.matchScore { font-size: 18px; font-weight: 900; font-family: var(--mono); }
 
 .matchActions { flex-shrink: 0; }
 .playBtn {
-  font-size: 11px; font-weight: 800; padding: 5px 14px; border-radius: 6px;
+  font-size: 13px; font-weight: 800; padding: 8px 22px; border-radius: 8px;
   background: var(--accent); color: #fff; border: none; cursor: pointer;
 }
 .playBtn:hover { opacity: 0.85; }
 .simBtn {
-  font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 6px;
+  font-size: 13px; font-weight: 700; padding: 8px 18px; border-radius: 8px;
   border: 1px solid var(--border); background: transparent; cursor: pointer;
   color: var(--text); opacity: 0.7;
 }
 .simBtn:hover { opacity: 1; border-color: var(--accent); }
 
-.winnerTag { font-size: 10px; font-weight: 800; flex-basis: 100%; text-align: right; padding-right: 2px; }
+.winnerTag { font-size: 12px; font-weight: 800; flex-basis: 100%; text-align: right; padding-right: 2px; }
 
 /* Champion screen */
 .champion {

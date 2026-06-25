@@ -148,10 +148,10 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onB
         </div>
       </header>
 
-      {renderStage('Oitavas de Final', roundOf16,    'roundOf16',    stage === 'roundOf16')}
-      {renderStage('Quartas de Final', quarterFinals, 'quarterfinals', stage === 'quarterfinals')}
-      {renderStage('Semifinais',       semiFinals,    'semifinals',    stage === 'semifinals')}
-      {renderStage('Final',            [final],       'final',         stage === 'final')}
+      {stage === 'roundOf16'    && renderStage('Oitavas de Final', roundOf16,     'roundOf16',    true)}
+      {stage === 'quarterfinals' && renderStage('Quartas de Final', quarterFinals, 'quarterfinals', true)}
+      {stage === 'semifinals'    && renderStage('Semifinais',       semiFinals,    'semifinals',    true)}
+      {stage === 'final'         && renderStage('Final',            [final],       'final',         true)}
     </div>
   );
 }
