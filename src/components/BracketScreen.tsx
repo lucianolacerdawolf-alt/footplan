@@ -2,10 +2,12 @@ import type { Team } from '../engine/types';
 import type { BracketState, BracketMatch } from '../engine/tournament';
 import styles from './BracketScreen.module.css';
 
+type PlayableStage = 'roundOf16' | 'quarterfinals' | 'semifinals' | 'final';
+
 interface Props {
   state: BracketState;
   onPlayMatch: (match: BracketMatch, homeTeam: Team, awayTeam: Team) => void;
-  onSimulateMatch: (stage: 'quarterfinals' | 'semifinals' | 'final', matchIndex: number) => void;
+  onSimulateMatch: (stage: PlayableStage, matchIndex: number) => void;
   onBack: () => void;
 }
 
@@ -76,7 +78,7 @@ function MatchCard({
 }
 
 export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onBack }: Props) {
-  const { teams, userTeamId, quarterFinals, semiFinals, final, stage, championId } = state;
+  const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
 
   if (stage === 'champion' && championId) {
     const champion = teamById(teams, championId)!;
@@ -105,6 +107,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onB
   }
 
   const stageLabels: Record<typeof stage, string> = {
+    roundOf16: 'Oitavas de Final',
     quarterfinals: 'Quartas de Final',
     semifinals: 'Semifinais',
     final: 'Final',
@@ -114,7 +117,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onB
   const renderStage = (
     label: string,
     matches: BracketMatch[],
-    stageKey: 'quarterfinals' | 'semifinals' | 'final',
+    stageKey: PlayableStage,
     isActive: boolean
   ) => (
     <div className={`${styles.stageBlock} ${isActive ? styles.stageBlockActive : ''}`}>
@@ -145,9 +148,10 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onB
         </div>
       </header>
 
+      {renderStage('Oitavas de Final', roundOf16,    'roundOf16',    stage === 'roundOf16')}
       {renderStage('Quartas de Final', quarterFinals, 'quarterfinals', stage === 'quarterfinals')}
-      {renderStage('Semifinais', semiFinals, 'semifinals', stage === 'semifinals')}
-      {renderStage('Final', [final], 'final', stage === 'final')}
+      {renderStage('Semifinais',       semiFinals,    'semifinals',    stage === 'semifinals')}
+      {renderStage('Final',            [final],       'final',         stage === 'final')}
     </div>
   );
 }

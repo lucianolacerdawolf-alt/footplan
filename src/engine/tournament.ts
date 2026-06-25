@@ -50,11 +50,12 @@ export interface BracketMatch {
   played: boolean;
 }
 
-export type BracketStage = 'quarterfinals' | 'semifinals' | 'final' | 'champion';
+export type BracketStage = 'roundOf16' | 'quarterfinals' | 'semifinals' | 'final' | 'champion';
 
 export interface BracketState {
   teams: Team[];
   userTeamId: string;
+  roundOf16: BracketMatch[];
   quarterFinals: BracketMatch[];
   semiFinals: BracketMatch[];
   final: BracketMatch;
@@ -77,7 +78,6 @@ export function generateLeagueSchedule(teams: Team[]): LeagueFixture[][] {
   for (let round = 0; round < n - 1; round++) {
     const fixtures: LeagueFixture[] = [];
 
-    // Par do time fixo
     const [ha, hb] = round % 2 === 0 ? [fixed, rotating[0]] : [rotating[0], fixed];
     fixtures.push({ id: `r${round}-f0`, roundIndex: round, homeTeamId: ha, awayTeamId: hb, played: false });
 
@@ -92,7 +92,6 @@ export function generateLeagueSchedule(teams: Team[]): LeagueFixture[][] {
     rotating.unshift(rotating.pop()!);
   }
 
-  // Jogos de volta (invertem mando)
   const returnRounds = rounds.map((round, ri) =>
     round.map((f, fi) => ({
       id: `r${ri + n - 1}-f${fi}`,
@@ -140,30 +139,40 @@ export function computeStandings(teams: Team[], fixtures: LeagueFixture[][]): St
 }
 
 // =============================================================================
-// COPA — criação do chaveamento
+// COPA — criação do chaveamento (16 times)
 // =============================================================================
 
 export function createBracket(userTeam: Team, otherTeams: Team[]): BracketState {
   const shuffled = [...otherTeams].sort(() => Math.random() - 0.5);
-  const teams = [userTeam, ...shuffled];
+  const teams = [userTeam, ...shuffled.slice(0, 15)];
 
-  const quarterFinals: BracketMatch[] = [
-    { id: 'qf1', homeTeamId: teams[0].id, awayTeamId: teams[7].id, played: false },
-    { id: 'qf2', homeTeamId: teams[1].id, awayTeamId: teams[6].id, played: false },
-    { id: 'qf3', homeTeamId: teams[2].id, awayTeamId: teams[5].id, played: false },
-    { id: 'qf4', homeTeamId: teams[3].id, awayTeamId: teams[4].id, played: false },
+  const roundOf16: BracketMatch[] = [
+    { id: 'r16-1', homeTeamId: teams[0].id,  awayTeamId: teams[15].id, played: false },
+    { id: 'r16-2', homeTeamId: teams[1].id,  awayTeamId: teams[14].id, played: false },
+    { id: 'r16-3', homeTeamId: teams[2].id,  awayTeamId: teams[13].id, played: false },
+    { id: 'r16-4', homeTeamId: teams[3].id,  awayTeamId: teams[12].id, played: false },
+    { id: 'r16-5', homeTeamId: teams[4].id,  awayTeamId: teams[11].id, played: false },
+    { id: 'r16-6', homeTeamId: teams[5].id,  awayTeamId: teams[10].id, played: false },
+    { id: 'r16-7', homeTeamId: teams[6].id,  awayTeamId: teams[9].id,  played: false },
+    { id: 'r16-8', homeTeamId: teams[7].id,  awayTeamId: teams[8].id,  played: false },
   ];
 
   return {
     teams,
     userTeamId: userTeam.id,
-    quarterFinals,
+    roundOf16,
+    quarterFinals: [
+      { id: 'qf1', homeTeamId: null, awayTeamId: null, played: false },
+      { id: 'qf2', homeTeamId: null, awayTeamId: null, played: false },
+      { id: 'qf3', homeTeamId: null, awayTeamId: null, played: false },
+      { id: 'qf4', homeTeamId: null, awayTeamId: null, played: false },
+    ],
     semiFinals: [
       { id: 'sf1', homeTeamId: null, awayTeamId: null, played: false },
       { id: 'sf2', homeTeamId: null, awayTeamId: null, played: false },
     ],
     final: { id: 'final', homeTeamId: null, awayTeamId: null, played: false },
-    stage: 'quarterfinals',
+    stage: 'roundOf16',
   };
 }
 
@@ -172,24 +181,38 @@ export function createBracket(userTeam: Team, otherTeams: Team[]): BracketState 
 // =============================================================================
 
 export function advanceBracket(state: BracketState): BracketState {
-  const { quarterFinals, semiFinals, stage } = state;
+  const { roundOf16, quarterFinals, semiFinals, stage } = state;
+
+  if (stage === 'roundOf16' && roundOf16.every(m => m.played)) {
+    return {
+      ...state,
+      quarterFinals: [
+        { id: 'qf1', homeTeamId: roundOf16[0].winnerId!, awayTeamId: roundOf16[1].winnerId!, played: false },
+        { id: 'qf2', homeTeamId: roundOf16[2].winnerId!, awayTeamId: roundOf16[3].winnerId!, played: false },
+        { id: 'qf3', homeTeamId: roundOf16[4].winnerId!, awayTeamId: roundOf16[5].winnerId!, played: false },
+        { id: 'qf4', homeTeamId: roundOf16[6].winnerId!, awayTeamId: roundOf16[7].winnerId!, played: false },
+      ],
+      stage: 'quarterfinals',
+    };
+  }
 
   if (stage === 'quarterfinals' && quarterFinals.every(m => m.played)) {
-    const newSemis: BracketMatch[] = [
-      { id: 'sf1', homeTeamId: quarterFinals[0].winnerId!, awayTeamId: quarterFinals[1].winnerId!, played: false },
-      { id: 'sf2', homeTeamId: quarterFinals[2].winnerId!, awayTeamId: quarterFinals[3].winnerId!, played: false },
-    ];
-    return { ...state, semiFinals: newSemis, stage: 'semifinals' };
+    return {
+      ...state,
+      semiFinals: [
+        { id: 'sf1', homeTeamId: quarterFinals[0].winnerId!, awayTeamId: quarterFinals[1].winnerId!, played: false },
+        { id: 'sf2', homeTeamId: quarterFinals[2].winnerId!, awayTeamId: quarterFinals[3].winnerId!, played: false },
+      ],
+      stage: 'semifinals',
+    };
   }
 
   if (stage === 'semifinals' && semiFinals.every(m => m.played)) {
-    const newFinal: BracketMatch = {
-      id: 'final',
-      homeTeamId: semiFinals[0].winnerId!,
-      awayTeamId: semiFinals[1].winnerId!,
-      played: false,
+    return {
+      ...state,
+      final: { id: 'final', homeTeamId: semiFinals[0].winnerId!, awayTeamId: semiFinals[1].winnerId!, played: false },
+      stage: 'final',
     };
-    return { ...state, final: newFinal, stage: 'final' };
   }
 
   if (stage === 'final' && state.final.played) {
@@ -236,4 +259,16 @@ export function simularRodadaAuto(
     const result = simularPartidaRapida(cloneTeam(home), cloneTeam(away));
     return { ...f, ...result, played: true };
   });
+}
+
+// =============================================================================
+// LIGA — simula o jogo do usuário de uma rodada (sem ir à tela de stats)
+// =============================================================================
+
+export function simularFixtureAuto(fixture: LeagueFixture, teams: Team[]): LeagueFixture {
+  const teamMap = new Map(teams.map(t => [t.id, t]));
+  const home = teamMap.get(fixture.homeTeamId)!;
+  const away = teamMap.get(fixture.awayTeamId)!;
+  const result = simularPartidaRapida(cloneTeam(home), cloneTeam(away));
+  return { ...fixture, ...result, played: true };
 }

@@ -38,6 +38,9 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
 
   return (
     <div className="team-select-screen">
+      <div className="top-nav">
+        <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
+      </div>
       <header className="app-header">
         <h1>FootPlan</h1>
         <p className="subtitle">{MODE_TITLE[mode]}</p>
@@ -91,11 +94,6 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
         </div>
       )}
 
-      <div className="select-tournament-entry">
-        <button className="tournament-entry-btn" onClick={onBack}>
-          ← Menu Principal
-        </button>
-      </div>
     </div>
   );
 }

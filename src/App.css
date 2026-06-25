@@ -2,6 +2,12 @@
    FootPlan - UI Refinada
    ============================================================================= */
 
+/* --- Top nav (back button no topo-esquerdo) --- */
+.top-nav {
+  display: flex; align-items: center;
+  padding: 10px 16px 0;
+}
+
 /* --- Header --- */
 .app-header {
   text-align: center;

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, LeagueFixture, Standing } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
@@ -7,6 +6,7 @@ import styles from './LeagueScreen.module.css';
 interface Props {
   state: LeagueState;
   onPlayMatch: (fixture: LeagueFixture, homeTeam: Team, awayTeam: Team) => void;
+  onSimulateUserMatch: () => void;
   onSimulateRound: (roundIndex: number) => void;
   onNextRound: () => void;
   onBack: () => void;
@@ -54,12 +54,11 @@ function StandingsTable({ standings, teams, userTeamId }: { standings: Standing[
   );
 }
 
-export default function LeagueScreen({ state, onPlayMatch, onSimulateRound, onNextRound, onBack }: Props) {
-  const [showTable, setShowTable] = useState(false);
+export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onBack }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
+  const standings = computeStandings(teams, fixtures);
 
   if (phase === 'done') {
-    const standings = computeStandings(teams, fixtures);
     const champion = teamById(teams, standings[0].teamId);
     const userStanding = standings.find(s => s.teamId === userTeamId)!;
     const userPos = standings.findIndex(s => s.teamId === userTeamId) + 1;
@@ -77,10 +76,7 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateRound, onNe
         <div className={styles.userResult}>
           Você terminou em <strong>{userPos}º lugar</strong> com {userStanding.points} pontos
         </div>
-        <details className={styles.details} open>
-          <summary className={styles.detailsSummary}>Classificação Final</summary>
-          <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
-        </details>
+        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
         <button className="start-btn" onClick={onBack}>Nova Partida</button>
       </div>
     );
@@ -91,7 +87,6 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateRound, onNe
   const otherFixtures = round.filter(f => f !== userFixture);
   const roundComplete = round.every(f => f.played);
   const othersComplete = otherFixtures.every(f => f.played);
-  const standings = computeStandings(teams, fixtures);
 
   const renderScore = (f: LeagueFixture) => {
     if (!f.played) return <span className={styles.fixtureVs}>vs</span>;
@@ -108,82 +103,88 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateRound, onNe
         </div>
       </header>
 
-      {/* Jogo do usuário */}
-      <div className={styles.section}>
-        <div className={styles.sectionLabel}>Seu Jogo</div>
-        <div className={`${styles.fixture} ${styles.fixtureUser}`}>
-          <div className={styles.fixtureTeam}>
-            <img src={teamById(teams, userFixture.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
-            <span style={{ color: teamById(teams, userFixture.homeTeamId).color }}>
-              {teamById(teams, userFixture.homeTeamId).abbreviation}
-            </span>
-          </div>
-          {renderScore(userFixture)}
-          <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
-            <span style={{ color: teamById(teams, userFixture.awayTeamId).color }}>
-              {teamById(teams, userFixture.awayTeamId).abbreviation}
-            </span>
-            <img src={teamById(teams, userFixture.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
-          </div>
-          {!userFixture.played && (
-            <button
-              className={styles.playBtn}
-              onClick={() => onPlayMatch(
-                userFixture,
-                teamById(teams, userFixture.homeTeamId),
-                teamById(teams, userFixture.awayTeamId)
+      <div className={styles.body}>
+        {/* Coluna esquerda — jogos */}
+        <div className={styles.fixturesCol}>
+          {/* Jogo do usuário */}
+          <div className={styles.section}>
+            <div className={styles.sectionLabel}>Seu Jogo</div>
+            <div className={`${styles.fixture} ${styles.fixtureUser}`}>
+              <div className={styles.fixtureTeam}>
+                <img src={teamById(teams, userFixture.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+                <span style={{ color: teamById(teams, userFixture.homeTeamId).color }}>
+                  {teamById(teams, userFixture.homeTeamId).abbreviation}
+                </span>
+              </div>
+              {renderScore(userFixture)}
+              <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
+                <span style={{ color: teamById(teams, userFixture.awayTeamId).color }}>
+                  {teamById(teams, userFixture.awayTeamId).abbreviation}
+                </span>
+                <img src={teamById(teams, userFixture.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+              </div>
+              {!userFixture.played && (
+                <div className={styles.userMatchBtns}>
+                  <button
+                    className={styles.playBtn}
+                    onClick={() => onPlayMatch(
+                      userFixture,
+                      teamById(teams, userFixture.homeTeamId),
+                      teamById(teams, userFixture.awayTeamId)
+                    )}
+                  >
+                    Jogar
+                  </button>
+                  <button className={styles.simOwnBtn} onClick={onSimulateUserMatch}>
+                    Simular
+                  </button>
+                </div>
               )}
-            >
-              Jogar
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Outros jogos */}
-      <div className={styles.section}>
-        <div className={styles.sectionLabelRow}>
-          <span className={styles.sectionLabel}>Outros Jogos</span>
-          {!othersComplete && (
-            <button className={styles.simAllBtn} onClick={() => onSimulateRound(currentRound)}>
-              Simular Todos
-            </button>
-          )}
-        </div>
-        {otherFixtures.map(f => (
-          <div key={f.id} className={styles.fixture}>
-            <div className={styles.fixtureTeam}>
-              <img src={teamById(teams, f.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
-              <span style={{ color: teamById(teams, f.homeTeamId).color }}>
-                {teamById(teams, f.homeTeamId).abbreviation}
-              </span>
-            </div>
-            {renderScore(f)}
-            <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
-              <span style={{ color: teamById(teams, f.awayTeamId).color }}>
-                {teamById(teams, f.awayTeamId).abbreviation}
-              </span>
-              <img src={teamById(teams, f.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
             </div>
           </div>
-        ))}
+
+          {/* Outros jogos */}
+          <div className={styles.section}>
+            <div className={styles.sectionLabelRow}>
+              <span className={styles.sectionLabel}>Outros Jogos</span>
+              {!othersComplete && (
+                <button className={styles.simAllBtn} onClick={() => onSimulateRound(currentRound)}>
+                  Simular Todos
+                </button>
+              )}
+            </div>
+            {otherFixtures.map(f => (
+              <div key={f.id} className={styles.fixture}>
+                <div className={styles.fixtureTeam}>
+                  <img src={teamById(teams, f.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+                  <span style={{ color: teamById(teams, f.homeTeamId).color }}>
+                    {teamById(teams, f.homeTeamId).abbreviation}
+                  </span>
+                </div>
+                {renderScore(f)}
+                <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
+                  <span style={{ color: teamById(teams, f.awayTeamId).color }}>
+                    {teamById(teams, f.awayTeamId).abbreviation}
+                  </span>
+                  <img src={teamById(teams, f.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {roundComplete && (
+            <button className="start-btn" onClick={onNextRound}>
+              {currentRound + 1 < fixtures.length ? `Rodada ${currentRound + 2} →` : 'Ver Classificação Final →'}
+            </button>
+          )}
+        </div>
+
+        {/* Coluna direita — tabela */}
+        <div className={styles.standingsCol}>
+          <div className={styles.sectionLabel}>Classificação</div>
+          <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
+        </div>
       </div>
-
-      {roundComplete && (
-        <button className="start-btn" onClick={onNextRound}>
-          {currentRound + 1 < fixtures.length ? `Rodada ${currentRound + 2} →` : 'Ver Classificação Final →'}
-        </button>
-      )}
-
-      {/* Tabela */}
-      <details className={styles.details} open={showTable} onToggle={e => setShowTable((e.target as HTMLDetailsElement).open)}>
-        <summary className={styles.detailsSummary}>
-          Classificação {standings.length > 0 && <span className={styles.userPos}>
-            {(() => { const pos = standings.findIndex(s => s.teamId === userTeamId) + 1; const team = teamById(teams, userTeamId); return <span style={{ color: team.color }}>{team.abbreviation} {pos}º</span>; })()}
-          </span>}
-        </summary>
-        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
-      </details>
     </div>
   );
 }

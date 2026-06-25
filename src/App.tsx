@@ -3,7 +3,7 @@ import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { TournamentMode } from './components/TournamentSetupScreen';
 import type { LeagueState, BracketState, BracketMatch, LeagueFixture } from './engine/tournament';
-import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto } from './engine/tournament';
+import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto } from './engine/tournament';
 import { cloneTeam } from './utils/teamUtils';
 import HomeScreen from './components/HomeScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
@@ -19,6 +19,7 @@ import './App.css';
 
 type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket';
 type MatchContext = 'regular' | 'league' | 'bracket';
+type PlayableStage = 'roundOf16' | 'quarterfinals' | 'semifinals' | 'final';
 
 function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -32,7 +33,7 @@ function App() {
   const [leagueState, setLeagueState] = useState<LeagueState | null>(null);
   const [bracketState, setBracketState] = useState<BracketState | null>(null);
   const [pendingLeagueFixture, setPendingLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
-  const [pendingBracketStage, setPendingBracketStage] = useState<'quarterfinals' | 'semifinals' | 'final' | null>(null);
+  const [pendingBracketStage, setPendingBracketStage] = useState<PlayableStage | null>(null);
   const [pendingBracketIdx, setPendingBracketIdx] = useState<number>(0);
 
   const { history, clearHistory } = useMatchHistory();
@@ -67,7 +68,7 @@ function App() {
     const others = premierLeagueTeams
       .filter(t => t.id !== userTeam.id)
       .sort(() => Math.random() - 0.5)
-      .slice(0, 7)
+      .slice(0, 15)
       .map(cloneTeam);
     setBracketState(createBracket(userTeam, others));
     setScreen('bracket');
@@ -86,6 +87,19 @@ function App() {
     setHomeTeam(cloneTeam(home)); setAwayTeam(cloneTeam(away));
     setMatchContext('league'); setIsKnockout(false);
     setScreen('setup');
+  }, [leagueState]);
+
+  const handleSimulateUserLeagueMatch = useCallback(() => {
+    if (!leagueState) return;
+    const roundIdx = leagueState.currentRound;
+    const round = leagueState.fixtures[roundIdx];
+    const fixtureIdx = round.findIndex(f => f.homeTeamId === leagueState.userTeamId || f.awayTeamId === leagueState.userTeamId);
+    if (fixtureIdx === -1 || round[fixtureIdx].played) return;
+    const simulated = simularFixtureAuto(round[fixtureIdx], leagueState.teams);
+    const newFixtures = leagueState.fixtures.map((r, ri) =>
+      ri === roundIdx ? r.map((f, fi) => fi === fixtureIdx ? simulated : f) : r
+    );
+    setLeagueState({ ...leagueState, fixtures: newFixtures });
   }, [leagueState]);
 
   const handleSimulateLeagueRound = useCallback((roundIndex: number) => {
@@ -114,7 +128,7 @@ function App() {
   }, [leagueState, pendingLeagueFixture]);
 
   // ── Copa ──────────────────────────────────────────────────────────────────
-  const handlePlayBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: 'quarterfinals' | 'semifinals' | 'final', matchIdx: number) => {
+  const handlePlayBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
     setPendingBracketStage(stage);
     setPendingBracketIdx(matchIdx);
     setHomeTeam(cloneTeam(home)); setAwayTeam(cloneTeam(away));
@@ -122,9 +136,10 @@ function App() {
     setScreen('setup');
   }, []);
 
-  const handleSimulateBracketMatch = useCallback((stage: 'quarterfinals' | 'semifinals' | 'final', matchIdx: number) => {
+  const handleSimulateBracketMatch = useCallback((stage: PlayableStage, matchIdx: number) => {
     if (!bracketState) return;
-    const stageMatches = stage === 'quarterfinals' ? bracketState.quarterFinals
+    const stageMatches = stage === 'roundOf16' ? bracketState.roundOf16
+      : stage === 'quarterfinals' ? bracketState.quarterFinals
       : stage === 'semifinals' ? bracketState.semiFinals
       : [bracketState.final];
     const match = stageMatches[matchIdx];
@@ -133,7 +148,8 @@ function App() {
     const sim = simularBracketMatch(home, away);
     const updated: BracketMatch = { ...match, ...sim };
     let s = { ...bracketState };
-    if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[matchIdx] = updated; s = { ...s, quarterFinals: qf }; }
+    if (stage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[matchIdx] = updated; s = { ...s, roundOf16: r16 }; }
+    else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[matchIdx] = updated; s = { ...s, quarterFinals: qf }; }
     else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[matchIdx] = updated; s = { ...s, semiFinals: sf }; }
     else { s = { ...s, final: updated }; }
     setBracketState(advanceBracket(s));
@@ -141,7 +157,8 @@ function App() {
 
   const handleBracketMatchResult = useCallback((result: MatchResult) => {
     if (!bracketState || !pendingBracketStage) return;
-    const stageMatches = pendingBracketStage === 'quarterfinals' ? bracketState.quarterFinals
+    const stageMatches = pendingBracketStage === 'roundOf16' ? bracketState.roundOf16
+      : pendingBracketStage === 'quarterfinals' ? bracketState.quarterFinals
       : pendingBracketStage === 'semifinals' ? bracketState.semiFinals
       : [bracketState.final];
     const match = stageMatches[pendingBracketIdx];
@@ -161,7 +178,8 @@ function App() {
       winnerId, played: true,
     };
     let s = { ...bracketState };
-    if (pendingBracketStage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[pendingBracketIdx] = updated; s = { ...s, quarterFinals: qf }; }
+    if (pendingBracketStage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[pendingBracketIdx] = updated; s = { ...s, roundOf16: r16 }; }
+    else if (pendingBracketStage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[pendingBracketIdx] = updated; s = { ...s, quarterFinals: qf }; }
     else if (pendingBracketStage === 'semifinals') { const sf = [...s.semiFinals]; sf[pendingBracketIdx] = updated; s = { ...s, semiFinals: sf }; }
     else { s = { ...s, final: updated }; }
     setBracketState(advanceBracket(s));
@@ -215,6 +233,7 @@ function App() {
       <LeagueScreen
         state={leagueState}
         onPlayMatch={handlePlayLeagueMatch}
+        onSimulateUserMatch={handleSimulateUserLeagueMatch}
         onSimulateRound={handleSimulateLeagueRound}
         onNextRound={handleNextLeagueRound}
         onBack={() => setScreen('home')}
@@ -227,8 +246,9 @@ function App() {
       <BracketScreen
         state={bracketState}
         onPlayMatch={(match, home, away) => {
-          const stage = bracketState.stage as 'quarterfinals' | 'semifinals' | 'final';
-          const matches = stage === 'quarterfinals' ? bracketState.quarterFinals
+          const stage = bracketState.stage as PlayableStage;
+          const matches = stage === 'roundOf16' ? bracketState.roundOf16
+            : stage === 'quarterfinals' ? bracketState.quarterFinals
             : stage === 'semifinals' ? bracketState.semiFinals
             : [bracketState.final];
           handlePlayBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));

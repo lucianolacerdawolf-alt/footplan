@@ -108,6 +108,9 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
 
   return (
     <div className="team-select-screen">
+      <div className="top-nav">
+        <button className="back-btn-secondary" onClick={onTournament}>← Menu Principal</button>
+      </div>
       <header className="app-header">
         <h1>FootPlan</h1>
         <p className="subtitle">Premier League</p>
@@ -174,11 +177,6 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
         </div>
       )}
 
-      <div className="select-tournament-entry">
-        <button className="tournament-entry-btn" onClick={onTournament}>
-          ← Menu Principal
-        </button>
-      </div>
     </div>
   );
 }
