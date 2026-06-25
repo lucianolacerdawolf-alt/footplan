@@ -108,6 +108,7 @@ export interface Team {
   logoUrl: string;          // URL do escudo oficial
   squad: Player[];
   strategy: Strategy;
+  morale?: number;          // moral do time (-10 a +10, padrão 0)
 }
 
 // =============================================================================
@@ -119,6 +120,7 @@ export interface MatchEvent {
   description: string;
   teamId: string | null; // time que gerou o evento (null para eventos neutros)
   playerId?: string;     // jogador envolvido (preenchido em redCard/yellowCard)
+  scorer?: string;       // nome do marcador (preenchido em goal)
 }
 
 /** Função de aleatoriedade injetável — permite simulações determinísticas */

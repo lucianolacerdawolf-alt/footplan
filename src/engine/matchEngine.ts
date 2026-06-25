@@ -150,6 +150,7 @@ function resolveAttack(
   const defFormMult = defCount / 4;
   const defLineMult = DEFENSIVE_LINE_MOD[defendingTeam.strategy.defensiveLine].defenseCompact;
   const defWidthMult = WIDTH_MOD[defendingTeam.strategy.width].defenseNarrow;
+  const moraleMod = 1 + ((attackingTeam.morale ?? 0) / 100);
 
   const fwds = getPlayersByPosition(getStarters(attackingTeam, cards), 'FWD');
   const mids = getPlayersByPosition(getStarters(attackingTeam, cards), 'MID');
@@ -163,7 +164,7 @@ function resolveAttack(
     const f = fatigueAtk.get(p.id) ?? 0;
     return sum + effective(p.attributes.speed, f) * modAtk.speed
                + effective(p.attributes.dribbling, f) * modAtk.dribbling;
-  }, 0) * atkFormMult * rng(0.7, 1.3);
+  }, 0) * atkFormMult * moraleMod * rng(0.7, 1.3);
 
   const defensePower = (
     chosenDef.reduce((sum, p) => {
@@ -344,7 +345,7 @@ function simularBloco(
         if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
           const scoreStr = `${state.homeScore}-${state.awayScore}`;
           if (shot.result === 'goal') {
-            state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id });
+            state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id, scorer: shot.scorer.name });
             if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
           } else if (shot.result === 'post') {
             state.events.push({ minute, type: 'post', description: generatePost(possTeam.name, shot.scorer), teamId: possTeam.id });

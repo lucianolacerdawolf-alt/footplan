@@ -1,9 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { TournamentMode } from './components/TournamentSetupScreen';
 import type { LeagueState, BracketState, BracketMatch, LeagueFixture } from './engine/tournament';
-import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto } from './engine/tournament';
+import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto, recoverFatigue } from './engine/tournament';
 import { cloneTeam } from './utils/teamUtils';
 import HomeScreen from './components/HomeScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
@@ -30,14 +30,41 @@ function App() {
   const [matchContext, setMatchContext] = useState<MatchContext>('regular');
   const [isKnockout, setIsKnockout] = useState(false);
   const [tournamentMode, setTournamentMode] = useState<TournamentMode>('league');
-  const [leagueState, setLeagueState] = useState<LeagueState | null>(null);
-  const [bracketState, setBracketState] = useState<BracketState | null>(null);
+  const [leagueState, setLeagueState] = useState<LeagueState | null>(() => {
+    try {
+      const saved = localStorage.getItem('fp:leagueState');
+      return saved ? (JSON.parse(saved) as LeagueState) : null;
+    } catch { return null; }
+  });
+  const [bracketState, setBracketState] = useState<BracketState | null>(() => {
+    try {
+      const saved = localStorage.getItem('fp:bracketState');
+      return saved ? (JSON.parse(saved) as BracketState) : null;
+    } catch { return null; }
+  });
   const [pendingLeagueFixture, setPendingLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
   const [isTournamentEntry, setIsTournamentEntry] = useState(false);
   const [pendingBracketStage, setPendingBracketStage] = useState<PlayableStage | null>(null);
   const [pendingBracketIdx, setPendingBracketIdx] = useState<number>(0);
 
   const { history, clearHistory } = useMatchHistory();
+
+  // ── Persistência localStorage ─────────────────────────────────────────────
+  useEffect(() => {
+    if (leagueState) {
+      try { localStorage.setItem('fp:leagueState', JSON.stringify(leagueState)); } catch { /* noop */ }
+    } else {
+      localStorage.removeItem('fp:leagueState');
+    }
+  }, [leagueState]);
+
+  useEffect(() => {
+    if (bracketState) {
+      try { localStorage.setItem('fp:bracketState', JSON.stringify(bracketState)); } catch { /* noop */ }
+    } else {
+      localStorage.removeItem('fp:bracketState');
+    }
+  }, [bracketState]);
 
   // ── Partida única ─────────────────────────────────────────────────────────
   const handleTeamsSelected = useCallback((home: Team, away: Team, mode: GameMode) => {
@@ -52,9 +79,18 @@ function App() {
       setScreen(matchContext === 'league' ? 'league' : 'bracket');
       return;
     }
+    // Persist user team strategy into league state
+    if (matchContext === 'league' && leagueState) {
+      const userIsHome = home.id === leagueState.userTeamId;
+      const userTeamConfigured = userIsHome ? home : away;
+      setLeagueState(prev => prev ? {
+        ...prev,
+        teams: prev.teams.map(t => t.id === prev.userTeamId ? { ...t, strategy: userTeamConfigured.strategy } : t),
+      } : prev);
+    }
     setHomeTeam(home); setAwayTeam(away);
     setScreen('match');
-  }, [isTournamentEntry, matchContext]);
+  }, [isTournamentEntry, matchContext, leagueState]);
 
   const handleViewStats = useCallback((result: MatchResult) => {
     setLastResult(result);
@@ -124,24 +160,52 @@ function App() {
   const handleSimulateLeagueRound = useCallback((roundIndex: number) => {
     if (!leagueState) return;
     const newRound = simularRodadaAuto(leagueState.fixtures[roundIndex], leagueState.teams, leagueState.userTeamId);
-    setLeagueState({ ...leagueState, fixtures: leagueState.fixtures.map((r, i) => i === roundIndex ? newRound : r) });
+    // Update morale for all teams based on round results
+    const moraleMap = new Map<string, number>();
+    for (const f of newRound) {
+      if (!f.played || f.homeScore == null || f.awayScore == null) continue;
+      const hWon = f.homeScore > f.awayScore;
+      const draw = f.homeScore === f.awayScore;
+      const delta = draw ? 0 : 2;
+      const hDelta = hWon ? delta : -delta;
+      const aDelta = hWon ? -delta : delta;
+      moraleMap.set(f.homeTeamId, (moraleMap.get(f.homeTeamId) ?? 0) + hDelta);
+      moraleMap.set(f.awayTeamId, (moraleMap.get(f.awayTeamId) ?? 0) + aDelta);
+    }
+    const newTeams = leagueState.teams.map(t => {
+      const delta = moraleMap.get(t.id) ?? 0;
+      if (delta === 0) return t;
+      return { ...t, morale: Math.max(-10, Math.min(10, (t.morale ?? 0) + delta)) };
+    });
+    setLeagueState({ ...leagueState, fixtures: leagueState.fixtures.map((r, i) => i === roundIndex ? newRound : r), teams: newTeams });
   }, [leagueState]);
 
   const handleNextLeagueRound = useCallback(() => {
     if (!leagueState) return;
     const next = leagueState.currentRound + 1;
-    setLeagueState({ ...leagueState, currentRound: next, phase: next >= leagueState.fixtures.length ? 'done' : 'playing' });
+    const recoveredTeams = recoverFatigue(leagueState.teams);
+    setLeagueState({ ...leagueState, teams: recoveredTeams, currentRound: next, phase: next >= leagueState.fixtures.length ? 'done' : 'playing' });
   }, [leagueState]);
 
   const handleLeagueMatchResult = useCallback((result: MatchResult) => {
     if (!leagueState || !pendingLeagueFixture) return;
     const { roundIdx, fixtureIdx } = pendingLeagueFixture;
+    const fixture = leagueState.fixtures[roundIdx][fixtureIdx];
+    const userIsHome = fixture.homeTeamId === leagueState.userTeamId;
+    const userScore = userIsHome ? result.homeScore : result.awayScore;
+    const oppScore = userIsHome ? result.awayScore : result.homeScore;
+    const moraleDelta = userScore > oppScore ? 2 : userScore === oppScore ? 0 : -2;
     const newFixtures = leagueState.fixtures.map((round, ri) =>
       ri === roundIdx
         ? round.map((f, fi) => fi === fixtureIdx ? { ...f, homeScore: result.homeScore, awayScore: result.awayScore, played: true } : f)
         : round
     );
-    setLeagueState({ ...leagueState, fixtures: newFixtures });
+    const newTeams = leagueState.teams.map(t => {
+      if (t.id !== leagueState.userTeamId) return t;
+      const current = t.morale ?? 0;
+      return { ...t, morale: Math.max(-10, Math.min(10, current + moraleDelta)) };
+    });
+    setLeagueState({ ...leagueState, fixtures: newFixtures, teams: newTeams });
     setLastResult(result);
     setScreen('stats');
   }, [leagueState, pendingLeagueFixture]);
@@ -218,6 +282,12 @@ function App() {
   }, [matchContext, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats]);
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const goHome = useCallback(() => {
+    setLeagueState(null);
+    setBracketState(null);
+    setScreen('home');
+  }, []);
+
   if (screen === 'home') {
     return (
       <HomeScreen
@@ -255,7 +325,7 @@ function App() {
         onSimulateUserMatch={handleSimulateUserLeagueMatch}
         onSimulateRound={handleSimulateLeagueRound}
         onNextRound={handleNextLeagueRound}
-        onBack={() => setScreen('home')}
+        onBack={goHome}
       />
     );
   }
@@ -273,7 +343,7 @@ function App() {
           handlePlayBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
         }}
         onSimulateMatch={handleSimulateBracketMatch}
-        onBack={() => setScreen('home')}
+        onBack={goHome}
       />
     );
   }
@@ -313,7 +383,7 @@ function App() {
       <MatchStatsScreen
         result={lastResult}
         history={isTournament ? [] : history}
-        onMenu={() => setScreen('home')}
+        onMenu={goHome}
         onClearHistory={clearHistory}
         onContinue={isTournament ? handleContinueTournament : undefined}
         continueLabel={matchContext === 'league' ? 'Continuar Premier League' : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}

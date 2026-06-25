@@ -262,6 +262,20 @@ export function simularRodadaAuto(
 }
 
 // =============================================================================
+// FADIGA — recuperação entre rodadas
+// =============================================================================
+
+export function recoverFatigue(teams: Team[]): Team[] {
+  return teams.map(team => ({
+    ...team,
+    squad: team.squad.map(player => ({
+      ...player,
+      currentFatigue: Math.max(0, player.currentFatigue - 60),
+    })),
+  }));
+}
+
+// =============================================================================
 // LIGA — simula o jogo do usuário de uma rodada (sem ir à tela de stats)
 // =============================================================================
 

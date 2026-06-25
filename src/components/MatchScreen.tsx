@@ -133,6 +133,37 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         </div>
       </div>
 
+      {/* Barra de posse ao vivo */}
+      {started && (() => {
+        const totalPoss = replayEvents.filter(e => e.type === 'possession').length;
+        const homePoss = replayEvents.filter(e => e.type === 'possession' && e.teamId === initialHome.id).length;
+        const homePct = totalPoss > 0 ? Math.round((homePoss / totalPoss) * 100) : 50;
+        const awayPct = 100 - homePct;
+        return (
+          <div className="possession-bar-wrap">
+            <span className="poss-pct poss-home" style={{ color: home.color }}>{homePct}%</span>
+            <div className="possession-bar">
+              <div className="possession-fill home-fill" style={{ width: `${homePct}%`, background: home.color }} />
+            </div>
+            <span className="poss-pct poss-away" style={{ color: away.color }}>{awayPct}%</span>
+          </div>
+        );
+      })()}
+
+      {/* Timeline de gols */}
+      {started && replayEvents.some(e => e.type === 'goal') && (
+        <div className="goal-timeline">
+          {replayEvents.filter(e => e.type === 'goal').map((e, idx) => {
+            const isHome = e.teamId === initialHome.id;
+            return (
+              <span key={idx} className={`goal-entry ${isHome ? 'goal-home' : 'goal-away'}`} style={{ color: isHome ? home.color : away.color }}>
+                {e.minute}&apos; · {e.scorer ?? '?'} ({isHome ? home.abbreviation : away.abbreviation})
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       {/* Campinho */}
       <div className="match-pitch-area">
         <div className="pitch-container">
@@ -151,6 +182,25 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             <div className="halftime-overlay">
               <div className="halftime-inner">
                 <div className="halftime-title">Intervalo</div>
+
+                {/* Mini-stats do 1º tempo */}
+                {(() => {
+                  const htEvents = replayEvents;
+                  const hShots = htEvents.filter(e => ['goal','miss','post','save'].includes(e.type) && (e.type === 'save' ? e.teamId !== initialHome.id : e.teamId === initialHome.id)).length;
+                  const aShots = htEvents.filter(e => ['goal','miss','post','save'].includes(e.type) && (e.type === 'save' ? e.teamId !== initialAway.id : e.teamId === initialAway.id)).length;
+                  const hSoT = htEvents.filter(e => (e.type === 'goal' && e.teamId === initialHome.id) || (e.type === 'save' && e.teamId !== initialHome.id)).length;
+                  const aSoT = htEvents.filter(e => (e.type === 'goal' && e.teamId === initialAway.id) || (e.type === 'save' && e.teamId !== initialAway.id)).length;
+                  const totalPoss = htEvents.filter(e => e.type === 'possession').length;
+                  const homePoss = htEvents.filter(e => e.type === 'possession' && e.teamId === initialHome.id).length;
+                  const homePct = totalPoss > 0 ? Math.round((homePoss / totalPoss) * 100) : 50;
+                  return (
+                    <div className="ht-mini-stats">
+                      <div className="ht-stat-row"><span style={{ color: home.color }}>{hShots}</span><span className="ht-stat-label">Finalizações</span><span style={{ color: away.color }}>{aShots}</span></div>
+                      <div className="ht-stat-row"><span style={{ color: home.color }}>{hSoT}</span><span className="ht-stat-label">No Alvo</span><span style={{ color: away.color }}>{aSoT}</span></div>
+                      <div className="ht-stat-row"><span style={{ color: home.color }}>{homePct}%</span><span className="ht-stat-label">Posse</span><span style={{ color: away.color }}>{100 - homePct}%</span></div>
+                    </div>
+                  );
+                })()}
 
                 <div className="halftime-teams">
                   <div className="halftime-team">
