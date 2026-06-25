@@ -5,6 +5,7 @@
 
 .header {
   display: flex; align-items: center; gap: 10px;
+  flex-wrap: wrap;
 }
 .headerCenter { flex: 1; display: flex; justify-content: center; }
 .title { font-size: 22px; font-weight: 900; font-family: var(--mono); }

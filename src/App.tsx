@@ -63,6 +63,16 @@ function App() {
           : t),
       } : prev);
     }
+    if (matchContext === 'bracket' && bracketState) {
+      const userIsHome = home.id === bracketState.userTeamId;
+      const userTeamConfigured = userIsHome ? home : away;
+      setBracketState(prev => prev ? {
+        ...prev,
+        teams: prev.teams.map(t => t.id === prev.userTeamId
+          ? { ...t, strategy: userTeamConfigured.strategy, squad: userTeamConfigured.squad }
+          : t),
+      } : prev);
+    }
     if (isTournamentEntry) {
       setIsTournamentEntry(false);
       setScreen(matchContext === 'league' ? 'league' : 'bracket');
@@ -70,7 +80,7 @@ function App() {
     }
     setHomeTeam(home); setAwayTeam(away);
     setScreen('match');
-  }, [isTournamentEntry, matchContext, leagueState, setLeagueState]);
+  }, [isTournamentEntry, matchContext, leagueState, bracketState, setLeagueState, setBracketState]);
 
   const handleViewStats = useCallback((result: MatchResult) => {
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
@@ -79,6 +89,17 @@ function App() {
   }, [recordH2H]);
 
   // ── Torneio: setup ────────────────────────────────────────────────────────
+  const handleEditBracketTactics = useCallback(() => {
+    if (!bracketState) return;
+    const userTeam = bracketState.teams.find(t => t.id === bracketState.userTeamId);
+    if (!userTeam) return;
+    setHomeTeam(cloneTeam(userTeam));
+    setAwayTeam(cloneTeam(userTeam));
+    setMatchContext('bracket'); setIsKnockout(true);
+    setIsTournamentEntry(true);
+    setScreen('setup');
+  }, [bracketState]);
+
   const handleEditLeagueTactics = useCallback(() => {
     if (!leagueState) return;
     const userTeam = leagueState.teams.find(t => t.id === leagueState.userTeamId);
@@ -336,6 +357,7 @@ function App() {
           handlePlayBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
         }}
         onSimulateMatch={handleSimulateBracketMatch}
+        onEditTactics={handleEditBracketTactics}
         onBack={goHome}
       />
     );

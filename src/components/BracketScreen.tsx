@@ -7,6 +7,7 @@ interface Props {
   state: BracketState;
   onPlayMatch: (match: BracketMatch, homeTeam: Team, awayTeam: Team) => void;
   onSimulateMatch: (stage: PlayableStage, matchIndex: number) => void;
+  onEditTactics: () => void;
   onBack: () => void;
 }
 
@@ -77,7 +78,7 @@ function MatchCard({
   );
 }
 
-export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onBack }: Props) {
+export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onEditTactics, onBack }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
   const [simulating, setSimulating] = useState(false);
   const runSim = (stageKey: PlayableStage, i: number) => {
@@ -148,10 +149,11 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onB
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
+        <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
         <div className={styles.headerCenter}>
           <span className={styles.title}>Copa · {stageLabels[stage]}</span>
         </div>
+        <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
       </header>
 
       {stage === 'roundOf16'    && renderStage('Oitavas de Final', roundOf16,     'roundOf16',    true)}
