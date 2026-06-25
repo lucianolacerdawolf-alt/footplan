@@ -272,7 +272,7 @@ export function recoverFatigue(teams: Team[]): Team[] {
     squad: team.squad.map(player => ({
       ...player,
       currentFatigue: Math.max(0, player.currentFatigue - 60),
-      injuredRounds: player.injuredRounds && player.injuredRounds > 0
+      injuredRounds: player.injuredRounds && player.injuredRounds > 1
         ? player.injuredRounds - 1
         : undefined,
     })),

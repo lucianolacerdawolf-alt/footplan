@@ -12,8 +12,6 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 
 ## 🎮 Gameplay / UX
 
-- 🟡 **Mando de campo não influencia o placar** — engine ignora quem é mandante. Real: ~+0.3 gols vantagem mandante. Adicionar `homeAdvantage` modifier em `resolveAttack`.
-- 🟡 **Histórico H2H só guarda placar agregado** — não tem datas nem detalhes dos confrontos. Limita uso analítico. Estender `H2HRecord` com lista de últimos 5 jogos completos.
 - 🟡 **Substituições só no intervalo** — durante o 2º tempo não dá pra trocar jogador cansado. Exigiria pausar o replay; trabalho real.
 
 ---
@@ -21,10 +19,9 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 ## 🏗️ Saúde do código
 
 - 🔴 **`App.tsx` tem 504 linhas e 40+ chamadas de hook** — virou god component. Extrair `useTournamentNavigation()` que retorne `{state, screen, handlers}` ajudaria muito. (Tentei na Fase 4 mas adiei pelo risco/benefício.)
-- 🟡 **`matchEngine.ts` tem 562 linhas e `simularPartida` enorme** — extrair `runCycle`, `resolveAttack`, `applyCards` em arquivos separados.
-- 🟡 **Sem testes para `tournament.ts`** — `recoverFatigue`, `applyPostMatchInjuries`, `randomizeCPUTactics`, `generateLeagueSchedule` são puras e fáceis de testar.
+- 🟡 **`matchEngine.ts` ainda tem 484 linhas** — `resolveAttack`, `resolveShot`, `applyFatigue`, `calculatePossession` poderiam virar arquivos próprios pra reduzir mais. Risco médio.
 - 🟡 **Premier League hardcoded** em `data/premierLeague.ts` (573 linhas). Se quiser outras ligas, falta abstrair "liga ativa".
-- 🟡 **Zero testes de componente** — pelo menos `MatchStatsScreen` e `playerRating` seria barato testar.
+- 🟡 **Zero testes de componente** — engine tem 79 testes; falta cobrir UI (`MatchStatsScreen`, `BracketScreen`, etc) via React Testing Library.
 
 ---
 
@@ -59,3 +56,7 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 - Lesões aplicadas pra CPU também (5% de chance em jogos simulados)
 - Acessibilidade: roles ARIA em modais (resume, tutorial), `role="status"` em toast, aria-label em botões de velocidade, aria-label semântico em pills de H2H, alt descritivo em escudos não-decorativos
 - `key={i}` substituído por chave composta com identidade real (`MatchStatsScreen` gols/cartões)
+- Mando de campo no engine (+8% no ataque do mandante, teste de regressão incluído)
+- H2H detalhado: `H2HRecord.log` com até 5 jogos completos (data + placar), exibido em `<details>` expansível no SetupScreen
+- 29 testes novos: `tournament.test.ts` (16) e `playerRating.test.ts` (13). Total: 79 testes
+- Refactor parcial do `matchEngine.ts`: constantes movidas pra `matchConfig.ts` (52 linhas), helpers puros pra `matchHelpers.ts` (59 linhas). matchEngine reduziu de 562 → 484 linhas

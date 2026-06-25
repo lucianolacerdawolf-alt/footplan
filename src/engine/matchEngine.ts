@@ -18,7 +18,7 @@
 // O cansaço reduz atributos em até 50%. RNG garante imprevisibilidade.
 // =============================================================================
 
-import type { Team, Player, MatchEvent, MatchResult, TeamStats, PenaltyResult, Mentality, Intensity, Position, DefensiveLine, Width, RandomFn } from './types';
+import type { Team, Player, MatchEvent, MatchResult, PenaltyResult, Mentality, RandomFn } from './types';
 import {
   generateKickoff, generatePossession, generatePass, generateTackle,
   generateAttack, generateGoal, generateMiss, generatePost, generateSave,
@@ -29,79 +29,15 @@ import {
   generatePenaltyKick, generatePenaltyWin,
 } from './commentary';
 import { FORMATION_COUNTS } from './constants';
-
-const CYCLE_MINUTES = 2;
-const FIRST_HALF_CYCLES = 22;  // ciclos 0-21 → minutos 0-42 + evento intervalo
-const TOTAL_CYCLES = 45;
-const ET_HALF_CYCLE  = TOTAL_CYCLES + 7;   // 52 → ~minuto 104
-const ET_END_CYCLE   = TOTAL_CYCLES + 14;  // 59 → ~minuto 118
-const MAX_EVENTS_PER_CYCLE = 6;
-
-const makeRng = (random: RandomFn) => (min: number, max: number) => min + random() * (max - min);
-
-const MENTALITY_MODIFIERS: Record<Mentality, {
-  passing: number; vision: number; speed: number; dribbling: number;
-  tackling: number; positioning: number; finishing: number;
-  staminaLossMultiplier: number;
-}> = {
-  // Controla bem a bola e cria chances por construção, gasta mais energia
-  'possession':     { passing: 1.20, vision: 1.20, speed: 0.90, dribbling: 1.00, tackling: 0.90, positioning: 0.95, finishing: 1.05, staminaLossMultiplier: 1.10 },
-  // Velocidade no contra-ataque é a arma; chute não é mais preciso, só mais rápido
-  'counter-attack': { passing: 0.85, vision: 0.95, speed: 1.25, dribbling: 1.10, tackling: 0.85, positioning: 0.90, finishing: 0.95, staminaLossMultiplier: 0.90 },
-  // Recupera bola com pressão alta e cansa muito; ataque normal
-  'high-press':     { passing: 0.95, vision: 1.00, speed: 1.05, dribbling: 1.00, tackling: 1.20, positioning: 1.15, finishing: 0.95, staminaLossMultiplier: 1.35 },
-  // Defesa sólida e compacta; raramente cria perigo no ataque
-  'defensive':      { passing: 0.90, vision: 0.85, speed: 0.90, dribbling: 0.85, tackling: 1.30, positioning: 1.35, finishing: 0.80, staminaLossMultiplier: 0.70 },
-};
-
-const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 7 };
-
-const ATK_CHANCE: Record<Mentality, number> = {
-  'possession': 0.90, 'counter-attack': 0.65, 'high-press': 0.88, 'defensive': 0.38,
-};
-
-const DEFENSIVE_LINE_MOD: Record<DefensiveLine, { possessionBias: number; defenseCompact: number }> = {
-  'high':   { possessionBias: 1.10, defenseCompact: 0.90 },
-  'normal': { possessionBias: 1.00, defenseCompact: 1.00 },
-  'low':    { possessionBias: 0.90, defenseCompact: 1.10 },
-};
-
-const WIDTH_MOD: Record<Width, { possessionSpread: number; defenseNarrow: number }> = {
-  'wide':   { possessionSpread: 1.10, defenseNarrow: 0.90 },
-  'normal': { possessionSpread: 1.00, defenseNarrow: 1.00 },
-  'narrow': { possessionSpread: 0.90, defenseNarrow: 1.10 },
-};
-
-function effective(attr: number, fatigue: number): number {
-  return attr * (1 - fatigue / 200);
-}
-
-function getPlayersByPosition(players: Player[], pos: Position): Player[] {
-  return players.filter(p => p.position === pos);
-}
-
-
-function getGoalkeeper(players: Player[]): Player {
-  return players.find(p => p.position === 'GK')!;
-}
-
-function pickRandom<T>(arr: T[], count: number, random: RandomFn): T[] {
-  const shuffled = [...arr].sort(() => random() - 0.5);
-  return shuffled.slice(0, Math.min(count, arr.length));
-}
-
-function getStarters(team: Team, cards?: Map<string, 'yellow' | 'red'>): Player[] {
-  const counts = FORMATION_COUNTS[team.strategy.formation] ?? { DEF: 4, MID: 3, FWD: 3 };
-  const starters: Player[] = [];
-  const active = (p: Player) => !cards || cards.get(p.id) !== 'red';
-  const gk = getPlayersByPosition(team.squad, 'GK').filter(active);
-  starters.push(...gk.slice(0, 1));
-  for (const pos of ['DEF', 'MID', 'FWD'] as const) {
-    const players = getPlayersByPosition(team.squad, pos).filter(active);
-    starters.push(...players.slice(0, counts[pos] ?? 3));
-  }
-  return starters;
-}
+import {
+  CYCLE_MINUTES, FIRST_HALF_CYCLES, TOTAL_CYCLES, ET_HALF_CYCLE, ET_END_CYCLE,
+  MAX_EVENTS_PER_CYCLE, HOME_ADVANTAGE,
+  MENTALITY_MODIFIERS, INTENSITY_FATIGUE, ATK_CHANCE, DEFENSIVE_LINE_MOD, WIDTH_MOD,
+} from './matchConfig';
+import {
+  effective, getPlayersByPosition, getGoalkeeper, pickRandom, getStarters,
+  makeRng, computeStats,
+} from './matchHelpers';
 
 function calculatePossession(
   teamA: Team, teamB: Team,
@@ -138,7 +74,8 @@ function calculatePossession(
 function resolveAttack(
   attackingTeam: Team, defendingTeam: Team,
   fatigueAtk: Map<string, number>, fatigueDef: Map<string, number>,
-  cards: Map<string, 'yellow' | 'red'>, random: RandomFn
+  cards: Map<string, 'yellow' | 'red'>, random: RandomFn,
+  isHomeAttack: boolean = false
 ): { won: boolean; attacker: Player | null } {
   const rng = makeRng(random);
   const modAtk = MENTALITY_MODIFIERS[attackingTeam.strategy.mentality];
@@ -151,6 +88,7 @@ function resolveAttack(
   const defLineMult = DEFENSIVE_LINE_MOD[defendingTeam.strategy.defensiveLine].defenseCompact;
   const defWidthMult = WIDTH_MOD[defendingTeam.strategy.width].defenseNarrow;
   const moraleMod = 1 + ((attackingTeam.morale ?? 0) / 100);
+  const homeMod = isHomeAttack ? HOME_ADVANTAGE : 1;
 
   const fwds = getPlayersByPosition(getStarters(attackingTeam, cards), 'FWD');
   const mids = getPlayersByPosition(getStarters(attackingTeam, cards), 'MID');
@@ -162,7 +100,7 @@ function resolveAttack(
     const f = fatigueAtk.get(p.id) ?? 0;
     return sum + effective(p.attributes.speed, f) * modAtk.speed
                + effective(p.attributes.dribbling, f) * modAtk.dribbling;
-  }, 0) * atkFormMult * moraleMod * rng(0.7, 1.3);
+  }, 0) * atkFormMult * moraleMod * homeMod * rng(0.7, 1.3);
 
   // GK contribui apenas em resolveShot (não desarma no meio-campo)
   const defensePower = chosenDef.reduce((sum, p) => {
@@ -204,22 +142,6 @@ function applyFatigue(team: Team, fatigueMap: Map<string, number>, cards: Map<st
     const current = fatigueMap.get(player.id) ?? 0;
     fatigueMap.set(player.id, Math.min(100, current + fatigueGain));
   }
-}
-
-// ---------------------------------------------------------------------------
-// Computa estatísticas de um time a partir dos eventos
-// ---------------------------------------------------------------------------
-function computeStats(events: MatchEvent[], teamId: string, opponentId: string): TeamStats {
-  let shots = 0, shotsOnTarget = 0, fouls = 0, yellowCards = 0, redCards = 0;
-  for (const e of events) {
-    if ((e.type === 'goal' || e.type === 'miss' || e.type === 'post') && e.teamId === teamId) shots++;
-    if (e.type === 'save' && e.teamId === opponentId) { shots++; shotsOnTarget++; }
-    if (e.type === 'goal' && e.teamId === teamId) shotsOnTarget++;
-    if (e.type === 'foul' && e.teamId === opponentId) fouls++;
-    if (e.type === 'yellowCard' && e.teamId === teamId) yellowCards++;
-    if (e.type === 'redCard' && e.teamId === teamId) redCards++;
-  }
-  return { shots, shotsOnTarget, fouls, yellowCards, redCards };
 }
 
 // ---------------------------------------------------------------------------
@@ -323,7 +245,7 @@ function simularBloco(
     const defFatigue = possessionWinner === 'A' ? state.fatigueAway : state.fatigueHome;
 
     if (random() < ATK_CHANCE[possTeam.strategy.mentality]) {
-      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random);
+      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A');
 
       if (atkResult.won && atkResult.attacker) {
         if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.18 && defTeam.strategy.defensiveLine === 'high') {

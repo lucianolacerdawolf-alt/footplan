@@ -283,18 +283,33 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       })()}
 
       {h2h && (h2h.wins + h2h.draws + h2h.losses) > 0 && (
-        <div className="h2h-strip">
-          <span className="h2h-label">Histórico {initialHome.abbreviation} vs {initialAway.abbreviation}</span>
-          <span className="h2h-record">
-            <span className="h2h-w">{h2h.wins}V</span> · <span className="h2h-d">{h2h.draws}E</span> · <span className="h2h-l">{h2h.losses}D</span>
-          </span>
-          <span className="h2h-label">Gols {h2h.gf}–{h2h.ga}</span>
-          {h2h.last.length > 0 && (
-            <span className="h2h-form" aria-label={`Últimos resultados: ${h2h.last.map(r => r === 'W' ? 'vitória' : r === 'D' ? 'empate' : 'derrota').join(', ')}`}>
-              {h2h.last.map((r, i) => <span key={i} className={`h2h-pill ${r}`} aria-hidden="true">{r}</span>)}
+        <details className="h2h-details">
+          <summary className="h2h-strip">
+            <span className="h2h-label">Histórico {initialHome.abbreviation} vs {initialAway.abbreviation}</span>
+            <span className="h2h-record">
+              <span className="h2h-w">{h2h.wins}V</span> · <span className="h2h-d">{h2h.draws}E</span> · <span className="h2h-l">{h2h.losses}D</span>
             </span>
+            <span className="h2h-label">Gols {h2h.gf}–{h2h.ga}</span>
+            {h2h.last.length > 0 && (
+              <span className="h2h-form" aria-label={`Últimos resultados: ${h2h.last.map(r => r === 'W' ? 'vitória' : r === 'D' ? 'empate' : 'derrota').join(', ')}`}>
+                {h2h.last.map((r, i) => <span key={i} className={`h2h-pill ${r}`} aria-hidden="true">{r}</span>)}
+              </span>
+            )}
+          </summary>
+          {h2h.log && h2h.log.length > 0 && (
+            <div className="h2h-log">
+              {h2h.log.map((m, i) => (
+                <div key={`${m.date}-${i}`} className="h2h-log-row">
+                  <span className={`h2h-pill ${m.result}`} aria-hidden="true">{m.result}</span>
+                  <span className="h2h-log-date">{m.date}</span>
+                  <span className="h2h-log-score" style={{ color: initialHome.color }}>{m.gf}</span>
+                  <span className="h2h-log-sep">–</span>
+                  <span className="h2h-log-score" style={{ color: initialAway.color }}>{m.ga}</span>
+                </div>
+              ))}
+            </div>
           )}
-        </div>
+        </details>
       )}
 
       <div className={lockAway ? 'setup-layout setup-layout-solo' : 'setup-layout'}>

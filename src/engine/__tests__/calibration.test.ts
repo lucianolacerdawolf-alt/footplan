@@ -93,6 +93,21 @@ describe('Calibração do matchEngine', () => {
     expect(pct).toBeLessThan(0.45);
   });
 
+  it('mandante vence mais que visitante em times iguais (1000 jogos)', () => {
+    const home = makeTeam('h', 72);
+    const away = makeTeam('a', 72);
+    const N = 1000;
+    let homeWins = 0;
+    let awayWins = 0;
+    for (let i = 0; i < N; i++) {
+      const r = withRng(seededRng(i + 500), () => simularPartidaRapida(home, away));
+      if (r.homeScore > r.awayScore) homeWins++;
+      else if (r.awayScore > r.homeScore) awayWins++;
+    }
+    expect(homeWins).toBeGreaterThan(awayWins);
+    expect(homeWins - awayWins).toBeGreaterThan(N * 0.04); // diff de pelo menos 4%
+  });
+
   it('distribuição de placares: 0-0 a 5-5 cobre >95% (500 jogos)', () => {
     const a = makeTeam('a', 72);
     const b = makeTeam('b', 72);

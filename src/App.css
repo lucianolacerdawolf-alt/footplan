@@ -622,6 +622,24 @@
 .h2h-pill.W { background: #16a34a; }
 .h2h-pill.D { background: #ca8a04; }
 .h2h-pill.L { background: #dc2626; }
+.h2h-details { margin: 0 16px; }
+.h2h-details summary {
+  list-style: none; cursor: pointer; margin: 0;
+}
+.h2h-details summary::-webkit-details-marker { display: none; }
+.h2h-details[open] .h2h-strip { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.h2h-log {
+  background: var(--code-bg); border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 10px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 6px 14px 10px;
+  font-family: var(--mono); font-size: 12px;
+}
+.h2h-log-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+.h2h-log-date { opacity: 0.55; min-width: 80px; font-size: 11px; }
+.h2h-log-score { font-weight: 900; font-size: 13px; min-width: 14px; text-align: center; }
+.h2h-log-sep { opacity: 0.4; }
+.h2h-details summary > .h2h-strip { margin: 0; }
 
 /* ── Loading state nos botões de simular ──────────────────────────── */
 .sim-loading { opacity: 0.5; pointer-events: none; }
