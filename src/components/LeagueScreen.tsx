@@ -146,6 +146,35 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
         <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
       </header>
 
+      {/* Season stats strip */}
+      {(() => {
+        let totalGoals = 0, playedCount = 0, homeWins = 0, draws = 0;
+        let userGF = 0, userGA = 0, userClean = 0;
+        for (const round of fixtures) {
+          for (const f of round) {
+            if (!f.played || f.homeScore == null || f.awayScore == null) continue;
+            totalGoals += f.homeScore + f.awayScore;
+            playedCount++;
+            if (f.homeScore > f.awayScore) homeWins++;
+            else if (f.homeScore === f.awayScore) draws++;
+            // User team
+            if (f.homeTeamId === userTeamId) { userGF += f.homeScore; userGA += f.awayScore; if (f.awayScore === 0) userClean++; }
+            else if (f.awayTeamId === userTeamId) { userGF += f.awayScore; userGA += f.homeScore; if (f.homeScore === 0) userClean++; }
+          }
+        }
+        if (playedCount === 0) return null;
+        return (
+          <div className={styles.statsStrip}>
+            <span className={styles.statItem}>⚽ Gols: <b>{totalGoals}</b></span>
+            <span className={styles.statItem}>📊 Média: <b>{(totalGoals / playedCount).toFixed(2)}</b></span>
+            <span className={styles.statItem}>🏟️ Casa: <b>{(homeWins / playedCount * 100).toFixed(0)}%</b></span>
+            <span className={styles.statItem}>🤝 Empate: <b>{(draws / playedCount * 100).toFixed(0)}%</b></span>
+            <span className={styles.statItem}>🔢 Seu time: <b>{userGF} GP · {userGA} GC {userGF - userGA >= 0 ? '+' : ''}{userGF - userGA}</b></span>
+            <span className={styles.statItem}>🧤 Clean sheets: <b>{userClean}</b></span>
+          </div>
+        );
+      })()}
+
       <div className={styles.body}>
         {/* Coluna esquerda — jogos */}
         <div className={styles.fixturesCol}>

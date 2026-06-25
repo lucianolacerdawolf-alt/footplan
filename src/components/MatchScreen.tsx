@@ -2,7 +2,33 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
-import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
+import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
+
+const Y_SLOTS: Record<number, number[]> = {
+  1: [50], 2: [20, 80], 3: [10, 50, 90], 4: [5, 32, 68, 95], 5: [3, 22, 50, 78, 97],
+};
+
+function renderFormationDots(formation: string, side: 'home' | 'away', color: string) {
+  const counts = FORMATION_COUNTS[formation as keyof typeof FORMATION_COUNTS] ?? FORMATION_COUNTS['4-4-2'];
+  const positions: Array<{ x: number; y: number; pos: string }> = [];
+
+  if (side === 'home') {
+    positions.push({ x: 8, y: 50, pos: 'GK' }); // GK
+    for (let i = 0; i < (counts.DEF ?? 4); i++) positions.push({ x: 25, y: Y_SLOTS[counts.DEF][i], pos: 'DEF' });
+    for (let i = 0; i < (counts.MID ?? 3); i++) positions.push({ x: 48, y: Y_SLOTS[counts.MID][i], pos: 'MID' });
+    for (let i = 0; i < (counts.FWD ?? 3); i++) positions.push({ x: 70, y: Y_SLOTS[counts.FWD][i], pos: 'FWD' });
+  } else {
+    for (let i = 0; i < (counts.FWD ?? 3); i++) positions.push({ x: 30, y: Y_SLOTS[counts.FWD][i], pos: 'FWD' });
+    for (let i = 0; i < (counts.MID ?? 3); i++) positions.push({ x: 52, y: Y_SLOTS[counts.MID][i], pos: 'MID' });
+    for (let i = 0; i < (counts.DEF ?? 4); i++) positions.push({ x: 75, y: Y_SLOTS[counts.DEF][i], pos: 'DEF' });
+    positions.push({ x: 92, y: 50, pos: 'GK' });
+  }
+
+  return positions.map((p, i) => (
+    <circle key={i} cx={p.x} cy={p.y} r={p.pos === 'GK' ? 3.5 : 3}
+      fill={p.pos === 'GK' ? '#facc15' : color} opacity={0.85} />
+  ));
+}
 import { resolveKnockoutTiebreak } from '../engine/matchEngine';
 import { useMatchSimulation } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
@@ -241,6 +267,41 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       {/* Campinho */}
       <div className="match-pitch-area">
         <div className="pitch-container">
+          {/* Formation preview before match */}
+          {!started && (
+            <div className="formation-preview">
+              <div className="formation-preview-title">Formações</div>
+              <div className="formation-preview-row">
+                <div className="formation-preview-team">
+                  <span style={{ color: home.color, fontWeight: 800, fontSize: 13 }}>{home.abbreviation}</span>
+                  <span style={{ fontSize: 18, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--text-h)' }}>{home.strategy.formation}</span>
+                  <div className="formation-mini-pitch formation-mini-home">
+                    <svg viewBox="0 0 100 100">
+                      <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+                      <circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+                      <rect x="0" y="20" width="18" height="60" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                      <rect x="82" y="20" width="18" height="60" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                      {renderFormationDots(home.strategy.formation, 'home', home.color)}
+                    </svg>
+                  </div>
+                </div>
+                <div className="formation-preview-vs">VS</div>
+                <div className="formation-preview-team">
+                  <span style={{ color: away.color, fontWeight: 800, fontSize: 13 }}>{away.abbreviation}</span>
+                  <span style={{ fontSize: 18, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--text-h)' }}>{away.strategy.formation}</span>
+                  <div className="formation-mini-pitch formation-mini-away">
+                    <svg viewBox="0 0 100 100">
+                      <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+                      <circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
+                      <rect x="0" y="20" width="18" height="60" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                      <rect x="82" y="20" width="18" height="60" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+                      {renderFormationDots(away.strategy.formation, 'away', away.color)}
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           <Pitch
             homeTeam={home} awayTeam={away}
             currentEvent={currentEvent}

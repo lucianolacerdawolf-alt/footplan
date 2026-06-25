@@ -135,6 +135,22 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
           sfx.goal();
         }
 
+        if (evt.type === 'foul') {
+          sfx.foulWhistle();
+        }
+
+        if (evt.type === 'post') {
+          sfx.postHit();
+        }
+
+        if (evt.type === 'miss' || evt.type === 'save') {
+          sfx.nearMiss();
+        }
+
+        if (evt.type === 'yellowCard' || evt.type === 'redCard') {
+          sfx.cardReaction();
+        }
+
         if (evt.type === 'penalty' && evt.scorer) {
           if (evt.description.includes('⚽')) {
             if (evt.teamId === initialHomeId) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
@@ -179,6 +195,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setFatigueMap({});
     setExpelledIds([]);
     sfx.whistleStart();
+    sfx.crowdMurmur();
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
