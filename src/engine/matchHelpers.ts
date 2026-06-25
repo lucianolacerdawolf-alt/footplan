@@ -12,6 +12,11 @@ export function effective(attr: number, fatigue: number): number {
   return attr * (1 - fatigue / 200);
 }
 
+/** Comprime atributo para evitar distorções extremas (floor 30, ceiling ~95). */
+export function compressAttr(attr: number): number {
+  return 30 + Math.pow((attr - 1) / 98, 0.7) * 65;
+}
+
 export function getPlayersByPosition(players: Player[], pos: Position): Player[] {
   return players.filter(p => p.position === pos);
 }

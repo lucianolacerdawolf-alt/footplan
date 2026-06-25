@@ -109,10 +109,10 @@ function simularBloco(
     const minute = cycle * CYCLE_MINUTES;
 
     // Decay momentum toward 0
-    state.momentumHome += state.momentumHome > 0 ? -10 : state.momentumHome < 0 ? 10 : 0;
-    state.momentumAway += state.momentumAway > 0 ? -10 : state.momentumAway < 0 ? 10 : 0;
-    if (Math.abs(state.momentumHome) < 11) state.momentumHome = 0;
-    if (Math.abs(state.momentumAway) < 11) state.momentumAway = 0;
+    state.momentumHome += state.momentumHome > 0 ? -8 : state.momentumHome < 0 ? 8 : 0;
+    state.momentumAway += state.momentumAway > 0 ? -8 : state.momentumAway < 0 ? 8 : 0;
+    if (Math.abs(state.momentumHome) < 9) state.momentumHome = 0;
+    if (Math.abs(state.momentumAway) < 9) state.momentumAway = 0;
 
     applyFatigue(home, state.fatigueHome, state.cards);
     applyFatigue(away, state.fatigueAway, state.cards);
@@ -167,8 +167,8 @@ function simularBloco(
     const atkFatigue = possessionWinner === 'A' ? state.fatigueHome : state.fatigueAway;
     const defFatigue = possessionWinner === 'A' ? state.fatigueAway : state.fatigueHome;
     const atkMomentum = isHome(possTeam) ? state.momentumHome : state.momentumAway;
-    const momentumMod = 1 + (atkMomentum / 350) + (trailing && isLate ? 0.05 : 0);
-    const urgencyMod = trailing && isLate ? 1.12 : 1;
+    const momentumMod = 1 + (atkMomentum / 250) + (trailing && isLate ? 0.08 : 0);
+    const urgencyMod = trailing && isLate ? 1.18 : 1;
 
     if (random() < ATK_CHANCE[possTeam.strategy.mentality] * urgencyMod) {
       const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A', momentumMod, state.injured);
@@ -213,8 +213,8 @@ function simularBloco(
           state.events.push({ minute, type: 'corner', description: generateCorner(possTeam.name), teamId: possTeam.id });
           cycleEvents++;
 
-          // Corner → goal chance (7%)
-          if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.07) {
+          // Corner → goal chance (10%)
+          if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.10) {
             const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'DEF'),
                               ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
             if (eligible.length > 0) {
@@ -246,8 +246,8 @@ function simularBloco(
         state.events.push({ minute, type: 'foul', description: generateFoul(foulerTeam.name, fouler), teamId: otherTeam.id });
         cycleEvents++;
 
-        // Foul → penalty chance (2%)
-        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.02) {
+        // Foul → penalty chance (3%)
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.03) {
           const penaltyTakers = [...getPlayersByPosition(getStarters(otherTeam, state.cards, state.injured), 'FWD'),
                                   ...getPlayersByPosition(getStarters(otherTeam, state.cards, state.injured), 'MID')]
             .sort((a, b) => (b.attributes.finishing + b.attributes.positioning) - (a.attributes.finishing + a.attributes.positioning));

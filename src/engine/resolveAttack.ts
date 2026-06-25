@@ -2,11 +2,11 @@ import type { Team, Player, RandomFn } from './types';
 import { FORMATION_COUNTS } from './constants';
 import {
   MENTALITY_MODIFIERS, HOME_ADVANTAGE,
-  DEFENSIVE_LINE_MOD, WIDTH_MOD,
+  DEFENSIVE_LINE_MOD, WIDTH_MOD, BASE_DEFENSE,
 } from './matchConfig';
 import {
   effective, getPlayersByPosition, getStarters,
-  pickRandom, makeRng,
+  pickRandom, makeRng, compressAttr,
 } from './matchHelpers';
 
 export function resolveAttack(
@@ -36,17 +36,18 @@ export function resolveAttack(
   const defenders = getPlayersByPosition(getStarters(defendingTeam, cards, injured), 'DEF');
   const chosenDef = pickRandom(defenders, 3, random);
 
+  // Compressed attributes prevent extreme OVR gaps from dominating
   const attackPower = attackers.reduce((sum, p) => {
     const f = fatigueAtk.get(p.id) ?? 0;
-    return sum + effective(p.attributes.speed, f) * modAtk.speed
-               + effective(p.attributes.dribbling, f) * modAtk.dribbling;
-  }, 0) * atkFormMult * moraleMod * homeMod * momentumMod * rng(0.7, 1.3);
+    return sum + effective(compressAttr(p.attributes.speed), f) * modAtk.speed
+               + effective(compressAttr(p.attributes.dribbling), f) * modAtk.dribbling;
+  }, 0) * atkFormMult * moraleMod * homeMod * momentumMod * rng(0.65, 1.35);
 
   const defensePower = chosenDef.reduce((sum, p) => {
     const f = fatigueDef.get(p.id) ?? 0;
-    return sum + effective(p.attributes.tackling, f) * modDef.tackling
-               + effective(p.attributes.positioning, f) * modDef.positioning;
-  }, 0) * defFormMult * defLineMult * defWidthMult * rng(0.7, 1.3);
+    return sum + effective(compressAttr(p.attributes.tackling), f) * modDef.tackling
+               + effective(compressAttr(p.attributes.positioning), f) * modDef.positioning;
+  }, 0) * defFormMult * defLineMult * defWidthMult * rng(0.65, 1.35) + BASE_DEFENSE;
 
   return { won: attackPower > defensePower, attacker: attackPower > defensePower ? attackers[0] : null };
 }

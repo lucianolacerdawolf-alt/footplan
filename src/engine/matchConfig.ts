@@ -14,8 +14,12 @@ export const ET_HALF_CYCLE = TOTAL_CYCLES + 7;   // 52 → ~minuto 104 (prorroga
 export const ET_END_CYCLE = TOTAL_CYCLES + 14;   // 59 → ~minuto 118 (prorrogação segundo tempo)
 export const MAX_EVENTS_PER_CYCLE = 6;
 
-// Mando de campo: +6% no ataque do mandante
-export const HOME_ADVANTAGE = 1.06;
+// Mando de campo: +8% no ataque do mandante
+export const HOME_ADVANTAGE = 1.08;
+
+// Piso defensivo: todo time tem defesa mínima, evitando goleadas irreais
+export const BASE_DEFENSE = 22;
+export const BASE_GK = 12;
 
 // Modificadores por mentalidade tática
 export const MENTALITY_MODIFIERS: Record<Mentality, {
@@ -36,7 +40,7 @@ export const MENTALITY_MODIFIERS: Record<Mentality, {
 export const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 7 };
 
 export const ATK_CHANCE: Record<Mentality, number> = {
-  'possession': 0.76, 'counter-attack': 0.54, 'high-press': 0.74, 'defensive': 0.32,
+  'possession': 1.06, 'counter-attack': 0.81, 'high-press': 1.03, 'defensive': 0.50,
 };
 
 export const DEFENSIVE_LINE_MOD: Record<DefensiveLine, { possessionBias: number; defenseCompact: number }> = {
