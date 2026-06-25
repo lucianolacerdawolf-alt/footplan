@@ -20,6 +20,17 @@
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
   opacity: 0.5; padding: 0 2px;
 }
+.stageLabelRow {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 2px;
+}
+.simAllBtn {
+  font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent; cursor: pointer;
+  color: var(--text); opacity: 0.85; font-family: var(--mono);
+}
+.simAllBtn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); opacity: 1; }
+.simAllBtn:disabled { opacity: 0.4; cursor: default; }
 
 /* Match card */
 .matchCard {

@@ -239,6 +239,29 @@ function App() {
     setScreen('setup');
   }, []);
 
+  const handleSimulateOtherBracketMatches = useCallback(() => {
+    if (!bracketState) return;
+    const stage = bracketState.stage as PlayableStage;
+    const matches = stage === 'roundOf16' ? bracketState.roundOf16
+      : stage === 'quarterfinals' ? bracketState.quarterFinals
+      : stage === 'semifinals' ? bracketState.semiFinals
+      : [bracketState.final];
+    let s = { ...bracketState };
+    matches.forEach((match, idx) => {
+      const isUser = match.homeTeamId === bracketState.userTeamId || match.awayTeamId === bracketState.userTeamId;
+      if (isUser || match.played) return;
+      const home = bracketState.teams.find(t => t.id === match.homeTeamId)!;
+      const away = bracketState.teams.find(t => t.id === match.awayTeamId)!;
+      const sim = simularBracketMatch(home, away);
+      const updated: BracketMatch = { ...match, ...sim };
+      if (stage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[idx] = updated; s = { ...s, roundOf16: r16 }; }
+      else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[idx] = updated; s = { ...s, quarterFinals: qf }; }
+      else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[idx] = updated; s = { ...s, semiFinals: sf }; }
+      else { s = { ...s, final: updated }; }
+    });
+    setBracketState(advanceBracket(s));
+  }, [bracketState, setBracketState]);
+
   const handleSimulateBracketMatch = useCallback((stage: PlayableStage, matchIdx: number) => {
     if (!bracketState) return;
     const stageMatches = stage === 'roundOf16' ? bracketState.roundOf16
@@ -390,6 +413,7 @@ function App() {
           handlePlayBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
         }}
         onSimulateMatch={handleSimulateBracketMatch}
+        onSimulateOthers={handleSimulateOtherBracketMatches}
         onEditTactics={handleEditBracketTactics}
         onBack={goHome}
       />

@@ -7,6 +7,7 @@ interface Props {
   state: BracketState;
   onPlayMatch: (match: BracketMatch, homeTeam: Team, awayTeam: Team) => void;
   onSimulateMatch: (stage: PlayableStage, matchIndex: number) => void;
+  onSimulateOthers: () => void;
   onEditTactics: () => void;
   onBack: () => void;
 }
@@ -30,14 +31,12 @@ function matchResultText(m: BracketMatch): string {
 }
 
 function MatchCard({
-  match, teams, userTeamId, onPlay, onSimulate, simulating,
+  match, teams, userTeamId, onPlay,
 }: {
   match: BracketMatch;
   teams: Team[];
   userTeamId: string;
   onPlay: () => void;
-  onSimulate: () => void;
-  simulating: boolean;
 }) {
   const home = teamById(teams, match.homeTeamId);
   const away = teamById(teams, match.awayTeamId);
@@ -62,11 +61,9 @@ function MatchCard({
           {away ? <img src={away.logoUrl} alt={away.abbreviation} className={styles.matchCrest} /> : <span className={styles.tbd}>—</span>}
         </div>
       </div>
-      {canPlay && (
+      {canPlay && isUserMatch && (
         <div className={styles.matchActions}>
-          {isUserMatch
-            ? <button className={styles.playBtn} onClick={onPlay}>Jogar</button>
-            : <button className={styles.simBtn} onClick={onSimulate} disabled={simulating}>{simulating ? 'Simulando…' : 'Simular'}</button>}
+          <button className={styles.playBtn} onClick={onPlay}>Jogar</button>
         </div>
       )}
       {match.played && winner && (
@@ -78,12 +75,12 @@ function MatchCard({
   );
 }
 
-export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onEditTactics, onBack }: Props) {
+export default function BracketScreen({ state, onPlayMatch, onSimulateOthers, onEditTactics, onBack }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
   const [simulating, setSimulating] = useState(false);
-  const runSim = (stageKey: PlayableStage, i: number) => {
+  const runSimOthers = () => {
     setSimulating(true);
-    setTimeout(() => { onSimulateMatch(stageKey, i); setSimulating(false); }, 200);
+    setTimeout(() => { onSimulateOthers(); setSimulating(false); }, 250);
   };
 
   if (stage === 'champion' && championId) {
@@ -123,28 +120,35 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onE
   const renderStage = (
     label: string,
     matches: BracketMatch[],
-    stageKey: PlayableStage,
     isActive: boolean
-  ) => (
-    <div className={`${styles.stageBlock} ${isActive ? styles.stageBlockActive : ''}`}>
-      <div className={styles.stageLabel}>{label}</div>
-      {matches.map((m, i) => (
-        <MatchCard
-          key={m.id}
-          match={m}
-          teams={teams}
-          userTeamId={userTeamId}
-          simulating={simulating}
-          onPlay={() => {
-            const home = teamById(teams, m.homeTeamId)!;
-            const away = teamById(teams, m.awayTeamId)!;
-            onPlayMatch(m, home, away);
-          }}
-          onSimulate={() => runSim(stageKey, i)}
-        />
-      ))}
-    </div>
-  );
+  ) => {
+    const othersPending = matches.some(m => !m.played && m.homeTeamId !== userTeamId && m.awayTeamId !== userTeamId);
+    return (
+      <div className={`${styles.stageBlock} ${isActive ? styles.stageBlockActive : ''}`}>
+        <div className={styles.stageLabelRow}>
+          <span className={styles.stageLabel}>{label}</span>
+          {othersPending && (
+            <button className={styles.simAllBtn} onClick={runSimOthers} disabled={simulating}>
+              {simulating ? 'Simulando…' : 'Simular Outros'}
+            </button>
+          )}
+        </div>
+        {matches.map(m => (
+          <MatchCard
+            key={m.id}
+            match={m}
+            teams={teams}
+            userTeamId={userTeamId}
+            onPlay={() => {
+              const home = teamById(teams, m.homeTeamId)!;
+              const away = teamById(teams, m.awayTeamId)!;
+              onPlayMatch(m, home, away);
+            }}
+          />
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className={styles.screen}>
@@ -156,10 +160,10 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onE
         <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
       </header>
 
-      {stage === 'roundOf16'    && renderStage('Oitavas de Final', roundOf16,     'roundOf16',    true)}
-      {stage === 'quarterfinals' && renderStage('Quartas de Final', quarterFinals, 'quarterfinals', true)}
-      {stage === 'semifinals'    && renderStage('Semifinais',       semiFinals,    'semifinals',    true)}
-      {stage === 'final'         && renderStage('Final',            [final],       'final',         true)}
+      {stage === 'roundOf16'    && renderStage('Oitavas de Final', roundOf16,     true)}
+      {stage === 'quarterfinals' && renderStage('Quartas de Final', quarterFinals, true)}
+      {stage === 'semifinals'    && renderStage('Semifinais',       semiFinals,    true)}
+      {stage === 'final'         && renderStage('Final',            [final],       true)}
     </div>
   );
 }
