@@ -33,6 +33,9 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [htHomePick, setHtHomePick] = useState<string | null>(null);
   const [htAwayPick, setHtAwayPick] = useState<string | null>(null);
   const [subToast, setSubToast] = useState<string | null>(null);
+  const [subsHome, setSubsHome] = useState(0);
+  const [subsAway, setSubsAway] = useState(0);
+  const MAX_SUBS = 3;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { addMatch } = useMatchHistory();
@@ -50,12 +53,20 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     toastTimerRef.current = setTimeout(() => setSubToast(null), 2500);
   };
 
-  const swapSquad = (team: Team, setTeam: (t: Team) => void, benchIdx: number, starterIdx: number) => {
+  const swapSquad = (team: Team, setTeam: (t: Team) => void, benchIdx: number, starterIdx: number, side: 'home' | 'away') => {
+    const used = side === 'home' ? subsHome : subsAway;
+    if (used >= MAX_SUBS) {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      setSubToast(`⛔ Limite de ${MAX_SUBS} substituições atingido`);
+      toastTimerRef.current = setTimeout(() => setSubToast(null), 2200);
+      return;
+    }
     const squad = [...team.squad];
     const outPlayer = squad[starterIdx].name;
     const inPlayer = squad[benchIdx].name;
     [squad[benchIdx], squad[starterIdx]] = [squad[starterIdx], squad[benchIdx]];
     setTeam({ ...team, squad });
+    if (side === 'home') setSubsHome(n => n + 1); else setSubsAway(n => n + 1);
     showSubToast(outPlayer, inPlayer);
   };
 
@@ -244,7 +255,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
                 {/* Substituições */}
                 <details className="ht-squad-details">
-                  <summary>Substituições</summary>
+                  <summary>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span></summary>
                   <div className="ht-squad-grid">
                     {([
                       ['home', home, setHome, htHomePick, setHtHomePick],
@@ -269,7 +280,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                 className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''}`}
                                 onClick={() => {
                                   if (pick && pickIsBench && team.squad[pickIdx].position === p.position) {
-                                    swapSquad(team, setTeam, pickIdx, i);
+                                    swapSquad(team, setTeam, pickIdx, i, side);
                                     setPick(null);
                                   } else {
                                     setPick(isPicked ? null : p.id);
@@ -291,7 +302,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                 className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
                                 onClick={() => {
                                   if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
-                                    swapSquad(team, setTeam, pickIdx, bi);
+                                    swapSquad(team, setTeam, pickIdx, bi, side);
                                     setPick(null);
                                   } else {
                                     setPick(isPicked ? null : p.id);

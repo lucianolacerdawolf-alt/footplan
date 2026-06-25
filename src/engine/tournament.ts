@@ -271,8 +271,35 @@ export function recoverFatigue(teams: Team[]): Team[] {
     squad: team.squad.map(player => ({
       ...player,
       currentFatigue: Math.max(0, player.currentFatigue - 60),
+      injuredRounds: player.injuredRounds && player.injuredRounds > 0
+        ? player.injuredRounds - 1
+        : undefined,
     })),
   }));
+}
+
+// =============================================================================
+// LESÕES — chance pós-partida de jogador lesionar (1-3 rodadas fora)
+// =============================================================================
+
+export interface InjuryReport {
+  player: { id: string; name: string; number: number };
+  rounds: number;
+}
+
+export function applyPostMatchInjuries(team: Team, chance = 0.15): { team: Team; injuries: InjuryReport[] } {
+  if (Math.random() >= chance) return { team, injuries: [] };
+  const starters = team.squad.slice(0, 11).filter(p => !p.injuredRounds);
+  if (starters.length === 0) return { team, injuries: [] };
+  const victim = starters[Math.floor(Math.random() * starters.length)];
+  const rounds = 1 + Math.floor(Math.random() * 3); // 1-3
+  const newSquad = team.squad.map(p =>
+    p.id === victim.id ? { ...p, injuredRounds: rounds } : p
+  );
+  return {
+    team: { ...team, squad: newSquad },
+    injuries: [{ player: { id: victim.id, name: victim.name, number: victim.number }, rounds }],
+  };
 }
 
 // =============================================================================

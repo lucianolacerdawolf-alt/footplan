@@ -55,6 +55,7 @@ export interface Player {
   position: Position;
   attributes: PlayerAttributes;
   currentFatigue: number; // Cansaço Atual (0-100, 0 = descansado)
+  injuredRounds?: number; // > 0: jogador lesionado e indisponível
 }
 
 // =============================================================================

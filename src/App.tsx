@@ -3,7 +3,7 @@ import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { TournamentMode } from './components/TournamentSetupScreen';
 import type { LeagueState, BracketState, BracketMatch, LeagueFixture } from './engine/tournament';
-import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto, recoverFatigue } from './engine/tournament';
+import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto, recoverFatigue, applyPostMatchInjuries } from './engine/tournament';
 import { cloneTeam } from './utils/teamUtils';
 import HomeScreen from './components/HomeScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
@@ -214,7 +214,13 @@ function App() {
     const newTeams = leagueState.teams.map(t => {
       if (t.id !== leagueState.userTeamId) return t;
       const current = t.morale ?? 0;
-      return { ...t, morale: Math.max(-10, Math.min(10, current + moraleDelta)) };
+      const withMorale = { ...t, morale: Math.max(-10, Math.min(10, current + moraleDelta)) };
+      const { team: injured, injuries } = applyPostMatchInjuries(withMorale);
+      if (injuries.length > 0) {
+        const inj = injuries[0];
+        setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} rodada${inj.rounds > 1 ? 's' : ''}`);
+      }
+      return injured;
     });
     setLeagueState({ ...leagueState, fixtures: newFixtures, teams: newTeams });
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
@@ -277,7 +283,17 @@ function App() {
     else if (pendingBracketStage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[pendingBracketIdx] = updated; s = { ...s, quarterFinals: qf }; }
     else if (pendingBracketStage === 'semifinals') { const sf = [...s.semiFinals]; sf[pendingBracketIdx] = updated; s = { ...s, semiFinals: sf }; }
     else { s = { ...s, final: updated }; }
-    setBracketState(advanceBracket(s));
+    const advanced = advanceBracket(s);
+    const finalState = { ...advanced, teams: advanced.teams.map(t => {
+      if (t.id !== advanced.userTeamId) return t;
+      const { team: injured, injuries } = applyPostMatchInjuries(t);
+      if (injuries.length > 0) {
+        const inj = injuries[0];
+        setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} jogo${inj.rounds > 1 ? 's' : ''}`);
+      }
+      return injured;
+    }) };
+    setBracketState(finalState);
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     setLastResult(result);
     setScreen('stats');

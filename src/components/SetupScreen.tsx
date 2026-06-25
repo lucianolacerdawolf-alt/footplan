@@ -4,6 +4,7 @@ import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 import { useH2H } from '../hooks/useH2H';
+import TutorialOverlay from './TutorialOverlay';
 
 interface Props {
   homeTeam: Team;
@@ -11,6 +12,21 @@ interface Props {
   onStartMatch: (home: Team, away: Team) => void;
   onBack: () => void;
   lockAway?: boolean;
+}
+
+/** Move lesionados pro banco e promove substitutos saudaveis da mesma posicao */
+function autoBenchInjured(team: Team): Team {
+  const counts = FORMATION_COUNTS[team.strategy?.formation ?? '4-3-3'];
+  const starterCount = 1 + counts.DEF + counts.MID + counts.FWD;
+  const squad = [...team.squad];
+  for (let i = 0; i < starterCount; i++) {
+    const p = squad[i];
+    if (!p.injuredRounds) continue;
+    const replacement = squad.findIndex((q, idx) => idx >= starterCount && !q.injuredRounds && q.position === p.position);
+    if (replacement < 0) continue;
+    [squad[i], squad[replacement]] = [squad[replacement], squad[i]];
+  }
+  return { ...team, squad };
 }
 
 /** Reorganiza titulares/reservas conforme a formação */
@@ -44,18 +60,21 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
-    return t;
+    return autoBenchInjured(t);
   });
   const [awayTeam, setAwayTeam] = useState<Team>(() => {
     const t = cloneTeam(initialAway);
     if (!t.strategy) t.strategy = { formation: '4-4-2', mentality: 'counter-attack', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
-    return t;
+    return autoBenchInjured(t);
   });
 
   const [homeSelected, setHomeSelected] = useState<string | null>(null);
   const [awaySelected, setAwaySelected] = useState<string | null>(null);
   const { get: getH2H } = useH2H();
   const h2h = getH2H(initialHome.id, initialAway.id);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    try { return !localStorage.getItem('fp:tutorialSeen'); } catch { return false; }
+  });
 
   const updateHome = useCallback((s: Strategy) => {
     if (s.formation !== homeTeam.strategy.formation) {
@@ -132,6 +151,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
               >
                 <span className="sq-num">#{p.number}</span>
                 <span className="sq-name">{p.name}</span>
+                {p.injuredRounds ? <span className="sq-injury">🤕 {p.injuredRounds}j</span> : null}
                 <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
                 <span className="sq-ovr">{playerOvr(p)}</span>
               </div>
@@ -233,6 +253,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   return (
     <div className="setup-screen">
+      {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
       <div className="setup-topbar">
         <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
         <header className="app-header" style={{ flex: 1 }}>
