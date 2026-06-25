@@ -46,9 +46,9 @@ function withRng<T>(rng: () => number, fn: () => T): T {
 }
 
 describe('Calibração do matchEngine', () => {
-  // Engine calibrado: ~2.74 gols/jogo em times OVR 72 (perto da
-  // Premier League ~2.85). Faixa larga pra absorver variação amostral.
-  it('média de gols por partida fica entre 2.0 e 3.5 (1000 jogos)', () => {
+  // Premier League real: ~2.75 gols/jogo (OVR varia). Com times iguais OVR 72,
+  // esperamos ~2.5-3.0 (um pouco abaixo por falta de desbalanço de qualidade).
+  it('média de gols por partida fica entre 2.4 e 3.1 (1000 jogos)', () => {
     const home = makeTeam('h', 72);
     const away = makeTeam('a', 72);
     const N = 1000;
@@ -58,8 +58,8 @@ describe('Calibração do matchEngine', () => {
       totalGoals += r.homeScore + r.awayScore;
     }
     const avg = totalGoals / N;
-    expect(avg).toBeGreaterThan(2.0);
-    expect(avg).toBeLessThan(3.5);
+    expect(avg).toBeGreaterThan(2.4);
+    expect(avg).toBeLessThan(3.1);
   });
 
   it('time muito superior vence a maioria dos jogos (500 jogos, OVR 85 vs 60)', () => {
@@ -79,7 +79,8 @@ describe('Calibração do matchEngine', () => {
     expect(strongWins + weakWins + draws).toBe(N);
   });
 
-  it('empates ficam entre 15% e 40% (1000 jogos times iguais)', () => {
+  // Premier League real: ~27% empates com qualidade variável.
+  it('empates ficam entre 20% e 35% (1000 jogos times iguais)', () => {
     const a = makeTeam('a', 72);
     const b = makeTeam('b', 72);
     const N = 1000;
@@ -89,8 +90,8 @@ describe('Calibração do matchEngine', () => {
       if (r.homeScore === r.awayScore) draws++;
     }
     const pct = draws / N;
-    expect(pct).toBeGreaterThan(0.10);
-    expect(pct).toBeLessThan(0.45);
+    expect(pct).toBeGreaterThan(0.20);
+    expect(pct).toBeLessThan(0.35);
   });
 
   it('mandante vence mais que visitante em times iguais (1000 jogos)', () => {
