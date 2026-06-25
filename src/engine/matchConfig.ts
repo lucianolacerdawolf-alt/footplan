@@ -4,7 +4,7 @@
 // Centralizadas aqui pra facilitar ajustes de calibração sem precisar
 // caçar pelos 500+ linhas do matchEngine.ts.
 
-import type { Mentality, Intensity, DefensiveLine, Width } from './types';
+import type { Mentality, Intensity, DefensiveLine, Width, Formation } from './types';
 
 // Ciclos da partida (1 ciclo ≈ 2 minutos de jogo)
 export const CYCLE_MINUTES = 2;
@@ -53,4 +53,41 @@ export const WIDTH_MOD: Record<Width, { possessionSpread: number; defenseNarrow:
   'wide':   { possessionSpread: 1.10, defenseNarrow: 0.90 },
   'normal': { possessionSpread: 1.00, defenseNarrow: 1.00 },
   'narrow': { possessionSpread: 0.90, defenseNarrow: 1.10 },
+};
+
+// =============================================================================
+// IMPACTO TÁTICO — o jogador precisa sentir que suas escolhas importam
+// =============================================================================
+
+// Bônus por formação: ataque, defesa, posse
+export const FORMATION_BONUS: Record<Formation, { atk: number; def: number; possession: number }> = {
+  '4-3-3':   { atk: 1.10, def: 1.00, possession: 1.00 },
+  '4-4-2':   { atk: 1.00, def: 1.05, possession: 1.00 },
+  '3-5-2':   { atk: 1.00, def: 0.95, possession: 1.10 },
+  '4-2-3-1': { atk: 1.15, def: 0.95, possession: 1.05 },
+  '5-3-2':   { atk: 0.90, def: 1.15, possession: 0.90 },
+};
+
+// Intensidade afeta desarme, faltas e cartões (além da fadiga já existente)
+export const INTENSITY_TACKLE_BONUS: Record<Intensity, number> = {
+  'low': 0.92, 'medium': 1.00, 'high': 1.06,
+};
+export const INTENSITY_FOUL_MULT: Record<Intensity, number> = {
+  'low': 0.60, 'medium': 1.00, 'high': 1.40,
+};
+export const INTENSITY_INJURY_MULT: Record<Intensity, number> = {
+  'low': 0.50, 'medium': 1.00, 'high': 1.50,
+};
+
+// Linha defensiva: chance de impedimento e vulnerabilidade a contra-ataque
+export const DEFENSIVE_LINE_OFFSIDE: Record<DefensiveLine, number> = {
+  'high': 0.30, 'normal': 0.18, 'low': 0.06,
+};
+export const DEFENSIVE_LINE_COUNTER_RISK: Record<DefensiveLine, number> = {
+  'high': 1.12, 'normal': 1.00, 'low': 0.92,
+};
+
+// Largura: bônus contra defesas estreitas e penalidade contra times abertos
+export const WIDTH_ATTACK_BONUS: Record<Width, number> = {
+  'wide': 1.08, 'normal': 1.00, 'narrow': 0.94,
 };

@@ -3,6 +3,7 @@ import { FORMATION_COUNTS } from './constants';
 import {
   MENTALITY_MODIFIERS,
   DEFENSIVE_LINE_MOD,
+  FORMATION_BONUS,
 } from './matchConfig';
 import {
   effective, getPlayersByPosition, getStarters,
@@ -30,13 +31,13 @@ export function calculatePossession(
     const f = fatigueA.get(p.id) ?? 0;
     return sum + effective(p.attributes.passing, f) * modA.passing
                + effective(p.attributes.vision, f) * modA.vision;
-  }, 0) * formMultA * dlA * rng(0.7, 1.3);
+  }, 0) * formMultA * dlA * FORMATION_BONUS[teamA.strategy.formation].possession * rng(0.7, 1.3);
 
   const powerB = midsB.reduce((sum, p) => {
     const f = fatigueB.get(p.id) ?? 0;
     return sum + effective(p.attributes.passing, f) * modB.passing
                + effective(p.attributes.vision, f) * modB.vision;
-  }, 0) * formMultB * dlB * rng(0.7, 1.3);
+  }, 0) * formMultB * dlB * FORMATION_BONUS[teamB.strategy.formation].possession * rng(0.7, 1.3);
 
   return powerA >= powerB ? 'A' : 'B';
 }

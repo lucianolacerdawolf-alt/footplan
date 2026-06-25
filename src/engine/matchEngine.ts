@@ -32,6 +32,7 @@ import {
 import {
   CYCLE_MINUTES, FIRST_HALF_CYCLES, TOTAL_CYCLES, ET_HALF_CYCLE, ET_END_CYCLE,
   MAX_EVENTS_PER_CYCLE, ATK_CHANCE,
+  INTENSITY_FOUL_MULT, INTENSITY_INJURY_MULT, DEFENSIVE_LINE_OFFSIDE,
 } from './matchConfig';
 import {
   effective, getPlayersByPosition, getGoalkeeper, pickRandom, getStarters,
@@ -174,7 +175,7 @@ function simularBloco(
       const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A', momentumMod, state.injured);
 
       if (atkResult.won && atkResult.attacker) {
-        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.18 && defTeam.strategy.defensiveLine === 'high') {
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < DEFENSIVE_LINE_OFFSIDE[defTeam.strategy.defensiveLine] && defTeam.strategy.defensiveLine !== 'low') {
           state.events.push({ minute, type: 'offside', description: generateOffside(possTeam.name, atkResult.attacker), teamId: possTeam.id });
           cycleEvents++;
           continue;
@@ -240,6 +241,8 @@ function simularBloco(
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.15) {
       const foulerTeam = random() < 0.5 ? home : away;
       const otherTeam  = foulerTeam.id === home.id ? away : home;
+      // Intensity affects foul frequency
+      const foulMult = INTENSITY_FOUL_MULT[foulerTeam.strategy.intensity];
       const eligible = getPlayersByPosition(getStarters(foulerTeam, state.cards, state.injured), 'DEF');
       if (eligible.length > 0) {
         const fouler = pickRandom(eligible, 1, random)[0];
@@ -266,8 +269,9 @@ function simularBloco(
           }
         }
 
-        // Injury chance after foul (8%)
-        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.08) {
+        // Injury chance after foul (affected by intensity of BOTH teams)
+        const injMult = INTENSITY_INJURY_MULT[foulerTeam.strategy.intensity];
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.08 * injMult) {
           const vicTeam = foulerTeam.id === home.id ? away : home;
           const victims = getStarters(vicTeam, state.cards, state.injured).filter(p => p.position !== 'GK');
           if (victims.length > 0) {
@@ -278,13 +282,13 @@ function simularBloco(
           }
         }
 
-        // Cards
+        // Cards: intensity increases card risk
         const existingCard = state.cards.get(fouler.id);
-        if (!existingCard && random() < 0.25 && cycleEvents < MAX_EVENTS_PER_CYCLE) {
+        if (!existingCard && random() < 0.25 * foulMult && cycleEvents < MAX_EVENTS_PER_CYCLE) {
           state.events.push({ minute, type: 'yellowCard', description: generateYellowCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
           state.cards.set(fouler.id, 'yellow');
           cycleEvents++;
-        } else if (existingCard === 'yellow' && random() < 0.3 && cycleEvents < MAX_EVENTS_PER_CYCLE) {
+        } else if (existingCard === 'yellow' && random() < 0.3 * foulMult && cycleEvents < MAX_EVENTS_PER_CYCLE) {
           state.events.push({ minute, type: 'redCard', description: generateRedCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
           state.cards.set(fouler.id, 'red');
           cycleEvents++;
@@ -292,9 +296,11 @@ function simularBloco(
       }
     }
 
-    // Random injury (0.3% per cycle)
+    // Random injury (affected by intensity)
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.003) {
       const unlucky = random() < 0.5 ? home : away;
+      const unluckyMult = INTENSITY_INJURY_MULT[unlucky.strategy.intensity];
+      if (random() > unluckyMult * 0.8) continue;
       const victims = getStarters(unlucky, state.cards, state.injured).filter(p => p.position !== 'GK');
       if (victims.length > 0) {
         const victim = victims[Math.floor(random() * victims.length)];
