@@ -72,7 +72,8 @@ function playNoise(
 
 function startMurmur() {
   const ac = getCtx();
-  if (!ac || !enabled || murmurSource) return;
+  if (!ac || !enabled) return;
+  if (murmurSource) return; // already playing
   const buf = noiseBuffer(4);
   if (!buf) return;
   murmurSource = ac.createBufferSource();
@@ -82,7 +83,7 @@ function startMurmur() {
   filter.type = 'lowpass';
   filter.frequency.setValueAtTime(500, ac.currentTime);
   murmurGain = ac.createGain();
-  murmurGain.gain.setValueAtTime(0.025, ac.currentTime);
+  murmurGain.gain.setValueAtTime(0.03, ac.currentTime);
   murmurSource.connect(filter).connect(murmurGain).connect(ac.destination);
   murmurSource.start();
 }
@@ -94,6 +95,10 @@ function stopMurmur() {
     murmurSource = null;
   }
   murmurGain = null;
+}
+
+function ensureMurmur() {
+  if (!murmurSource) startMurmur();
 }
 
 export const sfx = {
@@ -114,7 +119,7 @@ export const sfx = {
     playNoise(1.2, 0.20, 'bandpass', 800, 0.8, 0.05, 0.6);
   },
   crowdMurmur() {
-    startMurmur();
+    ensureMurmur();
   },
   nearMiss() {
     playNoise(0.35, 0.08, 'highpass', 1500, 2, 0.02, 0.15);

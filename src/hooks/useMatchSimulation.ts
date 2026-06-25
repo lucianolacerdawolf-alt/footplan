@@ -47,6 +47,8 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   rngRef.current = rng;
   const pausedRef = useRef(false);
   const injuryCbRef = useRef<((playerId: string) => void) | null>(null);
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
 
   useEffect(() => () => {
     if (replayRef.current) clearInterval(replayRef.current);
@@ -134,6 +136,15 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
           if (evt.teamId === initialHomeId) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
           else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
           sfx.goal();
+          // Dramatic pause on goal
+          pausedRef.current = true;
+          setPaused(true);
+          setTimeout(() => {
+            if (mountedRef.current && replayRef.current) {
+              pausedRef.current = false;
+              setPaused(false);
+            }
+          }, 2000);
         }
 
         if (evt.type === 'foul') {
@@ -157,6 +168,14 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
             if (evt.teamId === initialHomeId) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
             else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
             sfx.goal();
+            pausedRef.current = true;
+            setPaused(true);
+            setTimeout(() => {
+              if (mountedRef.current && replayRef.current) {
+                pausedRef.current = false;
+                setPaused(false);
+              }
+            }, 2000);
           }
         }
 
@@ -219,6 +238,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setSimulating(true);
     setPhase('simulating');
     setClockSeconds(HALF_SECONDS);
+    sfx.crowdMurmur();
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;

@@ -40,7 +40,7 @@ export const MENTALITY_MODIFIERS: Record<Mentality, {
 export const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 7 };
 
 export const ATK_CHANCE: Record<Mentality, number> = {
-  'possession': 1.06, 'counter-attack': 0.81, 'high-press': 1.03, 'defensive': 0.50,
+  'possession': 1.22, 'counter-attack': 0.96, 'high-press': 1.18, 'defensive': 0.62,
 };
 
 export const DEFENSIVE_LINE_MOD: Record<DefensiveLine, { possessionBias: number; defenseCompact: number }> = {

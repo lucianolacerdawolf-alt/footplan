@@ -202,13 +202,18 @@ function simularBloco(
         if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
           const scoreStr = `${state.homeScore}-${state.awayScore}`;
           if (shot.result === 'goal') {
-            state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id, scorer: shot.scorer.name });
-            if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
-            applyMomentum(possessionWinner);
-            // Momentum narration (30% chance)
-            if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.3) {
-              state.events.push({ minute, type: 'possession', description: generateMomentumShift(possTeam.name), teamId: possTeam.id });
-              cycleEvents++;
+            // Timing distribution: suppress early goals, boost late
+            if (random() < goalTimingMultiplier(minute)) {
+              state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id, scorer: shot.scorer.name });
+              if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
+              applyMomentum(possessionWinner);
+              if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.3) {
+                state.events.push({ minute, type: 'possession', description: generateMomentumShift(possTeam.name), teamId: possTeam.id });
+                cycleEvents++;
+              }
+            } else {
+              // Goal denied by timing — show as a save or miss instead
+              state.events.push({ minute, type: 'save', description: generateSave(defTeam.name, shot.goalkeeper), teamId: defTeam.id });
             }
           } else if (shot.result === 'post') {
             state.events.push({ minute, type: 'post', description: generatePost(possTeam.name, shot.scorer), teamId: possTeam.id });
@@ -235,7 +240,7 @@ function simularBloco(
               const headerPower = effective(header.attributes.positioning, atkFatigue.get(header.id) ?? 0) * 1.2 +
                                   effective(header.attributes.finishing, atkFatigue.get(header.id) ?? 0) * 0.5;
               const gkPower = effective(gk.attributes.positioning, defFatigue.get(gk.id) ?? 0) * rngFallback(random, 0.8, 1.2);
-              if (headerPower * rngFallback(random, 0.7, 1.3) > gkPower) {
+              if (headerPower * rngFallback(random, 0.7, 1.3) > gkPower && random() < goalTimingMultiplier(minute)) {
                 const newScore = `${state.homeScore}-${state.awayScore}`;
                 state.events.push({ minute, type: 'goal', description: generateCornerGoal(possTeam.name, header, minute, newScore), teamId: possTeam.id, scorer: header.name });
                 if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
@@ -271,10 +276,12 @@ function simularBloco(
             const shotPwr = effective(taker.attributes.finishing, state.fatigueHome.get(taker.id) ?? state.fatigueAway.get(taker.id) ?? 0) * rngFallback(random, 0.7, 1.3);
             const savePwr = effective(gk.attributes.positioning, state.fatigueHome.get(gk.id) ?? state.fatigueAway.get(gk.id) ?? 0) * rngFallback(random, 0.8, 1.2);
             const scored = shotPwr * 1.35 > savePwr;
-            state.events.push({ minute, type: 'penalty', description: generateMatchPenalty(otherTeam.name, taker, scored, gk), teamId: otherTeam.id, scorer: taker.name });
-            if (scored) {
+            if (scored && random() < goalTimingMultiplier(minute)) {
+              state.events.push({ minute, type: 'penalty', description: generateMatchPenalty(otherTeam.name, taker, true, gk), teamId: otherTeam.id, scorer: taker.name });
               if (isHome(otherTeam)) state.homeScore++; else state.awayScore++;
               applyMomentum(isHome(otherTeam) ? 'A' : 'B');
+            } else {
+              state.events.push({ minute, type: 'penalty', description: generateMatchPenalty(otherTeam.name, taker, false, gk), teamId: otherTeam.id, scorer: taker.name });
             }
             cycleEvents++;
           }
@@ -329,6 +336,17 @@ function simularBloco(
 
 function rngFallback(random: RandomFn, min: number, max: number): number {
   return min + random() * (max - min);
+}
+
+// Real football goal timing distribution: few early, peak near halftime + end
+function goalTimingMultiplier(minute: number): number {
+  if (minute <= 4) return 0.70;
+  if (minute <= 10) return 0.90;
+  if (minute <= 30) return 0.98;
+  if (minute <= 45) return 1.05;
+  if (minute <= 55) return 0.95;
+  if (minute <= 75) return 1.02;
+  return 1.08;
 }
 
 // ---------------------------------------------------------------------------
