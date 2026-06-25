@@ -108,12 +108,6 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
 
   return (
     <div className="team-select-screen">
-      <div className="top-nav">
-        <button className="back-btn-secondary" onClick={onTournament}>← Menu Principal</button>
-        {homeTeam && awayTeam && (
-          <button className="start-btn" onClick={handleConfirm}>Montar Táticas &rarr;</button>
-        )}
-      </div>
       <header className="app-header">
         <h1>FootPlan</h1>
         <p className="subtitle">Premier League</p>
@@ -126,9 +120,14 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
       </div>
 
       <div className="select-summary">
+        <button className="slot-nav-btn" onClick={onTournament}>← Menu Principal</button>
         {renderSlot(homeTeam, homeUniform, setHomeUniform, 'home', 'CASA')}
         <div className="select-vs">VS</div>
         {renderSlot(awayTeam, awayUniform, setAwayUniform, 'away', 'FORA')}
+        {homeTeam && awayTeam
+          ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleConfirm}>Montar Táticas →</button>
+          : <div className="slot-nav-spacer" />
+        }
       </div>
 
       {colorsConflict && (
