@@ -267,6 +267,19 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
         }
       } else if (event) {
         carrier = getBallCarrier(event, home.id, carriersRef.current);
+
+        // Shot animation: ball flies toward goal
+        if (['goal', 'miss', 'post', 'save'].includes(event.type) && carrier) {
+          const isHomeShot = event.teamId === home.id;
+          const goalX = isHomeShot ? 118 : 2;
+          const goalY = 32 + Math.random() * 6; // random target in goal area
+          ballTravelRef.current = {
+            srcX: carrier.x, srcY: carrier.y,
+            dstX: goalX, dstY: goalY,
+            t: 0,
+          };
+        }
+
         if (carrier && carrier.id !== prevCarrierId) {
           const oldCarrier = prevCarrierId ? players.get(prevCarrierId) : null;
           const newCarrier = players.get(carrier.id);
@@ -289,7 +302,9 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
       const b = ballPos(event, carrier?.id ?? null, players, home.id, eventSeed);
       const travel = ballTravelRef.current;
       if (travel && travel.t < 1) {
-        travel.t += dt * 3; // ~333ms de animação
+        const isShot = event && ['goal', 'miss', 'post', 'save'].includes(event.type);
+        const speed = isShot ? 5 : 3;
+        travel.t += dt * speed;
         const t = Math.min(1, travel.t);
         const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
         const bx = travel.srcX + (travel.dstX - travel.srcX) * ease;

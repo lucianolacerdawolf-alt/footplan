@@ -24,12 +24,13 @@ export interface SteeringPlayer {
 // ---------------------------------------------------------------------------
 // Parâmetros base (multiplicados pelos atributos do jogador)
 // ---------------------------------------------------------------------------
-const BASE_MAX_SPEED: Record<string, number> = { GK: 28, DEF: 38, MID: 46, FWD: 54 };
-const MAX_FORCE: Record<string, number> = { GK: 60, DEF: 85, MID: 95, FWD: 110 };
-const SLOWING_RADIUS = 22;
+const BASE_MAX_SPEED: Record<string, number> = { GK: 56, DEF: 76, MID: 92, FWD: 108 };
+const MAX_FORCE: Record<string, number> = { GK: 120, DEF: 170, MID: 190, FWD: 220 };
+const SLOWING_RADIUS = 10;
 const SEPARATION_DIST = 5;
 const SEPARATION_FORCE = 55;
 const DT = 1 / 60;
+const FRICTION = 0.995;
 
 function getMaxSpeed(p: SteeringPlayer): number {
   const base = BASE_MAX_SPEED[p.position] ?? 40;
@@ -150,42 +151,43 @@ export function computeTarget(
 
   switch (player.state) {
     case 'ATTACKING': {
-      // Empurra pra frente proporcional à posição
-      const push = 6 + posIdx * 4;
+      // Empurra pra frente — quanto mais ofensivo o jogador, mais avança
+      const push = 8 + posIdx * 6;
       tx += push * dir;
       // Abre nas pontas se for amplitude wide
       if (posIdx >= 2) {
-        ty += ySign * Math.min(Math.abs(yOff), 14) * (0.3 + widthMod * 0.4);
+        ty += ySign * Math.min(Math.abs(yOff), 18) * (0.4 + widthMod * 0.5);
       }
       break;
     }
     case 'DEFENDING': {
       // Recua, mais compacto
-      const pull = 5 + (3 - posIdx) * 3.5;
+      const pull = 6 + (3 - posIdx) * 4;
       tx -= pull * dir;
       // Compacta no centro
-      ty += -yOff * 0.3;
-      // Linha defensiva alta/baixa
+      ty += -yOff * 0.35;
       if (!hasBall && posIdx <= 1) {
-        tx += defLineMod * (1 + posIdx * 0.5) * dir;
+        tx += defLineMod * (1.5 + posIdx * 0.6) * dir;
       }
       break;
     }
     case 'SUPPORT': {
-      // Meio-campo: oferece opções de passe
-      tx += (2 + posIdx * 2) * dir;
-      // Abre laterais
-      ty += ySign * Math.min(Math.abs(yOff) * 0.6, 10) * widthMod;
+      // Meio-campo: oferece opções de passe, avança junto
+      tx += (4 + posIdx * 3) * dir;
+      ty += ySign * Math.min(Math.abs(yOff) * 0.7, 12) * widthMod;
       break;
     }
     case 'IDLE':
     default: {
-      // Mantém posição base com leve ajuste
       if (mentality === 'high-press' && hasBall && posIdx <= 1) {
-        tx += 3 * dir; // defesa sobe com pressão alta
+        tx += 5 * dir;
       }
       if (mentality === 'defensive' && !hasBall) {
-        tx -= 2.5 * dir; // recua com postura defensiva
+        tx -= 4 * dir;
+      }
+      // Posse: todo time sobe junto
+      if (hasBall && posIdx >= 1) {
+        tx += (1 + posIdx) * dir;
       }
       break;
     }
@@ -257,8 +259,8 @@ export function updatePlayers(
     p.y += p.vy * DT;
 
     // Friction (desaceleração leve)
-    p.vx *= 0.985;
-    p.vy *= 0.985;
+    p.vx *= FRICTION;
+    p.vy *= FRICTION;
 
     // Clamp dentro do campo
     p.x = Math.max(2, Math.min(118, p.x));
@@ -298,8 +300,8 @@ export function updatePlayers(
     if (spd > maxSpd) { p.vx = (p.vx / spd) * maxSpd; p.vy = (p.vy / spd) * maxSpd; }
     p.x += p.vx * DT;
     p.y += p.vy * DT;
-    p.vx *= 0.97;
-    p.vy *= 0.97;
+    p.vx *= 0.98;
+    p.vy *= 0.98;
     p.x = Math.max(2, Math.min(118, p.x));
     p.y = Math.max(3, Math.min(67, p.y));
   }
