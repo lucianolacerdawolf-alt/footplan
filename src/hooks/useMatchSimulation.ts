@@ -5,6 +5,12 @@ import { cloneTeam } from '../utils/teamUtils';
 import { sfx } from '../utils/audio';
 
 const BASE_HALF_DURATION_MS = 120000;
+const SPEED_DURATIONS: Record<number, number> = {
+  1: 120000,   // 2 min
+  2: 90000,    // 1 min 30s
+  3: 60000,    // 1 min
+  4: 45000,    // 45s
+};
 const CLOCK_TICK_MS = 50;
 const HALF_SECONDS = 45 * 60;
 
@@ -16,7 +22,7 @@ function combineFatigue(home: Map<string, number>, away: Map<string, number>): R
 }
 
 export function useMatchSimulation(initialHomeId: string, speedRef?: { current: number }, rng?: RandomFn) {
-  const getHalfDuration = () => BASE_HALF_DURATION_MS / (speedRef?.current ?? 1);
+  const getHalfDuration = () => SPEED_DURATIONS[speedRef?.current ?? 1] ?? BASE_HALF_DURATION_MS;
   const [result, setResult] = useState<MatchResult | null>(null);
   const [simulating, setSimulating] = useState(false);
   const [replayEvents, setReplayEvents] = useState<MatchEvent[]>([]);
