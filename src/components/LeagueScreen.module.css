@@ -12,10 +12,10 @@
 .leagueTitle { font-size: 13px; font-weight: 800; font-family: var(--mono); opacity: 0.7; }
 .roundLabel { font-size: 18px; font-weight: 900; font-family: var(--mono); }
 
-/* Layout de 2 colunas */
+/* Layout de 2 colunas — jogos mais fino, classificação mais larga */
 .body {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 3fr;
   gap: 16px;
   align-items: start;
 }
@@ -91,20 +91,20 @@
 
 /* Standings table */
 .table {
-  width: 100%; border-collapse: collapse; font-size: 11px;
+  width: 100%; border-collapse: collapse; font-size: 13px;
   font-family: var(--mono);
 }
 .table th {
-  padding: 5px 4px; text-align: center; font-weight: 700;
+  padding: 7px 6px; text-align: center; font-weight: 700;
   background: var(--code-bg); border-bottom: 1px solid var(--border);
-  font-size: 10px; opacity: 0.6; position: sticky; top: 0;
+  font-size: 11px; opacity: 0.6; position: sticky; top: 0;
 }
 .thPos, .thTeam { text-align: left; }
-.thPts { font-size: 11px; opacity: 1 !important; }
-.table td { padding: 5px 4px; text-align: center; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
+.thPts { font-size: 12px; opacity: 1 !important; }
+.table td { padding: 7px 6px; text-align: center; border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent); }
 .row:last-child td { border-bottom: none; }
 .rowUser { background: color-mix(in srgb, var(--accent) 8%, transparent); font-weight: 700; }
 .tdPos { text-align: left; padding-left: 8px; opacity: 0.5; }
-.tdTeam { text-align: left; display: flex; align-items: center; gap: 5px; }
-.tableCrest { width: 16px; height: 16px; object-fit: contain; }
-.tdPts { font-weight: 900; font-size: 12px; }
+.tdTeam { text-align: left; display: flex; align-items: center; gap: 6px; }
+.tableCrest { width: 20px; height: 20px; object-fit: contain; }
+.tdPts { font-weight: 900; font-size: 14px; }
