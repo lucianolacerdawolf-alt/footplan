@@ -2,15 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { premierLeagueTeams } from '../data/premierLeague';
 import type { Team, Strategy } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
+import { playerOvr } from '../utils/playerOvr';
 import { usePeerConnection } from '../hooks/usePeerConnection';
-import styles from './OnlineLobbyScreen.module.css';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
   onBack: () => void;
 }
-
-type LobbyPhase = 'connection' | 'team-select' | 'ready';
 
 interface PeerMessage {
   type: 'host-team' | 'guest-team' | 'start';
@@ -24,7 +22,6 @@ interface PeerMessage {
 
 export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
   const peer = usePeerConnection();
-  const [phase, setPhase] = useState<LobbyPhase>('connection');
   const [joinCode, setJoinCode] = useState('');
   const [hostTeamId, setHostTeamId] = useState<string | null>(null);
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null);
@@ -33,21 +30,20 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
   const lookupTeam = useCallback((id: string): Team | undefined =>
     premierLeagueTeams.find(t => t.id === id), []);
 
+  const getAvgOvr = (team: Team) => {
+    const starters = team.squad.slice(0, 11);
+    return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
+  };
+
   const selectHostTeam = useCallback((id: string) => {
     setHostTeamId(id);
     peer.send({ type: 'host-team', teamId: id });
-    if (guestTeamId) setPhase('ready');
-  }, [peer, guestTeamId]);
+  }, [peer]);
 
   const selectGuestTeam = useCallback((id: string) => {
     setGuestTeamId(id);
     peer.send({ type: 'guest-team', teamId: id });
-    if (hostTeamId) setPhase('ready');
-  }, [peer, hostTeamId]);
-
-  useEffect(() => {
-    if (hostTeamId && guestTeamId) setPhase('ready');
-  }, [hostTeamId, guestTeamId]);
+  }, [peer]);
 
   // Handle incoming data
   useEffect(() => {
@@ -72,7 +68,6 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
         onStartMatch(h, a, msg.seed);
       }
     });
-
     return () => peer.setOnData(null);
   }, [peer, lookupTeam, onStartMatch]);
 
@@ -90,12 +85,6 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
       setCopyLabel('Copiado!');
       setTimeout(() => setCopyLabel('Copiar'), 2000);
     } catch {
-      const input = document.createElement('input');
-      input.value = peer.roomId;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
       setCopyLabel('Copiado!');
       setTimeout(() => setCopyLabel('Copiar'), 2000);
     }
@@ -109,7 +98,6 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
     const seed = (Math.random() * 0xFFFFFFFF) >>> 0;
     const h = cloneTeam(homeTeam);
     const a = cloneTeam(awayTeam);
-    // Send to guest with strategies (defaults for now, they can edit on setup)
     peer.send({
       type: 'start',
       seed,
@@ -123,139 +111,195 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
 
   const teamList = premierLeagueTeams;
   const sharedTeamIds = new Set([hostTeamId, guestTeamId].filter(Boolean) as string[]);
+  const hostTeam = hostTeamId ? lookupTeam(hostTeamId) ?? null : null;
+  const guestTeam = guestTeamId ? lookupTeam(guestTeamId) ?? null : null;
+  const canPick = peer.isHost ? !hostTeamId : !guestTeamId;
 
+  // Connection phase
+  if (peer.state !== 'connected') {
+    return (
+      <div className="team-select-screen">
+        <header className="app-header">
+          <h1>FootPlan</h1>
+          <p className="subtitle">Jogar Online</p>
+        </header>
+
+        {peer.error && (
+          <div className="color-conflict-warning">
+            <span>{peer.error}</span>
+            <button className="conflict-fix-btn" onClick={() => peer.disconnect()}>
+              Tentar novamente
+            </button>
+          </div>
+        )}
+
+        <div className="select-instruction">
+          {peer.state === 'connecting' ? 'Conectando...' : 'Crie uma sala ou entre em uma existente'}
+        </div>
+
+        <div style={{ maxWidth: 400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <button
+            className="slot-nav-btn slot-nav-btn-primary"
+            onClick={handleCreateRoom}
+            disabled={peer.state === 'connecting'}
+            style={{ width: '100%', padding: '14px 20px', fontSize: 15 }}
+          >
+            {peer.state === 'connecting' ? 'Conectando...' : '🌐 Criar Sala'}
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, opacity: 0.3 }}>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'var(--mono)' }}>OU</span>
+            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          </div>
+
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="text"
+              placeholder="Código (4 letras)"
+              maxLength={4}
+              value={joinCode}
+              onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 4))}
+              onKeyDown={e => e.key === 'Enter' && handleJoinRoom()}
+              style={{
+                flex: 1, background: 'var(--code-bg)', border: '1.5px solid var(--border)',
+                borderRadius: 8, padding: '10px 14px', fontSize: 18, fontFamily: 'var(--mono)',
+                color: 'var(--text-h)', outline: 'none', textAlign: 'center',
+                letterSpacing: 8, textTransform: 'uppercase',
+              }}
+            />
+            <button
+              className="slot-nav-btn slot-nav-btn-primary"
+              onClick={handleJoinRoom}
+              disabled={peer.state === 'connecting' || joinCode.trim().length < 4}
+            >
+              Entrar
+            </button>
+          </div>
+        </div>
+
+        <button className="slot-nav-btn" onClick={onBack} style={{ alignSelf: 'center', marginTop: 8 }}>← Menu Principal</button>
+      </div>
+    );
+  }
+
+  // Connected — lobby
   return (
-    <div className={styles.screen}>
-      <div className={styles.header}>
-        <button className={styles.backBtn} onClick={() => { peer.disconnect(); onBack(); }} aria-label="Voltar">
-          ← Voltar
-        </button>
-        <h1 className={styles.title}>Jogar Online</h1>
-        {peer.state === 'connected' && <span className={styles.status}>● Conectado</span>}
+    <div className="team-select-screen">
+      <header className="app-header">
+        <h1>FootPlan</h1>
+        <p className="subtitle">Jogar Online</p>
+      </header>
+
+      {peer.isHost && peer.roomId && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+          background: 'var(--code-bg)', border: '1px solid var(--border)', borderRadius: 10,
+          padding: '10px 20px', margin: '0 auto 4px', maxWidth: 340,
+        }}>
+          <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.5, fontFamily: 'var(--mono)' }}>Sala:</span>
+          <code style={{
+            fontSize: 28, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--accent)',
+            letterSpacing: 6, userSelect: 'all',
+          }}>{peer.roomId}</code>
+          <button
+            className="slot-nav-btn"
+            onClick={handleCopyRoom}
+            style={{ padding: '4px 12px', fontSize: 11 }}
+          >{copyLabel}</button>
+        </div>
+      )}
+      {!peer.isHost && (
+        <div className="select-instruction">● Conectado à sala — aguarde o host</div>
+      )}
+
+      <div className="select-instruction">
+        {canPick ? 'Escolha seu time' : 'Time selecionado! Aguardando oponente...'}
       </div>
 
-      {peer.error && (
-        <div className={styles.errorBox}>
-          <span>{peer.error}</span>
-          <button className={styles.retryBtn} onClick={() => { setPhase('connection'); setHostTeamId(null); setGuestTeamId(null); peer.disconnect(); }}>
-            Tentar novamente
-          </button>
-        </div>
-      )}
+      <div className="slot-nav-row">
+        <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onBack(); }}>← Voltar</button>
 
-      {peer.state !== 'connected' && phase === 'connection' && (
-        <div className={styles.connectSection}>
-          <div className={styles.connectCard}>
-            <h2 className={styles.cardTitle}>Criar Sala</h2>
-            <p className={styles.cardDesc}>Crie uma sala e compartilhe o código com seu amigo</p>
-            <button className={styles.primaryBtn} onClick={handleCreateRoom} disabled={peer.state === 'connecting'}>
-              {peer.state === 'connecting' ? 'Conectando...' : 'Criar Sala'}
-            </button>
-          </div>
+        {renderSlot(hostTeam, 'home', 'CASA', 'home-slot')}
 
-          <div className={styles.divider}>
-            <span className={styles.dividerText}>ou</span>
-          </div>
+        <div className="select-vs">VS</div>
 
-          <div className={styles.connectCard}>
-            <h2 className={styles.cardTitle}>Entrar em Sala</h2>
-            <p className={styles.cardDesc}>Cole o código que seu amigo compartilhou</p>
-            <div className={styles.joinRow}>
-              <input
-                className={styles.joinInput}
-                type="text"
-                placeholder="Ex: ABCD"
-                maxLength={4}
-                value={joinCode}
-                onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 4))}
-                onKeyDown={e => e.key === 'Enter' && handleJoinRoom()}
-              />
-              <button className={styles.primaryBtn} onClick={handleJoinRoom} disabled={peer.state === 'connecting' || !joinCode.trim()}>
-                Entrar
+        {renderSlot(guestTeam, 'away', 'FORA', 'away-slot')}
+
+        {peer.isHost && hostTeamId && guestTeamId
+          ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>Iniciar Partida →</button>
+          : !peer.isHost && hostTeamId && guestTeamId
+          ? <div className="select-instruction" style={{ margin: 0 }}>Host irá iniciar...</div>
+          : <div className="slot-nav-spacer" />
+        }
+      </div>
+
+      {canPick && (
+        <div className="team-grid">
+          {teamList.map(team => {
+            const isHostPick = team.id === hostTeamId;
+            const isGuestPick = team.id === guestTeamId;
+            const isSelected = isHostPick || isGuestPick;
+            return (
+              <button
+                key={team.id}
+                className={`team-tile ${isHostPick ? 'picked-home' : ''} ${isGuestPick ? 'picked-away' : ''} ${isSelected ? 'selected' : ''}`}
+                style={isSelected ? { borderColor: team.color, background: team.color + '10' } : undefined}
+                onClick={() => peer.isHost ? selectHostTeam(team.id) : selectGuestTeam(team.id)}
+                disabled={sharedTeamIds.has(team.id)}
+              >
+                <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+                <span className="tile-name">{team.name}</span>
+                <span className="tile-ovr">{getAvgOvr(team)}</span>
               </button>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
 
-      {peer.state === 'connected' && (
-        <div className={styles.lobbySection}>
-          {peer.isHost && peer.roomId && (
-            <div className={styles.roomBox}>
-              <span className={styles.roomLabel}>Código da sala:</span>
-              <code className={styles.roomCode}>{peer.roomId}</code>
-              <button className={styles.copyBtn} onClick={handleCopyRoom}>{copyLabel}</button>
-            </div>
-          )}
-          {!peer.isHost && (
-            <div className={styles.roomBox}>
-              <span className={styles.roomLabel}>Conectado à sala</span>
-            </div>
-          )}
-
-          <div className={styles.vsSection}>
-            <div className={`${styles.teamSlot} ${hostTeamId ? styles.filled : ''}`}>
-              <span className={styles.slotLabel}>Mandante (Você{!peer.isHost ? ' · Oponente' : ''})</span>
-              {hostTeamId ? (
-                <div className={styles.pickedTeam} style={{ borderLeftColor: lookupTeam(hostTeamId)?.color ?? '#666' }}>
-                  <img className={styles.teamLogo} src={lookupTeam(hostTeamId)?.logoUrl} alt="" />
-                  <span className={styles.teamName}>{lookupTeam(hostTeamId)?.name}</span>
-                </div>
-              ) : peer.isHost ? (
-                <span className={styles.hint}>Escolha seu time abaixo</span>
-              ) : (
-                <span className={styles.hint}>Aguardando host escolher...</span>
-              )}
-            </div>
-
-            <span className={styles.vsText}>vs</span>
-
-            <div className={`${styles.teamSlot} ${guestTeamId ? styles.filled : ''}`}>
-              <span className={styles.slotLabel}>Visitante (Você{peer.isHost ? ' · Oponente' : ''})</span>
-              {guestTeamId ? (
-                <div className={styles.pickedTeam} style={{ borderLeftColor: lookupTeam(guestTeamId)?.color ?? '#666' }}>
-                  <img className={styles.teamLogo} src={lookupTeam(guestTeamId)?.logoUrl} alt="" />
-                  <span className={styles.teamName}>{lookupTeam(guestTeamId)?.name}</span>
-                </div>
-              ) : !peer.isHost ? (
-                <span className={styles.hint}>Escolha seu time abaixo</span>
-              ) : (
-                <span className={styles.hint}>Aguardando visitante escolher...</span>
-              )}
-            </div>
-          </div>
-
-          {((peer.isHost && !hostTeamId) || (!peer.isHost && !guestTeamId)) && (
-            <div className={styles.teamGrid}>
-              {teamList.map(t => (
-                <button
-                  key={t.id}
-                  className={`${styles.teamBtn} ${sharedTeamIds.has(t.id) ? styles.teamTaken : ''}`}
-                  style={{ borderColor: sharedTeamIds.has(t.id) ? 'transparent' : t.color + '40' }}
-                  disabled={sharedTeamIds.has(t.id)}
-                  onClick={() => peer.isHost ? selectHostTeam(t.id) : selectGuestTeam(t.id)}
-                >
-                  <img className={styles.teamLogoSmall} src={t.logoUrl} alt="" />
-                  <div className={styles.teamBtnInfo}>
-                    <span className={styles.teamBtnName}>{t.name}</span>
-                    <span className={styles.teamBtnAbbr}>{t.abbreviation}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {phase === 'ready' && hostTeamId && guestTeamId && peer.isHost && (
-            <button className={styles.startBtn} onClick={handleStart}>
-              Iniciar Partida
-            </button>
-          )}
-          {phase === 'ready' && !peer.isHost && (
-            <div className={styles.waitingBox}>
-              Aguardando o host iniciar a partida...
-            </div>
-          )}
+      {!canPick && hostTeam && guestTeam && (
+        <div className="team-grid">
+          {teamList.map(team => {
+            const isHostPick = team.id === hostTeamId;
+            const isGuestPick = team.id === guestTeamId;
+            const isSelected = isHostPick || isGuestPick;
+            return (
+              <button
+                key={team.id}
+                className={`team-tile ${isHostPick ? 'picked-home' : ''} ${isGuestPick ? 'picked-away' : ''} ${isSelected ? 'selected' : ''}`}
+                style={isSelected ? { borderColor: team.color, background: team.color + '10' } : undefined}
+                disabled
+              >
+                <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+                <span className="tile-name">{team.name}</span>
+                <span className="tile-ovr">{getAvgOvr(team)}</span>
+              </button>
+            );
+          })}
         </div>
+      )}
+    </div>
+  );
+}
+
+function renderSlot(
+  team: { name: string; logoUrl: string; color: string } | null,
+  _side: 'home' | 'away',
+  label: string,
+  slotClass: string
+) {
+  return (
+    <div
+      className={`select-slot ${slotClass} ${team ? 'filled' : ''}`}
+      style={team ? { borderColor: team.color, background: team.color + '12' } : undefined}
+    >
+      {team ? (
+        <>
+          <img className="slot-crest" src={team.logoUrl} alt={team.name} />
+          <span className="slot-name">{team.name}</span>
+        </>
+      ) : (
+        <span className="slot-empty">{label}</span>
       )}
     </div>
   );
