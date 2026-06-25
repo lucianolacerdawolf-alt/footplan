@@ -1,6 +1,7 @@
 import styles from './MatchStatsScreen.module.css';
 import type { MatchResult } from '../engine/types';
 import type { MatchRecord } from '../hooks/useMatchHistory';
+import { calculateRatings, manOfTheMatch, goalScorers, cardEvents } from '../engine/playerRating';
 
 interface Props {
   result: MatchResult;
@@ -66,8 +67,21 @@ function ResultBadge({ result }: { result: MatchResult }) {
   return <span className={`${styles.badge} ${styles.badgeDraw}`}>Empate</span>;
 }
 
+function ratingColor(r: number): string {
+  if (r >= 8.5) return '#7c3aed';
+  if (r >= 7.5) return '#22c55e';
+  if (r >= 6.5) return '#0ea5e9';
+  if (r >= 5.5) return '#94a3b8';
+  return '#ef4444';
+}
+
 export default function MatchStatsScreen({ result, history, onMenu, onClearHistory, onContinue, continueLabel }: Props) {
   const { homeTeam, awayTeam, homeScore, awayScore, homePossession, awayPossession, homeStats, awayStats } = result;
+  const ratings = calculateRatings(result);
+  const motm = manOfTheMatch(ratings);
+  const scorers = goalScorers(result);
+  const cards = cardEvents(result);
+  const topPerformers = ratings.slice(0, 5);
 
   return (
     <div className={styles.screen}>
@@ -98,6 +112,83 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
           <span className={styles.teamName} style={{ color: awayTeam.color }}>{awayTeam.abbreviation}</span>
         </div>
       </div>
+
+      {/* Gols */}
+      {scorers.length > 0 && (
+        <div className={styles.scorersBlock}>
+          <div className={styles.sectionLabel}>⚽ Gols</div>
+          <div className={styles.scorersList}>
+            {scorers.map((g, i) => (
+              <div key={i} className={styles.scorerRow}>
+                <span className={styles.scorerMinute}>{g.minute}&apos;</span>
+                <img src={g.team.logoUrl} alt="" className={styles.scorerCrest} />
+                <span className={styles.scorerName} style={{ color: g.team.color }}>{g.scorer}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Man of the Match */}
+      {motm && (
+        <div className={styles.motmBlock} style={{ borderColor: motm.team.color }}>
+          <div className={styles.motmHeader}>
+            <span className={styles.motmCrown}>★</span>
+            <span className={styles.motmLabel}>Melhor em Campo</span>
+          </div>
+          <div className={styles.motmBody}>
+            <img src={motm.team.logoUrl} alt="" className={styles.motmCrest} />
+            <div className={styles.motmInfo}>
+              <span className={styles.motmName} style={{ color: motm.team.color }}>
+                #{motm.player.number} {motm.player.name}
+              </span>
+              <span className={styles.motmStats}>
+                {motm.player.position}
+                {motm.goals > 0 && <> · {motm.goals} gol{motm.goals > 1 ? 's' : ''}</>}
+                {motm.yellow > 0 && <> · {motm.yellow}🟨</>}
+                {motm.red > 0 && <> · {motm.red}🟥</>}
+              </span>
+            </div>
+            <span className={styles.motmRating} style={{ background: ratingColor(motm.rating) }}>
+              {motm.rating.toFixed(1)}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Top 5 notas */}
+      <details className={styles.ratingsBlock}>
+        <summary className={styles.ratingsSummary}>📊 Notas dos jogadores</summary>
+        <div className={styles.ratingsList}>
+          {topPerformers.map(r => (
+            <div key={r.player.id} className={styles.ratingRow}>
+              <img src={r.team.logoUrl} alt="" className={styles.ratingCrest} />
+              <span className={styles.ratingNum}>#{r.player.number}</span>
+              <span className={styles.ratingName} style={{ color: r.team.color }}>{r.player.name}</span>
+              <span className={styles.ratingPos}>{r.player.position}</span>
+              <span className={styles.ratingVal} style={{ background: ratingColor(r.rating) }}>
+                {r.rating.toFixed(1)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </details>
+
+      {/* Cartões */}
+      {cards.length > 0 && (
+        <div className={styles.cardsBlock}>
+          <div className={styles.sectionLabel}>Cartões</div>
+          <div className={styles.cardsList}>
+            {cards.map((c, i) => (
+              <span key={i} className={styles.cardChip} style={{ borderColor: c.team.color }}>
+                <span>{c.type === 'yellow' ? '🟨' : '🟥'}</span>
+                <span style={{ color: c.team.color, fontWeight: 700 }}>{c.player?.name ?? c.team.abbreviation}</span>
+                <span className={styles.cardMinute}>{c.minute}&apos;</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className={styles.table}>
