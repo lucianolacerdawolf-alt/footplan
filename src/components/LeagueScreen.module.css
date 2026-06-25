@@ -27,7 +27,7 @@
 .fixturesCol { display: flex; flex-direction: column; gap: 12px; }
 .standingsCol {
   display: flex; flex-direction: column; gap: 6px;
-  overflow-y: auto;
+  overflow-y: auto; min-height: 0;
 }
 
 .section { display: flex; flex-direction: column; gap: 6px; }
