@@ -3,7 +3,6 @@ import type { Team } from '../engine/types';
 import { premierLeagueTeams } from '../data/premierLeague';
 import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
-import styles from './TournamentSetupScreen.module.css';
 
 export type TournamentMode = 'league' | 'bracket';
 
@@ -16,10 +15,6 @@ interface Props {
 const MODE_TITLE: Record<TournamentMode, string> = {
   league: 'Premier League',
   bracket: 'FA Cup',
-};
-const MODE_DESC: Record<TournamentMode, string> = {
-  league: 'Escolha seu time — todos os 20 da Premier League participam.',
-  bracket: 'Escolha seu time — os outros 7 são sorteados automaticamente.',
 };
 const MODE_BTN: Record<TournamentMode, string> = {
   league: 'Iniciar Temporada →',
@@ -39,36 +34,66 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
     onStart(cloneTeam(premierLeagueTeams.find(t => t.id === userTeamId)!));
   };
 
+  const selectedTeam = premierLeagueTeams.find(t => t.id === userTeamId) ?? null;
+
   return (
-    <div className={styles.screen}>
-      <header className={styles.header}>
-        <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
-        <h1 className={styles.title}>{MODE_TITLE[mode]}</h1>
+    <div className="team-select-screen">
+      <header className="app-header">
+        <h1>FootPlan</h1>
+        <p className="subtitle">{MODE_TITLE[mode]}</p>
       </header>
 
-      <p className={styles.instruction}>{MODE_DESC[mode]}</p>
+      <div className="select-instruction">
+        {userTeamId ? 'Time selecionado! Pode começar.' : 'Escolha seu time'}
+      </div>
 
-      <div className={styles.grid}>
+      <div className="select-summary" style={{ justifyContent: 'center' }}>
+        <div
+          className={`select-slot home-slot ${selectedTeam ? 'filled' : ''}`}
+          onClick={selectedTeam ? () => setUserTeamId(null) : undefined}
+          style={selectedTeam ? { borderColor: selectedTeam.color, background: selectedTeam.color + '12' } : undefined}
+        >
+          {selectedTeam ? (
+            <>
+              <img className="slot-crest" src={selectedTeam.logoUrl} alt={selectedTeam.name} />
+              <span className="slot-name">{selectedTeam.name}</span>
+              <span className="slot-ovr">{getAvgOvr(selectedTeam)} OVR</span>
+            </>
+          ) : (
+            <span className="slot-empty">SEU TIME</span>
+          )}
+        </div>
+      </div>
+
+      <div className="team-grid">
         {premierLeagueTeams.map(team => {
-          const selected = team.id === userTeamId;
+          const isSelected = team.id === userTeamId;
           return (
             <button
               key={team.id}
-              className={`${styles.tile} ${selected ? styles.tileSelected : ''}`}
-              style={selected ? { borderColor: team.color, background: team.color + '18' } : undefined}
-              onClick={() => setUserTeamId(selected ? null : team.id)}
+              className={`team-tile ${isSelected ? 'picked-home selected' : ''}`}
+              style={isSelected ? { borderColor: team.color, background: team.color + '10' } : undefined}
+              onClick={() => setUserTeamId(isSelected ? null : team.id)}
             >
-              <img src={team.logoUrl} alt={team.name} className={styles.tileCrest} />
-              <span className={styles.tileName}>{team.abbreviation}</span>
-              <span className={styles.tileOvr}>{getAvgOvr(team)}</span>
+              <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+              <span className="tile-name">{team.name}</span>
+              <span className="tile-ovr">{getAvgOvr(team)}</span>
             </button>
           );
         })}
       </div>
 
-      <div className={styles.footer}>
-        <button className="start-btn" disabled={!userTeamId} onClick={handleStart}>
-          {MODE_BTN[mode]}
+      {selectedTeam && (
+        <div className="select-action">
+          <button className="start-btn" onClick={handleStart}>
+            {MODE_BTN[mode]}
+          </button>
+        </div>
+      )}
+
+      <div className="select-tournament-entry">
+        <button className="tournament-entry-btn" onClick={onBack}>
+          ← Menu Principal
         </button>
       </div>
     </div>

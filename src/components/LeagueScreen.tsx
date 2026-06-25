@@ -65,6 +65,9 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateRound, onNe
     const userPos = standings.findIndex(s => s.teamId === userTeamId) + 1;
     return (
       <div className={styles.screen}>
+        <header className={styles.header}>
+          <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
+        </header>
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
           <img src={champion.logoUrl} alt={champion.name} className={styles.championCrest} />
@@ -98,7 +101,7 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateRound, onNe
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <button className="back-btn-secondary" onClick={onBack}>← Sair</button>
+        <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
         <div className={styles.headerCenter}>
           <span className={styles.leagueTitle}>Premier League</span>
           <span className={styles.roundLabel}>Rodada {currentRound + 1} / {fixtures.length}</span>
