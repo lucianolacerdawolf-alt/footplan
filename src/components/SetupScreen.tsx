@@ -28,8 +28,8 @@ function getTacticalInsight(home: Team, away: Team): string {
   // Opponent matchup
   if (hb.atk > 1 && ab.def < 1) insights.push(`✅ Seu ataque enfrenta defesa frágil`);
   if (hb.def > 1 && ab.atk > 1) insights.push(`⚠️ Defesa sólida contra ataque forte`);
-  if (af.formation === '5-3-2') insights.push(`ℹ️ ${away.name} usa 5 defensores`);
-  if (af.formation === '4-2-3-1' && hf !== '4-2-3-1') insights.push(`ℹ️ ${away.name} tem meio-campo criativo`);
+  if (af === '5-3-2') insights.push(`ℹ️ ${away.name} usa 5 defensores`);
+  if (af === '4-2-3-1' && hf !== '4-2-3-1') insights.push(`ℹ️ ${away.name} tem meio-campo criativo`);
 
   if (insights.length === 0) return `Confronto equilibrado. Sua tática será testada.`;
   return insights.slice(0, 2).join(' · ');

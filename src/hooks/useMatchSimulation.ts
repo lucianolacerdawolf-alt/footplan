@@ -13,8 +13,6 @@ const SPEED_DURATIONS: Record<number, number> = {
   3: 60000,    // 1 min
   4: 45000,    // 45s
 };
-const CLOCK_TICK_MS = 50;
-const HALF_SECONDS = 45 * 60;
 
 function combineFatigue(home: Map<string, number>, away: Map<string, number>): Record<string, number> {
   const out: Record<string, number> = {};

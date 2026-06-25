@@ -69,7 +69,7 @@ function ResultBadge({ result }: { result: MatchResult }) {
   return <span className={`${styles.badge} ${styles.badgeDraw}`}>Empate</span>;
 }
 
-function renderTacticalEffect(s: Strategy): JSX.Element {
+function renderTacticalEffect(s: Strategy): React.JSX.Element {
   const fb = FORMATION_BONUS[s.formation];
   const items: string[] = [];
   items.push(s.formation);
