@@ -1,7 +1,8 @@
-import type { Player } from './types';
+import type { Player, RandomFn } from './types';
 
-function rng(arr: string[]): string {
-  return arr[Math.floor(Math.random() * arr.length)];
+// rng default usa Math.random, mas aceita RandomFn injetada (testes determinísticos).
+function rng(arr: string[], random: RandomFn = Math.random): string {
+  return arr[Math.floor(random() * arr.length)];
 }
 
 // =============================================================================

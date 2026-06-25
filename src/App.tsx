@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { TournamentMode } from './components/TournamentSetupScreen';
@@ -167,7 +167,10 @@ function App() {
     const newFixtures = leagueState.fixtures.map((r, ri) =>
       ri === roundIdx ? r.map((f, fi) => fi === fixtureIdx ? simulated : f) : r
     );
-    setLeagueState({ ...leagueState, fixtures: newFixtures });
+    // Opponent (CPU) tem chance de lesão
+    const oppId = simulated.homeTeamId === leagueState.userTeamId ? simulated.awayTeamId : simulated.homeTeamId;
+    const newTeams = leagueState.teams.map(t => t.id === oppId ? applyPostMatchInjuries(t, 0.05).team : t);
+    setLeagueState({ ...leagueState, fixtures: newFixtures, teams: newTeams });
   }, [leagueState]);
 
   const handleSimulateLeagueRound = useCallback((roundIndex: number) => {
@@ -187,8 +190,12 @@ function App() {
     }
     const newTeams = leagueState.teams.map(t => {
       const delta = moraleMap.get(t.id) ?? 0;
-      if (delta === 0) return t;
-      return { ...t, morale: Math.max(-10, Math.min(10, (t.morale ?? 0) + delta)) };
+      let team = delta === 0 ? t : { ...t, morale: Math.max(-10, Math.min(10, (t.morale ?? 0) + delta)) };
+      // Lesão pra CPU (chance menor que user: 5%)
+      if (t.id !== leagueState.userTeamId) {
+        team = applyPostMatchInjuries(team, 0.05).team;
+      }
+      return team;
     });
     setLeagueState({ ...leagueState, fixtures: leagueState.fixtures.map((r, i) => i === roundIndex ? newRound : r), teams: newTeams });
   }, [leagueState]);
@@ -248,6 +255,7 @@ function App() {
       : stage === 'semifinals' ? bracketState.semiFinals
       : [bracketState.final];
     let s = { ...bracketState };
+    const injuredIds = new Set<string>();
     matches.forEach((match, idx) => {
       const isUser = match.homeTeamId === bracketState.userTeamId || match.awayTeamId === bracketState.userTeamId;
       if (isUser || match.played) return;
@@ -259,7 +267,10 @@ function App() {
       else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[idx] = updated; s = { ...s, quarterFinals: qf }; }
       else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[idx] = updated; s = { ...s, semiFinals: sf }; }
       else { s = { ...s, final: updated }; }
+      injuredIds.add(home.id); injuredIds.add(away.id);
     });
+    // Lesão pra CPU dos times que jogaram
+    s = { ...s, teams: s.teams.map(t => injuredIds.has(t.id) ? applyPostMatchInjuries(t, 0.05).team : t) };
     setBracketState(advanceBracket(s));
   }, [bracketState, setBracketState]);
 
@@ -338,6 +349,13 @@ function App() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   const [resumePrompt, setResumePrompt] = useState<'league' | 'bracket' | null>(null);
+
+  useEffect(() => {
+    if (!resumePrompt) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setResumePrompt(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [resumePrompt]);
 
   const goHome = useCallback(() => {
     setScreen('home');

@@ -4,6 +4,7 @@ import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 import { useH2H } from '../hooks/useH2H';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import TutorialOverlay from './TutorialOverlay';
 
 interface Props {
@@ -72,9 +73,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [awaySelected, setAwaySelected] = useState<string | null>(null);
   const { get: getH2H } = useH2H();
   const h2h = getH2H(initialHome.id, initialAway.id);
-  const [showTutorial, setShowTutorial] = useState(() => {
-    try { return !localStorage.getItem('fp:tutorialSeen'); } catch { return false; }
-  });
+  const [tutorialSeen] = useLocalStorage<string>('fp:tutorialSeen', '');
+  const [showTutorial, setShowTutorial] = useState(!tutorialSeen);
 
   const updateHome = useCallback((s: Strategy) => {
     if (s.formation !== homeTeam.strategy.formation) {
@@ -264,6 +264,23 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           Iniciar Partida →
         </button>
       </div>
+
+      {(() => {
+        const moraleTeam = lockAway ? homeTeam : null; // só mostra em torneios
+        const m = moraleTeam?.morale ?? 0;
+        if (!moraleTeam || m === 0) return null;
+        const icon = m >= 6 ? '😄' : m >= 2 ? '😊' : m <= -6 ? '😟' : m <= -2 ? '😕' : '😐';
+        const color = m > 0 ? '#4ade80' : '#f87171';
+        return (
+          <div className="morale-strip">
+            <span className="morale-label">Moral do time</span>
+            <span className="morale-value" style={{ color }}>
+              {icon} {m > 0 ? '+' : ''}{m}
+            </span>
+            <span className="morale-hint">{m > 0 ? 'Em alta' : 'Em baixa'} · afeta ataque em {Math.abs(m)}%</span>
+          </div>
+        );
+      })()}
 
       {h2h && (h2h.wins + h2h.draws + h2h.losses) > 0 && (
         <div className="h2h-strip">

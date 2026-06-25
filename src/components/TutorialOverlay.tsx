@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface Props {
   onClose: () => void;
@@ -34,12 +35,13 @@ const STEPS = [
 
 export default function TutorialOverlay({ onClose }: Props) {
   const [step, setStep] = useState(0);
+  const [, setSeen] = useLocalStorage<string>('fp:tutorialSeen', '');
   const isLast = step === STEPS.length - 1;
   const current = STEPS[step];
 
   const handleNext = () => {
     if (isLast) {
-      try { localStorage.setItem('fp:tutorialSeen', '1'); } catch { /* noop */ }
+      setSeen('1');
       onClose();
     } else {
       setStep(s => s + 1);
@@ -47,7 +49,7 @@ export default function TutorialOverlay({ onClose }: Props) {
   };
 
   const handleSkip = () => {
-    try { localStorage.setItem('fp:tutorialSeen', '1'); } catch { /* noop */ }
+    setSeen('1');
     onClose();
   };
 

@@ -84,24 +84,34 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const knockoutResolvedRef = useRef(false);
   const [knockoutResult, setKnockoutResult] = useState<MatchResult | null>(null);
 
+  // Refs pra capturar estado atual sem disparar o effect quando mudam
+  const homeRef = useRef(home);
+  const awayRef = useRef(away);
+  const isKnockoutRef = useRef(isKnockout);
+  homeRef.current = home;
+  awayRef.current = away;
+  isKnockoutRef.current = isKnockout;
+
   useEffect(() => {
     if (phase !== 'done' || !result) return;
-    if (!isKnockout) { addMatch(result); return; }
+    const h = homeRef.current;
+    const a = awayRef.current;
+    if (!isKnockoutRef.current) { addMatch(result); return; }
     if (knockoutResolvedRef.current) return;
     knockoutResolvedRef.current = true;
 
     if (result.homeScore !== result.awayScore) {
-      const enriched: MatchResult = { ...result, wentToExtraTime: false, winner: result.homeScore > result.awayScore ? home : away };
+      const enriched: MatchResult = { ...result, wentToExtraTime: false, winner: result.homeScore > result.awayScore ? h : a };
       addMatch(enriched);
       setKnockoutResult(enriched);
       return;
     }
 
     const state = engineStateRef.current!;
-    const tiebreak = resolveKnockoutTiebreak(cloneTeam(home), cloneTeam(away), state);
+    const tiebreak = resolveKnockoutTiebreak(cloneTeam(h), cloneTeam(a), state);
     const winner = tiebreak.penaltyResult
-      ? (tiebreak.penaltyResult.winner === 'home' ? home : away)
-      : (state.homeScore > state.awayScore ? home : away);
+      ? (tiebreak.penaltyResult.winner === 'home' ? h : a)
+      : (state.homeScore > state.awayScore ? h : a);
     const enriched: MatchResult = {
       ...result,
       homeScore: state.homeScore,
@@ -114,7 +124,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     };
     addMatch(enriched);
     setKnockoutResult(enriched);
-  }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [phase, result, addMatch, engineStateRef]);
 
   const updateHome = (s: Strategy) => setHome(prev => ({ ...prev, strategy: s }));
   const updateAway = (s: Strategy) => setAway(prev => ({ ...prev, strategy: s }));

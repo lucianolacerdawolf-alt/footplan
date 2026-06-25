@@ -309,7 +309,7 @@ export function updatePlayers(
 // Coordenadas base da formação (exportado para o Pitch usar)
 // =============================================================================
 
-interface PlayerCoord {
+export interface PlayerCoord {
   id: string; name: string; x: number; y: number;
   position: 'GK'|'DEF'|'MID'|'FWD'; team: 'home'|'away'; number: number;
   speedAttr: number; dribbleAttr: number; staminaAttr: number;

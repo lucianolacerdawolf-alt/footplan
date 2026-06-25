@@ -7,10 +7,6 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 ## 🐛 Bugs / Limpeza pendente
 
 - 🟢 **`public/fundo.png` tem 5.5 MB** — comprimir para WebP ou JPG de baixa qualidade. Recomendado: `cwebp -q 70 fundo.png -o fundo.webp` ou converter via TinyPNG. Carregamento inicial sofre. Após comprimir, ajustar `src/index.css` (`url('/fundo.png')` → `/fundo.webp`).
-- 🟢 **`Pitch.tsx:185` usa `as any`** — tipar `coords` corretamente em `buildSteeringPlayers`.
-- 🟢 **`MatchScreen.tsx:108` tem `eslint-disable react-hooks/exhaustive-deps`** — revisar dependências do effect e resolver propriamente.
-- 🟢 **`localStorage` direto em `TutorialOverlay.tsx` e `SetupScreen.tsx:76`** — migrar pra `useLocalStorage` (já existe).
-- 🟢 **Modal de Resume não fecha com `Escape`** — adicionar `useEffect` com keydown listener.
 - 🟡 **Acessibilidade**: nenhum botão tem `aria-label` consistente. Escudos, toasts e modais ficam confusos pra screen readers.
 - 🟡 **`key={i}` em listas** (`MatchStatsScreen`, `TutorialOverlay`, h2h-pills) — funciona porque são estáticas, mas é code smell. Trocar por `key={item.id}` ou similar.
 
@@ -20,10 +16,7 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 
 - 🟡 **Mando de campo não influencia o placar** — engine ignora quem é mandante. Real: ~+0.3 gols vantagem mandante. Adicionar `homeAdvantage` modifier em `resolveAttack`.
 - 🟡 **Histórico H2H só guarda placar agregado** — não tem datas nem detalhes dos confrontos. Limita uso analítico. Estender `H2HRecord` com lista de últimos 5 jogos completos.
-- 🟢 **Sem indicador visual de moral** — usuário não vê quando o time está em alta/baixa antes da partida. Badge no SetupScreen mostrando 😊 +6 / 😟 -4 etc.
-- 🟢 **Lesões só do user** — CPU é imune, quebra a imersão da liga. Aplicar `applyPostMatchInjuries` em times CPU também (talvez com chance menor pra evitar plantéis dizimados).
 - 🟡 **Substituições só no intervalo** — durante o 2º tempo não dá pra trocar jogador cansado. Exigiria pausar o replay; trabalho real.
-- 🟢 **`generateLeagueSchedule` sorteia mando aleatório** — mas no ano seguinte cada confronto inverte mandante/visitante. Não tem temporadas múltiplas então não importa hoje.
 
 ---
 
@@ -34,7 +27,6 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 - 🟡 **Sem testes para `tournament.ts`** — `recoverFatigue`, `applyPostMatchInjuries`, `randomizeCPUTactics`, `generateLeagueSchedule` são puras e fáceis de testar.
 - 🟡 **Premier League hardcoded** em `data/premierLeague.ts` (573 linhas). Se quiser outras ligas, falta abstrair "liga ativa".
 - 🟡 **Zero testes de componente** — pelo menos `MatchStatsScreen` e `playerRating` seria barato testar.
-- 🟢 **`Math.random` em `commentary.ts:4`** — `pickRandom` ainda usa Math.random direto. Receber RandomFn injetável.
 
 ---
 
@@ -60,4 +52,10 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 - Slider de velocidade do replay (1x/2x/4x)
 - CPU varia tática entre rodadas
 - Resumo de fadiga/lesão no header da liga
-- `Math.random` substituído por RandomFn em `tournament.ts`
+- `Math.random` substituído por RandomFn em `tournament.ts` e `commentary.ts`
+- `Pitch.tsx`: removido `as any` (PlayerCoord exportado de steering.ts)
+- `MatchScreen.tsx`: removido `eslint-disable` do useEffect (refs pra capturar estado)
+- `TutorialOverlay`/`SetupScreen`: migrados pra `useLocalStorage`
+- Modal Resume fecha com tecla `Escape`
+- Badge de moral no SetupScreen (😄/😊/😐/😕/😟 com valor +/-)
+- Lesões aplicadas pra CPU também (5% de chance em jogos simulados)

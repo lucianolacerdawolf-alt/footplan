@@ -5,6 +5,7 @@ import {
   buildSteeringPlayers,
   updatePlayers,
   type SteeringPlayer,
+  type PlayerCoord,
 } from '../engine/steering';
 
 interface Props {
@@ -22,11 +23,6 @@ interface Props {
   } | null;
   fatigueMap?: Record<string, number>;
   expelledIds?: string[];
-}
-
-interface PlayerCoord {
-  id: string; name: string; number: number;
-  x: number; y: number; position: string; team: 'home' | 'away';
 }
 
 // ---------------------------------------------------------------------------
@@ -182,7 +178,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
   useEffect(() => {
     const coords = [...homeBase, ...awayBase];
     carriersRef.current = coords.map(c => ({ ...c }));
-    playersRef.current = buildSteeringPlayers(coords as any);
+    playersRef.current = buildSteeringPlayers(coords);
     ballRef.current = { x: 60, y: 35, visible: true };
   }, [homeBase, awayBase]);
 

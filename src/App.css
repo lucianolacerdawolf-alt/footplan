@@ -591,6 +591,17 @@
 }
 .fp-toast-visible { opacity: 1; }
 
+/* ── Badge de moral no SetupScreen ─────────────────────────────────── */
+.morale-strip {
+  display: flex; justify-content: center; align-items: center; gap: 12px;
+  padding: 8px 14px; margin: 6px 16px 0; border-radius: 10px;
+  background: var(--code-bg); border: 1px solid var(--border);
+  font-size: 13px; font-family: var(--mono);
+}
+.morale-label { opacity: 0.6; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
+.morale-value { font-weight: 900; font-size: 15px; }
+.morale-hint { opacity: 0.55; font-size: 11px; }
+
 /* ── H2H badge no SetupScreen ──────────────────────────────────────── */
 .h2h-strip {
   display: flex; justify-content: center; align-items: center; gap: 14px;
