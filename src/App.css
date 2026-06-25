@@ -2,9 +2,9 @@
    FootPlan - UI Refinada
    ============================================================================= */
 
-/* --- Top nav (back button no topo-esquerdo) --- */
+/* --- Top nav (back button no topo-esquerdo, start no topo-direito) --- */
 .top-nav {
-  display: flex; align-items: center;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 10px 16px 0;
 }
 
