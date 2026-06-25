@@ -113,10 +113,10 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
 
       {/* Actions */}
       <div className={styles.actions}>
-        <button className="back-btn-secondary" onClick={onMenu}>Escolher Times</button>
-        {onContinue && (
-          <button className="start-btn" onClick={onContinue}>{continueLabel ?? 'Continuar'}</button>
-        )}
+        {onContinue
+          ? <button className="start-btn" onClick={onContinue}>{continueLabel ?? 'Continuar'}</button>
+          : <button className="start-btn" onClick={onMenu}>Escolher Times</button>
+        }
       </div>
 
       {/* Histórico */}

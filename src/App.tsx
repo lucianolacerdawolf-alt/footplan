@@ -1,9 +1,11 @@
 import { useState, useCallback } from 'react';
 import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
+import type { TournamentMode } from './components/TournamentSetupScreen';
 import type { LeagueState, BracketState, BracketMatch, LeagueFixture } from './engine/tournament';
 import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto } from './engine/tournament';
 import { cloneTeam } from './utils/teamUtils';
+import HomeScreen from './components/HomeScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SetupScreen from './components/SetupScreen';
 import MatchScreen from './components/MatchScreen';
@@ -15,17 +17,18 @@ import { useMatchHistory } from './hooks/useMatchHistory';
 import { premierLeagueTeams } from './data/premierLeague';
 import './App.css';
 
-type Screen = 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket';
+type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket';
 type MatchContext = 'regular' | 'league' | 'bracket';
 
 function App() {
-  const [screen, setScreen] = useState<Screen>('select');
+  const [screen, setScreen] = useState<Screen>('home');
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>('cpu');
   const [lastResult, setLastResult] = useState<MatchResult | null>(null);
   const [matchContext, setMatchContext] = useState<MatchContext>('regular');
   const [isKnockout, setIsKnockout] = useState(false);
+  const [tournamentMode, setTournamentMode] = useState<TournamentMode>('league');
   const [leagueState, setLeagueState] = useState<LeagueState | null>(null);
   const [bracketState, setBracketState] = useState<BracketState | null>(null);
   const [pendingLeagueFixture, setPendingLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
@@ -34,7 +37,7 @@ function App() {
 
   const { history, clearHistory } = useMatchHistory();
 
-  // ── Partida normal ────────────────────────────────────────────────────────
+  // ── Partida única ─────────────────────────────────────────────────────────
   const handleTeamsSelected = useCallback((home: Team, away: Team, mode: GameMode) => {
     setHomeTeam(home); setAwayTeam(away); setGameMode(mode);
     setMatchContext('regular'); setIsKnockout(false);
@@ -46,35 +49,36 @@ function App() {
     setScreen('match');
   }, []);
 
-  const handleBackToSelect = useCallback(() => {
-    setScreen('select'); setHomeTeam(null); setAwayTeam(null);
-  }, []);
-
-  const handleBackToSetup = useCallback(() => setScreen('setup'), []);
-
   const handleViewStats = useCallback((result: MatchResult) => {
     setLastResult(result);
     setScreen('stats');
   }, []);
 
-  // ── Torneio ───────────────────────────────────────────────────────────────
+  // ── Torneio: setup ────────────────────────────────────────────────────────
   const handleStartLeague = useCallback((userTeam: Team) => {
-    const allTeams = premierLeagueTeams.map(cloneTeam);
-    // Put userTeam first (so schedule is built around it)
-    const rest = allTeams.filter(t => t.id !== userTeam.id);
-    const orderedTeams = [userTeam, ...rest];
-    const fixtures = generateLeagueSchedule(orderedTeams);
-    setLeagueState({ teams: orderedTeams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' });
+    const all = premierLeagueTeams.map(cloneTeam);
+    const rest = all.filter(t => t.id !== userTeam.id);
+    const teams = [userTeam, ...rest];
+    setLeagueState({ teams, userTeamId: userTeam.id, fixtures: generateLeagueSchedule(teams), currentRound: 0, phase: 'playing' });
     setScreen('league');
   }, []);
 
-  const handleStartBracket = useCallback((userTeam: Team, others: Team[]) => {
-    const state = createBracket(userTeam, others);
-    setBracketState(state);
+  const handleStartBracket = useCallback((userTeam: Team) => {
+    const others = premierLeagueTeams
+      .filter(t => t.id !== userTeam.id)
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 7)
+      .map(cloneTeam);
+    setBracketState(createBracket(userTeam, others));
     setScreen('bracket');
   }, []);
 
-  // ── Liga: jogar ───────────────────────────────────────────────────────────
+  const handleTournamentStart = useCallback((userTeam: Team) => {
+    if (tournamentMode === 'league') handleStartLeague(userTeam);
+    else handleStartBracket(userTeam);
+  }, [tournamentMode, handleStartLeague, handleStartBracket]);
+
+  // ── Liga ──────────────────────────────────────────────────────────────────
   const handlePlayLeagueMatch = useCallback((fixture: LeagueFixture, home: Team, away: Team) => {
     const roundIdx = fixture.roundIndex;
     const fixtureIdx = leagueState!.fixtures[roundIdx].findIndex(f => f.id === fixture.id);
@@ -87,8 +91,7 @@ function App() {
   const handleSimulateLeagueRound = useCallback((roundIndex: number) => {
     if (!leagueState) return;
     const newRound = simularRodadaAuto(leagueState.fixtures[roundIndex], leagueState.teams, leagueState.userTeamId);
-    const newFixtures = leagueState.fixtures.map((r, i) => i === roundIndex ? newRound : r);
-    setLeagueState({ ...leagueState, fixtures: newFixtures });
+    setLeagueState({ ...leagueState, fixtures: leagueState.fixtures.map((r, i) => i === roundIndex ? newRound : r) });
   }, [leagueState]);
 
   const handleNextLeagueRound = useCallback(() => {
@@ -110,7 +113,7 @@ function App() {
     setScreen('stats');
   }, [leagueState, pendingLeagueFixture]);
 
-  // ── Copa: jogar ───────────────────────────────────────────────────────────
+  // ── Copa ──────────────────────────────────────────────────────────────────
   const handlePlayBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: 'quarterfinals' | 'semifinals' | 'final', matchIdx: number) => {
     setPendingBracketStage(stage);
     setPendingBracketIdx(matchIdx);
@@ -127,17 +130,13 @@ function App() {
     const match = stageMatches[matchIdx];
     const home = bracketState.teams.find(t => t.id === match.homeTeamId)!;
     const away = bracketState.teams.find(t => t.id === match.awayTeamId)!;
-    const simResult = simularBracketMatch(home, away);
-    const updatedMatch: BracketMatch = { ...match, ...simResult };
-    let newState = { ...bracketState };
-    if (stage === 'quarterfinals') {
-      const qf = [...bracketState.quarterFinals]; qf[matchIdx] = updatedMatch; newState = { ...newState, quarterFinals: qf };
-    } else if (stage === 'semifinals') {
-      const sf = [...bracketState.semiFinals]; sf[matchIdx] = updatedMatch; newState = { ...newState, semiFinals: sf };
-    } else {
-      newState = { ...newState, final: updatedMatch };
-    }
-    setBracketState(advanceBracket(newState));
+    const sim = simularBracketMatch(home, away);
+    const updated: BracketMatch = { ...match, ...sim };
+    let s = { ...bracketState };
+    if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[matchIdx] = updated; s = { ...s, quarterFinals: qf }; }
+    else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[matchIdx] = updated; s = { ...s, semiFinals: sf }; }
+    else { s = { ...s, final: updated }; }
+    setBracketState(advanceBracket(s));
   }, [bracketState]);
 
   const handleBracketMatchResult = useCallback((result: MatchResult) => {
@@ -148,12 +147,10 @@ function App() {
     const match = stageMatches[pendingBracketIdx];
     const home = bracketState.teams.find(t => t.id === match.homeTeamId)!;
     const away = bracketState.teams.find(t => t.id === match.awayTeamId)!;
-    const winnerId = result.winner
-      ? result.winner.id
-      : result.penaltyResult
-        ? (result.penaltyResult.winner === 'home' ? home.id : away.id)
-        : result.homeScore >= result.awayScore ? home.id : away.id;
-    const updatedMatch: BracketMatch = {
+    const winnerId = result.winner?.id
+      ?? (result.penaltyResult ? (result.penaltyResult.winner === 'home' ? home.id : away.id)
+        : result.homeScore >= result.awayScore ? home.id : away.id);
+    const updated: BracketMatch = {
       ...match,
       homeScore: result.homeScore, awayScore: result.awayScore,
       wentToExtraTime: result.wentToExtraTime,
@@ -163,24 +160,18 @@ function App() {
       penaltyAwayScore: result.penaltyResult?.awayScore,
       winnerId, played: true,
     };
-    let newState = { ...bracketState };
-    if (pendingBracketStage === 'quarterfinals') {
-      const qf = [...bracketState.quarterFinals]; qf[pendingBracketIdx] = updatedMatch; newState = { ...newState, quarterFinals: qf };
-    } else if (pendingBracketStage === 'semifinals') {
-      const sf = [...bracketState.semiFinals]; sf[pendingBracketIdx] = updatedMatch; newState = { ...newState, semiFinals: sf };
-    } else {
-      newState = { ...newState, final: updatedMatch };
-    }
-    const advanced = advanceBracket(newState);
-    setBracketState(advanced);
+    let s = { ...bracketState };
+    if (pendingBracketStage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[pendingBracketIdx] = updated; s = { ...s, quarterFinals: qf }; }
+    else if (pendingBracketStage === 'semifinals') { const sf = [...s.semiFinals]; sf[pendingBracketIdx] = updated; s = { ...s, semiFinals: sf }; }
+    else { s = { ...s, final: updated }; }
+    setBracketState(advanceBracket(s));
     setLastResult(result);
     setScreen('stats');
   }, [bracketState, pendingBracketStage, pendingBracketIdx]);
 
-  // ── Continuar depois dos stats ────────────────────────────────────────────
+  // ── Roteamento pós-stats ──────────────────────────────────────────────────
   const handleContinueTournament = useCallback(() => {
-    if (matchContext === 'league') setScreen('league');
-    else if (matchContext === 'bracket') setScreen('bracket');
+    setScreen(matchContext === 'league' ? 'league' : 'bracket');
   }, [matchContext]);
 
   const handleViewStatsFromMatch = useCallback((result: MatchResult) => {
@@ -190,12 +181,31 @@ function App() {
   }, [matchContext, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats]);
 
   // ── Render ────────────────────────────────────────────────────────────────
+  if (screen === 'home') {
+    return (
+      <HomeScreen
+        onSingleMatch={() => setScreen('select')}
+        onLeague={() => { setTournamentMode('league'); setScreen('tournament-setup'); }}
+        onCup={() => { setTournamentMode('bracket'); setScreen('tournament-setup'); }}
+      />
+    );
+  }
+
+  if (screen === 'select') {
+    return (
+      <TeamSelectionScreen
+        onConfirm={handleTeamsSelected}
+        onTournament={() => setScreen('home')}
+      />
+    );
+  }
+
   if (screen === 'tournament-setup') {
     return (
       <TournamentSetupScreen
-        onBack={() => setScreen('select')}
-        onStartLeague={handleStartLeague}
-        onStartBracket={handleStartBracket}
+        mode={tournamentMode}
+        onBack={() => setScreen('home')}
+        onStart={handleTournamentStart}
       />
     );
   }
@@ -207,7 +217,7 @@ function App() {
         onPlayMatch={handlePlayLeagueMatch}
         onSimulateRound={handleSimulateLeagueRound}
         onNextRound={handleNextLeagueRound}
-        onBack={handleBackToSelect}
+        onBack={() => setScreen('home')}
       />
     );
   }
@@ -221,11 +231,10 @@ function App() {
           const matches = stage === 'quarterfinals' ? bracketState.quarterFinals
             : stage === 'semifinals' ? bracketState.semiFinals
             : [bracketState.final];
-          const idx = matches.findIndex(m => m.id === match.id);
-          handlePlayBracketMatch(match, home, away, stage, idx);
+          handlePlayBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
         }}
         onSimulateMatch={handleSimulateBracketMatch}
-        onBack={handleBackToSelect}
+        onBack={() => setScreen('home')}
       />
     );
   }
@@ -239,7 +248,7 @@ function App() {
         onBack={() => {
           if (matchContext === 'league') setScreen('league');
           else if (matchContext === 'bracket') setScreen('bracket');
-          else handleBackToSelect();
+          else setScreen('select');
         }}
         lockAway={gameMode === 'cpu' && matchContext === 'regular'}
       />
@@ -251,7 +260,7 @@ function App() {
       <MatchScreen
         homeTeam={homeTeam}
         awayTeam={awayTeam}
-        onBack={handleBackToSetup}
+        onBack={() => setScreen('setup')}
         onViewStats={handleViewStatsFromMatch}
         isKnockout={isKnockout}
       />
@@ -264,20 +273,15 @@ function App() {
       <MatchStatsScreen
         result={lastResult}
         history={isTournament ? [] : history}
-        onMenu={handleBackToSelect}
+        onMenu={() => setScreen('home')}
         onClearHistory={clearHistory}
         onContinue={isTournament ? handleContinueTournament : undefined}
-        continueLabel={matchContext === 'league' ? 'Continuar Liga' : matchContext === 'bracket' ? 'Continuar Copa' : undefined}
+        continueLabel={matchContext === 'league' ? 'Continuar Premier League' : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
       />
     );
   }
 
-  return (
-    <TeamSelectionScreen
-      onConfirm={handleTeamsSelected}
-      onTournament={() => setScreen('tournament-setup')}
-    />
-  );
+  return <HomeScreen onSingleMatch={() => setScreen('select')} onLeague={() => { setTournamentMode('league'); setScreen('tournament-setup'); }} onCup={() => { setTournamentMode('bracket'); setScreen('tournament-setup'); }} />;
 }
 
 export default App;

@@ -176,7 +176,7 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
 
       <div className="select-tournament-entry">
         <button className="tournament-entry-btn" onClick={onTournament}>
-          🏆 Modo Torneio
+          ← Menu Principal
         </button>
       </div>
     </div>

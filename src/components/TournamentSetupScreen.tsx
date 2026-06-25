@@ -8,13 +8,25 @@ import styles from './TournamentSetupScreen.module.css';
 export type TournamentMode = 'league' | 'bracket';
 
 interface Props {
+  mode: TournamentMode;
   onBack: () => void;
-  onStartLeague: (userTeam: Team) => void;
-  onStartBracket: (userTeam: Team, otherTeams: Team[]) => void;
+  onStart: (userTeam: Team) => void;
 }
 
-export default function TournamentSetupScreen({ onBack, onStartLeague, onStartBracket }: Props) {
-  const [mode, setMode] = useState<TournamentMode>('league');
+const MODE_TITLE: Record<TournamentMode, string> = {
+  league: 'Premier League',
+  bracket: 'FA Cup',
+};
+const MODE_DESC: Record<TournamentMode, string> = {
+  league: 'Escolha seu time — todos os 20 da Premier League participam.',
+  bracket: 'Escolha seu time — os outros 7 são sorteados automaticamente.',
+};
+const MODE_BTN: Record<TournamentMode, string> = {
+  league: 'Iniciar Temporada →',
+  bracket: 'Sortear Copa →',
+};
+
+export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) {
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
 
   const getAvgOvr = (team: Team) => {
@@ -24,54 +36,18 @@ export default function TournamentSetupScreen({ onBack, onStartLeague, onStartBr
 
   const handleStart = () => {
     if (!userTeamId) return;
-    const userTeam = cloneTeam(premierLeagueTeams.find(t => t.id === userTeamId)!);
-
-    if (mode === 'league') {
-      onStartLeague(userTeam);
-    } else {
-      const others = premierLeagueTeams
-        .filter(t => t.id !== userTeamId)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 7)
-        .map(cloneTeam);
-      onStartBracket(userTeam, others);
-    }
+    onStart(cloneTeam(premierLeagueTeams.find(t => t.id === userTeamId)!));
   };
 
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
         <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
-        <h1 className={styles.title}>Modo Torneio</h1>
+        <h1 className={styles.title}>{MODE_TITLE[mode]}</h1>
       </header>
 
-      {/* Mode picker */}
-      <div className={styles.modePicker}>
-        <button
-          className={`${styles.modeBtn} ${mode === 'league' ? styles.modeBtnActive : ''}`}
-          onClick={() => setMode('league')}
-        >
-          <span className={styles.modeIcon}>📅</span>
-          <span className={styles.modeName}>Liga</span>
-          <span className={styles.modeDesc}>Pontos Corridos · 38 rodadas</span>
-        </button>
-        <button
-          className={`${styles.modeBtn} ${mode === 'bracket' ? styles.modeBtnActive : ''}`}
-          onClick={() => setMode('bracket')}
-        >
-          <span className={styles.modeIcon}>🏆</span>
-          <span className={styles.modeName}>Copa</span>
-          <span className={styles.modeDesc}>Mata-mata · 8 times</span>
-        </button>
-      </div>
+      <p className={styles.instruction}>{MODE_DESC[mode]}</p>
 
-      <p className={styles.instruction}>
-        {mode === 'league'
-          ? 'Escolha seu time — todos os 20 da Premier League participam.'
-          : 'Escolha seu time — os outros 7 são sorteados automaticamente.'}
-      </p>
-
-      {/* Team grid */}
       <div className={styles.grid}>
         {premierLeagueTeams.map(team => {
           const selected = team.id === userTeamId;
@@ -91,12 +67,8 @@ export default function TournamentSetupScreen({ onBack, onStartLeague, onStartBr
       </div>
 
       <div className={styles.footer}>
-        <button
-          className="start-btn"
-          disabled={!userTeamId}
-          onClick={handleStart}
-        >
-          {mode === 'league' ? 'Iniciar Temporada →' : 'Sortear Copa →'}
+        <button className="start-btn" disabled={!userTeamId} onClick={handleStart}>
+          {MODE_BTN[mode]}
         </button>
       </div>
     </div>
