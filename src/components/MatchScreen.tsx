@@ -62,7 +62,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [subToast, setSubToast] = useState<string | null>(null);
   const [subsHome, setSubsHome] = useState(0);
   const [subsAway, setSubsAway] = useState(0);
-  const MAX_SUBS = 3;
+  const MAX_SUBS = 5;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
 
