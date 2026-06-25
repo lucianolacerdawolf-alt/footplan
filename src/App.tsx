@@ -1,8 +1,8 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { TournamentMode } from './components/TournamentSetupScreen';
-import type { LeagueState, BracketState, BracketMatch, LeagueFixture } from './engine/tournament';
+import type { LeagueState, BracketState, BracketMatch, LeagueFixture, PlayableStage } from './engine/tournament';
 import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto, recoverFatigue, applyPostMatchInjuries } from './engine/tournament';
 import { cloneTeam } from './utils/teamUtils';
 import HomeScreen from './components/HomeScreen';
@@ -15,13 +15,13 @@ import LeagueScreen from './components/LeagueScreen';
 import BracketScreen from './components/BracketScreen';
 import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
+import { usePersistedState } from './hooks/usePersistedState';
 import Toast from './components/Toast';
 import { premierLeagueTeams } from './data/premierLeague';
 import './App.css';
 
 type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket';
 type MatchContext = 'regular' | 'league' | 'bracket';
-type PlayableStage = 'roundOf16' | 'quarterfinals' | 'semifinals' | 'final';
 
 function App() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -32,18 +32,10 @@ function App() {
   const [matchContext, setMatchContext] = useState<MatchContext>('regular');
   const [isKnockout, setIsKnockout] = useState(false);
   const [tournamentMode, setTournamentMode] = useState<TournamentMode>('league');
-  const [leagueState, setLeagueState] = useState<LeagueState | null>(() => {
-    try {
-      const saved = localStorage.getItem('fp:leagueState');
-      return saved ? (JSON.parse(saved) as LeagueState) : null;
-    } catch { return null; }
-  });
-  const [bracketState, setBracketState] = useState<BracketState | null>(() => {
-    try {
-      const saved = localStorage.getItem('fp:bracketState');
-      return saved ? (JSON.parse(saved) as BracketState) : null;
-    } catch { return null; }
-  });
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const notifySave = useCallback(() => setToastMsg('✓ Progresso salvo'), []);
+  const [leagueState, setLeagueState] = usePersistedState<LeagueState | null>('fp:leagueState', null, { onPersist: notifySave });
+  const [bracketState, setBracketState] = usePersistedState<BracketState | null>('fp:bracketState', null, { onPersist: notifySave });
   const [pendingLeagueFixture, setPendingLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
   const [isTournamentEntry, setIsTournamentEntry] = useState(false);
   const [pendingBracketStage, setPendingBracketStage] = useState<PlayableStage | null>(null);
@@ -51,30 +43,6 @@ function App() {
 
   const { history, clearHistory } = useMatchHistory();
   const { record: recordH2H } = useH2H();
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const didMountLeague = useRef(false);
-  const didMountBracket = useRef(false);
-
-  // ── Persistência localStorage ─────────────────────────────────────────────
-  useEffect(() => {
-    if (leagueState) {
-      try { localStorage.setItem('fp:leagueState', JSON.stringify(leagueState)); } catch { /* noop */ }
-    } else {
-      localStorage.removeItem('fp:leagueState');
-    }
-    if (didMountLeague.current && leagueState) setToastMsg('✓ Progresso salvo');
-    didMountLeague.current = true;
-  }, [leagueState]);
-
-  useEffect(() => {
-    if (bracketState) {
-      try { localStorage.setItem('fp:bracketState', JSON.stringify(bracketState)); } catch { /* noop */ }
-    } else {
-      localStorage.removeItem('fp:bracketState');
-    }
-    if (didMountBracket.current && bracketState) setToastMsg('✓ Progresso salvo');
-    didMountBracket.current = true;
-  }, [bracketState]);
 
   // ── Partida única ─────────────────────────────────────────────────────────
   const handleTeamsSelected = useCallback((home: Team, away: Team, mode: GameMode) => {

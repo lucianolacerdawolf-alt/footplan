@@ -51,6 +51,7 @@ export interface BracketMatch {
 }
 
 export type BracketStage = 'roundOf16' | 'quarterfinals' | 'semifinals' | 'final' | 'champion';
+export type PlayableStage = Exclude<BracketStage, 'champion'>;
 
 export interface BracketState {
   teams: Team[];

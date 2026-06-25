@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import type { Team } from '../engine/types';
-import type { BracketState, BracketMatch } from '../engine/tournament';
+import type { BracketState, BracketMatch, PlayableStage } from '../engine/tournament';
 import styles from './BracketScreen.module.css';
-
-type PlayableStage = 'roundOf16' | 'quarterfinals' | 'semifinals' | 'final';
 
 interface Props {
   state: BracketState;
