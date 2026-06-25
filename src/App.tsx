@@ -3,7 +3,7 @@ import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { TournamentMode } from './components/TournamentSetupScreen';
 import type { LeagueState, BracketState, BracketMatch, LeagueFixture, PlayableStage } from './engine/tournament';
-import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto, recoverFatigue, applyPostMatchInjuries } from './engine/tournament';
+import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto, recoverFatigue, applyPostMatchInjuries, randomizeCPUTactics } from './engine/tournament';
 import { cloneTeam } from './utils/teamUtils';
 import HomeScreen from './components/HomeScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
@@ -197,7 +197,8 @@ function App() {
     if (!leagueState) return;
     const next = leagueState.currentRound + 1;
     const recoveredTeams = recoverFatigue(leagueState.teams);
-    setLeagueState({ ...leagueState, teams: recoveredTeams, currentRound: next, phase: next >= leagueState.fixtures.length ? 'done' : 'playing' });
+    const variedTeams = randomizeCPUTactics(recoveredTeams, leagueState.userTeamId);
+    setLeagueState({ ...leagueState, teams: variedTeams, currentRound: next, phase: next >= leagueState.fixtures.length ? 'done' : 'playing' });
   }, [leagueState]);
 
   const handleLeagueMatchResult = useCallback((result: MatchResult) => {
@@ -309,7 +310,7 @@ function App() {
     else if (pendingBracketStage === 'semifinals') { const sf = [...s.semiFinals]; sf[pendingBracketIdx] = updated; s = { ...s, semiFinals: sf }; }
     else { s = { ...s, final: updated }; }
     const advanced = advanceBracket(s);
-    const finalState = { ...advanced, teams: advanced.teams.map(t => {
+    const finalState = { ...advanced, teams: randomizeCPUTactics(advanced.teams.map(t => {
       if (t.id !== advanced.userTeamId) return t;
       const { team: injured, injuries } = applyPostMatchInjuries(t);
       if (injuries.length > 0) {
@@ -317,7 +318,7 @@ function App() {
         setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} jogo${inj.rounds > 1 ? 's' : ''}`);
       }
       return injured;
-    }) };
+    }), advanced.userTeamId) };
     setBracketState(finalState);
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     setLastResult(result);

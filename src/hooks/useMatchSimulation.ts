@@ -4,7 +4,7 @@ import { simularPrimeiroTempo, simularSegundoTempo, type MatchState } from '../e
 import { cloneTeam } from '../utils/teamUtils';
 import { sfx } from '../utils/audio';
 
-const HALF_DURATION_MS = 120000;
+const BASE_HALF_DURATION_MS = 120000;
 const CLOCK_TICK_MS = 50;
 const HALF_SECONDS = 45 * 60;
 
@@ -15,7 +15,8 @@ function combineFatigue(home: Map<string, number>, away: Map<string, number>): R
   return out;
 }
 
-export function useMatchSimulation(initialHomeId: string) {
+export function useMatchSimulation(initialHomeId: string, speedRef?: { current: number }) {
+  const getHalfDuration = () => BASE_HALF_DURATION_MS / (speedRef?.current ?? 1);
   const [result, setResult] = useState<MatchResult | null>(null);
   const [simulating, setSimulating] = useState(false);
   const [replayEvents, setReplayEvents] = useState<MatchEvent[]>([]);
@@ -52,6 +53,7 @@ export function useMatchSimulation(initialHomeId: string) {
 
     const queue = [...events];
     const startTime = Date.now();
+    const halfDurationMs = getHalfDuration();
     const maxSec = halfOffsetSec + HALF_SECONDS;
 
     hScoreRef.current = initialHomeScore;
@@ -69,7 +71,7 @@ export function useMatchSimulation(initialHomeId: string) {
 
     replayRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
-      const inGameSec = Math.min(HALF_SECONDS, Math.floor((elapsed / HALF_DURATION_MS) * HALF_SECONDS));
+      const inGameSec = Math.min(HALF_SECONDS, Math.floor((elapsed / halfDurationMs) * HALF_SECONDS));
       const effectiveSec = halfOffsetSec + inGameSec;
 
       setClockSeconds(effectiveSec);
@@ -112,7 +114,7 @@ export function useMatchSimulation(initialHomeId: string) {
         setReplayEvents(prev => [...prev, evt]);
       }
 
-      if (elapsed >= HALF_DURATION_MS) {
+      if (elapsed >= halfDurationMs) {
         if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
         setClockSeconds(maxSec);
         onDone();

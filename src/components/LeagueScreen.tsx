@@ -2,7 +2,17 @@ import { useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, LeagueFixture, Standing } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
+import { FORMATION_COUNTS } from '../engine/constants';
 import styles from './LeagueScreen.module.css';
+
+function squadHealth(team: Team) {
+  const counts = FORMATION_COUNTS[team.strategy.formation];
+  const starterCount = 1 + counts.DEF + counts.MID + counts.FWD;
+  const starters = team.squad.slice(0, starterCount);
+  const tired = starters.filter(p => p.currentFatigue > 70).length;
+  const injured = team.squad.filter(p => p.injuredRounds && p.injuredRounds > 0).length;
+  return { tired, injured };
+}
 
 interface Props {
   state: LeagueState;
@@ -120,6 +130,18 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
         <div className={styles.headerCenter}>
           <span className={styles.leagueTitle}>Premier League</span>
           <span className={styles.roundLabel}>Rodada {currentRound + 1} / {fixtures.length}</span>
+          {(() => {
+            const user = teams.find(t => t.id === userTeamId);
+            if (!user) return null;
+            const h = squadHealth(user);
+            if (h.tired === 0 && h.injured === 0) return null;
+            return (
+              <span className={styles.healthBadges}>
+                {h.tired > 0 && <span className={styles.healthTired}>⚠ {h.tired} cansado{h.tired > 1 ? 's' : ''}</span>}
+                {h.injured > 0 && <span className={styles.healthInjured}>🤕 {h.injured} lesionado{h.injured > 1 ? 's' : ''}</span>}
+              </span>
+            );
+          })()}
         </div>
         <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
       </header>

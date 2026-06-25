@@ -38,6 +38,15 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const MAX_SUBS = 3;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [speed, setSpeed] = useState<number>(() => {
+    try { return Number(localStorage.getItem('fp:replaySpeed')) || 1; } catch { return 1; }
+  });
+  const speedRef = useRef(speed);
+  useEffect(() => {
+    speedRef.current = speed;
+    try { localStorage.setItem('fp:replaySpeed', String(speed)); } catch { /* noop */ }
+  }, [speed]);
+
   const { addMatch } = useMatchHistory();
 
   const {
@@ -45,7 +54,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
-  } = useMatchSimulation(initialHome.id);
+  } = useMatchSimulation(initialHome.id, speedRef);
 
   const showSubToast = (outName: string, inName: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -126,6 +135,16 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         </button>
         <span className="match-title">{home.abbreviation} vs {away.abbreviation}</span>
         <span className="match-formations">{home.strategy.formation} x {away.strategy.formation}</span>
+        <div className="speed-control">
+          {[1, 2, 4].map(s => (
+            <button
+              key={s}
+              className={`speed-btn ${speed === s ? 'active' : ''}`}
+              onClick={() => setSpeed(s)}
+              title={`Velocidade ${s}x`}
+            >{s}x</button>
+          ))}
+        </div>
       </header>
 
       {/* Placar + Tempo */}

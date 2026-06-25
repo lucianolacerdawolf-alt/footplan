@@ -143,8 +143,8 @@ export function computeStandings(teams: Team[], fixtures: LeagueFixture[][]): St
 // COPA — criação do chaveamento (16 times)
 // =============================================================================
 
-export function createBracket(userTeam: Team, otherTeams: Team[]): BracketState {
-  const shuffled = [...otherTeams].sort(() => Math.random() - 0.5);
+export function createBracket(userTeam: Team, otherTeams: Team[], rng: () => number = Math.random): BracketState {
+  const shuffled = [...otherTeams].sort(() => rng() - 0.5);
   const teams = [userTeam, ...shuffled.slice(0, 15)];
 
   const roundOf16: BracketMatch[] = [
@@ -280,6 +280,32 @@ export function recoverFatigue(teams: Team[]): Team[] {
 }
 
 // =============================================================================
+// IA — varia tática dos times CPU entre rodadas
+// =============================================================================
+
+const MENTALITIES_ARR = ['possession', 'counter-attack', 'high-press', 'defensive'] as const;
+const INTENSITIES_ARR = ['low', 'medium', 'high'] as const;
+const DEF_LINES_ARR = ['high', 'normal', 'low'] as const;
+const WIDTHS_ARR = ['narrow', 'normal', 'wide'] as const;
+
+function pickOne<T>(arr: readonly T[], rng: () => number): T {
+  return arr[Math.floor(rng() * arr.length)];
+}
+
+export function randomizeCPUTactics(teams: Team[], userTeamId: string, rng: () => number = Math.random): Team[] {
+  return teams.map(t => {
+    if (t.id === userTeamId) return t;
+    // 50% de chance de mudar mentalidade, 30% intensidade, 25% linha, 25% amplitude
+    const s = { ...t.strategy };
+    if (rng() < 0.5) s.mentality = pickOne(MENTALITIES_ARR, rng);
+    if (rng() < 0.3) s.intensity = pickOne(INTENSITIES_ARR, rng);
+    if (rng() < 0.25) s.defensiveLine = pickOne(DEF_LINES_ARR, rng);
+    if (rng() < 0.25) s.width = pickOne(WIDTHS_ARR, rng);
+    return { ...t, strategy: s };
+  });
+}
+
+// =============================================================================
 // LESÕES — chance pós-partida de jogador lesionar (1-3 rodadas fora)
 // =============================================================================
 
@@ -288,12 +314,12 @@ export interface InjuryReport {
   rounds: number;
 }
 
-export function applyPostMatchInjuries(team: Team, chance = 0.15): { team: Team; injuries: InjuryReport[] } {
-  if (Math.random() >= chance) return { team, injuries: [] };
+export function applyPostMatchInjuries(team: Team, chance = 0.15, rng: () => number = Math.random): { team: Team; injuries: InjuryReport[] } {
+  if (rng() >= chance) return { team, injuries: [] };
   const starters = team.squad.slice(0, 11).filter(p => !p.injuredRounds);
   if (starters.length === 0) return { team, injuries: [] };
-  const victim = starters[Math.floor(Math.random() * starters.length)];
-  const rounds = 1 + Math.floor(Math.random() * 3); // 1-3
+  const victim = starters[Math.floor(rng() * starters.length)];
+  const rounds = 1 + Math.floor(rng() * 3); // 1-3
   const newSquad = team.squad.map(p =>
     p.id === victim.id ? { ...p, injuredRounds: rounds } : p
   );
