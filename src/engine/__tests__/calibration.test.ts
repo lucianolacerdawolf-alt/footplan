@@ -46,9 +46,9 @@ function withRng<T>(rng: () => number, fn: () => T): T {
 }
 
 describe('Calibração do matchEngine', () => {
-  // Engine produz ~1.4 gols/jogo em times OVR 72. Range largo serve como
-  // guarda de regressão: alerta se o tuning ficar muito alto/baixo.
-  it('média de gols por partida fica entre 0.8 e 3.0 (1000 jogos)', () => {
+  // Engine calibrado: ~2.74 gols/jogo em times OVR 72 (perto da
+  // Premier League ~2.85). Faixa larga pra absorver variação amostral.
+  it('média de gols por partida fica entre 2.0 e 3.5 (1000 jogos)', () => {
     const home = makeTeam('h', 72);
     const away = makeTeam('a', 72);
     const N = 1000;
@@ -58,8 +58,8 @@ describe('Calibração do matchEngine', () => {
       totalGoals += r.homeScore + r.awayScore;
     }
     const avg = totalGoals / N;
-    expect(avg).toBeGreaterThan(0.8);
-    expect(avg).toBeLessThan(3.0);
+    expect(avg).toBeGreaterThan(2.0);
+    expect(avg).toBeLessThan(3.5);
   });
 
   it('time muito superior vence a maioria dos jogos (500 jogos, OVR 85 vs 60)', () => {

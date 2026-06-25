@@ -157,8 +157,6 @@ function resolveAttack(
   const attackers = pickRandom([...fwds, ...mids], 3, random);
   const defenders = getPlayersByPosition(getStarters(defendingTeam, cards), 'DEF');
   const chosenDef = pickRandom(defenders, 3, random);
-  const gk = getGoalkeeper(getStarters(defendingTeam, cards));
-  const gkFatigue = fatigueDef.get(gk.id) ?? 0;
 
   const attackPower = attackers.reduce((sum, p) => {
     const f = fatigueAtk.get(p.id) ?? 0;
@@ -166,13 +164,12 @@ function resolveAttack(
                + effective(p.attributes.dribbling, f) * modAtk.dribbling;
   }, 0) * atkFormMult * moraleMod * rng(0.7, 1.3);
 
-  const defensePower = (
-    chosenDef.reduce((sum, p) => {
-      const f = fatigueDef.get(p.id) ?? 0;
-      return sum + effective(p.attributes.tackling, f) * modDef.tackling
-                 + effective(p.attributes.positioning, f) * modDef.positioning;
-    }, 0) + effective(gk.attributes.positioning, gkFatigue) * modDef.positioning
-  ) * defFormMult * defLineMult * defWidthMult * rng(0.7, 1.3);
+  // GK contribui apenas em resolveShot (não desarma no meio-campo)
+  const defensePower = chosenDef.reduce((sum, p) => {
+    const f = fatigueDef.get(p.id) ?? 0;
+    return sum + effective(p.attributes.tackling, f) * modDef.tackling
+               + effective(p.attributes.positioning, f) * modDef.positioning;
+  }, 0) * defFormMult * defLineMult * defWidthMult * rng(0.7, 1.3);
 
   return { won: attackPower > defensePower, attacker: attackPower > defensePower ? attackers[0] : null };
 }
