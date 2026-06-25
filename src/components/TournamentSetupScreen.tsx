@@ -38,12 +38,6 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
 
   return (
     <div className="team-select-screen">
-      <div className="top-nav">
-        <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
-        {selectedTeam && (
-          <button className="start-btn" onClick={handleStart}>{MODE_BTN[mode]}</button>
-        )}
-      </div>
       <header className="app-header">
         <h1>FootPlan</h1>
         <p className="subtitle">{MODE_TITLE[mode]}</p>
@@ -53,7 +47,10 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
         {userTeamId ? 'Time selecionado! Pode começar.' : 'Escolha seu time'}
       </div>
 
-      <div className="select-summary" style={{ justifyContent: 'center' }}>
+      {/* Linha central: botão voltar | slot | botão iniciar */}
+      <div className="slot-nav-row">
+        <button className="slot-nav-btn" onClick={onBack}>← Menu Principal</button>
+
         <div
           className={`select-slot home-slot ${selectedTeam ? 'filled' : ''}`}
           onClick={selectedTeam ? () => setUserTeamId(null) : undefined}
@@ -69,6 +66,11 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
             <span className="slot-empty">SEU TIME</span>
           )}
         </div>
+
+        {selectedTeam
+          ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>{MODE_BTN[mode]}</button>
+          : <div className="slot-nav-spacer" />
+        }
       </div>
 
       <div className="team-grid">
@@ -88,8 +90,6 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
           );
         })}
       </div>
-
-
     </div>
   );
 }

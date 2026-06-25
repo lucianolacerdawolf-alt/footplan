@@ -8,6 +8,28 @@
   padding: 10px 16px 0;
 }
 
+/* --- Linha slot + botões laterais (TournamentSetupScreen) --- */
+.slot-nav-row {
+  display: flex; align-items: center; justify-content: center; gap: 16px;
+  padding: 8px 20px;
+  max-width: 900px; margin: 0 auto; width: 100%;
+}
+.slot-nav-btn {
+  padding: 12px 20px; font-size: 13px; font-weight: 700; font-family: var(--sans);
+  border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer;
+  background: var(--code-bg); color: var(--text-h);
+  transition: border-color 0.15s, opacity 0.15s;
+  white-space: nowrap; min-width: 155px; text-align: center;
+}
+.slot-nav-btn:hover { border-color: var(--accent); opacity: 0.85; }
+.slot-nav-btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #22c55e);
+  border-color: transparent; color: #fff;
+  box-shadow: 0 3px 16px rgba(59,130,246,0.35);
+}
+.slot-nav-btn-primary:hover { opacity: 0.9; transform: scale(1.02); box-shadow: 0 5px 22px rgba(59,130,246,0.45); }
+.slot-nav-spacer { min-width: 155px; }
+
 /* --- Header --- */
 .app-header {
   text-align: center;
