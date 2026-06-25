@@ -5,9 +5,10 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 interface Props {
   result: MatchResult;
   history: MatchRecord[];
-  onPlayAgain: () => void;
   onMenu: () => void;
   onClearHistory: () => void;
+  onContinue?: () => void;
+  continueLabel?: string;
 }
 
 interface StatRowProps {
@@ -53,13 +54,19 @@ function PossRow({ home, away, homeColor, awayColor }: { home: number; away: num
   );
 }
 
-function ResultBadge({ homeScore, awayScore }: { homeScore: number; awayScore: number }) {
-  if (homeScore > awayScore) return <span className={`${styles.badge} ${styles.badgeWin}`}>Vitória</span>;
-  if (awayScore > homeScore) return <span className={`${styles.badge} ${styles.badgeLoss}`}>Derrota</span>;
+function ResultBadge({ result }: { result: MatchResult }) {
+  if (result.winner) {
+    const won = result.homeScore >= result.awayScore; // home perspective after ET
+    return <span className={`${styles.badge} ${won ? styles.badgeWin : styles.badgeLoss}`}>
+      {result.wentToExtraTime ? (result.penaltyResult ? 'Pênaltis' : 'Prorrogação') : (won ? 'Vitória' : 'Derrota')}
+    </span>;
+  }
+  if (result.homeScore > result.awayScore) return <span className={`${styles.badge} ${styles.badgeWin}`}>Vitória</span>;
+  if (result.awayScore > result.homeScore) return <span className={`${styles.badge} ${styles.badgeLoss}`}>Derrota</span>;
   return <span className={`${styles.badge} ${styles.badgeDraw}`}>Empate</span>;
 }
 
-export default function MatchStatsScreen({ result, history, onPlayAgain, onMenu, onClearHistory }: Props) {
+export default function MatchStatsScreen({ result, history, onMenu, onClearHistory, onContinue, continueLabel }: Props) {
   const { homeTeam, awayTeam, homeScore, awayScore, homePossession, awayPossession, homeStats, awayStats } = result;
 
   return (
@@ -76,7 +83,14 @@ export default function MatchStatsScreen({ result, history, onPlayAgain, onMenu,
             <span className={styles.scoreSep}>–</span>
             <span style={{ color: awayTeam.color }}>{awayScore}</span>
           </div>
-          <ResultBadge homeScore={homeScore} awayScore={awayScore} />
+          {result.wentToExtraTime && (
+            <span className={styles.etLabel}>
+              {result.penaltyResult
+                ? `a.e.t. · Pên. ${result.penaltyResult.homeScore}–${result.penaltyResult.awayScore}`
+                : 'após prorrogação'}
+            </span>
+          )}
+          <ResultBadge result={result} />
           <span className={styles.screenLabel}>Estatísticas</span>
         </div>
         <div className={styles.team}>
@@ -99,8 +113,10 @@ export default function MatchStatsScreen({ result, history, onPlayAgain, onMenu,
 
       {/* Actions */}
       <div className={styles.actions}>
-        <button className="back-btn-secondary" onClick={onMenu}>Menu</button>
-        <button className="start-btn" onClick={onPlayAgain}>Jogar Novamente</button>
+        <button className="back-btn-secondary" onClick={onMenu}>Escolher Times</button>
+        {onContinue && (
+          <button className="start-btn" onClick={onContinue}>{continueLabel ?? 'Continuar'}</button>
+        )}
       </div>
 
       {/* Histórico */}

@@ -26,7 +26,10 @@ export type EventType =
   | 'yellowCard'
   | 'redCard'
   | 'halftime'
-  | 'fulltime';
+  | 'fulltime'
+  | 'extraTimeKickoff'
+  | 'penaltyKick'
+  | 'penaltyWin';
 
 // =============================================================================
 // ATRIBUTOS DO JOGADOR (escala 1-99)
@@ -132,6 +135,13 @@ export interface TeamStats {
   redCards: number;
 }
 
+export interface PenaltyResult {
+  homeScore: number;
+  awayScore: number;
+  winner: 'home' | 'away';
+  kicks: Array<{ teamId: string; scored: boolean }>;
+}
+
 export interface MatchResult {
   homeTeam: Team;
   awayTeam: Team;
@@ -142,4 +152,10 @@ export interface MatchResult {
   awayPossession: number;
   homeStats: TeamStats;
   awayStats: TeamStats;
+  // Optional knockout fields (populated only for elimination matches)
+  wentToExtraTime?: boolean;
+  extraTimeHomeScore?: number;
+  extraTimeAwayScore?: number;
+  penaltyResult?: PenaltyResult;
+  winner?: Team;
 }

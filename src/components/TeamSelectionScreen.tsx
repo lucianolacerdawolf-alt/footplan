@@ -8,11 +8,12 @@ export type GameMode = 'cpu' | 'player';
 
 interface Props {
   onConfirm: (home: Team, away: Team, mode: GameMode) => void;
+  onTournament: () => void;
 }
 
 type Uniform = 'home' | 'away';
 
-export default function TeamSelectionScreen({ onConfirm }: Props) {
+export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) {
   const [homeId, setHomeId] = useLocalStorage<string | null>('fp:homeId', null);
   const [awayId, setAwayId] = useLocalStorage<string | null>('fp:awayId', null);
   const [homeUniform, setHomeUniform] = useLocalStorage<Uniform>('fp:homeUniform', 'home');
@@ -172,6 +173,12 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
           </button>
         </div>
       )}
+
+      <div className="select-tournament-entry">
+        <button className="tournament-entry-btn" onClick={onTournament}>
+          🏆 Modo Torneio
+        </button>
+      </div>
     </div>
   );
 }

@@ -45,6 +45,42 @@ export function generateFulltime(
   return `🏁 Apito final! ${result}`;
 }
 
+export function generateExtraTimeKickoff(): string {
+  return rng([
+    '⏰ Prorrogação! Mais 30 minutos para decidir o classificado.',
+    '⏰ Empate no tempo normal — bola rolando para a prorrogação!',
+    '⏰ Nervos à flor da pele! Começa a prorrogação.',
+  ]);
+}
+
+export function generateExtraTimeMidpoint(): string {
+  return rng([
+    '🔄 Segundo tempo da prorrogação! Últimos 15 minutos.',
+    '🔄 Intervalo da prorrogação. Falta pouco para a decisão.',
+  ]);
+}
+
+export function generatePenaltyKick(teamName: string, playerName: string, scored: boolean): string {
+  return scored
+    ? rng([
+        `⚽ GOOOL! ${playerName} converte para ${teamName}!`,
+        `⚽ ${playerName} bate no canto e marca!`,
+        `⚽ Que calma! ${playerName} não perdoa.`,
+      ])
+    : rng([
+        `❌ ${playerName} (${teamName}) desperdiça o pênalti!`,
+        `🧤 Defesa incrível! ${playerName} bateu e o goleiro pegou.`,
+        `❌ Para fora! ${playerName} mandou por cima do travessão.`,
+      ]);
+}
+
+export function generatePenaltyWin(teamName: string, hScore: number, aScore: number): string {
+  return rng([
+    `🏆 ${teamName} avança nos pênaltis por ${hScore}×${aScore}! Que emoção!`,
+    `🏆 ${teamName} é o classificado! Decisão cruel nos pênaltis.`,
+  ]);
+}
+
 // =============================================================================
 // Posse / Passe / Desarme
 // =============================================================================

@@ -125,9 +125,9 @@ describe('simularPartida', () => {
 
   it('time com OVR muito superior marca mais gols em média', () => {
     const elite = makeTeam('e', 'Elite');
-    elite.squad = elite.squad.map(p => ({ ...p, attributes: Object.fromEntries(Object.entries(p.attributes).map(([k, _]) => [k, 99])) as Player['attributes'] }));
+    elite.squad = elite.squad.map(p => ({ ...p, attributes: Object.fromEntries(Object.entries(p.attributes).map(([k, _]) => [k, 99])) as unknown as Player['attributes'] }));
     const weak = makeTeam('w', 'Weak');
-    weak.squad = weak.squad.map(p => ({ ...p, attributes: Object.fromEntries(Object.entries(p.attributes).map(([k, _]) => [k, 20])) as Player['attributes'] }));
+    weak.squad = weak.squad.map(p => ({ ...p, attributes: Object.fromEntries(Object.entries(p.attributes).map(([k, _]) => [k, 20])) as unknown as Player['attributes'] }));
 
     let eliteWins = 0;
     for (let seed = 0; seed < 50; seed++) {

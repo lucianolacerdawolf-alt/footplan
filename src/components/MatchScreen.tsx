@@ -3,6 +3,7 @@ import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Wi
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
+import { resolveKnockoutTiebreak } from '../engine/matchEngine';
 import { useMatchSimulation } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
 import CommentaryFeed from './CommentaryFeed';
@@ -14,9 +15,10 @@ interface Props {
   awayTeam: Team;
   onBack: () => void;
   onViewStats: (result: MatchResult) => void;
+  isKnockout?: boolean;
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout }: Props) {
   const [home, setHome] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     t.strategy = { ...initialHome.strategy };
@@ -38,7 +40,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const {
     result, simulating, replayEvents, currentEvent,
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
-    fatigueMap, expelledIds,
+    fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
   } = useMatchSimulation(initialHome.id);
 
@@ -59,8 +61,39 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
+  const knockoutResolvedRef = useRef(false);
+  const [knockoutResult, setKnockoutResult] = useState<MatchResult | null>(null);
+
   useEffect(() => {
-    if (phase === 'done' && result) addMatch(result);
+    if (phase !== 'done' || !result) return;
+    if (!isKnockout) { addMatch(result); return; }
+    if (knockoutResolvedRef.current) return;
+    knockoutResolvedRef.current = true;
+
+    if (result.homeScore !== result.awayScore) {
+      const enriched: MatchResult = { ...result, wentToExtraTime: false, winner: result.homeScore > result.awayScore ? home : away };
+      addMatch(enriched);
+      setKnockoutResult(enriched);
+      return;
+    }
+
+    const state = engineStateRef.current!;
+    const tiebreak = resolveKnockoutTiebreak(cloneTeam(home), cloneTeam(away), state);
+    const winner = tiebreak.penaltyResult
+      ? (tiebreak.penaltyResult.winner === 'home' ? home : away)
+      : (state.homeScore > state.awayScore ? home : away);
+    const enriched: MatchResult = {
+      ...result,
+      homeScore: state.homeScore,
+      awayScore: state.awayScore,
+      wentToExtraTime: tiebreak.wentToExtraTime,
+      extraTimeHomeScore: tiebreak.extraTimeHomeScore,
+      extraTimeAwayScore: tiebreak.extraTimeAwayScore,
+      penaltyResult: tiebreak.penaltyResult,
+      winner,
+    };
+    addMatch(enriched);
+    setKnockoutResult(enriched);
   }, [phase, result]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updateHome = (s: Strategy) => setHome(prev => ({ ...prev, strategy: s }));
@@ -241,11 +274,13 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
         {phase !== 'halftime' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="simulate-btn" onClick={() => runFirstHalf(home, away)} disabled={simulating}>
+            <button className="simulate-btn" onClick={() => { knockoutResolvedRef.current = false; setKnockoutResult(null); runFirstHalf(home, away); }} disabled={simulating}>
               {simulating ? 'Simulando...' : started ? 'Simular Novamente' : 'Simular Partida'}
             </button>
-            {phase === 'done' && result && (
-              <button className="stats-btn" onClick={() => onViewStats(result!)}>📊 Estatísticas</button>
+            {phase === 'done' && (isKnockout ? knockoutResult : result) && (
+              <button className="stats-btn" onClick={() => onViewStats((isKnockout ? knockoutResult : result)!)}>
+                {isKnockout && !knockoutResult ? '⏳ Calculando...' : '📊 Estatísticas'}
+              </button>
             )}
           </div>
         )}

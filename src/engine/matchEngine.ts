@@ -18,19 +18,23 @@
 // O cansaço reduz atributos em até 50%. RNG garante imprevisibilidade.
 // =============================================================================
 
-import type { Team, Player, MatchEvent, MatchResult, TeamStats, Mentality, Intensity, Position, DefensiveLine, Width, RandomFn } from './types';
+import type { Team, Player, MatchEvent, MatchResult, TeamStats, PenaltyResult, Mentality, Intensity, Position, DefensiveLine, Width, RandomFn } from './types';
 import {
   generateKickoff, generatePossession, generatePass, generateTackle,
   generateAttack, generateGoal, generateMiss, generatePost, generateSave,
   generateHalftime, generateFulltime, generateSecondHalf,
   generateCorner, generateFoul, generateOffside,
   generateYellowCard, generateRedCard, generateContextual,
+  generateExtraTimeKickoff, generateExtraTimeMidpoint,
+  generatePenaltyKick, generatePenaltyWin,
 } from './commentary';
 import { FORMATION_COUNTS } from './constants';
 
 const CYCLE_MINUTES = 2;
 const FIRST_HALF_CYCLES = 22;  // ciclos 0-21 → minutos 0-42 + evento intervalo
 const TOTAL_CYCLES = 45;
+const ET_HALF_CYCLE  = TOTAL_CYCLES + 7;   // 52 → ~minuto 104
+const ET_END_CYCLE   = TOTAL_CYCLES + 14;  // 59 → ~minuto 118
 const MAX_EVENTS_PER_CYCLE = 6;
 
 const makeRng = (random: RandomFn) => (min: number, max: number) => min + random() * (max - min);
@@ -422,4 +426,139 @@ export function simularSegundoTempo(home: Team, away: Team, prevState: MatchStat
 export function simularPartida(home: Team, away: Team, random: RandomFn = Math.random): MatchResult {
   const { state } = simularPrimeiroTempo(home, away, random);
   return simularSegundoTempo(home, away, state, random);
+}
+
+// ---------------------------------------------------------------------------
+// Pênaltis
+// ---------------------------------------------------------------------------
+function simularPenaltisInterno(home: Team, away: Team, cards: Map<string, 'yellow' | 'red'>, random: RandomFn): PenaltyResult {
+  const rng = makeRng(random);
+  const getShooters = (team: Team): Player[] =>
+    [...getStarters(team, cards)]
+      .filter(p => p.position !== 'GK')
+      .sort((a, b) => b.attributes.finishing - a.attributes.finishing);
+
+  const homeShooters = getShooters(home);
+  const awayShooters = getShooters(away);
+  const homeGK = getGoalkeeper(getStarters(home, cards));
+  const awayGK = getGoalkeeper(getStarters(away, cards));
+
+  const kicks: Array<{ teamId: string; scored: boolean }> = [];
+  let homeScore = 0, awayScore = 0;
+
+  const takePenalty = (shooter: Player, gk: Player, teamId: string): boolean => {
+    const shot = effective(shooter.attributes.finishing, 0) * rng(0.7, 1.3);
+    const save = effective(gk.attributes.positioning, 0) * rng(0.8, 1.2);
+    const scored = shot * 1.35 > save; // ~75% base conversion
+    if (teamId === home.id) homeScore += scored ? 1 : 0;
+    else awayScore += scored ? 1 : 0;
+    kicks.push({ teamId, scored });
+    return scored;
+  };
+
+  for (let i = 0; i < 5; i++) {
+    takePenalty(homeShooters[i % homeShooters.length], awayGK, home.id);
+    const remaining = 4 - i;
+    if (homeScore - awayScore > remaining) break;
+    takePenalty(awayShooters[i % awayShooters.length], homeGK, away.id);
+    if (awayScore - homeScore > remaining) break;
+  }
+
+  let sdRound = 0;
+  while (homeScore === awayScore && sdRound < 20) {
+    const hScored = takePenalty(homeShooters[sdRound % homeShooters.length], awayGK, home.id);
+    const aScored = takePenalty(awayShooters[sdRound % awayShooters.length], homeGK, away.id);
+    sdRound++;
+    if (hScored !== aScored) break;
+  }
+
+  return { homeScore, awayScore, winner: homeScore > awayScore ? 'home' : 'away', kicks };
+}
+
+// ---------------------------------------------------------------------------
+// Prorrogação (modifica state in-place)
+// ---------------------------------------------------------------------------
+function simularProrrogacaoInterno(home: Team, away: Team, state: MatchState, random: RandomFn): void {
+  state.events.push({
+    minute: 90, type: 'extraTimeKickoff',
+    description: generateExtraTimeKickoff(), teamId: null,
+  });
+  simularBloco(home, away, TOTAL_CYCLES, ET_HALF_CYCLE, state, false, false, false, random);
+  state.events.push({
+    minute: 105, type: 'kickoff',
+    description: generateExtraTimeMidpoint(), teamId: null,
+  });
+  simularBloco(home, away, ET_HALF_CYCLE, ET_END_CYCLE, state, false, false, false, random);
+}
+
+// ---------------------------------------------------------------------------
+// API: resolve empate em mata-mata (modifica state in-place, exportada para MatchScreen)
+// ---------------------------------------------------------------------------
+export function resolveKnockoutTiebreak(
+  home: Team, away: Team, state: MatchState, random: RandomFn = Math.random
+): { wentToExtraTime: boolean; extraTimeHomeScore?: number; extraTimeAwayScore?: number; penaltyResult?: PenaltyResult } {
+  if (state.homeScore !== state.awayScore) return { wentToExtraTime: false };
+
+  const preHome = state.homeScore;
+  const preAway = state.awayScore;
+  simularProrrogacaoInterno(home, away, state, random);
+  const extraTimeHomeScore = state.homeScore - preHome;
+  const extraTimeAwayScore = state.awayScore - preAway;
+
+  if (state.homeScore !== state.awayScore) return { wentToExtraTime: true, extraTimeHomeScore, extraTimeAwayScore };
+
+  const penaltyResult = simularPenaltisInterno(home, away, state.cards, random);
+  const winner = penaltyResult.winner === 'home' ? home : away;
+  const loser = penaltyResult.winner === 'home' ? away : home;
+  state.events.push({
+    minute: 120, type: 'penaltyWin',
+    description: generatePenaltyWin(winner.name, penaltyResult.homeScore, penaltyResult.awayScore),
+    teamId: winner.id,
+  });
+  penaltyResult.kicks.forEach((kick, idx) => {
+    const teamObj = kick.teamId === home.id ? home : away;
+    const shooters = [...getStarters(teamObj, state.cards)]
+      .filter(p => p.position !== 'GK')
+      .sort((a, b) => b.attributes.finishing - a.attributes.finishing);
+    const shooter = shooters[Math.floor(idx / 2) % shooters.length];
+    if (shooter) {
+      state.events.push({
+        minute: 120, type: 'penaltyKick',
+        description: generatePenaltyKick(teamObj.name, shooter.name, kick.scored),
+        teamId: kick.teamId,
+      });
+    }
+  });
+  void loser;
+  return { wentToExtraTime: true, extraTimeHomeScore, extraTimeAwayScore, penaltyResult };
+}
+
+// ---------------------------------------------------------------------------
+// Simula partida rapidamente (sem eventos, apenas placar) — para torneio
+// ---------------------------------------------------------------------------
+export function simularPartidaRapida(home: Team, away: Team, random: RandomFn = Math.random): { homeScore: number; awayScore: number } {
+  const state = createMatchState(home, away);
+  simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, false, false, false, random);
+  simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, state, false, false, false, random);
+  return { homeScore: state.homeScore, awayScore: state.awayScore };
+}
+
+// ---------------------------------------------------------------------------
+// Simula mata-mata completo (90min + prorrogação + pênaltis se necessário)
+// ---------------------------------------------------------------------------
+export function simularKnockout(home: Team, away: Team, random: RandomFn = Math.random): {
+  homeScore: number; awayScore: number;
+  wentToExtraTime: boolean;
+  extraTimeHomeScore?: number; extraTimeAwayScore?: number;
+  penaltyResult?: PenaltyResult;
+  winner: 'home' | 'away';
+} {
+  const state = createMatchState(home, away);
+  simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, false, false, false, random);
+  simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, state, false, false, false, random);
+  const tiebreak = resolveKnockoutTiebreak(home, away, state, random);
+  const winner = tiebreak.penaltyResult
+    ? tiebreak.penaltyResult.winner
+    : state.homeScore > state.awayScore ? 'home' : 'away';
+  return { homeScore: state.homeScore, awayScore: state.awayScore, ...tiebreak, winner };
 }
