@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../engine/mockData';
+import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 
 interface Props {
   homeTeam: Team;
@@ -10,20 +11,6 @@ interface Props {
   onBack: () => void;
   lockAway?: boolean;
 }
-
-const FORMATIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'];
-const MENTALITIES: Mentality[] = ['possession', 'counter-attack', 'high-press', 'defensive'];
-const INTENSITIES: Intensity[] = ['low', 'medium', 'high'];
-const DEF_LINES: DefensiveLine[] = ['high', 'normal', 'low'];
-const WIDTHS: Width[] = ['narrow', 'normal', 'wide'];
-
-const FORMATION_COUNTS: Record<Formation, { DEF: number; MID: number; FWD: number }> = {
-  '4-3-3':   { DEF: 4, MID: 3, FWD: 3 },
-  '4-4-2':   { DEF: 4, MID: 4, FWD: 2 },
-  '3-5-2':   { DEF: 3, MID: 5, FWD: 2 },
-  '4-2-3-1': { DEF: 4, MID: 5, FWD: 1 },
-  '5-3-2':   { DEF: 5, MID: 3, FWD: 2 },
-};
 
 /** Reorganiza titulares/reservas conforme a formação */
 function rebalanceSquad(team: Team, formation: Formation): Team {
@@ -50,11 +37,7 @@ function rebalanceSquad(team: Team, formation: Formation): Team {
   return { ...team, squad: [...starters, ...bench], strategy: { ...team.strategy, formation } };
 }
 
-function playerOvr(p: { attributes: { speed: number; stamina: number; passing: number; finishing: number; tackling: number; dribbling: number; vision: number; positioning: number } }) {
-  return Math.round((p.attributes.speed + p.attributes.stamina + p.attributes.passing +
-    p.attributes.finishing + p.attributes.tackling + p.attributes.dribbling +
-    p.attributes.vision + p.attributes.positioning) / 8);
-}
+import { playerOvr } from '../utils/playerOvr';
 
 export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
@@ -114,44 +97,62 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
     const starters = team.squad.slice(0, starterCount);
     const bench = team.squad.slice(starterCount);
 
-    // Helper pra achar o índice real no squad a partir de um jogador do bench
     const realIdx = (playerId: string) => team.squad.findIndex(p => p.id === playerId);
+    const selectedIdx = selected ? realIdx(selected) : -1;
+    const selectedIsBench = selectedIdx >= starterCount;
 
     return (
       <div className="squad-panel">
         <div className="squad-section">
           <div className="squad-section-title">Titulares ({starterCount})</div>
-          {starters.map((p, i) => (
-            <div
-              key={p.id}
-              className={`squad-row starter ${selected && !locked ? 'clickable' : ''}`}
-              onClick={() => {
-                if (locked || !selected) return;
-                const bi = realIdx(selected);
-                if (bi >= starterCount && team.squad[bi].position === p.position) {
-                  handleSwap(bi, i);
-                }
-              }}
-            >
-              <span className="sq-num">#{p.number}</span>
-              <span className="sq-name">{p.name}</span>
-              <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-              <span className="sq-ovr">{playerOvr(p)}</span>
-            </div>
-          ))}
+          {starters.map((p, i) => {
+            const isSelected = p.id === selected;
+            const canSwap = selected && !locked && team.squad[selectedIdx]?.position === p.position
+              && ((selectedIsBench) || (selectedIdx !== i && !selectedIsBench));
+            return (
+              <div
+                key={p.id}
+                className={`squad-row starter ${isSelected ? 'selected' : ''} ${canSwap || (!selected && !locked) ? 'clickable' : ''}`}
+                onClick={() => {
+                  if (locked) return;
+                  if (selected) {
+                    // Swap: bench→starter or starter→starter (re-select)
+                    if (selectedIsBench && team.squad[selectedIdx].position === p.position) {
+                      handleSwap(selectedIdx, i);
+                    } else {
+                      setSelected(isSelected ? null : p.id);
+                    }
+                  } else {
+                    setSelected(p.id);
+                  }
+                }}
+              >
+                <span className="sq-num">#{p.number}</span>
+                <span className="sq-name">{p.name}</span>
+                <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                <span className="sq-ovr">{playerOvr(p)}</span>
+              </div>
+            );
+          })}
         </div>
         {bench.length > 0 && (
           <div className="squad-section bench-section">
             <div className="squad-section-title">Reservas ({bench.length})</div>
             {bench.map((p) => {
               const isSelected = p.id === selected;
+              const bi = realIdx(p.id);
               return (
                 <div
                   key={p.id}
                   className={`squad-row bench ${isSelected ? 'selected' : ''} ${!locked ? 'clickable' : ''}`}
                   onClick={() => {
                     if (locked) return;
-                    setSelected(isSelected ? null : p.id);
+                    if (selected && !selectedIsBench && team.squad[selectedIdx].position === p.position) {
+                      // starter→bench swap
+                      handleSwap(selectedIdx, bi);
+                    } else {
+                      setSelected(isSelected ? null : p.id);
+                    }
                   }}
                 >
                   <span className="sq-num">#{p.number}</span>

@@ -18,17 +18,20 @@
 // O cansaço reduz atributos em até 50%. RNG garante imprevisibilidade.
 // =============================================================================
 
-import type { Team, Player, MatchEvent, MatchResult, Mentality, Intensity, Position, Formation, DefensiveLine, Width } from './types';
+import type { Team, Player, MatchEvent, MatchResult, Mentality, Intensity, Position, DefensiveLine, Width } from './types';
 import {
-  generateKickoff, generatePossession, generateAttack, generateGoal,
-  generateMiss, generatePost, generateSave, generateHalftime,
-  generateFulltime, generateSecondHalf,
+  generateKickoff, generatePossession, generatePass, generateTackle,
+  generateAttack, generateGoal, generateMiss, generatePost, generateSave,
+  generateHalftime, generateFulltime, generateSecondHalf,
+  generateCorner, generateFoul, generateOffside,
+  generateYellowCard, generateRedCard, generateContextual,
 } from './commentary';
+import { FORMATION_COUNTS } from './constants';
 
-const CYCLE_MINUTES = 5;
-const FIRST_HALF_CYCLES = 9;   // ciclos 0-8 → minutos 0-40 + evento intervalo
-const TOTAL_CYCLES = 18;
-const MAX_EVENTS_PER_CYCLE = 3;
+const CYCLE_MINUTES = 2;
+const FIRST_HALF_CYCLES = 22;  // ciclos 0-21 → minutos 0-42 + evento intervalo
+const TOTAL_CYCLES = 45;
+const MAX_EVENTS_PER_CYCLE = 6;
 
 function rng(min: number, max: number): number {
   return min + Math.random() * (max - min);
@@ -48,35 +51,21 @@ const MENTALITY_MODIFIERS: Record<Mentality, {
 const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 7 };
 
 const ATK_CHANCE: Record<Mentality, number> = {
-  'possession': 0.70, 'counter-attack': 0.55, 'high-press': 0.75, 'defensive': 0.35,
+  'possession': 0.85, 'counter-attack': 0.70, 'high-press': 0.90, 'defensive': 0.45,
 };
 
-// --- Formação: quantos jogadores por linha ---
-const FORMATION_COUNTS: Record<Formation, Record<string, number>> = {
-  '4-3-3':   { DEF: 4, MID: 3, FWD: 3 },
-  '4-4-2':   { DEF: 4, MID: 4, FWD: 2 },
-  '3-5-2':   { DEF: 3, MID: 5, FWD: 2 },
-  '4-2-3-1': { DEF: 4, MID: 5, FWD: 1 },
-  '5-3-2':   { DEF: 5, MID: 3, FWD: 2 },
-};
-
-// --- Linha defensiva: ajusta a altura base do time ---
 const DEFENSIVE_LINE_MOD: Record<DefensiveLine, { possessionBias: number; defenseCompact: number }> = {
   'high':   { possessionBias: 1.10, defenseCompact: 0.90 },
   'normal': { possessionBias: 1.00, defenseCompact: 1.00 },
   'low':    { possessionBias: 0.90, defenseCompact: 1.10 },
 };
 
-// --- Amplitude: ajusta o espalhamento ---
 const WIDTH_MOD: Record<Width, { possessionSpread: number; defenseNarrow: number }> = {
   'wide':   { possessionSpread: 1.10, defenseNarrow: 0.90 },
   'normal': { possessionSpread: 1.00, defenseNarrow: 1.00 },
   'narrow': { possessionSpread: 0.90, defenseNarrow: 1.10 },
 };
 
-// ---------------------------------------------------------------------------
-// Utilidades
-// ---------------------------------------------------------------------------
 function effective(attr: number, fatigue: number): number {
   return attr * (1 - fatigue / 200);
 }
@@ -85,7 +74,6 @@ function getPlayersByPosition(players: Player[], pos: Position): Player[] {
   return players.filter(p => p.position === pos);
 }
 
-/** Retorna apenas os titulares (primeiros N por posição conforme formação) */
 function getStarters(team: Team): Player[] {
   const counts = FORMATION_COUNTS[team.strategy.formation] ?? { DEF: 4, MID: 3, FWD: 3 };
   const starters: Player[] = [];
@@ -115,14 +103,10 @@ function calculatePossession(
   const midsB = getPlayersByPosition(getStarters(teamB), 'MID');
   const modA = MENTALITY_MODIFIERS[teamA.strategy.mentality];
   const modB = MENTALITY_MODIFIERS[teamB.strategy.mentality];
-
-  // Formação: mais meias = mais poder de posse
   const countA = FORMATION_COUNTS[teamA.strategy.formation]?.MID ?? 3;
   const countB = FORMATION_COUNTS[teamB.strategy.formation]?.MID ?? 3;
   const formMultA = countA / 3;
   const formMultB = countB / 3;
-
-  // Linha defensiva e amplitude
   const dlA = DEFENSIVE_LINE_MOD[teamA.strategy.defensiveLine].possessionBias;
   const dlB = DEFENSIVE_LINE_MOD[teamB.strategy.defensiveLine].possessionBias;
 
@@ -147,22 +131,17 @@ function resolveAttack(
 ): { won: boolean; attacker: Player | null } {
   const modAtk = MENTALITY_MODIFIERS[attackingTeam.strategy.mentality];
   const modDef = MENTALITY_MODIFIERS[defendingTeam.strategy.mentality];
-
-  // Formação: mais atacantes = mais poder ofensivo, mais defensores = mais poder defensivo
   const fwdCount = FORMATION_COUNTS[attackingTeam.strategy.formation]?.FWD ?? 3;
   const midCount = FORMATION_COUNTS[attackingTeam.strategy.formation]?.MID ?? 3;
   const defCount = FORMATION_COUNTS[defendingTeam.strategy.formation]?.DEF ?? 4;
-  const atkFormMult = (fwdCount / 3) * 0.7 + (midCount / 3) * 0.3; // ataque pesa FWD 70%, MID 30%
+  const atkFormMult = (fwdCount / 3) * 0.7 + (midCount / 3) * 0.3;
   const defFormMult = defCount / 4;
-
-  // Linha defensiva e amplitude
   const defLineMult = DEFENSIVE_LINE_MOD[defendingTeam.strategy.defensiveLine].defenseCompact;
   const defWidthMult = WIDTH_MOD[defendingTeam.strategy.width].defenseNarrow;
 
   const fwds = getPlayersByPosition(getStarters(attackingTeam), 'FWD');
   const mids = getPlayersByPosition(getStarters(attackingTeam), 'MID');
   const attackers = pickRandom([...fwds, ...mids], 3);
-
   const defenders = getPlayersByPosition(getStarters(defendingTeam), 'DEF');
   const chosenDef = pickRandom(defenders, 3);
   const gk = getGoalkeeper(getStarters(defendingTeam));
@@ -207,7 +186,6 @@ function resolveShot(
 function applyFatigue(team: Team, fatigueMap: Map<string, number>): void {
   const baseFatigue = INTENSITY_FATIGUE[team.strategy.intensity];
   const mod = MENTALITY_MODIFIERS[team.strategy.mentality];
-
   for (const player of getStarters(team)) {
     if (player.position === 'GK') continue;
     const fatigueGain = baseFatigue * mod.staminaLossMultiplier * (1 - player.attributes.stamina / 200);
@@ -217,7 +195,7 @@ function applyFatigue(team: Team, fatigueMap: Map<string, number>): void {
 }
 
 // ---------------------------------------------------------------------------
-// Estado da partida (compartilhado entre 1º e 2º tempo)
+// Estado da partida
 // ---------------------------------------------------------------------------
 export interface MatchState {
   fatigueHome: Map<string, number>;
@@ -227,9 +205,9 @@ export interface MatchState {
   homePossessionWins: number;
   awayPossessionWins: number;
   events: MatchEvent[];
+  cards: Map<string, 'yellow' | 'red'>;
 }
 
-/** Cria estado inicial zerado */
 export function createMatchState(home: Team, away: Team): MatchState {
   const fatigueHome = new Map<string, number>();
   const fatigueAway = new Map<string, number>();
@@ -240,11 +218,12 @@ export function createMatchState(home: Team, away: Team): MatchState {
     homeScore: 0, awayScore: 0,
     homePossessionWins: 0, awayPossessionWins: 0,
     events: [],
+    cards: new Map(),
   };
 }
 
 // ---------------------------------------------------------------------------
-// Simula um bloco de ciclos (interno)
+// Simula um bloco de ciclos
 // ---------------------------------------------------------------------------
 function simularBloco(
   home: Team, away: Team,
@@ -280,55 +259,162 @@ function simularBloco(
 
     let cycleEvents = 0;
 
+    // --- Comentário contextual (minutos chave) ---
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
+      const diff = state.homeScore - state.awayScore;
+      const ctx = generateContextual(minute, diff, home.name, away.name);
+      if (ctx) {
+        state.events.push({ minute, type: 'possession', description: ctx, teamId: null });
+        cycleEvents++;
+      }
+    }
+
     // Posse
     const possessionWinner = calculatePossession(home, away, state.fatigueHome, state.fatigueAway);
     if (possessionWinner === 'A') state.homePossessionWins++;
     else state.awayPossessionWins++;
 
-    if (cycle % 2 === 0 && cycleEvents < MAX_EVENTS_PER_CYCLE) {
-      const teamName = possessionWinner === 'A' ? home.name : away.name;
+    const possTeam = possessionWinner === 'A' ? home : away;
+    const defTeam = possessionWinner === 'A' ? away : home;
+
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
       state.events.push({
         minute, type: 'possession',
-        description: generatePossession(teamName),
-        teamId: possessionWinner === 'A' ? home.id : away.id,
+        description: generatePossession(possTeam.name),
+        teamId: possTeam.id,
       });
       cycleEvents++;
     }
 
+    // Passe entre jogadores do time com posse
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE && Math.random() < 0.6) {
+      const mids = getPlayersByPosition(getStarters(possTeam), 'MID');
+      const fwds = getPlayersByPosition(getStarters(possTeam), 'FWD');
+      const eligible = [...mids, ...fwds].filter(p => !state.cards.has(p.id) || state.cards.get(p.id) !== 'red');
+      if (eligible.length >= 2) {
+        const [a, b] = pickRandom(eligible, 2);
+        state.events.push({
+          minute, type: 'pass',
+          description: generatePass(possTeam.name, a, b),
+          teamId: possTeam.id,
+        });
+        cycleEvents++;
+      }
+    }
+
+    // Desarme do time sem posse
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE && Math.random() < 0.45) {
+      const defs = getPlayersByPosition(getStarters(defTeam), 'DEF');
+      const mids = getPlayersByPosition(getStarters(defTeam), 'MID');
+      const eligible = [...defs, ...mids].filter(p => !state.cards.has(p.id) || state.cards.get(p.id) !== 'red');
+      if (eligible.length > 0) {
+        const tackler = pickRandom(eligible, 1)[0];
+        state.events.push({
+          minute, type: 'tackle',
+          description: generateTackle(defTeam.name, tackler),
+          teamId: defTeam.id,
+        });
+        cycleEvents++;
+      }
+    }
+
     // Ataque
-    const atkTeam = possessionWinner === 'A' ? home : away;
-    const defTeam = possessionWinner === 'A' ? away : home;
+    const atkTeam = possTeam;
     const atkFatigue = possessionWinner === 'A' ? state.fatigueHome : state.fatigueAway;
     const defFatigue = possessionWinner === 'A' ? state.fatigueAway : state.fatigueHome;
 
     if (Math.random() < ATK_CHANCE[atkTeam.strategy.mentality]) {
-      const { won, attacker } = resolveAttack(atkTeam, defTeam, atkFatigue, defFatigue);
+      const atkResult = resolveAttack(atkTeam, defTeam, atkFatigue, defFatigue);
 
-      if (won && attacker) {
+      if (atkResult.won && atkResult.attacker) {
+        // Verifica impedimento (mais comum em pressão alta)
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && Math.random() < 0.18 && defTeam.strategy.defensiveLine === 'high') {
+          state.events.push({
+            minute, type: 'offside',
+            description: generateOffside(atkTeam.name, atkResult.attacker),
+            teamId: atkTeam.id,
+          });
+          cycleEvents++;
+          // Não prossegue com a finalização
+          continue;
+        }
+
         if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
           state.events.push({
             minute, type: 'attack',
-            description: generateAttack(atkTeam.name, attacker),
+            description: generateAttack(atkTeam.name, atkResult.attacker),
             teamId: atkTeam.id,
           });
           cycleEvents++;
         }
 
-        const { result, scorer, goalkeeper } = resolveShot(attacker, defTeam, atkTeam.strategy.mentality, atkFatigue, defFatigue);
+        const shot = resolveShot(atkResult.attacker, defTeam, atkTeam.strategy.mentality, atkFatigue, defFatigue);
 
         if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
-          if (result === 'goal') {
-            state.events.push({ minute, type: 'goal', description: generateGoal(atkTeam.name, scorer), teamId: atkTeam.id });
+          const scoreStr = `${state.homeScore}-${state.awayScore}`;
+          if (shot.result === 'goal') {
+            state.events.push({ minute, type: 'goal', description: generateGoal(atkTeam.name, shot.scorer, minute, scoreStr), teamId: atkTeam.id });
             if (isHome(atkTeam)) state.homeScore++;
             else state.awayScore++;
-          } else if (result === 'post') {
-            state.events.push({ minute, type: 'post', description: generatePost(atkTeam.name, scorer), teamId: atkTeam.id });
-          } else if (result === 'save') {
-            state.events.push({ minute, type: 'save', description: generateSave(defTeam.name, goalkeeper), teamId: defTeam.id });
+          } else if (shot.result === 'post') {
+            state.events.push({ minute, type: 'post', description: generatePost(atkTeam.name, shot.scorer), teamId: atkTeam.id });
+          } else if (shot.result === 'save') {
+            state.events.push({ minute, type: 'save', description: generateSave(defTeam.name, shot.goalkeeper), teamId: defTeam.id });
           } else {
-            state.events.push({ minute, type: 'miss', description: generateMiss(atkTeam.name, scorer), teamId: atkTeam.id });
+            state.events.push({ minute, type: 'miss', description: generateMiss(atkTeam.name, shot.scorer), teamId: atkTeam.id });
           }
           cycleEvents++;
+        }
+
+        // Escanteio após defesa ou para fora
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE && (shot.result === 'save' || shot.result === 'miss') && Math.random() < 0.4) {
+          state.events.push({
+            minute, type: 'corner',
+            description: generateCorner(atkTeam.name),
+            teamId: atkTeam.id,
+          });
+          cycleEvents++;
+        }
+      }
+    }
+
+    // Faltas e cartões (chance baixa, não todo ciclo)
+    if (cycleEvents < MAX_EVENTS_PER_CYCLE && Math.random() < 0.15) {
+      const foulerTeam = Math.random() < 0.5 ? home : away;
+      const otherTeam = foulerTeam.id === home.id ? away : home;
+      const defs = getPlayersByPosition(getStarters(foulerTeam), 'DEF');
+      const eligible = defs.filter(p => !state.cards.has(p.id) || state.cards.get(p.id) !== 'red');
+      if (eligible.length > 0) {
+        const fouler = pickRandom(eligible, 1)[0];
+        state.events.push({
+          minute, type: 'foul',
+          description: generateFoul(foulerTeam.name, fouler),
+          teamId: otherTeam.id, // falta beneficia o outro time
+        });
+        cycleEvents++;
+
+        // Cartão (raro)
+        const existingCard = state.cards.get(fouler.id);
+        if (!existingCard && Math.random() < 0.25) {
+          if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
+            state.events.push({
+              minute, type: 'yellowCard',
+              description: generateYellowCard(foulerTeam.name, fouler),
+              teamId: foulerTeam.id,
+            });
+            state.cards.set(fouler.id, 'yellow');
+            cycleEvents++;
+          }
+        } else if (existingCard === 'yellow' && Math.random() < 0.3) {
+          if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
+            state.events.push({
+              minute, type: 'redCard',
+              description: generateRedCard(foulerTeam.name, fouler),
+              teamId: foulerTeam.id,
+            });
+            state.cards.set(fouler.id, 'red');
+            cycleEvents++;
+          }
         }
       }
     }
@@ -347,14 +433,12 @@ function simularBloco(
 // API PÚBLICA
 // ---------------------------------------------------------------------------
 
-/** Simula apenas o 1º tempo (0-45 min). Retorna estado para o 2º tempo. */
 export function simularPrimeiroTempo(home: Team, away: Team): { state: MatchState } {
   const state = createMatchState(home, away);
   simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, true, true, false);
   return { state };
 }
 
-/** Simula o 2º tempo (45-90 min) continuando do estado do 1º tempo. */
 export function simularSegundoTempo(home: Team, away: Team, prevState: MatchState): MatchResult {
   simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, prevState, false, false, true);
 
@@ -375,7 +459,6 @@ export function simularSegundoTempo(home: Team, away: Team, prevState: MatchStat
   };
 }
 
-/** Simula partida completa (90 min) — conveniência */
 export function simularPartida(home: Team, away: Team): MatchResult {
   const { state } = simularPrimeiroTempo(home, away);
   return simularSegundoTempo(home, away, state);

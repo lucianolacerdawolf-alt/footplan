@@ -3,22 +3,14 @@ import type { Team, MatchResult, MatchEvent as MatchEventType, Strategy, Mentali
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { simularPrimeiroTempo, simularSegundoTempo, type MatchState } from '../engine/matchEngine';
 import { cloneTeam } from '../engine/mockData';
+import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
 import CommentaryFeed from './CommentaryFeed';
 import Pitch from './Pitch';
+import { playerOvr } from '../utils/playerOvr';
 
-const REPLAY_MS = 1000;
-
-function playerOvr(p: { attributes: { speed: number; stamina: number; passing: number; finishing: number; tackling: number; dribbling: number; vision: number; positioning: number } }) {
-  return Math.round((p.attributes.speed + p.attributes.stamina + p.attributes.passing +
-    p.attributes.finishing + p.attributes.tackling + p.attributes.dribbling +
-    p.attributes.vision + p.attributes.positioning) / 8);
-}
-
-const FORMATIONS: Formation[] = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'];
-const MENTALITIES: Mentality[] = ['possession', 'counter-attack', 'high-press', 'defensive'];
-const INTENSITIES: Intensity[] = ['low', 'medium', 'high'];
-const DEF_LINES: DefensiveLine[] = ['high', 'normal', 'low'];
-const WIDTHS: Width[] = ['narrow', 'normal', 'wide'];
+const HALF_DURATION_MS = 120000; // 2 minutos reais = 45 min de jogo (2700s)
+const CLOCK_TICK_MS = 50;       // relógio de segundos rápidos
+const HALF_SECONDS = 45 * 60;   // 2700 segundos em jogo por tempo
 
 interface Props {
   homeTeam: Team;
@@ -47,6 +39,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [showOverlay, setShowOverlay] = useState(false);
   const [phase, setPhase] = useState<'idle' | 'simulating' | 'halftime' | 'done'>('idle');
   const [started, setStarted] = useState(false);
+  const [clockSeconds, setClockSeconds] = useState(0);
 
   // Swap no intervalo
   const [htHomePick, setHtHomePick] = useState<string | null>(null);
@@ -59,63 +52,97 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   };
 
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const eventsRef = useRef<MatchEventType[]>([]);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hScoreRef = useRef(0);
   const aScoreRef = useRef(0);
-  const idxRef = useRef(0);
   const engineStateRef = useRef<MatchState | null>(null);
 
-  // Limpeza
-  useEffect(() => () => { if (replayRef.current) clearInterval(replayRef.current); }, []);
+  useEffect(() => () => {
+    if (replayRef.current) clearInterval(replayRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  }, []);
 
-  // --- Função de replay (genérica) ---
-  const startReplay = useCallback((events: MatchEventType[], onHalftime: () => void, onDone: () => void) => {
+  // --- Função de replay com relógio MM:SS contínuo ---
+  const startReplay = useCallback((
+    events: MatchEventType[],
+    halfOffsetSec: number,
+    initialHomeScore: number,
+    initialAwayScore: number,
+    onHalftime: () => void,
+    onDone: () => void
+  ) => {
     if (replayRef.current) clearInterval(replayRef.current);
 
-    eventsRef.current = events;
-    hScoreRef.current = 0;
-    aScoreRef.current = 0;
-    idxRef.current = 0;
+    const queue = [...events];
+    const startTime = Date.now();
+    const maxSec = halfOffsetSec + HALF_SECONDS;
 
-    if (events.length > 0) {
-      setCurrentEvent(events[0]);
-      setReplayEvents([events[0]]);
-      idxRef.current = 1;
+    hScoreRef.current = initialHomeScore;
+    aScoreRef.current = initialAwayScore;
+    setHomeScore(initialHomeScore);
+    setAwayScore(initialAwayScore);
+    setReplayEvents([]);
+    setClockSeconds(halfOffsetSec);
+
+    // Exibe kickoff imediatamente
+    if (queue.length > 0 && queue[0].minute * 60 <= halfOffsetSec + 1) {
+      const kickoff = queue.shift()!;
+      setCurrentEvent(kickoff);
+      setReplayEvents([kickoff]);
     }
 
     replayRef.current = setInterval(() => {
-      const idx = idxRef.current;
-      if (idx >= eventsRef.current.length) {
+      const elapsed = Date.now() - startTime;
+      const inGameSec = Math.min(HALF_SECONDS, Math.floor(elapsed / HALF_DURATION_MS * HALF_SECONDS));
+      const effectiveSec = halfOffsetSec + inGameSec;
+
+      setClockSeconds(effectiveSec);
+
+      // Processa UM evento por tick (espaça as mensagens na cronologia)
+      if (queue.length > 0 && queue[0].minute * 60 <= effectiveSec) {
+        const evt = queue.shift()!;
+
+        if (evt.type === 'halftime') {
+          setCurrentEvent(evt);
+          setReplayEvents(prev => [...prev, evt]);
+          if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
+          setPhase('halftime');
+          setSimulating(false);
+          setClockSeconds(maxSec);
+          onHalftime();
+          return;
+        }
+
+        if (evt.type === 'fulltime') {
+          setCurrentEvent(evt);
+          setReplayEvents(prev => [...prev, evt]);
+          if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
+          setClockSeconds(maxSec);
+          onDone();
+          return;
+        }
+
+        if (evt.type === 'goal') {
+          if (evt.teamId === initialHome.id) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
+          else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
+        }
+
+        setCurrentEvent(evt);
+        setReplayEvents(prev => [...prev, evt]);
+      }
+
+      if (elapsed >= HALF_DURATION_MS) {
         if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
+        setClockSeconds(maxSec);
         onDone();
-        return;
       }
-
-      const evt = eventsRef.current[idx];
-      setCurrentEvent(evt);
-      setReplayEvents(prev => [...prev, evt]);
-
-      if (evt.type === 'goal') {
-        if (evt.teamId === initialHome.id) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
-        else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
-      }
-
-      // Pausa no intervalo
-      if (evt.type === 'halftime') {
-        if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
-        setPhase('halftime');
-        setSimulating(false);
-        onHalftime();
-        return;
-      }
-
-      idxRef.current = idx + 1;
-    }, REPLAY_MS);
+    }, CLOCK_TICK_MS);
   }, [initialHome.id]);
 
   // --- Simular 1º tempo ---
   const runFirstHalf = () => {
     if (replayRef.current) clearInterval(replayRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setSimulating(true);
     setStarted(true);
     setResult(null);
@@ -125,8 +152,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     setAwayScore(0);
     setShowOverlay(false);
     setPhase('simulating');
+    setClockSeconds(0);
 
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
       const { state } = simularPrimeiroTempo(
         cloneTeam(home),
         cloneTeam(away)
@@ -135,8 +164,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
       startReplay(
         [...state.events],
-        () => {}, // halftime callback (já tratado no setInterval)
-        () => {}  // done callback (não deve acontecer no 1º tempo)
+        0,
+        state.homeScore,
+        state.awayScore,
+        () => {},
+        () => {}
       );
     }, 150);
   };
@@ -145,11 +177,17 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const runSecondHalf = () => {
     if (!engineStateRef.current) return;
 
+    const firstHalfHome = engineStateRef.current.homeScore;
+    const firstHalfAway = engineStateRef.current.awayScore;
+
     if (replayRef.current) clearInterval(replayRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setSimulating(true);
     setPhase('simulating');
+    setClockSeconds(HALF_SECONDS);
 
-    setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
       const matchResult = simularSegundoTempo(
         cloneTeam(home),
         cloneTeam(away),
@@ -157,23 +195,22 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       );
       setResult(matchResult);
 
-      // Pega só os eventos do 2º tempo (a partir do kickoff do 2º tempo)
-      const halfIdx = matchResult.events.findIndex(e => e.type === 'kickoff' && e.minute === 45);
+      // Pega só os eventos do 2º tempo (a partir do último kickoff no minuto 45)
+      const halfIdx = matchResult.events.findLastIndex(e => e.type === 'kickoff' && e.minute === 45);
       const secondHalfEvents = halfIdx >= 0 ? matchResult.events.slice(halfIdx) : matchResult.events;
-
-      // Reseta scores pro acumulado (primeiro tempo + segundo)
-      hScoreRef.current = matchResult.homeScore;
-      aScoreRef.current = matchResult.awayScore;
-      setHomeScore(matchResult.homeScore);
-      setAwayScore(matchResult.awayScore);
 
       startReplay(
         secondHalfEvents,
+        HALF_SECONDS,
+        firstHalfHome,
+        firstHalfAway,
         () => {},
         () => {
           setSimulating(false);
           setPhase('done');
           setShowOverlay(true);
+          setHomeScore(matchResult.homeScore);
+          setAwayScore(matchResult.awayScore);
         }
       );
     }, 150);
@@ -183,7 +220,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const updateHome = (s: Strategy) => setHome(prev => ({ ...prev, strategy: s }));
   const updateAway = (s: Strategy) => setAway(prev => ({ ...prev, strategy: s }));
 
-  const currentMinute = currentEvent?.minute ?? 0;
+  // Removido: currentMinute agora é clockMinute
 
   const pitchResult = (showOverlay && result) ? {
     homeScore: result.homeScore, awayScore: result.awayScore,
@@ -210,7 +247,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           <span className="score-num">{started ? homeScore : '\u2013'}</span>
         </div>
         <div className="score-clock">
-          <span className="clock-num">{currentMinute}&apos;</span>
+          <span className="clock-num">{String(Math.floor(clockSeconds / 60)).padStart(2, '0')}:{String(clockSeconds % 60).padStart(2, '0')}</span>
           <span className="clock-label">MIN</span>
         </div>
         <div className="score-side away" style={{ borderRightColor: away.color }}>
@@ -281,19 +318,31 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   <summary>Substituições</summary>
                   <div className="ht-squad-grid">
                     {[['home', home, setHome, htHomePick, setHtHomePick] as const,
-                      ['away', away, setAway, htAwayPick, setHtAwayPick] as const].map(([side, team, setTeam, pick, setPick]) => (
+                      ['away', away, setAway, htAwayPick, setHtAwayPick] as const].map(([side, team, setTeam, pick, setPick]) => {
+                        const benchPlayers = team.squad.slice(11);
+                        const starters = team.squad.slice(0, 11);
+                        const pickIdx = team.squad.findIndex(sp => sp.id === pick);
+                        const pickIsBench = pickIdx >= 11;
+                        const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
+                        return (
                       <div key={side} className="ht-squad-col">
                         <strong style={{ color: side === 'home' ? home.color : away.color, fontSize: 11 }}>
                           {side === 'home' ? home.abbreviation : away.abbreviation}
                         </strong>
-                        {team.squad.slice(11).map((p) => {
+                        <div className="ht-sub-group-label">Titulares</div>
+                        {starters.map((p, i) => {
                           const isPicked = p.id === pick;
+                          const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
                           return (
                             <div key={p.id}
-                              className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+                              className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''}`}
                               onClick={() => {
-                                if (isPicked) { setPick(null); return; }
-                                setPick(p.id);
+                                if (pick && pickIsBench && team.squad[pickIdx].position === p.position) {
+                                  swapSquad(team, setTeam, pickIdx, i);
+                                  setPick(null);
+                                } else {
+                                  setPick(isPicked ? null : p.id);
+                                }
                               }}>
                               <span className="sq-num">#{p.number}</span>
                               <span className="sq-name">{p.name}</span>
@@ -302,29 +351,31 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                             </div>
                           );
                         })}
-                        {pick && (
-                          <div className="ht-swap-targets">
-                            <span style={{ fontSize: 10, opacity: 0.5 }}>Trocar com:</span>
-                            {team.squad.slice(0, 11).map((p, i) => {
-                              const benchPlayer = team.squad.find(sp => sp.id === pick);
-                              if (!benchPlayer || benchPlayer.position !== p.position) return null;
-                              return (
-                                <div key={p.id} className="ht-squad-row clickable"
-                                  onClick={() => {
-                                    swapSquad(team, setTeam, team.squad.findIndex(sp => sp.id === pick), i);
-                                    setPick(null);
-                                  }}>
-                                  <span className="sq-num">#{p.number}</span>
-                                  <span className="sq-name">{p.name}</span>
-                                  <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                  <span className="sq-ovr">{playerOvr(p)}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
+                        <div className="ht-sub-group-label">Reservas</div>
+                        {benchPlayers.map((p) => {
+                          const isPicked = p.id === pick;
+                          const bi = team.squad.findIndex(sp => sp.id === p.id);
+                          return (
+                            <div key={p.id}
+                              className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+                              onClick={() => {
+                                if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
+                                  swapSquad(team, setTeam, pickIdx, bi);
+                                  setPick(null);
+                                } else {
+                                  setPick(isPicked ? null : p.id);
+                                }
+                              }}>
+                              <span className="sq-num">#{p.number}</span>
+                              <span className="sq-name">{p.name}</span>
+                              <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                              <span className="sq-ovr">{playerOvr(p)}</span>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </details>
 
