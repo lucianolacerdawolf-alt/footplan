@@ -10,6 +10,7 @@ interface Props {
   onSimulateUserMatch: () => void;
   onSimulateRound: (roundIndex: number) => void;
   onNextRound: () => void;
+  onEditTactics: () => void;
   onBack: () => void;
 }
 
@@ -68,7 +69,7 @@ function StandingsTable({ standings, teams, userTeamId }: { standings: Standing[
   );
 }
 
-export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onBack }: Props) {
+export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onBack }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
   const standings = computeStandings(teams, fixtures);
   const [simulating, setSimulating] = useState(false);
@@ -115,11 +116,12 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
+        <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
         <div className={styles.headerCenter}>
           <span className={styles.leagueTitle}>Premier League</span>
           <span className={styles.roundLabel}>Rodada {currentRound + 1} / {fixtures.length}</span>
         </div>
+        <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
       </header>
 
       <div className={styles.body}>

@@ -52,23 +52,25 @@ function App() {
   }, []);
 
   const handleStartMatch = useCallback((home: Team, away: Team) => {
-    if (isTournamentEntry) {
-      setIsTournamentEntry(false);
-      setScreen(matchContext === 'league' ? 'league' : 'bracket');
-      return;
-    }
-    // Persist user team strategy into league state
+    // Persist user team strategy into league state (também na entrada/edição)
     if (matchContext === 'league' && leagueState) {
       const userIsHome = home.id === leagueState.userTeamId;
       const userTeamConfigured = userIsHome ? home : away;
       setLeagueState(prev => prev ? {
         ...prev,
-        teams: prev.teams.map(t => t.id === prev.userTeamId ? { ...t, strategy: userTeamConfigured.strategy } : t),
+        teams: prev.teams.map(t => t.id === prev.userTeamId
+          ? { ...t, strategy: userTeamConfigured.strategy, squad: userTeamConfigured.squad }
+          : t),
       } : prev);
+    }
+    if (isTournamentEntry) {
+      setIsTournamentEntry(false);
+      setScreen(matchContext === 'league' ? 'league' : 'bracket');
+      return;
     }
     setHomeTeam(home); setAwayTeam(away);
     setScreen('match');
-  }, [isTournamentEntry, matchContext, leagueState]);
+  }, [isTournamentEntry, matchContext, leagueState, setLeagueState]);
 
   const handleViewStats = useCallback((result: MatchResult) => {
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
@@ -77,6 +79,17 @@ function App() {
   }, [recordH2H]);
 
   // ── Torneio: setup ────────────────────────────────────────────────────────
+  const handleEditLeagueTactics = useCallback(() => {
+    if (!leagueState) return;
+    const userTeam = leagueState.teams.find(t => t.id === leagueState.userTeamId);
+    if (!userTeam) return;
+    setHomeTeam(cloneTeam(userTeam));
+    setAwayTeam(cloneTeam(userTeam));
+    setMatchContext('league'); setIsKnockout(false);
+    setIsTournamentEntry(true);
+    setScreen('setup');
+  }, [leagueState]);
+
   const handleStartLeague = useCallback((userTeam: Team) => {
     const all = premierLeagueTeams.map(cloneTeam);
     const rest = all.filter(t => t.id !== userTeam.id);
@@ -306,6 +319,7 @@ function App() {
         onSimulateUserMatch={handleSimulateUserLeagueMatch}
         onSimulateRound={handleSimulateLeagueRound}
         onNextRound={handleNextLeagueRound}
+        onEditTactics={handleEditLeagueTactics}
         onBack={goHome}
       />
     );
