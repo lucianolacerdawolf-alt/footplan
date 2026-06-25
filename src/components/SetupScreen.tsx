@@ -230,35 +230,38 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   return (
     <div className="setup-screen">
-      <header className="app-header">
-        <h1>FootPlan</h1>
-        <p className="subtitle">Configuração Tática</p>
-      </header>
+      <div className="setup-topbar">
+        <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
+        <header className="app-header" style={{ flex: 1 }}>
+          <h1>FootPlan</h1>
+          <p className="subtitle">Configuração Tática</p>
+        </header>
+        <button className="start-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
+          Iniciar Partida →
+        </button>
+      </div>
 
-      <div className="setup-layout">
+      <div className={lockAway ? 'setup-layout setup-layout-solo' : 'setup-layout'}>
         <div className="setup-left">
           {renderCard(homeTeam, updateHome, 'home')}
           {renderSquad(homeTeam, homeSelected, setHomeSelected, handleSwapHome, false)}
         </div>
 
-        <div className="setup-center">
-          <div className="setup-vs-col">
-            <div className="setup-vs-circle">VS</div>
-          </div>
-        </div>
-
-        <div className="setup-right">
-          {renderCard(awayTeam, updateAway, 'away', lockAway)}
-          {renderSquad(awayTeam, awaySelected, setAwaySelected, handleSwapAway, !!lockAway)}
-        </div>
+        {!lockAway && (
+          <>
+            <div className="setup-center">
+              <div className="setup-vs-col">
+                <div className="setup-vs-circle">VS</div>
+              </div>
+            </div>
+            <div className="setup-right">
+              {renderCard(awayTeam, updateAway, 'away', false)}
+              {renderSquad(awayTeam, awaySelected, setAwaySelected, handleSwapAway, false)}
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="setup-action">
-        <button className="back-btn-secondary" onClick={onBack} style={{ marginRight: 12 }}>Voltar</button>
-        <button className="start-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
-          Iniciar Partida
-        </button>
-      </div>
     </div>
   );
 }

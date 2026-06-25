@@ -42,7 +42,10 @@
 
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)),
+    url('/fundo.png') center/cover fixed no-repeat;
+  background-color: var(--bg);
 }
 
 #root {

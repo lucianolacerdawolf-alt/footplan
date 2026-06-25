@@ -46,6 +46,10 @@
    SETUP SCREEN
    ============================================================================= */
 .setup-screen { max-width: 960px; margin: 0 auto; padding-bottom: 28px; }
+.setup-topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 16px 0; max-width: 960px; margin: 0 auto;
+}
 .setup-teams { display: flex; align-items: flex-start; justify-content: center; gap: 10px; padding: 16px; }
 @media (max-width: 780px) { .setup-teams { flex-direction: column; align-items: center; } .setup-vs { margin: 4px 0; } }
 
@@ -121,9 +125,6 @@
 .team-select-screen {
   max-width: 100%; margin: 0 auto; padding-bottom: 16px;
   min-height: 100vh;
-  background: 
-    linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.55)),
-    url('/fundo.png') center/cover fixed no-repeat;
 }
 
 .select-instruction {
@@ -211,18 +212,19 @@
 /* Squad panel (ao lado das taticas) */
 .squad-panel {
   flex: 1; min-width: 280px; background: var(--code-bg); border: 1px solid var(--border);
-  border-radius: 10px; padding: 10px; font-size: 12px;
+  border-radius: 10px; padding: 10px; font-size: 14px;
+  display: flex; flex-direction: row; gap: 0;
 }
 .squad-section-title {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.4px; opacity: 0.45; margin-bottom: 4px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; opacity: 0.45; margin-bottom: 6px;
 }
-.squad-section { margin-bottom: 6px; }
-.bench-section { border-top: 1px dashed var(--border); padding-top: 6px; }
+.squad-section { flex: 1; margin-bottom: 0; }
+.bench-section { border-left: 1px dashed var(--border); padding-left: 10px; margin-left: 8px; }
 .squad-row {
   display: flex; align-items: center; gap: 6px;
-  padding: 4px 6px; border-radius: 4px; border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  padding: 6px 6px; border-radius: 4px; border-bottom: 1px solid var(--border);
+  font-size: 14px;
 }
 .squad-row:last-child { border-bottom: none; }
 .squad-row.clickable { cursor: pointer; transition: background 0.15s; }
@@ -238,16 +240,18 @@
   border-radius: 4px; margin: -1px;
 }
 .squad-row.bench.clickable:hover { opacity: 0.9; }
-.sq-num { font-weight: 700; min-width: 22px; color: var(--accent); font-size: 12px; }
-.sq-name { flex: 1; color: var(--text-h); font-weight: 500; font-size: 12px; }
-.sq-pos { font-size: 11px; font-weight: 700; padding: 1px 4px; border-radius: 3px; min-width: 26px; text-align: center; }
-.sq-ovr { font-size: 12px; font-weight: 700; color: var(--accent); }
+.sq-num { font-weight: 700; min-width: 26px; color: var(--accent); font-size: 13px; }
+.sq-name { flex: 1; color: var(--text-h); font-weight: 500; font-size: 14px; }
+.sq-pos { font-size: 12px; font-weight: 700; padding: 2px 5px; border-radius: 3px; min-width: 30px; text-align: center; }
+.sq-ovr { font-size: 13px; font-weight: 700; color: var(--accent); }
 
 /* Setup layout columns */
 .setup-layout {
   display: flex; align-items: flex-start; justify-content: center; gap: 8px; padding: 6px 8px;
 }
 @media (max-width: 1100px) { .setup-layout { flex-direction: column; align-items: center; } }
+.setup-layout-solo { justify-content: center; }
+.setup-layout-solo .setup-left { max-width: 680px; flex: unset; }
 @media (max-width: 600px) { .setup-left, .setup-right { flex-direction: column; } }
 .setup-left, .setup-right { flex: 1; max-width: 580px; display: flex; flex-direction: row; gap: 8px; align-items: flex-start; }
 .setup-right { flex-direction: row-reverse; }
