@@ -145,13 +145,15 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         </button>
         <span className="match-title">{home.abbreviation} vs {away.abbreviation}</span>
         <span className="match-formations">{home.strategy.formation} x {away.strategy.formation}</span>
-        <div className="speed-control">
+        <div className="speed-control" role="group" aria-label="Velocidade do replay">
           {[1, 2, 4].map(s => (
             <button
               key={s}
               className={`speed-btn ${speed === s ? 'active' : ''}`}
               onClick={() => setSpeed(s)}
               title={`Velocidade ${s}x`}
+              aria-label={`Velocidade ${s}x`}
+              aria-pressed={speed === s}
             >{s}x</button>
           ))}
         </div>

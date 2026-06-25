@@ -7,8 +7,6 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 ## 🐛 Bugs / Limpeza pendente
 
 - 🟢 **`public/fundo.png` tem 5.5 MB** — comprimir para WebP ou JPG de baixa qualidade. Recomendado: `cwebp -q 70 fundo.png -o fundo.webp` ou converter via TinyPNG. Carregamento inicial sofre. Após comprimir, ajustar `src/index.css` (`url('/fundo.png')` → `/fundo.webp`).
-- 🟡 **Acessibilidade**: nenhum botão tem `aria-label` consistente. Escudos, toasts e modais ficam confusos pra screen readers.
-- 🟡 **`key={i}` em listas** (`MatchStatsScreen`, `TutorialOverlay`, h2h-pills) — funciona porque são estáticas, mas é code smell. Trocar por `key={item.id}` ou similar.
 
 ---
 
@@ -59,3 +57,5 @@ Lista do que está pendente. Itens marcados com 🟢 são pequenos (<1h), 🟡 m
 - Modal Resume fecha com tecla `Escape`
 - Badge de moral no SetupScreen (😄/😊/😐/😕/😟 com valor +/-)
 - Lesões aplicadas pra CPU também (5% de chance em jogos simulados)
+- Acessibilidade: roles ARIA em modais (resume, tutorial), `role="status"` em toast, aria-label em botões de velocidade, aria-label semântico em pills de H2H, alt descritivo em escudos não-decorativos
+- `key={i}` substituído por chave composta com identidade real (`MatchStatsScreen` gols/cartões)

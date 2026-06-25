@@ -290,8 +290,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           </span>
           <span className="h2h-label">Gols {h2h.gf}–{h2h.ga}</span>
           {h2h.last.length > 0 && (
-            <span className="h2h-form">
-              {h2h.last.map((r, i) => <span key={i} className={`h2h-pill ${r}`}>{r}</span>)}
+            <span className="h2h-form" aria-label={`Últimos resultados: ${h2h.last.map(r => r === 'W' ? 'vitória' : r === 'D' ? 'empate' : 'derrota').join(', ')}`}>
+              {h2h.last.map((r, i) => <span key={i} className={`h2h-pill ${r}`} aria-hidden="true">{r}</span>)}
             </span>
           )}
         </div>

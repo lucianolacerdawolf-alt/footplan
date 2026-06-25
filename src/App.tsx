@@ -489,10 +489,10 @@ function App() {
       <div className="screen-fade" key={screen}>{content}</div>
       <Toast message={toastMsg} onDismiss={() => setToastMsg(null)} />
       {resumePrompt && (
-        <div className="resume-overlay" onClick={() => setResumePrompt(null)}>
-          <div className="resume-modal" onClick={e => e.stopPropagation()}>
-            <div className="resume-icon">{resumePrompt === 'league' ? '📅' : '🏆'}</div>
-            <div className="resume-title">
+        <div className="resume-overlay" onClick={() => setResumePrompt(null)} role="presentation">
+          <div className="resume-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="resume-title">
+            <div className="resume-icon" aria-hidden="true">{resumePrompt === 'league' ? '📅' : '🏆'}</div>
+            <div className="resume-title" id="resume-title">
               {resumePrompt === 'league' ? 'Premier League em andamento' : 'FA Cup em andamento'}
             </div>
             <div className="resume-body">

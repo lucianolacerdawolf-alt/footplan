@@ -21,7 +21,7 @@ export default function Toast({ message, duration = 2000, onDismiss }: Props) {
 
   if (!message) return null;
   return (
-    <div className={`fp-toast ${visible ? 'fp-toast-visible' : ''}`}>
+    <div className={`fp-toast ${visible ? 'fp-toast-visible' : ''}`} role="status" aria-live="polite">
       {message}
     </div>
   );

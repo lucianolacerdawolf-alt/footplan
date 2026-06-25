@@ -54,15 +54,15 @@ export default function TutorialOverlay({ onClose }: Props) {
   };
 
   return (
-    <div className="tutorial-overlay" onClick={handleSkip}>
-      <div className="tutorial-card" onClick={e => e.stopPropagation()}>
-        <button className="tutorial-skip" onClick={handleSkip}>Pular ✕</button>
-        <div className="tutorial-icon">{current.icon}</div>
-        <div className="tutorial-title">{current.title}</div>
+    <div className="tutorial-overlay" onClick={handleSkip} role="presentation">
+      <div className="tutorial-card" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
+        <button className="tutorial-skip" onClick={handleSkip} aria-label="Pular tutorial">Pular ✕</button>
+        <div className="tutorial-icon" aria-hidden="true">{current.icon}</div>
+        <div className="tutorial-title" id="tutorial-title">{current.title}</div>
         <div className="tutorial-body">{current.body}</div>
-        <div className="tutorial-dots">
+        <div className="tutorial-dots" role="progressbar" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEPS.length} aria-label={`Passo ${step + 1} de ${STEPS.length}`}>
           {STEPS.map((_, i) => (
-            <span key={i} className={`tutorial-dot ${i === step ? 'active' : ''}`} />
+            <span key={i} className={`tutorial-dot ${i === step ? 'active' : ''}`} aria-hidden="true" />
           ))}
         </div>
         <button className="tutorial-next" onClick={handleNext}>

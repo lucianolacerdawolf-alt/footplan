@@ -119,9 +119,9 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
           <div className={styles.sectionLabel}>⚽ Gols</div>
           <div className={styles.scorersList}>
             {scorers.map((g, i) => (
-              <div key={i} className={styles.scorerRow}>
+              <div key={`${g.team.id}-${g.minute}-${g.scorer}-${i}`} className={styles.scorerRow}>
                 <span className={styles.scorerMinute}>{g.minute}&apos;</span>
-                <img src={g.team.logoUrl} alt="" className={styles.scorerCrest} />
+                <img src={g.team.logoUrl} alt={`Escudo ${g.team.abbreviation}`} className={styles.scorerCrest} />
                 <span className={styles.scorerName} style={{ color: g.team.color }}>{g.scorer}</span>
               </div>
             ))}
@@ -180,8 +180,8 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
           <div className={styles.sectionLabel}>Cartões</div>
           <div className={styles.cardsList}>
             {cards.map((c, i) => (
-              <span key={i} className={styles.cardChip} style={{ borderColor: c.team.color }}>
-                <span>{c.type === 'yellow' ? '🟨' : '🟥'}</span>
+              <span key={`${c.team.id}-${c.minute}-${c.type}-${i}`} className={styles.cardChip} style={{ borderColor: c.team.color }} aria-label={`${c.type === 'yellow' ? 'Cartão amarelo' : 'Cartão vermelho'} para ${c.player?.name ?? c.team.abbreviation} aos ${c.minute} minutos`}>
+                <span aria-hidden="true">{c.type === 'yellow' ? '🟨' : '🟥'}</span>
                 <span style={{ color: c.team.color, fontWeight: 700 }}>{c.player?.name ?? c.team.abbreviation}</span>
                 <span className={styles.cardMinute}>{c.minute}&apos;</span>
               </span>
