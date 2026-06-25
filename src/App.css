@@ -663,3 +663,26 @@
   border-radius: 4px; margin-left: 4px;
 }
 .squad-row:has(.sq-injury) { opacity: 0.6; }
+
+/* ── Mobile tweaks (Fase 5.4) ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .setup-topbar { flex-wrap: wrap; gap: 8px; }
+  .setup-topbar .start-btn,
+  .setup-topbar .back-btn-secondary { font-size: 13px; padding: 8px 14px; }
+  .setup-controls { gap: 4px; }
+  .setup-select select { font-size: 13px; padding: 6px 8px; }
+  .h2h-strip { flex-wrap: wrap; gap: 8px; padding: 8px 10px; font-size: 12px; }
+  .squad-panel { flex-direction: column !important; }
+  .bench-section { border-left: none; border-top: 1px dashed var(--border); padding-left: 0; padding-top: 10px; margin-left: 0; margin-top: 8px; }
+  .match-topbar { flex-wrap: wrap; gap: 6px; font-size: 13px; }
+  .match-scorebar .score-num { font-size: 32px; }
+  .match-scorebar .clock-num { font-size: 18px; }
+  .goal-timeline { font-size: 11px; flex-wrap: wrap; }
+  .tutorial-card { padding: 22px 18px 18px; }
+  .tutorial-title { font-size: 18px; }
+  .tutorial-icon { font-size: 44px; }
+}
+
+@media (max-width: 480px) {
+  .setup-layout-solo .setup-left { max-width: 100%; }
+}

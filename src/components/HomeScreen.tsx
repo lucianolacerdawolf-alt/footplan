@@ -1,4 +1,5 @@
 import styles from './HomeScreen.module.css';
+import { useTheme } from '../hooks/useTheme';
 
 interface Props {
   onSingleMatch: () => void;
@@ -6,9 +7,15 @@ interface Props {
   onCup: () => void;
 }
 
+const THEME_LABELS = { auto: '🌓 Auto', light: '☀️ Claro', dark: '🌙 Escuro' } as const;
+
 export default function HomeScreen({ onSingleMatch, onLeague, onCup }: Props) {
+  const [mode, , cycle] = useTheme();
   return (
     <div className={styles.screen}>
+      <button className={styles.themeBtn} onClick={cycle} title="Alternar tema">
+        {THEME_LABELS[mode]}
+      </button>
       <header className={styles.header}>
         <h1 className={styles.title}>FootPlan</h1>
         <p className={styles.subtitle}>Simulador Tático · Premier League 2025/26</p>
