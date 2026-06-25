@@ -79,7 +79,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
   const handleCreateRoom = () => peer.createRoom();
 
   const handleJoinRoom = () => {
-    const code = joinCode.trim();
+    const code = joinCode.trim().toUpperCase();
     if (code) peer.joinRoom(code);
   };
 
@@ -164,9 +164,10 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
               <input
                 className={styles.joinInput}
                 type="text"
-                placeholder="Código da sala"
+                placeholder="Ex: ABCD"
+                maxLength={4}
                 value={joinCode}
-                onChange={e => setJoinCode(e.target.value)}
+                onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 4))}
                 onKeyDown={e => e.key === 'Enter' && handleJoinRoom()}
               />
               <button className={styles.primaryBtn} onClick={handleJoinRoom} disabled={peer.state === 'connecting' || !joinCode.trim()}>
@@ -198,7 +199,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
               {hostTeamId ? (
                 <div className={styles.pickedTeam} style={{ borderLeftColor: lookupTeam(hostTeamId)?.color ?? '#666' }}>
                   <img className={styles.teamLogo} src={lookupTeam(hostTeamId)?.logoUrl} alt="" />
-                  <span className={styles.teamAbbr}>{lookupTeam(hostTeamId)?.abbreviation}</span>
+                  <span className={styles.teamName}>{lookupTeam(hostTeamId)?.name}</span>
                 </div>
               ) : peer.isHost ? (
                 <span className={styles.hint}>Escolha seu time abaixo</span>
@@ -214,7 +215,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
               {guestTeamId ? (
                 <div className={styles.pickedTeam} style={{ borderLeftColor: lookupTeam(guestTeamId)?.color ?? '#666' }}>
                   <img className={styles.teamLogo} src={lookupTeam(guestTeamId)?.logoUrl} alt="" />
-                  <span className={styles.teamAbbr}>{lookupTeam(guestTeamId)?.abbreviation}</span>
+                  <span className={styles.teamName}>{lookupTeam(guestTeamId)?.name}</span>
                 </div>
               ) : !peer.isHost ? (
                 <span className={styles.hint}>Escolha seu time abaixo</span>
@@ -235,7 +236,10 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
                   onClick={() => peer.isHost ? selectHostTeam(t.id) : selectGuestTeam(t.id)}
                 >
                   <img className={styles.teamLogoSmall} src={t.logoUrl} alt="" />
-                  <span className={styles.teamBtnAbbr}>{t.abbreviation}</span>
+                  <div className={styles.teamBtnInfo}>
+                    <span className={styles.teamBtnName}>{t.name}</span>
+                    <span className={styles.teamBtnAbbr}>{t.abbreviation}</span>
+                  </div>
                 </button>
               ))}
             </div>

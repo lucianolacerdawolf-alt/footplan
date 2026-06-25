@@ -51,12 +51,17 @@ export function usePeerConnection(): UsePeerConnectionReturn {
     setState('connecting');
     setIsHost(true);
 
-    const peer = new Peer();
+    const code = Array.from({ length: 4 }, () =>
+      String.fromCharCode(65 + Math.floor(Math.random() * 26))
+    ).join('');
+    const peerId = `fp-${code}`;
+
+    const peer = new Peer(peerId);
     peerRef.current = peer;
 
-    peer.on('open', (id) => {
+    peer.on('open', () => {
       if (!mountedRef.current) { peer.destroy(); return; }
-      setRoomId(id);
+      setRoomId(code);
       setState('connected');
     });
 
@@ -111,12 +116,14 @@ export function usePeerConnection(): UsePeerConnectionReturn {
     setState('connecting');
     setIsHost(false);
 
+    const peerId = hostId.includes('-') ? hostId : `fp-${hostId.toUpperCase()}`;
+
     const peer = new Peer();
     peerRef.current = peer;
 
     peer.on('open', () => {
       if (!mountedRef.current) { peer.destroy(); return; }
-      const conn = peer.connect(hostId, { reliable: true });
+      const conn = peer.connect(peerId, { reliable: true });
       connRef.current = conn;
 
       conn.on('open', () => {
