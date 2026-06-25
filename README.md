@@ -1,44 +1,119 @@
-# ⚽ FootPlan — Simulador de Gerenciamento Tático de Futebol
+# ⚽ FootPlan — Simulador Tático de Futebol
 
-Simulador de partidas de futebol com foco em **escolhas estratégicas** e **simulação automatizada baseada em dados**. Escolha entre os 20 clubes da Premier League, defina formações e táticas, e assista à partida se desenrolar minuto a minuto em um campo tático interativo.
+Simulador de partidas de futebol com foco em **escolhas estratégicas** e **simulação baseada em dados**. Escolha entre os 20 clubes da Premier League, defina formações e táticas, e assista à partida se desenrolar minuto a minuto em um campo tático interativo — ou dispute uma temporada completa de pontos corridos e uma copa eliminatória.
 
 ---
 
-## 🎮 Funcionalidades
+## 🎮 Modos de Jogo
 
-### 3 Telas de Fluxo
+| Modo | Descrição |
+|------|-----------|
+| **Partida Única** | Escolha 2 times, configure as táticas e jogue uma partida avulsa. |
+| **Premier League** | Temporada completa com os 20 times em pontos corridos (38 rodadas × 10 jogos). Você controla seu time e simula os demais. |
+| **FA Cup** | Copa eliminatória com 8 times (você + 7 sorteados). Quartas de Final → Semifinais → Final. Empates vão para prorrogação e pênaltis. |
+
+---
+
+## 🖥 Fluxo de Telas
+
+```
+HomeScreen
+├── Partida Única → TeamSelectionScreen → SetupScreen → MatchScreen → MatchStatsScreen
+├── Premier League → TournamentSetupScreen → LeagueScreen ↔ SetupScreen → MatchScreen → MatchStatsScreen
+└── FA Cup         → TournamentSetupScreen → BracketScreen ↔ SetupScreen → MatchScreen → MatchStatsScreen
+```
+
 | Tela | Descrição |
 |------|-----------|
-| **Seleção de Times** | Escolha 2 times entre os 20 da Premier League. Toggle entre uniforme HOME/AWAY para cada time (cores oficiais). |
-| **Configuração Tática** | Defina Formação (4-3-3, 4-4-2, 3-5-2...), Mentalidade (Posse, Contra-Ataque, Pressão Alta, Retranca) e Intensidade (Baixa, Média, Alta) para cada time. |
-| **Partida** | Simulação com campo tático animado, placar, relógio e feed de comentários minuto a minuto. |
+| **HomeScreen** | Menu principal com 3 modos de jogo. |
+| **TeamSelectionScreen** | Escolha 2 times. Toggle HOME/AWAY de uniforme. Conflito de cores detectado automaticamente. Seleção persistida via localStorage. |
+| **TournamentSetupScreen** | Escolha seu time para Premier League ou FA Cup. Mesmo visual da tela de seleção. |
+| **SetupScreen** | Formação, mentalidade e intensidade para cada time. Exibe elenco completo com OVR por posição. |
+| **MatchScreen** | Campo SVG animado, placar, relógio, feed de comentários, intervalo interativo com troca de táticas. Suporte a prorrogação e pênaltis nos modos eliminatórios. |
+| **MatchStatsScreen** | Estatísticas completas (posse, chutes, faltas, cartões). Histórico de partidas (modo partida única). |
+| **LeagueScreen** | Hub da temporada: jogo do usuário, outros jogos, "Simular Todos", tabela de classificação colapsável. |
+| **BracketScreen** | Hub da copa: chaveamento completo com todos os confrontos, placar e indicador de vencedor por fase. |
 
-### Motor de Simulação (Match Engine)
-- **Divisão em 2 tempos**: 1º tempo (0-45') + Intervalo com possibilidade de **mudar táticas** + 2º tempo (45-90')
-- **Ciclos de 5 minutos**: 18 ciclos por partida
-- **Cálculo de Posse**: Meio-campistas (Passe + Visão) × modificador de mentalidade × RNG
-- **Ataque vs Defesa**: Atacantes (Velocidade + Drible) × RNG vs Defensores (Desarme + Posicionamento) + Goleiro × RNG
-- **Finalização**: Finalização do atacante × modMentalidade × RNG vs Posicionamento do goleiro × RNG
-- **Cansaço**: Atributos caem até 50% conforme o jogo avança. Intensidade alta = mais desgaste.
-- **RNG (0.7~1.3)**: Garante imprevisibilidade — times fortes vencem mais, mas zebras acontecem.
+---
 
-### Campo Tático Interativo
-- **Horizontal** (estilo TV), visão top-down com linhas, áreas e gols
-- **Jogadores** coloridos conforme o uniforme escolhido (cada time tem cor primária e secundária oficiais da PL)
+## ⚙️ Motor de Simulação
+
+### Estrutura da Partida
+- **1º Tempo**: 23 ciclos de 2 min cada (0–45')
+- **Intervalo**: pausa automática com overlay para trocar táticas
+- **2º Tempo**: mais 23 ciclos (45'–90')
+- **Prorrogação** (mata-mata em empate): 2 × 7 ciclos (90'–104')
+- **Pênaltis** (empate após prorrogação): 5 cobranças + morte súbita
+
+### Cálculo de Gol — Duas Verificações Consecutivas
+
+**1. Ataque vs Defesa**
+```
+Ataque = Σ(atacantes: Velocidade + Drible) × modMentalidade × RNG(0.7–1.3)
+Defesa = Σ(defensores: Desarme + Posicionamento) + PosicionamentoGK × RNG(0.7–1.3)
+```
+Se `Ataque > Defesa` → chance de finalização criada.
+
+**2. Finalização vs Goleiro**
+```
+Chute    = Finalização × modMentalidade × RNG(0.8–1.2)
+DefesaGK = PosicionamentoGK × RNG(0.8–1.2)
+```
+- `Chute > DefesaGK` → **GOL** ⚽
+- `Chute ≤ 80% da DefesaGK` → **Na trave** 😱
+- `Chute ≤ 50% da DefesaGK` → **Defesa do goleiro** 🛡️
+- Abaixo disso → **Para fora** ↗️
+
+### Modificadores por Mentalidade
+| Mentalidade | Passe | Visão | Veloc | Drible | Desarme | Posic | Finaliz | Cansaço |
+|------------|-------|-------|-------|--------|---------|-------|---------|---------|
+| Posse de Bola | +20% | +20% | -10% | +5% | -10% | -5% | 0% | 1.0× |
+| Contra-Ataque | -15% | 0% | +20% | +15% | -10% | -10% | +10% | 1.0× |
+| Pressão Alta | -5% | 0% | +5% | 0% | +15% | +15% | -5% | **1.3×** |
+| Retranca | -10% | -10% | -15% | -15% | +25% | +25% | -15% | 0.8× |
+
+### Cansaço por Intensidade (por ciclo de 2 min)
+- **Baixa**: +2 pts | **Média**: +4 pts | **Alta**: +7 pts
+- Jogadores com Stamina alta cansam menos. Cansaço reduz todos os atributos em até 50%.
+
+### Pênaltis
+- Taxa de conversão base: ~75% (`chute × 1.35 > defesa`)
+- 5 cobranças por time + morte súbita em caso de empate
+- Registro individual de cada cobrança no feed de comentários
+
+### Simulação Rápida (CPU vs CPU)
+- `simularPartidaRapida` — executa o mesmo motor sem gerar eventos visuais
+- `simularRodadaAuto` — simula todos os jogos não controlados pelo usuário em uma rodada da liga
+- `simularBracketMatch` — simula um confronto eliminatório incluindo prorrogação e pênaltis
+
+---
+
+## 🏆 Modos de Torneio
+
+### Premier League (Pontos Corridos)
+- 20 times, 38 rodadas, calendário gerado pelo **método do círculo** (round-robin)
+- Cada rodada: 10 jogos (1 do usuário + 9 simulados pela CPU)
+- Tabela de classificação em tempo real: Pts / J / V / E / D / GP / GC / SG
+- Classificação de desempate: pontos → saldo de gols → gols pró
+
+### FA Cup (Eliminatória)
+- 8 times (usuário + 7 sorteados da Premier League)
+- Fases: Quartas de Final (4 jogos) → Semifinais (2 jogos) → Final (1 jogo)
+- Empates resolvidos com prorrogação (2 × 7 ciclos) e, se necessário, pênaltis
+- Progresso automático para a próxima fase quando todos os jogos são concluídos
+
+---
+
+## 🎨 Campo Tático Interativo
+
+- **Horizontal** (estilo transmissão de TV), visão top-down com linhas, áreas e gols
+- **Jogadores** coloridos conforme o uniforme escolhido
 - **Bola** se move pelo campo conforme o lance (meio-campo → área → gol)
-- **Movimentação tática**:
-  - Times avançam/recuam conforme posse, ataque e defesa
-  - Atração magnética dos jogadores à bola
-  - Sistema anti-sobreposição (repulsão entre jogadores próximos)
-  - Idle sway (oscilação sutil quando parados)
-  - Rotação sutil em direção à bola
-- **Animações**: transições de 0.6s com easing spring, flash no gol
-
-### Intervalo Interativo
-- Pausa automática aos 45 minutos
-- Overlay sobre o campo com placar atual
-- **Dropdowns para alterar Formação, Mentalidade e Intensidade** de ambos os times
-- As mudanças **afetam o 2º tempo** (o motor recalcula com as novas táticas)
+- **Movimentação tática**: times avançam/recuam conforme posse e fase do jogo
+- **Anti-sobreposição**: repulsão entre jogadores próximos
+- **Idle sway**: oscilação sutil quando parados
+- **Animações**: transições CSS com easing spring, flash dourado no gol
+- **Expulsões**: jogadores removidos visivelmente do campo após cartão vermelho
 
 ---
 
@@ -46,11 +121,13 @@ Simulador de partidas de futebol com foco em **escolhas estratégicas** e **simu
 
 | Camada | Stack |
 |--------|-------|
-| **Frontend** | React 19 + TypeScript |
+| **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Estilo** | CSS puro (variáveis CSS, tema claro/escuro) |
-| **Renderização** | SVG (campo tático) + HTML/CSS |
-| **Estado** | React Hooks (useState, useMemo, useRef, useCallback) |
+| **Testes** | Vitest 3 (separado em `vitest.config.ts`) |
+| **Estilo** | CSS puro + CSS Modules para componentes escopados |
+| **Renderização** | SVG (campo) + HTML/CSS |
+| **Estado** | React Hooks — useState, useRef, useCallback, useEffect |
+| **Persistência** | localStorage (time selecionado, modo, uniforme) |
 
 ---
 
@@ -59,19 +136,32 @@ Simulador de partidas de futebol com foco em **escolhas estratégicas** e **simu
 ```
 src/
 ├── engine/
-│   ├── types.ts           # Tipos: Player, Team, Strategy, MatchEvent, MatchResult
-│   ├── matchEngine.ts     # Motor de simulação (1º/2º tempo, posse, ataque, gol, cansaço)
-│   ├── commentary.ts      # Gerador de frases de comentário (variações por evento)
-│   └── mockData.ts        # Dados mock (2 times fictícios, cloneTeam)
+│   ├── types.ts           # Tipos: Player, Team, Strategy, MatchEvent, MatchResult, PenaltyResult
+│   ├── matchEngine.ts     # Motor: tempos, posse, gol, cansaço, prorrogação, pênaltis
+│   ├── commentary.ts      # Gerador de frases (gols, faltas, pênaltis, prorrogação...)
+│   ├── tournament.ts      # Liga (round-robin, standings) + Copa (bracket, advanceBracket)
+│   └── steering.ts        # Sistema de movimentação dos jogadores no campo
 ├── data/
-│   └── premierLeague.ts   # 20 times da Premier League 2025/26 com 11 jogadores cada
+│   └── premierLeague.ts   # 20 times da Premier League com elencos de 11 jogadores
 ├── components/
-│   ├── TeamSelectionScreen.tsx  # Tela 1: seleção de times + toggle uniforme
-│   ├── SetupScreen.tsx          # Tela 2: formação, mentalidade, intensidade
-│   ├── MatchScreen.tsx          # Tela 3: campo, placar, simulação, intervalo
-│   ├── Pitch.tsx                # Campo tático SVG (jogadores, bola, overlays)
-│   └── CommentaryFeed.tsx       # Feed de comentários minuto a minuto
-├── App.tsx / App.css / index.css / main.tsx
+│   ├── HomeScreen.tsx           # Menu principal (3 modos)
+│   ├── TeamSelectionScreen.tsx  # Seleção de 2 times (partida única)
+│   ├── TournamentSetupScreen.tsx# Seleção do time do usuário (torneios)
+│   ├── SetupScreen.tsx          # Formação, mentalidade, intensidade
+│   ├── MatchScreen.tsx          # Campo, placar, simulação, intervalo, prorrogação, pênaltis
+│   ├── Pitch.tsx                # Campo tático SVG + movimentação dos jogadores
+│   ├── CommentaryFeed.tsx       # Feed de comentários em tempo real
+│   ├── MatchStatsScreen.tsx     # Estatísticas pós-jogo + histórico
+│   ├── LeagueScreen.tsx         # Hub da Premier League entre partidas
+│   └── BracketScreen.tsx        # Hub da FA Cup entre partidas
+├── hooks/
+│   ├── useMatchSimulation.ts    # Hook central da simulação de partida
+│   ├── useMatchHistory.ts       # Histórico de partidas (localStorage)
+│   └── useLocalStorage.ts       # Hook genérico de persistência
+├── utils/
+│   ├── teamUtils.ts       # cloneTeam
+│   └── playerOvr.ts       # Cálculo de OVR do jogador
+└── App.tsx / App.css / index.css / main.tsx
 ```
 
 ---
@@ -88,11 +178,61 @@ npm run dev
 # Build de produção
 npm run build
 
+# Rodar testes
+npm run test
+
 # Preview do build
 npm run preview
 ```
 
-O servidor de desenvolvimento roda em `http://localhost:5173` e o preview em `http://localhost:4173`.
+O servidor de desenvolvimento roda em `http://localhost:5173`.
+
+---
+
+## 🧠 Modelo de Dados
+
+### Jogador (`Player`)
+```typescript
+{
+  id: string;
+  name: string;
+  number: number;
+  position: 'GK' | 'DEF' | 'MID' | 'FWD';
+  attributes: {
+    speed, stamina, passing, finishing,
+    tackling, dribbling, vision, positioning; // todos 1–99
+  };
+  currentFatigue: number; // 0–100
+}
+```
+
+### Time (`Team`)
+```typescript
+{
+  id: string;
+  name: string;
+  abbreviation: string;
+  logoUrl: string;
+  color: string;          // uniforme principal (hex)
+  secondaryColor: string; // uniforme alternativo (hex)
+  squad: Player[];
+  strategy: Strategy;
+}
+```
+
+### Resultado (`MatchResult`)
+```typescript
+{
+  homeTeam, awayTeam: Team;
+  homeScore, awayScore: number;
+  homePossession, awayPossession: number;
+  homeStats, awayStats: { shots, shotsOnTarget, fouls, yellowCards, redCards };
+  wentToExtraTime?: boolean;
+  extraTimeHomeScore?, extraTimeAwayScore?: number;
+  penaltyResult?: { homeScore, awayScore, winner, kicks[] };
+  winner?: Team;
+}
+```
 
 ---
 
@@ -123,94 +263,15 @@ O servidor de desenvolvimento roda em `http://localhost:5173` e o preview em `ht
 
 ---
 
-## 🧠 Modelo de Dados
-
-### Jogador (`Player`)
-```typescript
-{
-  id: string;              // identificador único
-  name: string;            // nome
-  number: number;          // número da camisa
-  position: 'GK' | 'DEF' | 'MID' | 'FWD';
-  attributes: {
-    speed: number;         // 1-99
-    stamina: number;       // 1-99
-    passing: number;       // 1-99
-    finishing: number;     // 1-99
-    tackling: number;      // 1-99
-    dribbling: number;     // 1-99
-    vision: number;        // 1-99
-    positioning: number;   // 1-99
-  };
-  currentFatigue: number;  // 0-100 (0 = descansado)
-}
-```
-
-### Time (`Team`)
-```typescript
-{
-  id: string;
-  name: string;
-  abbreviation: string;
-  color: string;           // uniforme escolhido (hex)
-  secondaryColor: string;  // uniforme alternativo (hex)
-  squad: Player[];
-  strategy: Strategy;
-}
-```
-
-### Estratégia (`Strategy`)
-```typescript
-{
-  formation: '4-3-3' | '4-4-2' | '3-5-2' | '4-2-3-1' | '5-3-2';
-  mentality: 'possession' | 'counter-attack' | 'high-press' | 'defensive';
-  intensity: 'low' | 'medium' | 'high';
-}
-```
-
----
-
-## 🔢 Como a Probabilidade de Gol é Calculada
-
-O gol ocorre após **duas verificações consecutivas**:
-
-### 1. Embate Ataque vs Defesa
-```
-Ataque = Σ(atacantes: Velocidade + Drible) × modMentalidade × RNG(0.7~1.3)
-Defesa = Σ(defensores: Desarme + Posicionamento) + PosicionamentoGoleiro × RNG(0.7~1.3)
-```
-Se `Ataque > Defesa` → chance de finalização criada.
-
-### 2. Finalização vs Goleiro
-```
-Chute    = Finalização × modMentalidade × RNG(0.8~1.2)
-DefesaGK = PosicionamentoGoleiro × RNG(0.8~1.2)
-```
-- `Chute > DefesaGK` → **GOL** ⚽
-- `Chute ≤ 80% da DefesaGK` → **Na trave** 😱
-- `Chute ≤ 50% da DefesaGK` → **Defesa do goleiro** 🛡️
-- `Chute ≤ 50% e perdeu por muito` → **Para fora** ↗️
-
-### Modificadores por Mentalidade
-| Mentalidade | Passe | Visão | Veloc | Drible | Desarme | Posic | Finaliz | Cansaço |
-|------------|-------|-------|-------|--------|---------|-------|---------|---------|
-| Posse de Bola | +20% | +20% | -10% | +5% | -10% | -5% | 0% | 1.0x |
-| Contra-Ataque | -15% | 0% | +20% | +15% | -10% | -10% | +10% | 1.0x |
-| Pressão Alta | -5% | 0% | +5% | 0% | +15% | +15% | -5% | **1.3x** |
-| Retranca | -10% | -10% | -15% | -15% | +25% | +25% | -15% | 0.8x |
-
-### Cansaço por Intensidade (por ciclo de 5 min)
-- **Baixa**: +2 pts | **Média**: +4 pts | **Alta**: +7 pts
-- Jogadores com Stamina alta cansam menos. Cansaço reduz atributos em até 50%.
-
----
-
 ## 🏗 Decisões de Arquitetura
 
-- **Sem backend**: Toda a simulação roda no navegador (React + TypeScript). Os dados dos times são estáticos.
-- **Motor deterministicamente aleatório**: O RNG usa `Math.random()` para imprevisibilidade, mas a semente dos jogadores no campo usa hash determinístico para evitar flicker visual.
-- **Estado imutável**: Times são clonados (`cloneTeam`) antes de cada simulação para evitar mutação de estado.
-- **CSS transitions**: As movimentações no campo usam transições CSS (não requestAnimationFrame) para simplicidade e performance.
+- **Sem backend**: Toda a simulação roda no navegador. Os dados dos times são estáticos em TypeScript.
+- **Estado de torneio em memória React**: O estado da Liga/Copa fica em `useState` do App — objetos `Team` com elencos completos são grandes demais para localStorage.
+- **RNG injetável**: O motor recebe uma função `random` como parâmetro, facilitando testes determinísticos.
+- **Estado imutável**: Times são clonados (`cloneTeam`) antes de cada simulação para evitar mutação.
+- **Prorrogação em-place**: `resolveKnockoutTiebreak` modifica o `MatchState` atual (já em memória) sem recriar a partida. Guarda `knockoutResolvedRef` para garantir execução única.
+- **Build separado**: `vite.config.ts` (produção) e `vitest.config.ts` (testes) usam imports diferentes para evitar conflito de tipos Vite 8 × Vitest 3.
+- **CSS Modules** para componentes com escopo visual próprio (MatchStatsScreen, LeagueScreen, BracketScreen, TournamentSetupScreen). App.css para classes globais compartilhadas.
 
 ---
 
