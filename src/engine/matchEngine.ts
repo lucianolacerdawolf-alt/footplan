@@ -29,6 +29,7 @@ import {
   generatePenaltyKick, generatePenaltyWin,
   generateInjury, generateMatchPenalty, generateCornerGoal, generateMomentumShift,
 } from './commentary';
+import { generateTacticalComment } from './tacticalCommentary';
 import {
   CYCLE_MINUTES, FIRST_HALF_CYCLES, TOTAL_CYCLES, ET_HALF_CYCLE, ET_END_CYCLE,
   MAX_EVENTS_PER_CYCLE, ATK_CHANCE,
@@ -101,6 +102,16 @@ function simularBloco(
 
   if (includeKickoff) {
     state.events.push({ minute: 0, type: 'kickoff', description: generateKickoff(home.name, away.name), teamId: null });
+    // Tactical insight at kickoff
+    state.events.push({
+      minute: 1, type: 'possession',
+      description: generateTacticalComment(
+        home.name, away.name,
+        home.strategy.formation, away.strategy.formation,
+        home.strategy.mentality, away.strategy.mentality,
+        home.strategy.defensiveLine, away.strategy.defensiveLine,
+      ), teamId: null,
+    });
   }
   if (includeSecondHalfKickoff) {
     state.events.push({ minute: 45, type: 'kickoff', description: generateSecondHalf(), teamId: null });

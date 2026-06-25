@@ -1,7 +1,9 @@
 import styles from './MatchStatsScreen.module.css';
-import type { MatchResult } from '../engine/types';
+import type { MatchResult, Strategy } from '../engine/types';
 import type { MatchRecord } from '../hooks/useMatchHistory';
 import { calculateRatings, manOfTheMatch, goalScorers, cardEvents } from '../engine/playerRating';
+import { FORMATION_BONUS } from '../engine/matchConfig';
+import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 
 interface Props {
   result: MatchResult;
@@ -65,6 +67,27 @@ function ResultBadge({ result }: { result: MatchResult }) {
   if (result.homeScore > result.awayScore) return <span className={`${styles.badge} ${styles.badgeWin}`}>Vitória</span>;
   if (result.awayScore > result.homeScore) return <span className={`${styles.badge} ${styles.badgeLoss}`}>Derrota</span>;
   return <span className={`${styles.badge} ${styles.badgeDraw}`}>Empate</span>;
+}
+
+function renderTacticalEffect(s: Strategy): JSX.Element {
+  const fb = FORMATION_BONUS[s.formation];
+  const items: string[] = [];
+  items.push(s.formation);
+  if (fb.atk > 1) items.push(`Atk +${Math.round((fb.atk - 1) * 100)}%`);
+  if (fb.atk < 1) items.push(`Atk ${Math.round((fb.atk - 1) * 100)}%`);
+  if (fb.def > 1) items.push(`Def +${Math.round((fb.def - 1) * 100)}%`);
+  if (fb.def < 1) items.push(`Def ${Math.round((fb.def - 1) * 100)}%`);
+  items.push(MENTALITY_LABELS[s.mentality]);
+  items.push(INTENSITY_LABELS[s.intensity]);
+  items.push(DEFENSIVE_LINE_LABELS[s.defensiveLine]);
+  items.push(WIDTH_LABELS[s.width]);
+  return (
+    <div className={styles.tacticalItems}>
+      {items.map((item, i) => (
+        <span key={i} className={styles.tacticalItem}>{item}</span>
+      ))}
+    </div>
+  );
 }
 
 function ratingColor(r: number): string {
@@ -200,6 +223,21 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
         {(homeStats.redCards > 0 || awayStats.redCards > 0) && (
           <StatRow label="Vermelhos" home={homeStats.redCards} away={awayStats.redCards} homeColor={homeTeam.color} awayColor={awayTeam.color} icon="🟥" />
         )}
+      </div>
+
+      {/* Tactical breakdown */}
+      <div className={styles.tacticalSection}>
+        <div className={styles.tacticalTitle}>📋 Efeito Tático</div>
+        <div className={styles.tacticalGrid}>
+          <div className={styles.tacticalTeam}>
+            <span style={{ color: homeTeam.color, fontWeight: 800, fontSize: 13 }}>{homeTeam.abbreviation}</span>
+            {renderTacticalEffect(homeTeam.strategy)}
+          </div>
+          <div className={styles.tacticalTeam}>
+            <span style={{ color: awayTeam.color, fontWeight: 800, fontSize: 13 }}>{awayTeam.abbreviation}</span>
+            {renderTacticalEffect(awayTeam.strategy)}
+          </div>
+        </div>
       </div>
 
       {/* Actions */}

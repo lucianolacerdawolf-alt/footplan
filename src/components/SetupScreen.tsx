@@ -3,9 +3,37 @@ import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Wi
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
+import { FORMATION_BONUS } from '../engine/matchConfig';
 import { useH2H } from '../hooks/useH2H';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import TutorialOverlay from './TutorialOverlay';
+
+function getTacticalInsight(home: Team, away: Team): string {
+  const hf = home.strategy.formation;
+  const af = away.strategy.formation;
+  const hm = home.strategy.mentality;
+  const hb = FORMATION_BONUS[hf];
+  const ab = FORMATION_BONUS[af];
+
+  const insights: string[] = [];
+
+  if (hb.atk > 1.05) insights.push(`🔺 ${hf} é ofensivo`);
+  if (hb.def > 1.05) insights.push(`🔻 ${hf} é defensivo`);
+  if (hm === 'high-press') insights.push(`⚡ Pressão alta — muita intensidade`);
+  if (hm === 'counter-attack') insights.push(`🏃 Contra-ataque — velocidade nas costas`);
+  if (hm === 'defensive') insights.push(`🛡️ Retranca — difícil de furar`);
+  if (home.strategy.defensiveLine === 'high') insights.push(`⚠️ Linha alta — risco de bola nas costas`);
+  if (home.strategy.defensiveLine === 'low') insights.push(`🧱 Linha baixa — compacto atrás`);
+
+  // Opponent matchup
+  if (hb.atk > 1 && ab.def < 1) insights.push(`✅ Seu ataque enfrenta defesa frágil`);
+  if (hb.def > 1 && ab.atk > 1) insights.push(`⚠️ Defesa sólida contra ataque forte`);
+  if (af.formation === '5-3-2') insights.push(`ℹ️ ${away.name} usa 5 defensores`);
+  if (af.formation === '4-2-3-1' && hf !== '4-2-3-1') insights.push(`ℹ️ ${away.name} tem meio-campo criativo`);
+
+  if (insights.length === 0) return `Confronto equilibrado. Sua tática será testada.`;
+  return insights.slice(0, 2).join(' · ');
+}
 
 interface Props {
   homeTeam: Team;
@@ -311,6 +339,14 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           )}
         </details>
       )}
+
+      {/* ── Tactical Matchup Insight ── */}
+      <div className="morale-strip" style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)' }}>
+        <span className="morale-label" style={{ color: 'var(--accent)' }}>📋 Análise Tática</span>
+        <span className="morale-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-h)', flex: 1, textAlign: 'center' }}>
+          {getTacticalInsight(homeTeam, awayTeam)}
+        </span>
+      </div>
 
       <div className={lockAway ? 'setup-layout setup-layout-solo' : 'setup-layout'}>
         <div className="setup-left">
