@@ -49,7 +49,7 @@ function StandingsTable({ standings, teams, userTeamId }: { standings: Standing[
               <td className={styles.tdPos}>{pos}</td>
               <td className={styles.tdTeam}>
                 <img src={team.logoUrl} alt={team.abbreviation} className={styles.tableCrest} />
-                <span className={styles.teamName} style={{ color: team.color }}>{team.abbreviation}</span>
+                <span className={styles.teamName}>{team.name}</span>
               </td>
               <td className={styles.tdPts}>{s.points}</td>
               <td>{s.played}</td>

@@ -33,6 +33,7 @@ function App() {
   const [leagueState, setLeagueState] = useState<LeagueState | null>(null);
   const [bracketState, setBracketState] = useState<BracketState | null>(null);
   const [pendingLeagueFixture, setPendingLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
+  const [isLeagueEntry, setIsLeagueEntry] = useState(false);
   const [pendingBracketStage, setPendingBracketStage] = useState<PlayableStage | null>(null);
   const [pendingBracketIdx, setPendingBracketIdx] = useState<number>(0);
 
@@ -46,9 +47,14 @@ function App() {
   }, []);
 
   const handleStartMatch = useCallback((home: Team, away: Team) => {
+    if (isLeagueEntry) {
+      setIsLeagueEntry(false);
+      setScreen('league');
+      return;
+    }
     setHomeTeam(home); setAwayTeam(away);
     setScreen('match');
-  }, []);
+  }, [isLeagueEntry]);
 
   const handleViewStats = useCallback((result: MatchResult) => {
     setLastResult(result);
@@ -60,8 +66,14 @@ function App() {
     const all = premierLeagueTeams.map(cloneTeam);
     const rest = all.filter(t => t.id !== userTeam.id);
     const teams = [userTeam, ...rest];
-    setLeagueState({ teams, userTeamId: userTeam.id, fixtures: generateLeagueSchedule(teams), currentRound: 0, phase: 'playing' });
-    setScreen('league');
+    const fixtures = generateLeagueSchedule(teams);
+    setLeagueState({ teams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' });
+    const firstFixture = fixtures[0].find(f => f.homeTeamId === userTeam.id || f.awayTeamId === userTeam.id)!;
+    setHomeTeam(cloneTeam(teams.find(t => t.id === firstFixture.homeTeamId)!));
+    setAwayTeam(cloneTeam(teams.find(t => t.id === firstFixture.awayTeamId)!));
+    setMatchContext('league'); setIsKnockout(false);
+    setIsLeagueEntry(true);
+    setScreen('setup');
   }, []);
 
   const handleStartBracket = useCallback((userTeam: Team) => {
