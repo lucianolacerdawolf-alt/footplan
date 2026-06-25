@@ -313,19 +313,52 @@ function App() {
   }, [matchContext, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats]);
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const [resumePrompt, setResumePrompt] = useState<'league' | 'bracket' | null>(null);
+
   const goHome = useCallback(() => {
-    setLeagueState(null);
-    setBracketState(null);
     setScreen('home');
   }, []);
+
+  const handleLeagueFromHome = useCallback(() => {
+    if (leagueState && leagueState.phase !== 'done') {
+      setResumePrompt('league');
+    } else {
+      setTournamentMode('league');
+      setScreen('tournament-setup');
+    }
+  }, [leagueState]);
+
+  const handleCupFromHome = useCallback(() => {
+    if (bracketState && bracketState.stage !== 'champion') {
+      setResumePrompt('bracket');
+    } else {
+      setTournamentMode('bracket');
+      setScreen('tournament-setup');
+    }
+  }, [bracketState]);
+
+  const handleResumeContinue = useCallback(() => {
+    const target = resumePrompt;
+    setResumePrompt(null);
+    if (target === 'league') setScreen('league');
+    else if (target === 'bracket') setScreen('bracket');
+  }, [resumePrompt]);
+
+  const handleResumeNew = useCallback(() => {
+    const target = resumePrompt;
+    setResumePrompt(null);
+    if (target === 'league') { setLeagueState(null); setTournamentMode('league'); }
+    else if (target === 'bracket') { setBracketState(null); setTournamentMode('bracket'); }
+    setScreen('tournament-setup');
+  }, [resumePrompt, setLeagueState, setBracketState]);
 
   let content: React.ReactNode;
   if (screen === 'home') {
     content = (
       <HomeScreen
         onSingleMatch={() => setScreen('select')}
-        onLeague={() => { setTournamentMode('league'); setScreen('tournament-setup'); }}
-        onCup={() => { setTournamentMode('bracket'); setScreen('tournament-setup'); }}
+        onLeague={handleLeagueFromHome}
+        onCup={handleCupFromHome}
       />
     );
   } else if (screen === 'select') {
@@ -402,8 +435,8 @@ function App() {
     content = (
       <HomeScreen
         onSingleMatch={() => setScreen('select')}
-        onLeague={() => { setTournamentMode('league'); setScreen('tournament-setup'); }}
-        onCup={() => { setTournamentMode('bracket'); setScreen('tournament-setup'); }}
+        onLeague={handleLeagueFromHome}
+        onCup={handleCupFromHome}
       />
     );
   }
@@ -412,6 +445,34 @@ function App() {
     <>
       <div className="screen-fade" key={screen}>{content}</div>
       <Toast message={toastMsg} onDismiss={() => setToastMsg(null)} />
+      {resumePrompt && (
+        <div className="resume-overlay" onClick={() => setResumePrompt(null)}>
+          <div className="resume-modal" onClick={e => e.stopPropagation()}>
+            <div className="resume-icon">{resumePrompt === 'league' ? '📅' : '🏆'}</div>
+            <div className="resume-title">
+              {resumePrompt === 'league' ? 'Premier League em andamento' : 'FA Cup em andamento'}
+            </div>
+            <div className="resume-body">
+              {resumePrompt === 'league' && leagueState
+                ? `Você está na rodada ${leagueState.currentRound + 1} de ${leagueState.fixtures.length}.`
+                : resumePrompt === 'bracket' && bracketState
+                ? `Você está em ${bracketState.stage === 'roundOf16' ? 'Oitavas' : bracketState.stage === 'quarterfinals' ? 'Quartas' : bracketState.stage === 'semifinals' ? 'Semifinais' : 'Final'}.`
+                : ''}
+            </div>
+            <div className="resume-actions">
+              <button className="resume-btn-primary" onClick={handleResumeContinue}>
+                Continuar de onde parei
+              </button>
+              <button className="resume-btn-secondary" onClick={handleResumeNew}>
+                Nova temporada
+              </button>
+              <button className="resume-btn-cancel" onClick={() => setResumePrompt(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
