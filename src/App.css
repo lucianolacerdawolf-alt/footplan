@@ -196,6 +196,10 @@
   background: var(--accent-bg); border: 1px solid var(--accent);
   border-radius: 4px; margin: -1px;
 }
+.squad-row.starter.selected {
+  background: var(--accent-bg); border: 1px solid var(--accent);
+  border-radius: 4px; margin: -1px;
+}
 .squad-row.bench.clickable:hover { opacity: 0.9; }
 .sq-num { font-weight: 700; min-width: 22px; color: var(--accent); font-size: 12px; }
 .sq-name { flex: 1; color: var(--text-h); font-weight: 500; font-size: 12px; }
@@ -333,6 +337,7 @@
 .ht-swap-targets { margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--border); }
 .ht-squad-row.clickable { opacity: 0.8; }
 .ht-squad-row.clickable:hover { opacity: 1; }
+.ht-sub-group-label { font-size: 9px; text-transform: uppercase; opacity: 0.35; padding: 3px 5px 0; letter-spacing: 0.5px; }
 
 /* =============================================================================
    PITCH
@@ -416,6 +421,20 @@
 .event-icon { font-size: 12px; }
 .event-text { flex: 1; color: var(--text-h); }
 .feed-empty { text-align: center; padding: 18px 14px; opacity: 0.35; font-style: italic; font-size: 12px; }
+.feed-hidden { text-align: center; padding: 6px 14px; opacity: 0.4; font-size: 11px; font-style: italic; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+
+.color-conflict-warning {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: rgba(251, 191, 36, 0.12); border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 8px; padding: 8px 14px; margin: 0 auto 10px; max-width: 480px;
+  font-size: 12px; color: #fbbf24;
+}
+.conflict-fix-btn {
+  background: rgba(251, 191, 36, 0.2); border: 1px solid rgba(251, 191, 36, 0.5);
+  color: #fbbf24; border-radius: 5px; padding: 4px 10px; font-size: 11px;
+  cursor: pointer; white-space: nowrap;
+}
+.conflict-fix-btn:hover { background: rgba(251, 191, 36, 0.35); }
 
 /* =============================================================================
    SHARED

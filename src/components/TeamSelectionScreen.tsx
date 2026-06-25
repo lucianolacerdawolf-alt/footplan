@@ -1,7 +1,8 @@
-import { useState } from 'react';
 import type { Team } from '../engine/types';
 import { premierLeagueTeams } from '../data/premierLeague';
 import { cloneTeam } from '../engine/mockData';
+import { playerOvr } from '../utils/playerOvr';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 export type GameMode = 'cpu' | 'player';
 
@@ -12,20 +13,37 @@ interface Props {
 type Uniform = 'home' | 'away';
 
 export default function TeamSelectionScreen({ onConfirm }: Props) {
-  const [homeId, setHomeId] = useState<string | null>(null);
-  const [awayId, setAwayId] = useState<string | null>(null);
-  const [homeUniform, setHomeUniform] = useState<Uniform>('home');
-  const [awayUniform, setAwayUniform] = useState<Uniform>('away');
-  const [mode, setMode] = useState<GameMode>('cpu');
+  const [homeId, setHomeId] = useLocalStorage<string | null>('fp:homeId', null);
+  const [awayId, setAwayId] = useLocalStorage<string | null>('fp:awayId', null);
+  const [homeUniform, setHomeUniform] = useLocalStorage<Uniform>('fp:homeUniform', 'home');
+  const [awayUniform, setAwayUniform] = useLocalStorage<Uniform>('fp:awayUniform', 'away');
+  const [mode, setMode] = useLocalStorage<GameMode>('fp:mode', 'cpu');
 
   const homeTeam = premierLeagueTeams.find(t => t.id === homeId) ?? null;
   const awayTeam = premierLeagueTeams.find(t => t.id === awayId) ?? null;
+
+  const displayColor = (team: Team, uniform: Uniform) =>
+    uniform === 'home' ? team.color : team.secondaryColor;
 
   const handleTeamClick = (teamId: string) => {
     if (homeId === teamId) { setHomeId(null); return; }
     if (awayId === teamId) { setAwayId(null); return; }
     if (!homeId) { setHomeId(teamId); setHomeUniform('home'); return; }
     if (!awayId && teamId !== homeId) { setAwayId(teamId); setAwayUniform('away'); return; }
+  };
+
+  const colorsConflict = !!(homeTeam && awayTeam &&
+    displayColor(homeTeam, homeUniform).toLowerCase() === displayColor(awayTeam, awayUniform).toLowerCase());
+
+  const fixColorConflict = () => {
+    if (!homeTeam || !awayTeam) return;
+    // Tenta trocar o kit do visitante; se ainda conflitar, troca o mandante
+    const awayAlt: Uniform = awayUniform === 'home' ? 'away' : 'home';
+    if (displayColor(homeTeam, homeUniform).toLowerCase() !== displayColor(awayTeam, awayAlt).toLowerCase()) {
+      setAwayUniform(awayAlt);
+    } else {
+      setHomeUniform(homeUniform === 'home' ? 'away' : 'home');
+    }
   };
 
   const handleConfirm = () => {
@@ -43,16 +61,8 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
 
   const getAvgOvr = (team: Team) => {
     const starters = team.squad.slice(0, 11);
-    const sum = starters.reduce((acc, p) =>
-      acc + (p.attributes.speed + p.attributes.stamina + p.attributes.passing +
-        p.attributes.finishing + p.attributes.tackling + p.attributes.dribbling +
-        p.attributes.vision + p.attributes.positioning) / 8, 0
-    );
-    return Math.round(sum / starters.length);
+    return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
   };
-
-  const displayColor = (team: Team, uniform: Uniform) =>
-    uniform === 'home' ? team.color : team.secondaryColor;
 
   const renderSlot = (
     team: Team | null,
@@ -113,6 +123,15 @@ export default function TeamSelectionScreen({ onConfirm }: Props) {
         <div className="select-vs">VS</div>
         {renderSlot(awayTeam, awayUniform, setAwayUniform, 'away', 'FORA')}
       </div>
+
+      {colorsConflict && (
+        <div className="color-conflict-warning">
+          <span>Ambos os times estão com a mesma cor!</span>
+          <button className="conflict-fix-btn" onClick={fixColorConflict}>
+            Corrigir kit automaticamente
+          </button>
+        </div>
+      )}
 
       <div className="mode-selector">
         <span className="mode-label">Modo:</span>
