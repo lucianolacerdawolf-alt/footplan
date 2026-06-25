@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Team } from '../engine/types';
 import type { BracketState, BracketMatch } from '../engine/tournament';
 import styles from './BracketScreen.module.css';
@@ -30,13 +31,14 @@ function matchResultText(m: BracketMatch): string {
 }
 
 function MatchCard({
-  match, teams, userTeamId, onPlay, onSimulate,
+  match, teams, userTeamId, onPlay, onSimulate, simulating,
 }: {
   match: BracketMatch;
   teams: Team[];
   userTeamId: string;
   onPlay: () => void;
   onSimulate: () => void;
+  simulating: boolean;
 }) {
   const home = teamById(teams, match.homeTeamId);
   const away = teamById(teams, match.awayTeamId);
@@ -65,7 +67,7 @@ function MatchCard({
         <div className={styles.matchActions}>
           {isUserMatch
             ? <button className={styles.playBtn} onClick={onPlay}>Jogar</button>
-            : <button className={styles.simBtn} onClick={onSimulate}>Simular</button>}
+            : <button className={styles.simBtn} onClick={onSimulate} disabled={simulating}>{simulating ? 'Simulando…' : 'Simular'}</button>}
         </div>
       )}
       {match.played && winner && (
@@ -79,6 +81,11 @@ function MatchCard({
 
 export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onBack }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
+  const [simulating, setSimulating] = useState(false);
+  const runSim = (stageKey: PlayableStage, i: number) => {
+    setSimulating(true);
+    setTimeout(() => { onSimulateMatch(stageKey, i); setSimulating(false); }, 200);
+  };
 
   if (stage === 'champion' && championId) {
     const champion = teamById(teams, championId)!;
@@ -128,12 +135,13 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onB
           match={m}
           teams={teams}
           userTeamId={userTeamId}
+          simulating={simulating}
           onPlay={() => {
             const home = teamById(teams, m.homeTeamId)!;
             const away = teamById(teams, m.awayTeamId)!;
             onPlayMatch(m, home, away);
           }}
-          onSimulate={() => onSimulateMatch(stageKey, i)}
+          onSimulate={() => runSim(stageKey, i)}
         />
       ))}
     </div>

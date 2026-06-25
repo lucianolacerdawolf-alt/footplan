@@ -3,6 +3,7 @@ import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Wi
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
+import { useH2H } from '../hooks/useH2H';
 
 interface Props {
   homeTeam: Team;
@@ -53,6 +54,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   const [homeSelected, setHomeSelected] = useState<string | null>(null);
   const [awaySelected, setAwaySelected] = useState<string | null>(null);
+  const { get: getH2H } = useH2H();
+  const h2h = getH2H(initialHome.id, initialAway.id);
 
   const updateHome = useCallback((s: Strategy) => {
     if (s.formation !== homeTeam.strategy.formation) {
@@ -240,6 +243,21 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           Iniciar Partida →
         </button>
       </div>
+
+      {h2h && (h2h.wins + h2h.draws + h2h.losses) > 0 && (
+        <div className="h2h-strip">
+          <span className="h2h-label">Histórico {initialHome.abbreviation} vs {initialAway.abbreviation}</span>
+          <span className="h2h-record">
+            <span className="h2h-w">{h2h.wins}V</span> · <span className="h2h-d">{h2h.draws}E</span> · <span className="h2h-l">{h2h.losses}D</span>
+          </span>
+          <span className="h2h-label">Gols {h2h.gf}–{h2h.ga}</span>
+          {h2h.last.length > 0 && (
+            <span className="h2h-form">
+              {h2h.last.map((r, i) => <span key={i} className={`h2h-pill ${r}`}>{r}</span>)}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className={lockAway ? 'setup-layout setup-layout-solo' : 'setup-layout'}>
         <div className="setup-left">

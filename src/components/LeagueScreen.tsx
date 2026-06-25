@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, LeagueFixture, Standing } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
@@ -70,6 +71,11 @@ function StandingsTable({ standings, teams, userTeamId }: { standings: Standing[
 export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onBack }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
   const standings = computeStandings(teams, fixtures);
+  const [simulating, setSimulating] = useState(false);
+  const runSim = (fn: () => void) => {
+    setSimulating(true);
+    setTimeout(() => { fn(); setSimulating(false); }, 200);
+  };
 
   if (phase === 'done') {
     const champion = teamById(teams, standings[0].teamId);
@@ -148,8 +154,8 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
                   >
                     Jogar
                   </button>
-                  <button className={styles.simOwnBtn} onClick={onSimulateUserMatch}>
-                    Simular
+                  <button className={styles.simOwnBtn} onClick={() => runSim(onSimulateUserMatch)} disabled={simulating}>
+                    {simulating ? 'Simulando…' : 'Simular'}
                   </button>
                 </div>
               )}
@@ -161,8 +167,8 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
             <div className={styles.sectionLabelRow}>
               <span className={styles.sectionLabel}>Outros Jogos</span>
               {!othersComplete && (
-                <button className={styles.simAllBtn} onClick={() => onSimulateRound(currentRound)}>
-                  Simular Todos
+                <button className={styles.simAllBtn} onClick={() => runSim(() => onSimulateRound(currentRound))} disabled={simulating}>
+                  {simulating ? 'Simulando…' : 'Simular Todos'}
                 </button>
               )}
             </div>

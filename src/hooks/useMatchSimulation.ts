@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Team, MatchResult, MatchEvent } from '../engine/types';
 import { simularPrimeiroTempo, simularSegundoTempo, type MatchState } from '../engine/matchEngine';
 import { cloneTeam } from '../utils/teamUtils';
+import { sfx } from '../utils/audio';
 
 const HALF_DURATION_MS = 120000;
 const CLOCK_TICK_MS = 50;
@@ -92,6 +93,7 @@ export function useMatchSimulation(initialHomeId: string) {
           setReplayEvents(prev => [...prev, evt]);
           if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
           setClockSeconds(maxSec);
+          sfx.whistleEnd();
           onDone();
           return;
         }
@@ -99,6 +101,7 @@ export function useMatchSimulation(initialHomeId: string) {
         if (evt.type === 'goal') {
           if (evt.teamId === initialHomeId) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
           else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
+          sfx.goal();
         }
 
         if (evt.type === 'redCard' && evt.playerId) {
@@ -132,6 +135,7 @@ export function useMatchSimulation(initialHomeId: string) {
     setClockSeconds(0);
     setFatigueMap({});
     setExpelledIds([]);
+    sfx.whistleStart();
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;

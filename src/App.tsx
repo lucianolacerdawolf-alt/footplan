@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { TournamentMode } from './components/TournamentSetupScreen';
@@ -14,6 +14,8 @@ import TournamentSetupScreen from './components/TournamentSetupScreen';
 import LeagueScreen from './components/LeagueScreen';
 import BracketScreen from './components/BracketScreen';
 import { useMatchHistory } from './hooks/useMatchHistory';
+import { useH2H } from './hooks/useH2H';
+import Toast from './components/Toast';
 import { premierLeagueTeams } from './data/premierLeague';
 import './App.css';
 
@@ -48,6 +50,10 @@ function App() {
   const [pendingBracketIdx, setPendingBracketIdx] = useState<number>(0);
 
   const { history, clearHistory } = useMatchHistory();
+  const { record: recordH2H } = useH2H();
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const didMountLeague = useRef(false);
+  const didMountBracket = useRef(false);
 
   // ── Persistência localStorage ─────────────────────────────────────────────
   useEffect(() => {
@@ -56,6 +62,8 @@ function App() {
     } else {
       localStorage.removeItem('fp:leagueState');
     }
+    if (didMountLeague.current && leagueState) setToastMsg('✓ Progresso salvo');
+    didMountLeague.current = true;
   }, [leagueState]);
 
   useEffect(() => {
@@ -64,6 +72,8 @@ function App() {
     } else {
       localStorage.removeItem('fp:bracketState');
     }
+    if (didMountBracket.current && bracketState) setToastMsg('✓ Progresso salvo');
+    didMountBracket.current = true;
   }, [bracketState]);
 
   // ── Partida única ─────────────────────────────────────────────────────────
@@ -93,9 +103,10 @@ function App() {
   }, [isTournamentEntry, matchContext, leagueState]);
 
   const handleViewStats = useCallback((result: MatchResult) => {
+    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     setLastResult(result);
     setScreen('stats');
-  }, []);
+  }, [recordH2H]);
 
   // ── Torneio: setup ────────────────────────────────────────────────────────
   const handleStartLeague = useCallback((userTeam: Team) => {
@@ -206,9 +217,10 @@ function App() {
       return { ...t, morale: Math.max(-10, Math.min(10, current + moraleDelta)) };
     });
     setLeagueState({ ...leagueState, fixtures: newFixtures, teams: newTeams });
+    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     setLastResult(result);
     setScreen('stats');
-  }, [leagueState, pendingLeagueFixture]);
+  }, [leagueState, pendingLeagueFixture, recordH2H]);
 
   // ── Copa ──────────────────────────────────────────────────────────────────
   const handlePlayBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
@@ -266,9 +278,10 @@ function App() {
     else if (pendingBracketStage === 'semifinals') { const sf = [...s.semiFinals]; sf[pendingBracketIdx] = updated; s = { ...s, semiFinals: sf }; }
     else { s = { ...s, final: updated }; }
     setBracketState(advanceBracket(s));
+    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     setLastResult(result);
     setScreen('stats');
-  }, [bracketState, pendingBracketStage, pendingBracketIdx]);
+  }, [bracketState, pendingBracketStage, pendingBracketIdx, recordH2H]);
 
   // ── Roteamento pós-stats ──────────────────────────────────────────────────
   const handleContinueTournament = useCallback(() => {
@@ -288,37 +301,21 @@ function App() {
     setScreen('home');
   }, []);
 
+  let content: React.ReactNode;
   if (screen === 'home') {
-    return (
+    content = (
       <HomeScreen
         onSingleMatch={() => setScreen('select')}
         onLeague={() => { setTournamentMode('league'); setScreen('tournament-setup'); }}
         onCup={() => { setTournamentMode('bracket'); setScreen('tournament-setup'); }}
       />
     );
-  }
-
-  if (screen === 'select') {
-    return (
-      <TeamSelectionScreen
-        onConfirm={handleTeamsSelected}
-        onTournament={() => setScreen('home')}
-      />
-    );
-  }
-
-  if (screen === 'tournament-setup') {
-    return (
-      <TournamentSetupScreen
-        mode={tournamentMode}
-        onBack={() => setScreen('home')}
-        onStart={handleTournamentStart}
-      />
-    );
-  }
-
-  if (screen === 'league' && leagueState) {
-    return (
+  } else if (screen === 'select') {
+    content = <TeamSelectionScreen onConfirm={handleTeamsSelected} onTournament={() => setScreen('home')} />;
+  } else if (screen === 'tournament-setup') {
+    content = <TournamentSetupScreen mode={tournamentMode} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
+  } else if (screen === 'league' && leagueState) {
+    content = (
       <LeagueScreen
         state={leagueState}
         onPlayMatch={handlePlayLeagueMatch}
@@ -328,10 +325,8 @@ function App() {
         onBack={goHome}
       />
     );
-  }
-
-  if (screen === 'bracket' && bracketState) {
-    return (
+  } else if (screen === 'bracket' && bracketState) {
+    content = (
       <BracketScreen
         state={bracketState}
         onPlayMatch={(match, home, away) => {
@@ -346,10 +341,8 @@ function App() {
         onBack={goHome}
       />
     );
-  }
-
-  if (screen === 'setup' && homeTeam && awayTeam) {
-    return (
+  } else if (screen === 'setup' && homeTeam && awayTeam) {
+    content = (
       <SetupScreen
         homeTeam={homeTeam}
         awayTeam={awayTeam}
@@ -363,10 +356,8 @@ function App() {
         lockAway={matchContext !== 'regular' || gameMode === 'cpu'}
       />
     );
-  }
-
-  if (screen === 'match' && homeTeam && awayTeam) {
-    return (
+  } else if (screen === 'match' && homeTeam && awayTeam) {
+    content = (
       <MatchScreen
         homeTeam={homeTeam}
         awayTeam={awayTeam}
@@ -375,11 +366,9 @@ function App() {
         isKnockout={isKnockout}
       />
     );
-  }
-
-  if (screen === 'stats' && lastResult) {
+  } else if (screen === 'stats' && lastResult) {
     const isTournament = matchContext !== 'regular';
-    return (
+    content = (
       <MatchStatsScreen
         result={lastResult}
         history={isTournament ? [] : history}
@@ -389,9 +378,22 @@ function App() {
         continueLabel={matchContext === 'league' ? 'Continuar Premier League' : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
       />
     );
+  } else {
+    content = (
+      <HomeScreen
+        onSingleMatch={() => setScreen('select')}
+        onLeague={() => { setTournamentMode('league'); setScreen('tournament-setup'); }}
+        onCup={() => { setTournamentMode('bracket'); setScreen('tournament-setup'); }}
+      />
+    );
   }
 
-  return <HomeScreen onSingleMatch={() => setScreen('select')} onLeague={() => { setTournamentMode('league'); setScreen('tournament-setup'); }} onCup={() => { setTournamentMode('bracket'); setScreen('tournament-setup'); }} />;
+  return (
+    <>
+      <div className="screen-fade" key={screen}>{content}</div>
+      <Toast message={toastMsg} onDismiss={() => setToastMsg(null)} />
+    </>
+  );
 }
 
 export default App;
