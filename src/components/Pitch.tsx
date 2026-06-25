@@ -1,6 +1,11 @@
-import { useMemo } from 'react';
-import { forceSimulation, forceCollide, forceX, forceY } from 'd3-force';
-import type { Team, MatchEvent, Formation } from '../engine/types';
+import { useMemo, useEffect, useRef } from 'react';
+import type { Team, MatchEvent } from '../engine/types';
+import {
+  buildBaseCoords,
+  buildSteeringPlayers,
+  updatePlayers,
+  type SteeringPlayer,
+} from '../engine/steering';
 
 interface Props {
   homeTeam: Team;
@@ -15,6 +20,12 @@ interface Props {
   halftime: {
     homeScore: number; awayScore: number;
   } | null;
+  fatigueMap?: Record<string, number>;
+}
+
+interface PlayerCoord {
+  id: string; name: string; number: number;
+  x: number; y: number; position: string; team: 'home' | 'away';
 }
 
 // ---------------------------------------------------------------------------
@@ -27,126 +38,8 @@ function seed(str: string): number {
 }
 
 // ---------------------------------------------------------------------------
-// Posições base (viewBox 120x70, horizontal)
+// Portador da bola
 // ---------------------------------------------------------------------------
-const Y_SLOTS: Record<number, number[]> = {
-  1: [35], 2: [15, 55], 3: [9, 35, 61], 4: [5, 20, 50, 65], 5: [3, 15, 35, 55, 67],
-};
-const X_ZONES = {
-  home: { GK: 6, DEF: 23, MID: 46, FWD: 68 },
-  away: { GK: 114, DEF: 97, MID: 74, FWD: 52 },
-};
-const FORMATION: Record<Formation, Record<string, number>> = {
-  '4-3-3': { DEF: 4, MID: 3, FWD: 3 },
-  '4-4-2': { DEF: 4, MID: 4, FWD: 2 },
-  '3-5-2': { DEF: 3, MID: 5, FWD: 2 },
-  '4-2-3-1': { DEF: 4, MID: 5, FWD: 1 },
-  '5-3-2': { DEF: 5, MID: 3, FWD: 2 },
-};
-
-// ---------------------------------------------------------------------------
-// Coordenadas base (estáveis, sem offset tático)
-// ---------------------------------------------------------------------------
-interface PlayerCoord {
-  id: string; name: string; number: number;
-  x: number; y: number; position: string; team: 'home' | 'away';
-}
-
-function baseCoords(team: Team, side: 'home' | 'away'): PlayerCoord[] {
-  const counts = FORMATION[team.strategy.formation] ?? FORMATION['4-4-2'];
-  const xz = X_ZONES[side];
-  const coords: PlayerCoord[] = [];
-
-  for (const pos of ['GK', 'DEF', 'MID', 'FWD'] as const) {
-    const players = team.squad.filter(p => p.position === pos);
-    const count = counts[pos] ?? players.length;
-    const slots = Y_SLOTS[count] ?? [35];
-
-    players.slice(0, count).forEach((p, i) => {
-      const hx = seed(p.id + 'x');
-      const hy = seed(p.id + 'y');
-      coords.push({
-        id: p.id, name: p.name, number: p.number,
-        x: xz[pos] + (hx - 0.5) * 3,
-        y: (slots[i] ?? 35) + (hy - 0.5) * 4,
-        position: p.position, team: side,
-      });
-    });
-  }
-  return coords;
-}
-
-// ---------------------------------------------------------------------------
-// =============================================================================
-// Movimentação tática — BLOCO (linhas movem juntas, não proporcionais)
-// =============================================================================
-type Shift = { dx: number; dy: number; angle: number };
-
-function tacticalShift(
-  event: MatchEvent | null,
-  team: Team,
-  player: PlayerCoord
-): Shift {
-  if (!event) return { dx: 0, dy: 0, angle: 0 };
-
-  const isHome = player.team === 'home';
-  const eventTeam = event.teamId;
-  const iHaveBall = eventTeam !== null && (
-    (isHome && eventTeam === team.id) || (!isHome && eventTeam !== team.id)
-  );
-
-  // Modificadores visuais da estratégia
-  const dlMod = team.strategy.defensiveLine === 'high' ? 0.8 : team.strategy.defensiveLine === 'low' ? -0.8 : 0;
-  const wMod = team.strategy.width === 'wide' ? 1.3 : team.strategy.width === 'narrow' ? 0.7 : 1.0;
-
-  const s = seed(event.description + player.id);
-  const jx = (s - 0.5) * 0.6;
-  const jy = (seed(event.description + 'y' + player.id) - 0.5) * 1.2;
-
-  const posIdx = player.position === 'GK' ? 0 : player.position === 'DEF' ? 1 : player.position === 'MID' ? 2 : 3;
-
-  let baseDx = 0, lineDelta = 0, baseDy = 0;
-  const dir = iHaveBall ? 1 : -1;
-
-  switch (event.type) {
-    case 'possession':
-      baseDx = iHaveBall ? 2.5 : 2; lineDelta = 0.6; baseDy = iHaveBall ? 3 : 1.5;
-      break;
-    case 'attack':
-      baseDx = iHaveBall ? 5 : 3.5; lineDelta = 1.0; baseDy = iHaveBall ? 2 : 1;
-      break;
-    case 'miss':
-    case 'post':
-      baseDx = iHaveBall ? 3 : 2; lineDelta = 0.5; baseDy = iHaveBall ? 1.5 : 1;
-      break;
-    case 'goal':
-      baseDx = iHaveBall ? 6 : 2; lineDelta = 1.5; baseDy = iHaveBall ? 4 : 2;
-      break;
-    case 'save':
-      baseDx = iHaveBall ? 2 : 4; lineDelta = 0.5; baseDy = iHaveBall ? 1 : 2.5;
-      break;
-    default:
-      baseDx = 0.5; lineDelta = 0.2; baseDy = 0.5;
-  }
-
-  // Linha defensiva: alta empurra time pra frente, baixa recua
-  const dlOffset = dlMod * (iHaveBall ? 1 : -1) * (1 + posIdx * 0.3);
-  const shiftX = (baseDx + posIdx * lineDelta + dlOffset) * dir + jx;
-
-  // Amplitude: wide = mais abertura lateral, narrow = compacto
-  const yOff = player.y - 35;
-  const ySign = yOff > 0 ? 1 : -1;
-  const yFactor = Math.min(Math.abs(yOff) / 25, 1);
-  const shiftY = baseDy * yFactor * ySign * wMod * (0.4 + s * 0.6) + jy;
-
-  const angle = dir * 0.5 + jx * 0.5;
-
-  return { dx: shiftX, dy: shiftY, angle };
-}
-
-// =============================================================================
-// Portador da bola — quem está com ela agora
-// =============================================================================
 function getBallCarrier(
   event: MatchEvent | null,
   homeTeamId: string,
@@ -158,18 +51,16 @@ function getBallCarrier(
     const isHome = p.team === 'home';
     return event.teamId === homeTeamId ? isHome : !isHome;
   });
-
   if (teamPlayers.length === 0) return null;
 
   const s = seed(event.description + 'carrier');
 
   switch (event.type) {
-    case 'possession':
-      // Um meia ou atacante conduz
+    case 'possession': {
       const mids = teamPlayers.filter(p => p.position === 'MID' || p.position === 'FWD');
       return mids.length > 0 ? mids[Math.floor(s * mids.length)] : teamPlayers[0];
-    case 'attack':
-      // O atacante mais avançado (maior x para home, menor para away)
+    }
+    case 'attack': {
       const fwds = teamPlayers.filter(p => p.position === 'FWD');
       if (fwds.length > 0) {
         const isHome = teamPlayers[0].team === 'home';
@@ -178,10 +69,10 @@ function getBallCarrier(
           : fwds.reduce((a, b) => a.x < b.x ? a : b);
       }
       return teamPlayers[Math.floor(s * teamPlayers.length)];
+    }
     case 'goal':
     case 'miss':
     case 'post': {
-      // Chute: o atacante mais avançado chutou
       const fwds2 = teamPlayers.filter(p => p.position === 'FWD');
       if (fwds2.length > 0) {
         const isHome2 = teamPlayers[0].team === 'home';
@@ -191,26 +82,25 @@ function getBallCarrier(
       }
       return teamPlayers[0];
     }
-    case 'save':
-      // Goleiro do time que defendeu
+    case 'save': {
       const gk = allPlayers.find(p => p.position === 'GK' && (
         (p.team === 'home' && event.teamId !== homeTeamId) ||
         (p.team === 'away' && event.teamId === homeTeamId)
       ));
       return gk ?? null;
+    }
     default:
       return teamPlayers[Math.floor(s * teamPlayers.length)];
   }
 }
 
-// =============================================================================
-// Posição da bola — deriva do portador
-// =============================================================================
-function ballFromCarrier(
+// ---------------------------------------------------------------------------
+// Posição da bola a partir do portador
+// ---------------------------------------------------------------------------
+function ballPos(
   event: MatchEvent | null,
-  carrier: PlayerCoord | null,
-  carrierX: number,  // posição final do portador (após d3-force)
-  carrierY: number,
+  carrierId: string | null,
+  players: Map<string, SteeringPlayer>,
   homeTeamId: string,
   eventSeed: number
 ): { x: number; y: number; visible: boolean } {
@@ -219,41 +109,35 @@ function ballFromCarrier(
   const r = eventSeed;
   const isHome = event.teamId === homeTeamId;
 
+  const carrier = carrierId ? players.get(carrierId) : null;
+  const cx = carrier?.x ?? 60;
+  const cy = carrier?.y ?? 35;
+
   switch (event.type) {
     case 'kickoff':
       return { x: 60, y: 35, visible: true };
-
     case 'possession':
     case 'attack':
-      // Bola nos pés do portador, levemente à frente
       if (carrier) {
         const dir = isHome ? 1.5 : -1.5;
-        return { x: carrierX + dir + (r - 0.5), y: carrierY + (r - 0.5) * 0.8, visible: true };
+        return { x: cx + dir + (r - 0.5), y: cy + (r - 0.5) * 0.8, visible: true };
       }
       return { x: 60, y: 35, visible: true };
-
     case 'goal':
     case 'miss':
     case 'post':
-      // Chute: bola SAI do portador em direção ao gol
       if (carrier) {
         const shotDir = isHome ? 1 : -1;
-        // Posição do chute = entre o portador e o gol (intermediária/área)
-        const shotX = carrierX + shotDir * (6 + r * 10); // distância do chute
-        const shotY = carrierY + (r - 0.5) * 6;
-        const clampedX = isHome ? Math.min(shotX, 114) : Math.max(shotX, 6);
-        return { x: clampedX, y: Math.max(8, Math.min(62, shotY)), visible: true };
+        const sx = cx + shotDir * (6 + r * 10);
+        const sy = cy + (r - 0.5) * 6;
+        return { x: isHome ? Math.min(sx, 114) : Math.max(sx, 6), y: Math.max(8, Math.min(62, sy)), visible: true };
       }
       return { x: isHome ? 100 : 20, y: 35, visible: true };
-
     case 'save':
-      // Perto do goleiro
       return { x: isHome ? 108 : 12, y: 33 + (r - 0.5) * 8, visible: true };
-
     case 'halftime':
     case 'fulltime':
       return { x: 60, y: 35, visible: false };
-
     default:
       return { x: 60, y: 35, visible: true };
   }
@@ -262,9 +146,27 @@ function ballFromCarrier(
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result, halftime }: Props) {
-  const homeBase = useMemo(() => baseCoords(homeTeam, 'home'), [homeTeam.id, homeTeam.strategy.formation]);
-  const awayBase = useMemo(() => baseCoords(awayTeam, 'away'), [awayTeam.id, awayTeam.strategy.formation]);
+export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result, halftime, fatigueMap }: Props) {
+  // Coordenadas base
+  const homeBase = useMemo(() => buildBaseCoords(homeTeam, 'home'), [homeTeam.id, homeTeam.strategy.formation]);
+  const awayBase = useMemo(() => buildBaseCoords(awayTeam, 'away'), [awayTeam.id, awayTeam.strategy.formation]);
+
+  // Estado mutável dos jogadores (steering)
+  const playersRef = useRef<Map<string, SteeringPlayer>>(new Map());
+  const carriersRef = useRef<PlayerCoord[]>([]);
+  const ballRef = useRef({ x: 60, y: 35, visible: true });
+  const svgElsRef = useRef<Map<string, SVGGElement>>(new Map());
+  const ballElRef = useRef<SVGCircleElement | null>(null);
+  const rafRef = useRef<number>(0);
+  const carrierIdRef = useRef<string | null>(null);
+  const carrierTimerRef = useRef<number>(0);
+  const ballTravelRef = useRef<{ srcX: number; srcY: number; dstX: number; dstY: number; t: number } | null>(null);
+  const homeTeamRef = useRef(homeTeam);
+  const awayTeamRef = useRef(awayTeam);
+  const eventRef = useRef(currentEvent);
+  homeTeamRef.current = homeTeam;
+  awayTeamRef.current = awayTeam;
+  eventRef.current = currentEvent;
 
   const eventId = currentEvent ? currentEvent.minute + '|' + currentEvent.type + '|' + currentEvent.description : '';
   const eventSeed = useMemo(() => seed(eventId), [eventId]);
@@ -272,70 +174,155 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
   const isGoal = currentEvent?.type === 'goal' && phase !== 'done';
   const goalTeamId = isGoal ? currentEvent!.teamId : null;
 
-  // --- Calcula posições dos jogadores (d3-force) + bola (do portador) ---
-  const { allShifts, ball } = useMemo(() => {
-    const allPlayers = [...homeBase, ...awayBase];
-    const shifts = new Map<string, Shift>();
+  // Inicializa/reinicia jogadores quando times ou formação mudam
+  useEffect(() => {
+    const coords = [...homeBase, ...awayBase];
+    carriersRef.current = coords.map(c => ({ ...c }));
+    playersRef.current = buildSteeringPlayers(coords as any);
+    ballRef.current = { x: 60, y: 35, visible: true };
+  }, [homeBase, awayBase]);
 
-    // Passo 1: posição alvo = base + tático
-    const nodes: { id: string; x: number; y: number; tx: number; ty: number }[] = [];
-    for (const p of allPlayers) {
-      const team = p.team === 'home' ? homeTeam : awayTeam;
-      const s = tacticalShift(currentEvent, team, p);
-      const tx = p.x + s.dx;
-      const ty = p.y + s.dy;
-      nodes.push({ id: p.id, x: tx, y: ty, tx, ty });
-      shifts.set(p.id, { dx: 0, dy: 0, angle: s.angle });
+  // Aplica fadiga do engine aos steering players quando muda (início do 2º tempo)
+  useEffect(() => {
+    if (!fatigueMap) return;
+    for (const [id, p] of playersRef.current) {
+      const f = fatigueMap[id];
+      if (f !== undefined) p.fatigue = f;
+    }
+  }, [fatigueMap]);
+
+  // Game loop com requestAnimationFrame
+  useEffect(() => {
+    const running = phase === 'simulating';
+    if (!running) {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      return;
     }
 
-    // Passo 2: d3-force — colisão + atração ao alvo
-    const sim = forceSimulation(nodes)
-      .force('collide', forceCollide(3.5))
-      .force('x', forceX((d: any) => d.tx).strength(0.15))
-      .force('y', forceY((d: any) => d.ty).strength(0.15))
-      .alpha(1).stop();
-    for (let i = 0; i < 120; i++) sim.tick();
+    let lastTime = performance.now();
 
-    // Clamp
-    for (const node of nodes) {
-      node.x = Math.max(2, Math.min(118, node.x));
-      node.y = Math.max(3, Math.min(67, node.y));
-    }
+    const loop = (now: number) => {
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      lastTime = now;
 
-    // Extrai shifts
-    for (const p of allPlayers) {
-      const node = nodes.find(n => n.id === p.id)!;
-      const s = shifts.get(p.id)!;
-      shifts.set(p.id, { dx: node.x - p.x, dy: node.y - p.y, angle: s.angle });
-    }
+      const players = playersRef.current;
+      const home = homeTeamRef.current;
+      const away = awayTeamRef.current;
+      const event = eventRef.current;
 
-    // Portador da bola
-    const carrier = getBallCarrier(currentEvent, homeTeam.id, allPlayers);
-    let carrierX = 60, carrierY = 35;
-    if (carrier) {
-      const node = nodes.find(n => n.id === carrier.id);
-      if (node) { carrierX = node.x; carrierY = node.y; }
-    }
+      const hasPoss = event?.teamId !== null && event?.teamId !== undefined;
+      const homeHasBall = hasPoss && event!.teamId === home.id;
+      const awayHasBall = hasPoss && event!.teamId !== home.id;
 
-    // Posição da bola a partir do portador
-    const ballPos = ballFromCarrier(currentEvent, carrier, carrierX, carrierY, homeTeam.id, eventSeed);
+      const defLine = (v: string) => v === 'high' ? 1.5 : v === 'low' ? -1.5 : 0;
+      const width = (v: string) => v === 'wide' ? 1.3 : v === 'narrow' ? 0.7 : 1.0;
 
-    return { allShifts: shifts, ball: ballPos };
-  }, [homeBase, awayBase, currentEvent, eventSeed, homeTeam.id]);
+      const active = [...players.values()].filter(p => p.position !== 'GK');
 
-  // Renderiza um jogador com shift calculado
+      updatePlayers(
+        players, active, event,
+        homeHasBall, awayHasBall,
+        home.strategy.mentality, away.strategy.mentality,
+        defLine(home.strategy.defensiveLine), defLine(away.strategy.defensiveLine),
+        width(home.strategy.width), width(away.strategy.width)
+      );
+
+      // Sincroniza DOM
+      for (const [id, p] of players) {
+        const el = svgElsRef.current.get(id);
+        if (el) {
+          el.setAttribute('transform', `translate(${(p.x - (p.baseX)).toFixed(2)},${(p.y - (p.baseY)).toFixed(2)})`);
+        }
+      }
+
+      // Bola — rotaciona portador e anima passes
+      carrierTimerRef.current += dt;
+      const prevCarrierId = carrierIdRef.current;
+      let carrier: PlayerCoord | null = null;
+      if (event && event.teamId && (event.type === 'possession' || event.type === 'attack' || event.type === 'pass')) {
+        const isHome = event.teamId === home.id;
+        const eligible = carriersRef.current.filter(p => {
+          const match = isHome ? p.team === 'home' : p.team === 'away';
+          return match && (p.position === 'MID' || p.position === 'FWD');
+        });
+        if (eligible.length > 0) {
+          if (!carrierIdRef.current || carrierTimerRef.current > 0.8) {
+            const oldCarrier = carrierIdRef.current ? players.get(carrierIdRef.current) : null;
+            const newId = eligible[Math.floor(Math.random() * eligible.length)].id;
+            carrierIdRef.current = newId;
+            carrierTimerRef.current = 0;
+            // Anima passagem da bola
+            if (oldCarrier) {
+              const newCarrier = players.get(newId);
+              if (newCarrier) {
+                ballTravelRef.current = {
+                  srcX: oldCarrier.x, srcY: oldCarrier.y,
+                  dstX: newCarrier.x, dstY: newCarrier.y,
+                  t: 0,
+                };
+              }
+            }
+          }
+          carrier = carriersRef.current.find(p => p.id === carrierIdRef.current) ?? eligible[0];
+        }
+      } else if (event) {
+        carrier = getBallCarrier(event, home.id, carriersRef.current);
+        if (carrier && carrier.id !== prevCarrierId) {
+          const oldCarrier = prevCarrierId ? players.get(prevCarrierId) : null;
+          const newCarrier = players.get(carrier.id);
+          if (oldCarrier && newCarrier) {
+            ballTravelRef.current = {
+              srcX: oldCarrier.x, srcY: oldCarrier.y,
+              dstX: newCarrier.x, dstY: newCarrier.y,
+              t: 0,
+            };
+          }
+        }
+        carrierIdRef.current = carrier?.id ?? null;
+        carrierTimerRef.current = 0;
+      } else {
+        carrierIdRef.current = null;
+        carrierTimerRef.current = 0;
+      }
+
+      // Posição da bola com animação de passe
+      const b = ballPos(event, carrier?.id ?? null, players, home.id, eventSeed);
+      const travel = ballTravelRef.current;
+      if (travel && travel.t < 1) {
+        travel.t += dt * 3; // ~333ms de animação
+        const t = Math.min(1, travel.t);
+        const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
+        const bx = travel.srcX + (travel.dstX - travel.srcX) * ease;
+        const by = travel.srcY + (travel.dstY - travel.srcY) * ease;
+        ballRef.current = { x: bx, y: by, visible: true };
+        if (t >= 1) ballTravelRef.current = null;
+      } else {
+        ballRef.current = b;
+      }
+      if (ballElRef.current) {
+        ballElRef.current.setAttribute('cx', ballRef.current.x.toFixed(2));
+        ballElRef.current.setAttribute('cy', ballRef.current.y.toFixed(2));
+        ballElRef.current.setAttribute('visibility', ballRef.current.visible ? 'visible' : 'hidden');
+      }
+
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, [phase, eventSeed, homeTeam.id]);
+
+  // Limpa no unmount
+  useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
+
+  // Renderiza um jogador (SVG estático + ref para posicionamento dinâmico)
   const renderPlayer = (p: PlayerCoord) => {
     const gradId = `grad-${p.team}`;
-    const shift = allShifts.get(p.id) ?? { dx: 0, dy: 0, angle: 0 };
-    const hasShift = shift.dx !== 0 || shift.dy !== 0;
     return (
       <g key={p.id}
-         className={`player-group ${!hasShift && phase === 'idle' ? 'idle-sway' : ''}`}
-         style={{
-           transform: `translate(${shift.dx}px, ${shift.dy}px) rotate(${shift.angle}deg)`,
-           transition: 'transform 0.4s cubic-bezier(0.25, 0.1, 0.25, 1.2)',
-           transformOrigin: `${p.x}px ${p.y}px`,
-         }}>
+         ref={(el) => { if (el) svgElsRef.current.set(p.id, el); }}
+         className={`player-group ${phase === 'idle' ? 'idle-sway' : ''}`}
+         style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
         <circle cx={p.x} cy={p.y} r="3"
           fill={p.position === 'GK' ? 'url(#gkGrad)' : `url(#${gradId})`}
           stroke="#fff" strokeWidth="0.22" filter="url(#glow)" />
@@ -422,13 +409,12 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
             {awayBase.map(renderPlayer)}
 
             {/* Bola */}
-            {ball.visible && (
-              <g filter="url(#shadow)">
-                <circle cx={ball.x} cy={ball.y} r="1.3" fill="#fefefe"
-                  stroke="#ccc" strokeWidth="0.12" className="ball-dot" />
-                <circle cx={ball.x - 0.16} cy={ball.y - 0.16} r="0.2" fill="rgba(0,0,0,0.08)" />
-              </g>
-            )}
+            <g filter="url(#shadow)">
+              <circle ref={ballElRef} cx="60" cy="35" r="1.3" fill="#fefefe"
+                stroke="#ccc" strokeWidth="0.12" className="ball-dot" />
+              <circle cx={-0.16} cy={-0.16} r="0.2" fill="rgba(0,0,0,0.08)"
+                style={{ transform: `translate(${(ballRef.current.x - 0.16).toFixed(2)}px, ${(ballRef.current.y - 0.16).toFixed(2)}px)` }} />
+            </g>
           </>
         )}
 

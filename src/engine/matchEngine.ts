@@ -42,16 +42,20 @@ const MENTALITY_MODIFIERS: Record<Mentality, {
   tackling: number; positioning: number; finishing: number;
   staminaLossMultiplier: number;
 }> = {
-  'possession':     { passing: 1.20, vision: 1.20, speed: 0.90, dribbling: 1.05, tackling: 0.90, positioning: 0.95, finishing: 1.00, staminaLossMultiplier: 1.0 },
-  'counter-attack': { passing: 0.85, vision: 1.00, speed: 1.20, dribbling: 1.15, tackling: 0.90, positioning: 0.90, finishing: 1.10, staminaLossMultiplier: 1.0 },
-  'high-press':     { passing: 0.95, vision: 1.00, speed: 1.05, dribbling: 1.00, tackling: 1.15, positioning: 1.15, finishing: 0.95, staminaLossMultiplier: 1.30 },
-  'defensive':      { passing: 0.90, vision: 0.90, speed: 0.85, dribbling: 0.85, tackling: 1.25, positioning: 1.25, finishing: 0.85, staminaLossMultiplier: 0.80 },
+  // Controla bem a bola e cria chances por construção, gasta mais energia
+  'possession':     { passing: 1.20, vision: 1.20, speed: 0.90, dribbling: 1.00, tackling: 0.90, positioning: 0.95, finishing: 1.05, staminaLossMultiplier: 1.10 },
+  // Velocidade no contra-ataque é a arma; chute não é mais preciso, só mais rápido
+  'counter-attack': { passing: 0.85, vision: 0.95, speed: 1.25, dribbling: 1.10, tackling: 0.85, positioning: 0.90, finishing: 0.95, staminaLossMultiplier: 0.90 },
+  // Recupera bola com pressão alta e cansa muito; ataque normal
+  'high-press':     { passing: 0.95, vision: 1.00, speed: 1.05, dribbling: 1.00, tackling: 1.20, positioning: 1.15, finishing: 0.95, staminaLossMultiplier: 1.35 },
+  // Defesa sólida e compacta; raramente cria perigo no ataque
+  'defensive':      { passing: 0.90, vision: 0.85, speed: 0.90, dribbling: 0.85, tackling: 1.30, positioning: 1.35, finishing: 0.80, staminaLossMultiplier: 0.70 },
 };
 
 const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 7 };
 
 const ATK_CHANCE: Record<Mentality, number> = {
-  'possession': 0.85, 'counter-attack': 0.70, 'high-press': 0.90, 'defensive': 0.45,
+  'possession': 0.90, 'counter-attack': 0.65, 'high-press': 0.88, 'defensive': 0.38,
 };
 
 const DEFENSIVE_LINE_MOD: Record<DefensiveLine, { possessionBias: number; defenseCompact: number }> = {
