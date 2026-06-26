@@ -336,7 +336,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
               aria-label={pausesRemaining > 0 ? 'Pausar jogo' : 'Pausas esgotadas'}
             >⏸ {pausesRemaining}</button>
           )}
-          {[2, 3, 4].map(s => (
+          {[1, 2, 3, 4].map(s => (
             <button
               key={s}
               className={`speed-btn ${speed === s ? 'active' : ''}`}

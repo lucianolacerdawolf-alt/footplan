@@ -115,6 +115,18 @@ function ballPos(
       return { x: 60, y: 35, visible: true };
     case 'possession':
     case 'attack':
+    case 'pass':
+    case 'tackle':
+    case 'corner':
+    case 'foul':
+    case 'offside':
+    case 'yellowCard':
+    case 'redCard':
+    case 'injury':
+    case 'penalty':
+    case 'extraTimeKickoff':
+    case 'penaltyKick':
+    case 'penaltyWin':
       if (carrier) {
         const dir = isHome ? 1.5 : -1.5;
         return { x: cx + dir + (r - 0.5), y: cy + (r - 0.5) * 0.8, visible: true };
@@ -170,6 +182,8 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
 
   const eventId = currentEvent ? currentEvent.minute + '|' + currentEvent.type + '|' + currentEvent.description : '';
   const eventSeed = useMemo(() => seed(eventId), [eventId]);
+  const eventSeedRef = useRef(eventSeed);
+  eventSeedRef.current = eventSeed;
 
   const isGoal = currentEvent?.type === 'goal' && phase !== 'done';
   const goalTeamId = isGoal ? currentEvent!.teamId : null;
@@ -219,12 +233,23 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
 
       const active = [...players.values()].filter(p => p.position !== 'GK' && !expelledSetRef.current.has(p.id));
 
+      // Quick ball position estimate for GK positioning
+      let ballEstimateX = 60;
+      let ballEstimateY = 35;
+      if (event) {
+        const carrierEst = getBallCarrier(event, home.id, carriersRef.current);
+        const b = ballPos(event, carrierEst?.id ?? null, players, home.id, eventSeedRef.current);
+        ballEstimateX = b.x;
+        ballEstimateY = b.y;
+      }
+
       updatePlayers(
         players, active, event,
         homeHasBall, awayHasBall,
         home.strategy.mentality, away.strategy.mentality,
         defLine(home.strategy.defensiveLine), defLine(away.strategy.defensiveLine),
-        width(home.strategy.width), width(away.strategy.width)
+        width(home.strategy.width), width(away.strategy.width),
+        ballEstimateX, ballEstimateY,
       );
 
       // Sincroniza DOM
@@ -299,7 +324,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
       }
 
       // Posição da bola com animação de passe
-      const b = ballPos(event, carrier?.id ?? null, players, home.id, eventSeed);
+      const b = ballPos(event, carrier?.id ?? null, players, home.id, eventSeedRef.current);
       const travel = ballTravelRef.current;
       if (travel && travel.t < 1) {
         const isShot = event && ['goal', 'miss', 'post', 'save'].includes(event.type);
@@ -325,7 +350,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
 
     rafRef.current = requestAnimationFrame(loop);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [phase, eventSeed, homeTeam.id]);
+  }, [phase, homeTeam.id]);
 
   // Limpa no unmount
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);

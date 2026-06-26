@@ -88,7 +88,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setPaused(false);
 
     const queue = [...events];
-    const startTime = Date.now();
     const maxSec = halfOffsetSec + HALF_SECONDS;
     let pauseAccumMs = 0;
 
@@ -111,9 +110,10 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
         return;
       }
 
-      const elapsed = Date.now() - startTime - pauseAccumMs;
-      const duration = SPEED_DURATIONS[speedRef?.current ?? 1] ?? BASE_HALF_DURATION_MS;
-      const inGameSec = Math.min(HALF_SECONDS, Math.floor((elapsed / duration) * HALF_SECONDS));
+      const speed = speedRef?.current ?? 1;
+      pauseAccumMs += CLOCK_TICK_MS * speed;
+      const baseDuration = SPEED_DURATIONS[1] ?? BASE_HALF_DURATION_MS;
+      const inGameSec = Math.min(HALF_SECONDS, Math.floor((pauseAccumMs / baseDuration) * HALF_SECONDS));
       const effectiveSec = halfOffsetSec + inGameSec;
 
       setClockSeconds(effectiveSec);
@@ -201,7 +201,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
         setReplayEvents(prev => [...prev, evt]);
       }
 
-      if (elapsed >= duration) {
+      if (inGameSec >= HALF_SECONDS) {
         if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
         setClockSeconds(maxSec);
         onDone();
@@ -226,7 +226,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setExpelledIds([]);
     setPausesRemaining(1);
     sfx.whistleStart();
-    sfx.crowdMurmur();
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
@@ -250,7 +249,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setSimulating(true);
     setPhase('simulating');
     setClockSeconds(HALF_SECONDS);
-    sfx.crowdMurmur();
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;

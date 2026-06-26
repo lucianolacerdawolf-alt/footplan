@@ -216,7 +216,9 @@ export function updatePlayers(
   homeDefLine: number,
   awayDefLine: number,
   homeWidth: number,
-  awayWidth: number
+  awayWidth: number,
+  ballX: number,
+  ballY: number,
 ): void {
   const all = [...players.values()];
 
@@ -267,27 +269,34 @@ export function updatePlayers(
     p.y = Math.max(3, Math.min(67, p.y));
   }
 
-  // Goleiros: movimento mais simples (só seek à posição base + leve ajuste)
+  // Goleiros: movimento reativo à bola, contido na área
   for (const p of all) {
     if (p.position !== 'GK') continue;
     const hasBall = p.team === 'home' ? homeHasBall : awayHasBall;
     const mentality = p.team === 'home' ? homeMentality : awayMentality;
     const maxSpd = getMaxSpeed(p);
     const maxFrc = MAX_FORCE['GK'];
+    const isHome = p.team === 'home';
 
-    // GK se move levemente conforme a jogada
     let gkTargetX = p.baseX;
     let gkTargetY = p.baseY;
     if (event) {
-      if (event.type === 'attack' && !hasBall) {
-        const dir = p.team === 'home' ? 1 : -1;
-        gkTargetX += dir * (mentality === 'high-press' ? 6 : 3);
-        gkTargetY += (event.description.length % 9 - 4) * 2;
+      if (!hasBall) {
+        // Track ball laterally and forward/back from goal
+        const ballDy = ballY - 35;
+        gkTargetY = p.baseY + Math.max(-10, Math.min(10, ballDy * 0.7));
+        const ballDx = ballX - p.baseX;
+        gkTargetX += Math.max(-3, Math.min(3, ballDx * 0.15));
+        if (event.type === 'attack') {
+          const dir = isHome ? 1 : -1;
+          gkTargetX += dir * (mentality === 'high-press' ? 4 : 2);
+        }
       }
       if (event.type === 'save') {
-        const dir = p.team === 'home' ? -1 : 1;
-        gkTargetX += dir * 4;
-        gkTargetY += (event.description.length % 7 - 3) * 4;
+        const dir = isHome ? -1 : 1;
+        gkTargetX += dir * 3;
+        const ballDy2 = ballY - 35;
+        gkTargetY = p.baseY + Math.max(-8, Math.min(8, ballDy2 * 0.6));
       }
     }
     p.targetX = gkTargetX;
@@ -302,8 +311,8 @@ export function updatePlayers(
     p.y += p.vy * DT;
     p.vx *= 0.98;
     p.vy *= 0.98;
-    p.x = Math.max(2, Math.min(118, p.x));
-    p.y = Math.max(3, Math.min(67, p.y));
+    p.x = Math.max(isHome ? 2 : 100, Math.min(isHome ? 18 : 118, p.x));
+    p.y = Math.max(18, Math.min(52, p.y));
   }
 }
 

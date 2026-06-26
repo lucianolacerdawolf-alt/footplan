@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { simularPartida, simularPrimeiroTempo, simularSegundoTempo } from '../matchEngine';
+import { simularPartida, simularPrimeiroTempo, simularSegundoTempo, resolveKnockoutTiebreak, simularPartidaRapida, simularKnockout, createMatchState } from '../matchEngine';
 import type { Team, Player } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -230,5 +230,109 @@ describe('cartões e expulsões', () => {
         expect(yellows.length).toBeGreaterThanOrEqual(1);
       }
     }
+  });
+});
+
+// ── Extra time & penalties ─────────────────────────────────────────────────
+describe('resolveKnockoutTiebreak', () => {
+  it('returns wentToExtraTime=false when scores differ', () => {
+    const home = makeTeam('h', 'Home');
+    const away = makeTeam('a', 'Away');
+    const state = createMatchState(home, away);
+    state.homeScore = 2;
+    state.awayScore = 1;
+    const result = resolveKnockoutTiebreak(home, away, state, seededRng(1));
+    expect(result.wentToExtraTime).toBe(false);
+  });
+
+  it('returns wentToExtraTime=true when scores are tied', () => {
+    const home = makeTeam('h', 'Home');
+    const away = makeTeam('a', 'Away');
+    const state = createMatchState(home, away);
+    state.homeScore = 1;
+    state.awayScore = 1;
+    const result = resolveKnockoutTiebreak(home, away, state, seededRng(1));
+    expect(result.wentToExtraTime).toBe(true);
+  });
+
+  it('returns penaltyResult when still tied after ET', () => {
+    let foundPenalties = false;
+    for (let seed = 0; seed < 50; seed++) {
+      const home = makeTeam('h', 'Home');
+      const away = makeTeam('a', 'Away');
+      const state = createMatchState(home, away);
+      state.homeScore = 1;
+      state.awayScore = 1;
+      const result = resolveKnockoutTiebreak(home, away, state, seededRng(seed));
+      if (result.penaltyResult) {
+        foundPenalties = true;
+        expect(result.penaltyResult.homeScore).toBeGreaterThanOrEqual(0);
+        expect(result.penaltyResult.awayScore).toBeGreaterThanOrEqual(0);
+        expect(result.penaltyResult.winner).toMatch(/home|away/);
+        expect(result.penaltyResult.kicks.length).toBeGreaterThanOrEqual(5);
+        break;
+      }
+    }
+    expect(foundPenalties).toBe(true);
+  });
+
+  it('penalty shootout produces a winner', () => {
+    const home = makeTeam('h', 'Home');
+    const away = makeTeam('a', 'Away');
+    const state = createMatchState(home, away);
+    state.homeScore = 0;
+    state.awayScore = 0;
+    const result = resolveKnockoutTiebreak(home, away, state, seededRng(7));
+    if (result.penaltyResult) {
+      expect(result.penaltyResult.homeScore).not.toBe(result.penaltyResult.awayScore);
+    }
+  });
+
+  it('extra time scores are correctly computed', () => {
+    const home = makeTeam('h', 'Home');
+    const away = makeTeam('a', 'Away');
+    const state = createMatchState(home, away);
+    state.homeScore = 0;
+    state.awayScore = 0;
+    const result = resolveKnockoutTiebreak(home, away, state, seededRng(3));
+    if (!result.penaltyResult) {
+      expect(state.homeScore).not.toBe(state.awayScore);
+      expect(result.extraTimeHomeScore).toBeDefined();
+      expect(result.extraTimeAwayScore).toBeDefined();
+    }
+  });
+});
+
+describe('simularPartidaRapida', () => {
+  it('returns homeScore and awayScore', () => {
+    const home = makeTeam('h', 'Home');
+    const away = makeTeam('a', 'Away');
+    const r = simularPartidaRapida(home, away, seededRng(1));
+    expect(r.homeScore).toBeGreaterThanOrEqual(0);
+    expect(r.awayScore).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('simularKnockout', () => {
+  it('returns a winner (home or away)', () => {
+    const home = makeTeam('h', 'Home');
+    const away = makeTeam('a', 'Away');
+    const r = simularKnockout(home, away, seededRng(1));
+    expect(['home', 'away']).toContain(r.winner);
+  });
+
+  it('ties go to extra time and produce a winner', () => {
+    let foundET = false;
+    for (let seed = 0; seed < 30; seed++) {
+      const home = makeTeam('h', 'Home');
+      const away = makeTeam('a', 'Away');
+      const r = simularKnockout(home, away, seededRng(seed));
+      if (r.wentToExtraTime) {
+        foundET = true;
+        expect(r.winner).toBeDefined();
+        break;
+      }
+    }
+    expect(foundET).toBe(true);
   });
 });
