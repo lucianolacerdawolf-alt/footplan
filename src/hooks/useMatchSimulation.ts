@@ -35,6 +35,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const [fatigueMap, setFatigueMap] = useState<Record<string, number>>({});
   const [expelledIds, setExpelledIds] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
+  const [pausesRemaining, setPausesRemaining] = useState(1);
 
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -61,6 +62,17 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const resumeReplay = useCallback(() => {
     pausedRef.current = false;
     setPaused(false);
+  }, []);
+
+  const consumePause = useCallback((): boolean => {
+    if (pausesRemaining <= 0) return false;
+    setPausesRemaining(p => p - 1);
+    pauseReplay();
+    return true;
+  }, [pausesRemaining, pauseReplay]);
+
+  const resetPauses = useCallback(() => {
+    setPausesRemaining(1);
   }, []);
 
   const startReplay = useCallback((
@@ -212,6 +224,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setClockSeconds(0);
     setFatigueMap({});
     setExpelledIds([]);
+    setPausesRemaining(1);
     sfx.whistleStart();
     sfx.crowdMurmur();
 
@@ -228,6 +241,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const runSecondHalf = useCallback((home: Team, away: Team) => {
     if (!engineStateRef.current) return;
 
+    setPausesRemaining(1);
     const firstHalfHome = engineStateRef.current.homeScore;
     const firstHalfAway = engineStateRef.current.awayScore;
 
@@ -270,6 +284,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
-    paused, pauseReplay, resumeReplay, setInjuryCallback,
+    paused, pauseReplay, resumeReplay, consumePause, pausesRemaining, resetPauses, setInjuryCallback,
   };
 }

@@ -19,6 +19,7 @@ import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
 import { usePersistedState } from './hooks/usePersistedState';
 import { useAchievements } from './hooks/useAchievements';
+import { usePeerConnection } from './hooks/usePeerConnection';
 import type { AchievementEvalInput } from './hooks/useAchievements';
 import { SeededRng } from './engine/rng';
 import Toast from './components/Toast';
@@ -50,6 +51,7 @@ function App() {
   const { record: recordH2H } = useH2H();
   const achievements = useAchievements();
   const onlineRngRef = useRef<SeededRng | null>(null);
+  const peer = usePeerConnection();
 
   const evaluateAchievements = useCallback((input: AchievementEvalInput) => {
     const newlyUnlocked = achievements.evaluate(input);
@@ -458,7 +460,7 @@ function App() {
   } else if (screen === 'select') {
     content = <TeamSelectionScreen onConfirm={handleTeamsSelected} onTournament={() => setScreen('home')} />;
   } else if (screen === 'online-lobby') {
-    content = <OnlineLobbyScreen onStartMatch={handleStartOnlineMatch} onBack={goHome} />;
+    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={goHome} />;
   } else if (screen === 'tournament-setup') {
     content = <TournamentSetupScreen mode={tournamentMode} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
   } else if (screen === 'league' && leagueState) {
@@ -510,6 +512,11 @@ function App() {
     const onlineRngFn: RandomFn | undefined = matchContext === 'online' && onlineRngRef.current
       ? () => onlineRngRef.current!.next()
       : undefined;
+    const onlineProps = matchContext === 'online' && peer.state === 'connected' ? {
+      isHost: peer.isHost,
+      send: peer.send,
+      setOnData: peer.setOnData,
+    } : undefined;
     content = (
       <MatchScreen
         homeTeam={homeTeam}
@@ -518,6 +525,7 @@ function App() {
         onViewStats={matchContext === 'online' ? handleOnlineMatchResult : handleViewStatsFromMatch}
         isKnockout={isKnockout}
         rng={onlineRngFn}
+        online={onlineProps}
       />
     );
   } else if (screen === 'stats' && lastResult) {

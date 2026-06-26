@@ -3,11 +3,12 @@ import { premierLeagueTeams } from '../data/premierLeague';
 import type { Team, Strategy } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
-import { usePeerConnection } from '../hooks/usePeerConnection';
+import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
   onBack: () => void;
+  peer: UsePeerConnectionReturn;
 }
 
 interface PeerMessage {
@@ -20,8 +21,7 @@ interface PeerMessage {
   awayStrategy?: Strategy;
 }
 
-export default function OnlineLobbyScreen({ onStartMatch, onBack }: Props) {
-  const peer = usePeerConnection();
+export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props) {
   const [joinCode, setJoinCode] = useState('');
   const [hostTeamId, setHostTeamId] = useState<string | null>(null);
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null);

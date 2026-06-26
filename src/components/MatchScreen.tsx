@@ -1,8 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn } from '../engine/types';
+import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn, Player } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
+
+interface OnlineProps {
+  isHost: boolean;
+  send: (data: unknown) => void;
+  setOnData: (handler: ((data: unknown) => void) | null) => void;
+}
+
+type MatchSyncMsg =
+  | { type: 'strategy-update'; side: 'home' | 'away'; strategy: Strategy }
+  | { type: 'squad-update'; side: 'home' | 'away'; squad: Player[] }
+  | { type: 'ready-halftime' }
+  | { type: 'pause-game' }
+  | { type: 'ready-resume' };
 
 const Y_SLOTS: Record<number, number[]> = {
   1: [50], 2: [20, 80], 3: [10, 50, 90], 4: [5, 32, 68, 95], 5: [3, 22, 50, 78, 97],
@@ -43,9 +56,10 @@ interface Props {
   onViewStats: (result: MatchResult) => void;
   isKnockout?: boolean;
   rng?: RandomFn;
+  online?: OnlineProps;
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online }: Props) {
   const [home, setHome] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     t.strategy = { ...initialHome.strategy };
@@ -66,6 +80,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
 
+  // Online coordination state
+  const [hostReady, setHostReady] = useState(false);
+  const [guestReady, setGuestReady] = useState(false);
+
   const [speed, setSpeed] = useState<number>(() => {
     try { return Number(localStorage.getItem('fp:replaySpeed')) || 1; } catch { return 1; }
   });
@@ -82,7 +100,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
-    paused, pauseReplay, resumeReplay, setInjuryCallback,
+    paused, pauseReplay, resumeReplay, consumePause, pausesRemaining, setInjuryCallback,
   } = useMatchSimulation(initialHome.id, speedRef, rng);
 
   const [injuredIds, setInjuredIds] = useState<string[]>([]);
@@ -107,6 +125,99 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     return () => setInjuryCallback(null);
   }, [setInjuryCallback, handleInjury]);
 
+  // ── Online sync helpers ──────────────────────────────────────────────────
+  const syncStrategy = useCallback((side: 'home' | 'away', strategy: Strategy) => {
+    online?.send({ type: 'strategy-update', side, strategy } satisfies MatchSyncMsg);
+  }, [online]);
+
+  const syncSquad = useCallback((side: 'home' | 'away', squad: Player[]) => {
+    online?.send({ type: 'squad-update', side, squad } satisfies MatchSyncMsg);
+  }, [online]);
+
+  const sendReadyHalftime = useCallback(() => {
+    setHostReady(online?.isHost ?? false);
+    setGuestReady(!(online?.isHost ?? true));
+    online?.send({ type: 'ready-halftime' } satisfies MatchSyncMsg);
+  }, [online]);
+
+  const sendPauseGame = useCallback(() => {
+    online?.send({ type: 'pause-game' } satisfies MatchSyncMsg);
+  }, [online]);
+
+  const sendReadyResume = useCallback(() => {
+    setHostReady(online?.isHost ?? false);
+    setGuestReady(!(online?.isHost ?? true));
+    online?.send({ type: 'ready-resume' } satisfies MatchSyncMsg);
+  }, [online]);
+
+  // Handle incoming peer data during match
+  useEffect(() => {
+    if (!online) return;
+    const handler = (data: unknown) => {
+      const msg = data as MatchSyncMsg;
+      if (!msg || typeof msg !== 'object') return;
+
+      if (msg.type === 'strategy-update') {
+        if (msg.side === 'home') setHome(prev => ({ ...prev, strategy: msg.strategy }));
+        else setAway(prev => ({ ...prev, strategy: msg.strategy }));
+      }
+      if (msg.type === 'squad-update') {
+        if (msg.side === 'home') setHome(prev => ({ ...prev, squad: msg.squad }));
+        else setAway(prev => ({ ...prev, squad: msg.squad }));
+      }
+      if (msg.type === 'ready-halftime') {
+        if (online.isHost) { setGuestReady(true); }
+        else { setHostReady(true); }
+      }
+      if (msg.type === 'pause-game') {
+        setHostReady(false);
+        setGuestReady(false);
+        pauseReplay();
+      }
+      if (msg.type === 'ready-resume') {
+        if (online.isHost) { setGuestReady(true); }
+        else { setHostReady(true); }
+      }
+    };
+    online.setOnData(handler);
+    return () => online.setOnData(null);
+  }, [online, pauseReplay]);
+
+  // Reset ready states when entering halftime
+  useEffect(() => {
+    if (phase === 'halftime') {
+      setHostReady(false);
+      setGuestReady(false);
+    }
+  }, [phase]);
+
+  // Auto-start second half when both ready in online mode
+  useEffect(() => {
+    if (!online || phase !== 'halftime') return;
+    if ((online.isHost && hostReady && guestReady) || (!online.isHost && hostReady && guestReady)) {
+      runSecondHalf(home, away);
+    }
+  }, [online, phase, hostReady, guestReady, home, away, runSecondHalf]);
+
+  // Auto-resume when both ready in online pause
+  useEffect(() => {
+    if (!online || !paused) return;
+    if ((online.isHost && hostReady && guestReady) || (!online.isHost && hostReady && guestReady)) {
+      setHostReady(false);
+      setGuestReady(false);
+      resumeReplay();
+    }
+  }, [online, paused, hostReady, guestReady, resumeReplay]);
+
+  const handleOnlinePause = useCallback(() => {
+    if (pausesRemaining <= 0) return;
+    if (consumePause()) {
+      if (online) {
+        sendPauseGame();
+      }
+    }
+  }, [pausesRemaining, consumePause, online, sendPauseGame]);
+
   const showSubToast = (outName: string, inName: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setSubToast(`↕ ${inName} entra · ${outName} sai`);
@@ -125,9 +236,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     const outPlayer = squad[starterIdx].name;
     const inPlayer = squad[benchIdx].name;
     [squad[benchIdx], squad[starterIdx]] = [squad[starterIdx], squad[benchIdx]];
-    setTeam({ ...team, squad });
+    const updatedTeam = { ...team, squad };
+    setTeam(updatedTeam);
     if (side === 'home') setSubsHome(n => n + 1); else setSubsAway(n => n + 1);
     showSubToast(outPlayer, inPlayer);
+    if (online) syncSquad(side, squad);
   };
 
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
@@ -177,8 +290,14 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     setKnockoutResult(enriched);
   }, [phase, result, addMatch, engineStateRef]);
 
-  const updateHome = (s: Strategy) => setHome(prev => ({ ...prev, strategy: s }));
-  const updateAway = (s: Strategy) => setAway(prev => ({ ...prev, strategy: s }));
+  const updateHome = (s: Strategy) => {
+    setHome(prev => ({ ...prev, strategy: s }));
+    if (online) syncStrategy('home', s);
+  };
+  const updateAway = (s: Strategy) => {
+    setAway(prev => ({ ...prev, strategy: s }));
+    if (online) syncStrategy('away', s);
+  };
 
   const pitchResult = (showOverlay && result) ? {
     homeScore: result.homeScore, awayScore: result.awayScore,
@@ -197,13 +316,23 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         <span className="match-title">{home.abbreviation} vs {away.abbreviation}</span>
         <span className="match-formations">{home.strategy.formation} x {away.strategy.formation}</span>
         <div className="speed-control" role="group" aria-label="Velocidade do replay">
-          {phase === 'simulating' && started && (
+          {phase === 'simulating' && started && !online && (
             <button
               className="speed-btn"
-              onClick={paused ? resumeReplay : pauseReplay}
-              title={paused ? 'Retomar' : 'Pausar'}
+              onClick={paused ? resumeReplay : (pausesRemaining > 0 ? () => { consumePause(); } : undefined)}
+              disabled={pausesRemaining <= 0 && !paused}
+              title={paused ? 'Retomar' : pausesRemaining > 0 ? `Pausar (${pausesRemaining} restante${pausesRemaining > 1 ? 's' : ''})` : 'Pausas esgotadas'}
               aria-label={paused ? 'Retomar replay' : 'Pausar replay'}
-            >{paused ? '▶' : '⏸'}</button>
+            >{paused ? '▶' : `⏸ ${pausesRemaining}`}</button>
+          )}
+          {phase === 'simulating' && started && online && (
+            <button
+              className="speed-btn"
+              onClick={paused ? undefined : handleOnlinePause}
+              disabled={pausesRemaining <= 0 && !paused}
+              title={pausesRemaining > 0 ? `Pausar (${pausesRemaining} restante${pausesRemaining > 1 ? 's' : ''})` : 'Pausas esgotadas'}
+              aria-label={pausesRemaining > 0 ? 'Pausar jogo' : 'Pausas esgotadas'}
+            >⏸ {pausesRemaining}</button>
           )}
           {[2, 3, 4].map(s => (
             <button
@@ -340,39 +469,39 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
                 <div className="halftime-teams">
                   <div className="halftime-team">
-                    <strong style={{ color: home.color }}>{home.abbreviation}</strong>
-                    <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>
+                    <strong style={{ color: home.color }}>{home.abbreviation} {online && online.isHost ? '(Você)' : ''}</strong>
+                    <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })} disabled={online && !online.isHost}>
                       {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
-                    <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>
+                    <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })} disabled={online && !online.isHost}>
                       {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
                     </select>
-                    <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>
+                    <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })} disabled={online && !online.isHost}>
                       {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
                     </select>
-                    <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>
+                    <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })} disabled={online && !online.isHost}>
                       {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
                     </select>
-                    <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>
+                    <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })} disabled={online && !online.isHost}>
                       {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
                     </select>
                   </div>
                   <span className="halftime-vs">vs</span>
                   <div className="halftime-team">
-                    <strong style={{ color: away.secondaryColor }}>{away.abbreviation}</strong>
-                    <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>
+                    <strong style={{ color: away.secondaryColor }}>{away.abbreviation} {online && !online.isHost ? '(Você)' : ''}</strong>
+                    <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })} disabled={online && online.isHost}>
                       {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
                     </select>
-                    <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>
+                    <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })} disabled={online && online.isHost}>
                       {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
                     </select>
-                    <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>
+                    <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })} disabled={online && online.isHost}>
                       {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
                     </select>
-                    <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>
+                    <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })} disabled={online && online.isHost}>
                       {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
                     </select>
-                    <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>
+                    <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })} disabled={online && online.isHost}>
                       {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
                     </select>
                   </div>
@@ -383,9 +512,9 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   <summary>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span></summary>
                   <div className="ht-squad-grid">
                     {([
-                      ['home', home, setHome, htHomePick, setHtHomePick],
-                      ['away', away, setAway, htAwayPick, setHtAwayPick],
-                    ] as const).map(([side, team, setTeam, pick, setPick]) => {
+                      ['home', home, setHome, htHomePick, setHtHomePick, online?.isHost ?? true],
+                      ['away', away, setAway, htAwayPick, setHtAwayPick, online ? !online.isHost : true],
+                    ] as const).map(([side, team, setTeam, pick, setPick, canEdit]) => {
                       const benchPlayers = team.squad.slice(11);
                       const starters = team.squad.slice(0, 11);
                       const pickIdx = team.squad.findIndex(sp => sp.id === pick);
@@ -394,7 +523,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                       return (
                         <div key={side} className="ht-squad-col">
                           <strong style={{ color: side === 'home' ? home.color : away.color, fontSize: 11 }}>
-                            {side === 'home' ? home.abbreviation : away.abbreviation}
+                            {side === 'home' ? home.abbreviation : away.abbreviation} {!canEdit ? '(adversário)' : ''}
                           </strong>
                           <div className="ht-sub-group-label">Titulares</div>
                           {starters.map((p, i) => {
@@ -402,8 +531,9 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                             const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
                             return (
                               <div key={p.id}
-                                className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''}`}
+                                className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap && canEdit ? 'clickable' : ''}`}
                                 onClick={() => {
+                                  if (!canEdit) return;
                                   if (pick && pickIsBench && team.squad[pickIdx].position === p.position) {
                                     swapSquad(team, setTeam, pickIdx, i, side);
                                     setPick(null);
@@ -450,14 +580,29 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   <div className="sub-toast">{subToast}</div>
                 )}
 
-                <button className="simulate-btn" onClick={() => runSecondHalf(home, away)}>
-                  Iniciar 2º Tempo
-                </button>
+                {online ? (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
+                    <button className="simulate-btn" onClick={sendReadyHalftime} disabled={online.isHost ? hostReady : guestReady}>
+                      {online.isHost
+                        ? (hostReady ? (guestReady ? 'Iniciar 2º Tempo...' : 'Aguardando oponente...') : 'Pronto')
+                        : (guestReady ? (hostReady ? 'Iniciar 2º Tempo...' : 'Aguardando oponente...') : 'Pronto')}
+                    </button>
+                    <span style={{ fontSize: 11, opacity: 0.6 }}>
+                      {online.isHost
+                        ? (hostReady ? (guestReady ? '✓ Ambos prontos' : '✓ Você · Aguardando visitante') : 'Clique em Pronto')
+                        : (guestReady ? (hostReady ? '✓ Ambos prontos' : '✓ Você · Aguardando host') : 'Clique em Pronto')}
+                    </span>
+                  </div>
+                ) : (
+                  <button className="simulate-btn" onClick={() => runSecondHalf(home, away)}>
+                    Iniciar 2º Tempo
+                  </button>
+                )}
               </div>
             </div>
           )}
 
-          {/* Substitution modal on pause (2nd half) */}
+          {/* Substitution modal on pause */}
           {paused && (
             <div className="halftime-overlay">
               <div className="halftime-inner">
@@ -465,105 +610,203 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   {injuryToast ? injuryToast : 'Jogo Pausado'}
                 </div>
 
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 4 }}>
-                  <button
-                    className={`speed-btn ${!showOpponent ? 'active' : ''}`}
-                    onClick={() => setShowOpponent(false)}
-                    style={{ fontSize: 12, padding: '4px 14px' }}
-                  >
-                    Seu Time ({home.abbreviation})
-                  </button>
-                  <button
-                    className={`speed-btn ${showOpponent ? 'active' : ''}`}
-                    onClick={() => setShowOpponent(true)}
-                    style={{ fontSize: 12, padding: '4px 14px' }}
-                  >
-                    Adversário ({away.abbreviation})
-                  </button>
-                </div>
+                {online ? (
+                  <>
+                    <div style={{ fontSize: 12, opacity: 0.6, textAlign: 'center', marginBottom: 4 }}>
+                      Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
+                    </div>
+                    <div className="ht-squad-grid">
+                      {(() => {
+                        const side = online.isHost ? 'home' : 'away';
+                        const team = online.isHost ? home : away;
+                        const setTeam = online.isHost ? setHome : setAway;
+                        const pick = online.isHost ? htHomePick : htAwayPick;
+                        const setPick = online.isHost ? setHtHomePick : setHtAwayPick;
+                        const benchPlayers = team.squad.slice(11);
+                        const starters = team.squad.slice(0, 11);
+                        const pickIdx = team.squad.findIndex(sp => sp.id === pick);
+                        const pickIsBench = pickIdx >= 11;
+                        const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
+                        return (
+                          <div className="ht-squad-col">
+                            <strong style={{ color: online.isHost ? home.color : away.color, fontSize: 11 }}>
+                              Seu Time ({online.isHost ? home.abbreviation : away.abbreviation})
+                            </strong>
+                            <div className="ht-sub-group-label">Titulares</div>
+                            {starters.map((p, i) => {
+                              const isPicked = p.id === pick;
+                              const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
+                              const isInjured = injuredIds.includes(p.id);
+                              return (
+                                <div key={p.id}
+                                  className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
+                                  style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
+                                  onClick={() => {
+                                    if (isInjured && pick && pickIsBench && team.squad[pickIdx].position === p.position) {
+                                      swapSquad(team, setTeam, pickIdx, i, side);
+                                      setPick(null);
+                                      setInjuredIds(prev => prev.filter(id => id !== p.id));
+                                    } else if (pick && pickIsBench && team.squad[pickIdx].position === p.position && !isInjured) {
+                                      swapSquad(team, setTeam, pickIdx, i, side);
+                                      setPick(null);
+                                    } else {
+                                      setPick(isPicked ? null : p.id);
+                                    }
+                                  }}>
+                                  <span className="sq-num">#{p.number}</span>
+                                  <span className="sq-name">{p.name}</span>
+                                  <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                                  <span className="sq-ovr">{playerOvr(p)}</span>
+                                </div>
+                              );
+                            })}
+                            <div className="ht-sub-group-label">Reservas</div>
+                            {benchPlayers.map((p) => {
+                              const isPicked = p.id === pick;
+                              const bi = team.squad.findIndex(sp => sp.id === p.id);
+                              return (
+                                <div key={p.id}
+                                  className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+                                  onClick={() => {
+                                    if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
+                                      swapSquad(team, setTeam, pickIdx, bi, side);
+                                      setPick(null);
+                                    } else {
+                                      setPick(isPicked ? null : p.id);
+                                    }
+                                  }}>
+                                  <span className="sq-num">#{p.number}</span>
+                                  <span className="sq-name">{p.name}</span>
+                                  <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                                  <span className="sq-ovr">{playerOvr(p)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </div>
 
-                <details className="ht-squad-details" open>
-                  <summary>Substituições · <span style={{ color: showOpponent ? away.color : home.color }}>{showOpponent ? away.abbreviation : home.abbreviation} {showOpponent ? subsAway : subsHome}/{MAX_SUBS}</span></summary>
-                  <div className="ht-squad-grid">
-                    {(() => {
-                      const side = showOpponent ? 'away' : 'home';
-                      const team = showOpponent ? away : home;
-                      const setTeam = showOpponent ? setAway : setHome;
-                      const pick = showOpponent ? htAwayPick : htHomePick;
-                      const setPick = showOpponent ? setHtAwayPick : setHtHomePick;
-                      const benchPlayers = team.squad.slice(11);
-                      const starters = team.squad.slice(0, 11);
-                      const pickIdx = team.squad.findIndex(sp => sp.id === pick);
-                      const pickIsBench = pickIdx >= 11;
-                      const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
-                      return (
-                        <div className="ht-squad-col">
-                          <strong style={{ color: showOpponent ? away.color : home.color, fontSize: 11 }}>
-                            {showOpponent ? away.abbreviation : home.abbreviation}
-                          </strong>
-                          <div className="ht-sub-group-label">Titulares</div>
-                          {starters.map((p, i) => {
-                            const isPicked = p.id === pick;
-                            const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
-                            const isInjured = injuredIds.includes(p.id);
-                            return (
-                              <div key={p.id}
-                                className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
-                                style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
-                                onClick={() => {
-                                  if (isInjured && pick && pickIsBench && team.squad[pickIdx].position === p.position) {
-                                    swapSquad(team, setTeam, pickIdx, i, side);
-                                    setPick(null);
-                                    setInjuredIds(prev => prev.filter(id => id !== p.id));
-                                  } else if (pick && pickIsBench && team.squad[pickIdx].position === p.position && !isInjured) {
-                                    swapSquad(team, setTeam, pickIdx, i, side);
-                                    setPick(null);
-                                  } else {
-                                    setPick(isPicked ? null : p.id);
-                                  }
-                                }}>
-                                <span className="sq-num">#{p.number}</span>
-                                <span className="sq-name">{p.name}</span>
-                                <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                <span className="sq-ovr">{playerOvr(p)}</span>
-                              </div>
-                            );
-                          })}
-                          <div className="ht-sub-group-label">Reservas</div>
-                          {benchPlayers.map((p) => {
-                            const isPicked = p.id === pick;
-                            const bi = team.squad.findIndex(sp => sp.id === p.id);
-                            return (
-                              <div key={p.id}
-                                className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
-                                onClick={() => {
-                                  if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
-                                    swapSquad(team, setTeam, pickIdx, bi, side);
-                                    setPick(null);
-                                  } else {
-                                    setPick(isPicked ? null : p.id);
-                                  }
-                                }}>
-                                <span className="sq-num">#{p.number}</span>
-                                <span className="sq-name">{p.name}</span>
-                                <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                <span className="sq-ovr">{playerOvr(p)}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </details>
+                    {subToast && (
+                      <div className="sub-toast">{subToast}</div>
+                    )}
 
-                {subToast && (
-                  <div className="sub-toast">{subToast}</div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginTop: 8 }}>
+                      <button className="simulate-btn" onClick={sendReadyResume} disabled={online.isHost ? hostReady : guestReady}>
+                        {online.isHost
+                          ? (hostReady ? (guestReady ? 'Retomando...' : 'Aguardando oponente...') : 'Pronto')
+                          : (guestReady ? (hostReady ? 'Retomando...' : 'Aguardando oponente...') : 'Pronto')}
+                      </button>
+                      <span style={{ fontSize: 11, opacity: 0.6 }}>
+                        {online.isHost
+                          ? (hostReady ? (guestReady ? '✓ Ambos prontos' : '✓ Você · Aguardando visitante') : 'Clique em Pronto')
+                          : (guestReady ? (hostReady ? '✓ Ambos prontos' : '✓ Você · Aguardando host') : 'Clique em Pronto')}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 4 }}>
+                      <button
+                        className={`speed-btn ${!showOpponent ? 'active' : ''}`}
+                        onClick={() => setShowOpponent(false)}
+                        style={{ fontSize: 12, padding: '4px 14px' }}
+                      >
+                        Seu Time ({home.abbreviation})
+                      </button>
+                      <button
+                        className={`speed-btn ${showOpponent ? 'active' : ''}`}
+                        onClick={() => setShowOpponent(true)}
+                        style={{ fontSize: 12, padding: '4px 14px' }}
+                      >
+                        Adversário ({away.abbreviation})
+                      </button>
+                    </div>
+
+                    <details className="ht-squad-details" open>
+                      <summary>Substituições · <span style={{ color: showOpponent ? away.color : home.color }}>{showOpponent ? away.abbreviation : home.abbreviation} {showOpponent ? subsAway : subsHome}/{MAX_SUBS}</span></summary>
+                      <div className="ht-squad-grid">
+                        {(() => {
+                          const side = showOpponent ? 'away' : 'home';
+                          const team = showOpponent ? away : home;
+                          const setTeam = showOpponent ? setAway : setHome;
+                          const pick = showOpponent ? htAwayPick : htHomePick;
+                          const setPick = showOpponent ? setHtAwayPick : setHtHomePick;
+                          const benchPlayers = team.squad.slice(11);
+                          const starters = team.squad.slice(0, 11);
+                          const pickIdx = team.squad.findIndex(sp => sp.id === pick);
+                          const pickIsBench = pickIdx >= 11;
+                          const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
+                          return (
+                            <div className="ht-squad-col">
+                              <strong style={{ color: showOpponent ? away.color : home.color, fontSize: 11 }}>
+                                {showOpponent ? away.abbreviation : home.abbreviation}
+                              </strong>
+                              <div className="ht-sub-group-label">Titulares</div>
+                              {starters.map((p, i) => {
+                                const isPicked = p.id === pick;
+                                const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
+                                const isInjured = injuredIds.includes(p.id);
+                                return (
+                                  <div key={p.id}
+                                    className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
+                                    style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
+                                    onClick={() => {
+                                      if (isInjured && pick && pickIsBench && team.squad[pickIdx].position === p.position) {
+                                        swapSquad(team, setTeam, pickIdx, i, side);
+                                        setPick(null);
+                                        setInjuredIds(prev => prev.filter(id => id !== p.id));
+                                      } else if (pick && pickIsBench && team.squad[pickIdx].position === p.position && !isInjured) {
+                                        swapSquad(team, setTeam, pickIdx, i, side);
+                                        setPick(null);
+                                      } else {
+                                        setPick(isPicked ? null : p.id);
+                                      }
+                                    }}>
+                                    <span className="sq-num">#{p.number}</span>
+                                    <span className="sq-name">{p.name}</span>
+                                    <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                                    <span className="sq-ovr">{playerOvr(p)}</span>
+                                  </div>
+                                );
+                              })}
+                              <div className="ht-sub-group-label">Reservas</div>
+                              {benchPlayers.map((p) => {
+                                const isPicked = p.id === pick;
+                                const bi = team.squad.findIndex(sp => sp.id === p.id);
+                                return (
+                                  <div key={p.id}
+                                    className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+                                    onClick={() => {
+                                      if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
+                                        swapSquad(team, setTeam, pickIdx, bi, side);
+                                        setPick(null);
+                                      } else {
+                                        setPick(isPicked ? null : p.id);
+                                      }
+                                    }}>
+                                    <span className="sq-num">#{p.number}</span>
+                                    <span className="sq-name">{p.name}</span>
+                                    <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                                    <span className="sq-ovr">{playerOvr(p)}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </details>
+
+                    {subToast && (
+                      <div className="sub-toast">{subToast}</div>
+                    )}
+
+                    <button className="simulate-btn" onClick={resumeReplay}>
+                      ▶ Retomar Jogo
+                    </button>
+                  </>
                 )}
-
-                <button className="simulate-btn" onClick={resumeReplay}>
-                  ▶ Retomar Jogo
-                </button>
               </div>
             </div>
           )}
