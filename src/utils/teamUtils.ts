@@ -1,9 +1,13 @@
 import type { Team } from '../engine/types';
 
-/** Cópia profunda de um time com cansaço dos jogadores zerado */
-export function cloneTeam(team: Team): Team {
+/** Cópia profunda de um time */
+export function cloneTeam(team: Team, preserveFatigue = false): Team {
   return {
     ...team,
-    squad: team.squad.map(p => ({ ...p, attributes: { ...p.attributes }, currentFatigue: 0 })),
+    squad: team.squad.map(p => ({
+      ...p,
+      attributes: { ...p.attributes },
+      currentFatigue: preserveFatigue ? p.currentFatigue : 0,
+    })),
   };
 }

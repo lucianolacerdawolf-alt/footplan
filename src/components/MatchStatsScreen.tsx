@@ -59,7 +59,7 @@ function PossRow({ home, away, homeColor, awayColor }: { home: number; away: num
 
 function ResultBadge({ result }: { result: MatchResult }) {
   if (result.winner) {
-    const won = result.homeScore >= result.awayScore; // home perspective after ET
+    const won = result.winner.id === result.homeTeam.id;
     return <span className={`${styles.badge} ${won ? styles.badgeWin : styles.badgeLoss}`}>
       {result.wentToExtraTime ? (result.penaltyResult ? 'Pênaltis' : 'Prorrogação') : (won ? 'Vitória' : 'Derrota')}
     </span>;

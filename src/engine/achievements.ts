@@ -88,6 +88,7 @@ function computeLeagueStreaks(
 
   for (let r = leagueState.currentRound; r >= 0; r--) {
     const round = fixtures[r];
+    if (!round) break;
     for (const f of round) {
       if (!f.played || f.homeScore == null || f.awayScore == null) continue;
       const isUserHome = f.homeTeamId === userTeamId;

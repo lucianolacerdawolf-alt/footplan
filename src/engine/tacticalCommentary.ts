@@ -1,8 +1,11 @@
+import type { RandomFn } from './types';
+
 export function generateTacticalComment(
   homeName: string, awayName: string,
   homeFormation: string, awayFormation: string,
   homeMentality: string, awayMentality: string,
   homeDefLine: string, awayDefLine: string,
+  random: RandomFn = Math.random,
 ): string {
   const pool: string[] = [];
 
@@ -61,5 +64,5 @@ export function generateTacticalComment(
     pool.push(`🏟️ Partida equilibrada nos primeiros minutos. Os times se respeitam.`);
   }
 
-  return pool[Math.floor(Math.random() * pool.length)];
+  return pool[Math.floor(random() * pool.length)];
 }

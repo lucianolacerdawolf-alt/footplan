@@ -63,8 +63,8 @@ export interface MatchState {
 export function createMatchState(home: Team, away: Team): MatchState {
   const fatigueHome = new Map<string, number>();
   const fatigueAway = new Map<string, number>();
-  getStarters(home).forEach(p => fatigueHome.set(p.id, 0));
-  getStarters(away).forEach(p => fatigueAway.set(p.id, 0));
+  getStarters(home).forEach(p => fatigueHome.set(p.id, p.currentFatigue));
+  getStarters(away).forEach(p => fatigueAway.set(p.id, p.currentFatigue));
   return {
     fatigueHome, fatigueAway,
     homeScore: 0, awayScore: 0,
@@ -110,11 +110,9 @@ function simularBloco(
         home.strategy.formation, away.strategy.formation,
         home.strategy.mentality, away.strategy.mentality,
         home.strategy.defensiveLine, away.strategy.defensiveLine,
+        random,
       ), teamId: null,
     });
-  }
-  if (includeSecondHalfKickoff) {
-    state.events.push({ minute: 45, type: 'kickoff', description: generateSecondHalf(), teamId: null });
   }
 
   for (let cycle = startCycle; cycle < endCycle; cycle++) {
@@ -327,6 +325,16 @@ function simularBloco(
         cycleEvents++;
       }
     }
+  }
+
+  // Second-half kickoff inserted chronologically after minute-44 events
+  if (includeSecondHalfKickoff) {
+    const evt = { minute: 45, type: 'kickoff' as const, description: generateSecondHalf(), teamId: null };
+    let idx = state.events.length;
+    for (let i = 0; i < state.events.length; i++) {
+      if (state.events[i].minute >= 46) { idx = i; break; }
+    }
+    state.events.splice(idx, 0, evt);
   }
 
   if (includeHalftime) {

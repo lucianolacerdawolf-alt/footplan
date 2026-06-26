@@ -230,7 +230,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
-      const { state } = simularPrimeiroTempo(cloneTeam(home), cloneTeam(away), rngRef.current);
+      const { state } = simularPrimeiroTempo(cloneTeam(home, true), cloneTeam(away, true), rngRef.current);
       engineStateRef.current = state;
       setFatigueMap(combineFatigue(state.fatigueHome, state.fatigueAway));
 
@@ -254,7 +254,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
-      const matchResult = simularSegundoTempo(cloneTeam(home), cloneTeam(away), engineStateRef.current!, rngRef.current);
+      const matchResult = simularSegundoTempo(cloneTeam(home, true), cloneTeam(away, true), engineStateRef.current!, rngRef.current);
       setResult(matchResult);
       setFatigueMap(combineFatigue(engineStateRef.current!.fatigueHome, engineStateRef.current!.fatigueAway));
 

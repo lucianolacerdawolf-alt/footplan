@@ -12,7 +12,7 @@ interface OnlineProps {
 
 type MatchSyncMsg =
   | { type: 'strategy-update'; side: 'home' | 'away'; strategy: Strategy }
-  | { type: 'squad-update'; side: 'home' | 'away'; squad: Player[] }
+  | { type: 'squad-update'; side: 'home' | 'away'; squad: Player[]; subsUsed: number }
   | { type: 'ready-halftime' }
   | { type: 'pause-game' }
   | { type: 'ready-resume' };
@@ -57,9 +57,11 @@ interface Props {
   isKnockout?: boolean;
   rng?: RandomFn;
   online?: OnlineProps;
+  continueLabel?: string;
+  onContinue?: () => void;
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue }: Props) {
   const [home, setHome] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     t.strategy = { ...initialHome.strategy };
@@ -130,13 +132,13 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     online?.send({ type: 'strategy-update', side, strategy } satisfies MatchSyncMsg);
   }, [online]);
 
-  const syncSquad = useCallback((side: 'home' | 'away', squad: Player[]) => {
-    online?.send({ type: 'squad-update', side, squad } satisfies MatchSyncMsg);
+  const syncSquad = useCallback((side: 'home' | 'away', squad: Player[], subsUsed: number) => {
+    online?.send({ type: 'squad-update', side, squad, subsUsed } satisfies MatchSyncMsg);
   }, [online]);
 
   const sendReadyHalftime = useCallback(() => {
-    setHostReady(online?.isHost ?? false);
-    setGuestReady(!(online?.isHost ?? true));
+    if (online?.isHost) setHostReady(true);
+    else setGuestReady(true);
     online?.send({ type: 'ready-halftime' } satisfies MatchSyncMsg);
   }, [online]);
 
@@ -145,8 +147,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   }, [online]);
 
   const sendReadyResume = useCallback(() => {
-    setHostReady(online?.isHost ?? false);
-    setGuestReady(!(online?.isHost ?? true));
+    if (online?.isHost) setHostReady(true);
+    else setGuestReady(true);
     online?.send({ type: 'ready-resume' } satisfies MatchSyncMsg);
   }, [online]);
 
@@ -162,8 +164,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         else setAway(prev => ({ ...prev, strategy: msg.strategy }));
       }
       if (msg.type === 'squad-update') {
-        if (msg.side === 'home') setHome(prev => ({ ...prev, squad: msg.squad }));
-        else setAway(prev => ({ ...prev, squad: msg.squad }));
+        if (msg.side === 'home') { setHome(prev => ({ ...prev, squad: msg.squad })); setSubsHome(msg.subsUsed); }
+        else { setAway(prev => ({ ...prev, squad: msg.squad })); setSubsAway(msg.subsUsed); }
       }
       if (msg.type === 'ready-halftime') {
         if (online.isHost) { setGuestReady(true); }
@@ -240,7 +242,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     setTeam(updatedTeam);
     if (side === 'home') setSubsHome(n => n + 1); else setSubsAway(n => n + 1);
     showSubToast(outPlayer, inPlayer);
-    if (online) syncSquad(side, squad);
+    if (online) syncSquad(side, squad, (side === 'home' ? subsHome : subsAway) + 1);
   };
 
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
@@ -814,14 +816,22 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
         {phase !== 'halftime' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button className="simulate-btn" onClick={() => { knockoutResolvedRef.current = false; setKnockoutResult(null); runFirstHalf(home, away); }} disabled={simulating}>
-              {simulating ? 'Simulando...' : started ? 'Simular Novamente' : 'Simular Partida'}
-            </button>
-            {phase === 'done' && (isKnockout ? knockoutResult : result) && (
-              <button className="stats-btn" onClick={() => onViewStats((isKnockout ? knockoutResult : result)!)}>
-                {isKnockout && !knockoutResult ? '⏳ Calculando...' : '📊 Estatísticas'}
+            {!started ? (
+              <button className="simulate-btn" onClick={() => { knockoutResolvedRef.current = false; setKnockoutResult(null); setSubsHome(0); setSubsAway(0); setInjuredIds([]); runFirstHalf(home, away); }} disabled={simulating}>
+                Simular Partida
               </button>
-            )}
+            ) : phase === 'done' && (isKnockout ? knockoutResult : result) ? (
+              <>
+                <button className="stats-btn" onClick={() => onViewStats((isKnockout ? knockoutResult : result)!)}>
+                  {isKnockout && !knockoutResult ? '⏳ Calculando...' : '📊 Estatísticas'}
+                </button>
+                {onContinue && (
+                  <button className="simulate-btn" onClick={onContinue}>
+                    {continueLabel ?? 'Continuar'}
+                  </button>
+                )}
+              </>
+            ) : null}
           </div>
         )}
       </div>
