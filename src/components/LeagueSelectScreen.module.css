@@ -28,7 +28,7 @@
 .grid {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
   max-width: 480px;
 }
@@ -37,10 +37,11 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 24px 20px;
+  padding: 22px 18px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-left: 4px solid var(--border);
+  border-radius: 12px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
   text-align: left;
@@ -49,20 +50,26 @@
 
 .card:hover {
   background: var(--surface-hover);
-  border-color: var(--accent);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.12);
 }
 
 .card:active {
   transform: translateY(0);
 }
 
-.flag {
-  font-size: 2.6rem;
+.flagBox {
   flex-shrink: 0;
-  width: 52px;
-  text-align: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flag {
+  font-size: 2.4rem;
   line-height: 1;
 }
 
@@ -72,7 +79,7 @@
 }
 
 .leagueName {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 2px;
@@ -81,7 +88,7 @@
 .country {
   font-size: 0.8rem;
   color: var(--text-secondary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .metaRow {
@@ -91,7 +98,7 @@
 
 .pill {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 500;
   background: var(--surface-hover);
   border: 1px solid var(--border);
@@ -101,10 +108,10 @@
 }
 
 .arrow {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   color: var(--text-secondary);
   flex-shrink: 0;
-  opacity: 0.4;
+  opacity: 0.3;
 }
 
 .card:hover .arrow {

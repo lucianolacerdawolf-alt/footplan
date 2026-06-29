@@ -20,9 +20,12 @@ export default function LeagueSelectScreen({ onSelect, onBack }: Props) {
           <button
             key={league.id}
             className={styles.card}
+            style={{ borderLeftColor: league.color }}
             onClick={() => onSelect(league)}
           >
-            <span className={styles.flag}>{league.flag}</span>
+            <div className={styles.flagBox} style={{ background: league.color + '18' }}>
+              <span className={styles.flag}>{league.flag}</span>
+            </div>
             <div className={styles.info}>
               <div className={styles.leagueName}>{league.name}</div>
               <div className={styles.country}>{league.country}</div>

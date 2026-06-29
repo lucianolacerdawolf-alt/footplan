@@ -6,6 +6,7 @@ export const premierLeague: LeagueDefinition = {
   name: 'Premier League',
   country: 'Inglaterra',
   flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+  color: '#3d195b',
   totalRounds: 38,
   teams: premierLeagueTeams,
   europeanSlots: { championsLeague: 4, europaLeague: 2, conferenceLeague: 1 },

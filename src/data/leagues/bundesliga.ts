@@ -27,6 +27,7 @@ export const bundesliga: LeagueDefinition = {
   name: 'Bundesliga',
   country: 'Alemanha',
   flag: '🇩🇪',
+  color: '#e32221',
   totalRounds: 34,
   teams: TEAMS.map(([name, abbr, color, secColor, ovr]) =>
     generateTeam(`bun-${abbr.toLowerCase()}`, name, abbr, color, secColor, '', ovr)

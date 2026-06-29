@@ -15,6 +15,7 @@ export function useAppShell() {
   const [tournamentMode, setTournamentMode] = useState<TournamentMode>('league');
   const [isTournamentEntry, setIsTournamentEntry] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<LeagueDefinition | null>(null);
+  const [returnScreen, setReturnScreen] = useState<Screen | null>(null);
 
   const goHome = useCallback(() => setScreen('home'), []);
 
@@ -29,6 +30,7 @@ export function useAppShell() {
     tournamentMode, setTournamentMode,
     isTournamentEntry, setIsTournamentEntry,
     selectedLeague, setSelectedLeague,
+    returnScreen, setReturnScreen,
     goHome, handleContinueTournament,
   };
 }

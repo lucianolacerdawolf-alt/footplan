@@ -12,6 +12,7 @@ export interface LeagueDefinition {
   name: string;
   country: string;
   flag: string;
+  color: string;
   totalRounds: number;
   teams: Team[];
   europeanSlots: {

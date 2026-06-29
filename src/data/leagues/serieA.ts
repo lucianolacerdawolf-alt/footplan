@@ -29,6 +29,7 @@ export const serieA: LeagueDefinition = {
   name: 'Serie A',
   country: 'Itália',
   flag: '🇮🇹',
+  color: '#004c97',
   totalRounds: 38,
   teams: TEAMS.map(([name, abbr, color, secColor, ovr]) =>
     generateTeam(`ita-${abbr.toLowerCase()}`, name, abbr, color, secColor, '', ovr)

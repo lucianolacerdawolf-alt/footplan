@@ -29,6 +29,7 @@ export const laLiga: LeagueDefinition = {
   name: 'La Liga',
   country: 'Espanha',
   flag: '🇪🇸',
+  color: '#ff4d4d',
   totalRounds: 38,
   teams: TEAMS.map(([name, abbr, color, secColor, ovr]) =>
     generateTeam(`lal-${abbr.toLowerCase()}`, name, abbr, color, secColor, '', ovr)

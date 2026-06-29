@@ -43,6 +43,7 @@ function App() {
     tournamentMode, setTournamentMode,
     isTournamentEntry, setIsTournamentEntry,
     selectedLeague, setSelectedLeague,
+    returnScreen, setReturnScreen,
     goHome, handleContinueTournament,
   } = useAppShell();
 
@@ -115,7 +116,7 @@ function App() {
   });
 
   const handleLeagueFromHome = useCallback(() => {
-    if (!selectedLeague) { setScreen('league-select'); return; }
+    if (!selectedLeague) { setReturnScreen('tournament-setup'); setScreen('league-select'); return; }
     if (leagueState && leagueState.phase !== 'done') setResumePrompt('league');
     else { setTournamentMode('league'); setScreen('tournament-setup'); }
   }, [leagueState, setTournamentMode, setScreen, setResumePrompt, selectedLeague]);
@@ -133,7 +134,9 @@ function App() {
         onSelect={(league) => {
           localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
           setSelectedLeague(league);
-          setScreen('home');
+          const target = returnScreen ?? 'home';
+          setReturnScreen(null);
+          setScreen(target);
         }}
         onBack={() => setScreen('home')}
       />
@@ -142,18 +145,18 @@ function App() {
     content = (
       <HomeScreen
         onSingleMatch={() => {
-          if (!selectedLeague) { setScreen('league-select'); return; }
+          if (!selectedLeague) { setReturnScreen('select'); setScreen('league-select'); return; }
           setScreen('select');
         }}
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
         onOnline={() => {
-          if (!selectedLeague) { setScreen('league-select'); return; }
+          if (!selectedLeague) { setReturnScreen('online-lobby'); setScreen('league-select'); return; }
           setScreen('online-lobby');
         }}
         selectedLeague={selectedLeague}
-        onChangeLeague={() => { setSelectedLeague(null); setScreen('league-select'); }}
+        onChangeLeague={() => { setSelectedLeague(null); setReturnScreen(null); setScreen('league-select'); }}
       />
     );
   } else if (screen === 'select') {
@@ -168,20 +171,7 @@ function App() {
   } else if (screen === 'online-lobby') {
     content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={goHome} />;
   } else if (screen === 'tournament-setup') {
-    if (!selectedLeague) {
-      content = (
-        <LeagueSelectScreen
-          onSelect={(league) => {
-            localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
-            setSelectedLeague(league);
-            setScreen('home');
-          }}
-          onBack={() => setScreen('home')}
-        />
-      );
-    } else {
-      content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
-    }
+    content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
   } else if (screen === 'league' && leagueState) {
     content = (
       <LeagueScreen
@@ -274,18 +264,18 @@ function App() {
     content = (
       <HomeScreen
         onSingleMatch={() => {
-          if (!selectedLeague) { setScreen('league-select'); return; }
+          if (!selectedLeague) { setReturnScreen('select'); setScreen('league-select'); return; }
           setScreen('select');
         }}
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
         onOnline={() => {
-          if (!selectedLeague) { setScreen('league-select'); return; }
+          if (!selectedLeague) { setReturnScreen('online-lobby'); setScreen('league-select'); return; }
           setScreen('online-lobby');
         }}
         selectedLeague={selectedLeague}
-        onChangeLeague={() => { setSelectedLeague(null); setScreen('league-select'); }}
+        onChangeLeague={() => { setSelectedLeague(null); setReturnScreen(null); setScreen('league-select'); }}
       />
     );
   }
