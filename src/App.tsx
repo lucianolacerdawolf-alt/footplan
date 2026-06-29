@@ -1,10 +1,7 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Team, MatchResult, RandomFn } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
-import type { TournamentMode } from './components/TournamentSetupScreen';
-import type { LeagueState, BracketState, BracketMatch, LeagueFixture, PlayableStage } from './engine/tournament';
-import { generateLeagueSchedule, createBracket, advanceBracket, simularBracketMatch, simularRodadaAuto, simularFixtureAuto, recoverFatigue, applyPostMatchInjuries, randomizeCPUTactics } from './engine/tournament';
-import { cloneTeam } from './utils/teamUtils';
+import type { PlayableStage } from './engine/tournament';
 import HomeScreen from './components/HomeScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SetupScreen from './components/SetupScreen';
@@ -17,41 +14,38 @@ import AchievementsScreen from './components/AchievementsScreen';
 import OnlineLobbyScreen from './components/OnlineLobbyScreen';
 import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
-import { usePersistedState } from './hooks/usePersistedState';
 import { useAchievements } from './hooks/useAchievements';
 import { usePeerConnection } from './hooks/usePeerConnection';
 import type { AchievementEvalInput } from './hooks/useAchievements';
-import { SeededRng } from './engine/rng';
+import { useAppShell } from './hooks/useAppShell';
+import { useLeagueManager } from './hooks/useLeagueManager';
+import { useBracketManager } from './hooks/useBracketManager';
+import { useGameFlow } from './hooks/useGameFlow';
+import { useOnlineMatch } from './hooks/useOnlineMatch';
+import { useResumePrompt } from './hooks/useResumePrompt';
 import Toast from './components/Toast';
-import { premierLeagueTeams } from './data/premierLeague';
 import './App.css';
 
-type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
-type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
-
 function App() {
-  const [screen, setScreen] = useState<Screen>('home');
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>('cpu');
   const [lastResult, setLastResult] = useState<MatchResult | null>(null);
-  const [matchContext, setMatchContext] = useState<MatchContext>('regular');
-  const [isKnockout, setIsKnockout] = useState(false);
-  const [tournamentMode, setTournamentMode] = useState<TournamentMode>('league');
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const notifySave = useCallback(() => setToastMsg('✓ Progresso salvo'), []);
-  const [leagueState, setLeagueState] = usePersistedState<LeagueState | null>('fp:leagueState', null, { onPersist: notifySave });
-  const [bracketState, setBracketState] = usePersistedState<BracketState | null>('fp:bracketState', null, { onPersist: notifySave });
-  const [pendingLeagueFixture, setPendingLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
-  const [isTournamentEntry, setIsTournamentEntry] = useState(false);
-  const [pendingBracketStage, setPendingBracketStage] = useState<PlayableStage | null>(null);
-  const [pendingBracketIdx, setPendingBracketIdx] = useState<number>(0);
+
+  const {
+    screen, setScreen,
+    matchContext, setMatchContext,
+    isKnockout, setIsKnockout,
+    tournamentMode, setTournamentMode,
+    isTournamentEntry, setIsTournamentEntry,
+    goHome, handleContinueTournament,
+  } = useAppShell();
 
   const { history, clearHistory } = useMatchHistory();
   const { record: recordH2H } = useH2H();
   const achievements = useAchievements();
-  const onlineRngRef = useRef<SeededRng | null>(null);
-  const peer = usePeerConnection();
 
   const evaluateAchievements = useCallback((input: AchievementEvalInput) => {
     const newlyUnlocked = achievements.evaluate(input);
@@ -60,414 +54,73 @@ function App() {
     }
   }, [achievements]);
 
-  // ── Partida única ─────────────────────────────────────────────────────────
-  const handleTeamsSelected = useCallback((home: Team, away: Team, mode: GameMode) => {
-    setHomeTeam(home); setAwayTeam(away); setGameMode(mode);
-    setMatchContext('regular'); setIsKnockout(false);
-    setScreen('setup');
-  }, []);
+  const {
+    leagueState, setLeagueState,
+    handleStartLeague, handlePlayLeagueMatch, handleSimulateUserLeagueMatch,
+    handleSimulateLeagueRound, handleNextLeagueRound, handleLeagueMatchResult,
+    handleEditLeagueTactics,
+  } = useLeagueManager({
+    setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
+    evaluateAchievements, recordH2H, notifySave, setToastMsg,
+  });
 
-  const handleStartMatch = useCallback((home: Team, away: Team) => {
-    // Persist user team strategy into league state (também na entrada/edição)
-    if (matchContext === 'league' && leagueState) {
-      const userIsHome = home.id === leagueState.userTeamId;
-      const userTeamConfigured = userIsHome ? home : away;
-      setLeagueState(prev => prev ? {
-        ...prev,
-        teams: prev.teams.map(t => t.id === prev.userTeamId
-          ? { ...t, strategy: userTeamConfigured.strategy, squad: userTeamConfigured.squad }
-          : t),
-      } : prev);
-    }
-    if (matchContext === 'bracket' && bracketState) {
-      const userIsHome = home.id === bracketState.userTeamId;
-      const userTeamConfigured = userIsHome ? home : away;
-      setBracketState(prev => prev ? {
-        ...prev,
-        teams: prev.teams.map(t => t.id === prev.userTeamId
-          ? { ...t, strategy: userTeamConfigured.strategy, squad: userTeamConfigured.squad }
-          : t),
-      } : prev);
-    }
-    if (isTournamentEntry) {
-      setIsTournamentEntry(false);
-      setScreen(matchContext === 'league' ? 'league' : 'bracket');
-      return;
-    }
-    setHomeTeam(home); setAwayTeam(away);
-    setScreen('match');
-  }, [isTournamentEntry, matchContext, leagueState, bracketState, setLeagueState, setBracketState]);
+  const {
+    bracketState, setBracketState,
+    handleStartBracket, handlePlayBracketMatch, handleSimulateOtherBracketMatches,
+    handleSimulateBracketMatch, handleBracketMatchResult,
+    handleEditBracketTactics,
+  } = useBracketManager({
+    setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
+    evaluateAchievements, recordH2H, notifySave, setToastMsg,
+  });
 
-  const handleViewStats = useCallback((result: MatchResult) => {
-    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
-    setLastResult(result);
-    setScreen('stats');
-    const userIsHome = homeTeam?.id === result.homeTeam.id;
-    const userTeamId = userIsHome ? result.homeTeam.id : result.awayTeam.id;
-    evaluateAchievements({
-      result, userTeamId, matchContext: 'regular',
-    });
-  }, [recordH2H, evaluateAchievements, homeTeam]);
+  const peer = usePeerConnection();
 
-  // ── Online ─────────────────────────────────────────────────────────────────
-  const handleStartOnlineMatch = useCallback((home: Team, away: Team, seed: number) => {
-    const rng = new SeededRng(seed);
-    onlineRngRef.current = rng;
-    setHomeTeam(home);
-    setAwayTeam(away);
-    setMatchContext('online');
-    setIsKnockout(false);
-    setScreen('match');
-  }, []);
+  const {
+    handleTeamsSelected, handleStartMatch, handleViewStats,
+  } = useGameFlow({
+    setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout,
+    setGameMode, setIsTournamentEntry, setLeagueState, setBracketState,
+    setLastResult, matchContext, isTournamentEntry, leagueState, bracketState,
+    homeTeam, recordH2H, evaluateAchievements,
+  });
 
-  const handleOnlineMatchResult = useCallback((result: MatchResult) => {
-    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
-    setLastResult(result);
-    setScreen('stats');
-    const userIsHome = homeTeam?.id === result.homeTeam.id;
-    const userTeamId = userIsHome ? result.homeTeam.id : result.awayTeam.id;
-    evaluateAchievements({
-      result, userTeamId, matchContext: 'regular',
-    });
-  }, [recordH2H, evaluateAchievements, homeTeam]);
+  const { onlineRngRef, handleStartOnlineMatch, handleOnlineMatchResult } = useOnlineMatch({
+    setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout,
+    setLastResult, recordH2H, evaluateAchievements, homeTeam,
+  });
 
   // ── Torneio: setup ────────────────────────────────────────────────────────
-  const handleEditBracketTactics = useCallback(() => {
-    if (!bracketState) return;
-    const userTeam = bracketState.teams.find(t => t.id === bracketState.userTeamId);
-    if (!userTeam) return;
-    setHomeTeam(cloneTeam(userTeam, true));
-    setAwayTeam(cloneTeam(userTeam, true));
-    setMatchContext('bracket'); setIsKnockout(true);
-    setIsTournamentEntry(true);
-    setScreen('setup');
-  }, [bracketState]);
-
-  const handleEditLeagueTactics = useCallback(() => {
-    if (!leagueState) return;
-    const userTeam = leagueState.teams.find(t => t.id === leagueState.userTeamId);
-    if (!userTeam) return;
-    setHomeTeam(cloneTeam(userTeam, true));
-    setAwayTeam(cloneTeam(userTeam, true));
-    setMatchContext('league'); setIsKnockout(false);
-    setIsTournamentEntry(true);
-    setScreen('setup');
-  }, [leagueState]);
-
-  const handleStartLeague = useCallback((userTeam: Team) => {
-    const all = premierLeagueTeams.map(t => cloneTeam(t));
-    const rest = all.filter(t => t.id !== userTeam.id);
-    const teams = [userTeam, ...rest];
-    const fixtures = generateLeagueSchedule(teams);
-    setLeagueState({ teams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' });
-    const firstFixture = fixtures[0].find(f => f.homeTeamId === userTeam.id || f.awayTeamId === userTeam.id)!;
-    setHomeTeam(cloneTeam(teams.find(t => t.id === firstFixture.homeTeamId)!));
-    setAwayTeam(cloneTeam(teams.find(t => t.id === firstFixture.awayTeamId)!));
-    setMatchContext('league'); setIsKnockout(false);
-    setIsTournamentEntry(true);
-    setScreen('setup');
-  }, []);
-
-  const handleStartBracket = useCallback((userTeam: Team) => {
-    const others = premierLeagueTeams
-      .filter(t => t.id !== userTeam.id)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 15)
-      .map(t => cloneTeam(t));
-    const bracket = createBracket(userTeam, others);
-    setBracketState(bracket);
-    const allTeams = [userTeam, ...others];
-    const userMatch = bracket.roundOf16.find(m => m.homeTeamId === userTeam.id || m.awayTeamId === userTeam.id)!;
-    setHomeTeam(cloneTeam(allTeams.find(t => t.id === userMatch.homeTeamId)!));
-    setAwayTeam(cloneTeam(allTeams.find(t => t.id === userMatch.awayTeamId)!));
-    setMatchContext('bracket'); setIsKnockout(true);
-    setIsTournamentEntry(true);
-    setScreen('setup');
-  }, []);
-
   const handleTournamentStart = useCallback((userTeam: Team) => {
     if (tournamentMode === 'league') handleStartLeague(userTeam);
     else handleStartBracket(userTeam);
   }, [tournamentMode, handleStartLeague, handleStartBracket]);
 
-  // ── Liga ──────────────────────────────────────────────────────────────────
-  const handlePlayLeagueMatch = useCallback((fixture: LeagueFixture, home: Team, away: Team) => {
-    const roundIdx = fixture.roundIndex;
-    const fixtureIdx = leagueState!.fixtures[roundIdx].findIndex(f => f.id === fixture.id);
-    setPendingLeagueFixture({ roundIdx, fixtureIdx });
-    setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
-    setMatchContext('league'); setIsKnockout(false);
-    setScreen('setup');
-  }, [leagueState]);
-
-  const handleSimulateUserLeagueMatch = useCallback(() => {
-    if (!leagueState) return;
-    const roundIdx = leagueState.currentRound;
-    const round = leagueState.fixtures[roundIdx];
-    const fixtureIdx = round.findIndex(f => f.homeTeamId === leagueState.userTeamId || f.awayTeamId === leagueState.userTeamId);
-    if (fixtureIdx === -1 || round[fixtureIdx].played) return;
-    const simulated = simularFixtureAuto(round[fixtureIdx], leagueState.teams);
-    const newFixtures = leagueState.fixtures.map((r, ri) =>
-      ri === roundIdx ? r.map((f, fi) => fi === fixtureIdx ? simulated : f) : r
-    );
-    // Opponent (CPU) tem chance de lesão
-    const oppId = simulated.homeTeamId === leagueState.userTeamId ? simulated.awayTeamId : simulated.homeTeamId;
-    const newTeams = leagueState.teams.map(t => t.id === oppId ? applyPostMatchInjuries(t, 0.05).team : t);
-    const updatedState: LeagueState = { ...leagueState, fixtures: newFixtures, teams: newTeams };
-    setLeagueState(updatedState);
-    const homeTeamObj = leagueState.teams.find(t => t.id === simulated.homeTeamId)!;
-    const awayTeamObj = leagueState.teams.find(t => t.id === simulated.awayTeamId)!;
-    evaluateAchievements({
-      result: {
-        homeTeam: homeTeamObj, awayTeam: awayTeamObj,
-        homeScore: simulated.homeScore ?? 0, awayScore: simulated.awayScore ?? 0,
-        events: [], homePossession: 50, awayPossession: 50,
-        homeStats: { shots: 0, shotsOnTarget: 0, fouls: 0, yellowCards: 0, redCards: 0 },
-        awayStats: { shots: 0, shotsOnTarget: 0, fouls: 0, yellowCards: 0, redCards: 0 },
-      },
-      userTeamId: leagueState.userTeamId, matchContext: 'league',
-      leagueState: updatedState,
-    });
-  }, [leagueState, evaluateAchievements]);
-
-  const handleSimulateLeagueRound = useCallback((roundIndex: number) => {
-    if (!leagueState) return;
-    const newRound = simularRodadaAuto(leagueState.fixtures[roundIndex], leagueState.teams, leagueState.userTeamId);
-    // Update morale for all teams based on round results
-    const moraleMap = new Map<string, number>();
-    for (const f of newRound) {
-      if (!f.played || f.homeScore == null || f.awayScore == null) continue;
-      const hWon = f.homeScore > f.awayScore;
-      const draw = f.homeScore === f.awayScore;
-      const delta = draw ? 0 : 2;
-      const hDelta = hWon ? delta : -delta;
-      const aDelta = hWon ? -delta : delta;
-      moraleMap.set(f.homeTeamId, (moraleMap.get(f.homeTeamId) ?? 0) + hDelta);
-      moraleMap.set(f.awayTeamId, (moraleMap.get(f.awayTeamId) ?? 0) + aDelta);
-    }
-    const newTeams = leagueState.teams.map(t => {
-      const delta = moraleMap.get(t.id) ?? 0;
-      let team = delta === 0 ? t : { ...t, morale: Math.max(-10, Math.min(10, (t.morale ?? 0) + delta)) };
-      // Lesão pra CPU (chance menor que user: 5%)
-      if (t.id !== leagueState.userTeamId) {
-        team = applyPostMatchInjuries(team, 0.05).team;
-      }
-      return team;
-    });
-    setLeagueState({ ...leagueState, fixtures: leagueState.fixtures.map((r, i) => i === roundIndex ? newRound : r), teams: newTeams });
-  }, [leagueState]);
-
-  const handleNextLeagueRound = useCallback(() => {
-    if (!leagueState) return;
-    const next = leagueState.currentRound + 1;
-    const recoveredTeams = recoverFatigue(leagueState.teams);
-    const variedTeams = randomizeCPUTactics(recoveredTeams, leagueState.userTeamId);
-    const phase: LeagueState['phase'] = next >= leagueState.fixtures.length ? 'done' : 'playing';
-    const updatedState: LeagueState = { ...leagueState, teams: variedTeams, currentRound: next, phase };
-    setLeagueState(updatedState);
-    if (phase === 'done') {
-      evaluateAchievements({
-        result: null as unknown as MatchResult, userTeamId: leagueState.userTeamId,
-        matchContext: 'league', leagueState: updatedState,
-      });
-    }
-  }, [leagueState, evaluateAchievements]);
-
-  const handleLeagueMatchResult = useCallback((result: MatchResult) => {
-    if (!leagueState || !pendingLeagueFixture) return;
-    const { roundIdx, fixtureIdx } = pendingLeagueFixture;
-    const fixture = leagueState.fixtures[roundIdx][fixtureIdx];
-    const userIsHome = fixture.homeTeamId === leagueState.userTeamId;
-    const userScore = userIsHome ? result.homeScore : result.awayScore;
-    const oppScore = userIsHome ? result.awayScore : result.homeScore;
-    const moraleDelta = userScore > oppScore ? 2 : userScore === oppScore ? 0 : -2;
-    const newFixtures = leagueState.fixtures.map((round, ri) =>
-      ri === roundIdx
-        ? round.map((f, fi) => fi === fixtureIdx ? { ...f, homeScore: result.homeScore, awayScore: result.awayScore, played: true } : f)
-        : round
-    );
-    const newTeams = leagueState.teams.map(t => {
-      if (t.id !== leagueState.userTeamId) return t;
-      const current = t.morale ?? 0;
-      const withMorale = { ...t, morale: Math.max(-10, Math.min(10, current + moraleDelta)) };
-      const { team: injured, injuries } = applyPostMatchInjuries(withMorale);
-      if (injuries.length > 0) {
-        const inj = injuries[0];
-        setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} rodada${inj.rounds > 1 ? 's' : ''}`);
-      }
-      return injured;
-    });
-    const updatedState: typeof leagueState = { ...leagueState, fixtures: newFixtures, teams: newTeams };
-    setLeagueState(updatedState);
-    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
-    setLastResult(result);
-    setScreen('stats');
-    evaluateAchievements({
-      result, userTeamId: leagueState.userTeamId, matchContext: 'league',
-      leagueState: updatedState,
-    });
-  }, [leagueState, pendingLeagueFixture, recordH2H, evaluateAchievements]);
-
-  // ── Copa ──────────────────────────────────────────────────────────────────
-  const handlePlayBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
-    setPendingBracketStage(stage);
-    setPendingBracketIdx(matchIdx);
-    setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
-    setMatchContext('bracket'); setIsKnockout(true);
-    setScreen('setup');
-  }, []);
-
-  const handleSimulateOtherBracketMatches = useCallback(() => {
-    if (!bracketState) return;
-    const stage = bracketState.stage as PlayableStage;
-    const matches = stage === 'roundOf16' ? bracketState.roundOf16
-      : stage === 'quarterfinals' ? bracketState.quarterFinals
-      : stage === 'semifinals' ? bracketState.semiFinals
-      : [bracketState.final];
-    let s = { ...bracketState };
-    const injuredIds = new Set<string>();
-    matches.forEach((match, idx) => {
-      const isUser = match.homeTeamId === bracketState.userTeamId || match.awayTeamId === bracketState.userTeamId;
-      if (isUser || match.played) return;
-      const home = bracketState.teams.find(t => t.id === match.homeTeamId)!;
-      const away = bracketState.teams.find(t => t.id === match.awayTeamId)!;
-      const sim = simularBracketMatch(home, away);
-      const updated: BracketMatch = { ...match, ...sim };
-      if (stage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[idx] = updated; s = { ...s, roundOf16: r16 }; }
-      else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[idx] = updated; s = { ...s, quarterFinals: qf }; }
-      else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[idx] = updated; s = { ...s, semiFinals: sf }; }
-      else { s = { ...s, final: updated }; }
-      injuredIds.add(home.id); injuredIds.add(away.id);
-    });
-    // Lesão pra CPU dos times que jogaram
-    s = { ...s, teams: s.teams.map(t => injuredIds.has(t.id) ? applyPostMatchInjuries(t, 0.05).team : t) };
-    setBracketState(advanceBracket(s));
-  }, [bracketState, setBracketState]);
-
-  const handleSimulateBracketMatch = useCallback((stage: PlayableStage, matchIdx: number) => {
-    if (!bracketState) return;
-    const stageMatches = stage === 'roundOf16' ? bracketState.roundOf16
-      : stage === 'quarterfinals' ? bracketState.quarterFinals
-      : stage === 'semifinals' ? bracketState.semiFinals
-      : [bracketState.final];
-    const match = stageMatches[matchIdx];
-    const home = bracketState.teams.find(t => t.id === match.homeTeamId)!;
-    const away = bracketState.teams.find(t => t.id === match.awayTeamId)!;
-    const sim = simularBracketMatch(home, away);
-    const updated: BracketMatch = { ...match, ...sim };
-    let s = { ...bracketState };
-    if (stage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[matchIdx] = updated; s = { ...s, roundOf16: r16 }; }
-    else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[matchIdx] = updated; s = { ...s, quarterFinals: qf }; }
-    else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[matchIdx] = updated; s = { ...s, semiFinals: sf }; }
-    else { s = { ...s, final: updated }; }
-    setBracketState(advanceBracket(s));
-  }, [bracketState]);
-
-  const handleBracketMatchResult = useCallback((result: MatchResult) => {
-    if (!bracketState || !pendingBracketStage) return;
-    const stageMatches = pendingBracketStage === 'roundOf16' ? bracketState.roundOf16
-      : pendingBracketStage === 'quarterfinals' ? bracketState.quarterFinals
-      : pendingBracketStage === 'semifinals' ? bracketState.semiFinals
-      : [bracketState.final];
-    const match = stageMatches[pendingBracketIdx];
-    const home = bracketState.teams.find(t => t.id === match.homeTeamId)!;
-    const away = bracketState.teams.find(t => t.id === match.awayTeamId)!;
-    const winnerId = result.winner?.id
-      ?? (result.penaltyResult ? (result.penaltyResult.winner === 'home' ? home.id : away.id)
-        : result.homeScore >= result.awayScore ? home.id : away.id);
-    const updated: BracketMatch = {
-      ...match,
-      homeScore: result.homeScore, awayScore: result.awayScore,
-      wentToExtraTime: result.wentToExtraTime,
-      extraTimeHomeScore: result.extraTimeHomeScore,
-      extraTimeAwayScore: result.extraTimeAwayScore,
-      penaltyHomeScore: result.penaltyResult?.homeScore,
-      penaltyAwayScore: result.penaltyResult?.awayScore,
-      winnerId, played: true,
-    };
-    let s = { ...bracketState };
-    if (pendingBracketStage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[pendingBracketIdx] = updated; s = { ...s, roundOf16: r16 }; }
-    else if (pendingBracketStage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[pendingBracketIdx] = updated; s = { ...s, quarterFinals: qf }; }
-    else if (pendingBracketStage === 'semifinals') { const sf = [...s.semiFinals]; sf[pendingBracketIdx] = updated; s = { ...s, semiFinals: sf }; }
-    else { s = { ...s, final: updated }; }
-    const advanced = advanceBracket(s);
-    const finalState = { ...advanced, teams: randomizeCPUTactics(advanced.teams.map(t => {
-      if (t.id !== advanced.userTeamId) return t;
-      const { team: injured, injuries } = applyPostMatchInjuries(t);
-      if (injuries.length > 0) {
-        const inj = injuries[0];
-        setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} jogo${inj.rounds > 1 ? 's' : ''}`);
-      }
-      return injured;
-    }), advanced.userTeamId) };
-    setBracketState(finalState);
-    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
-    setLastResult(result);
-    setScreen('stats');
-    evaluateAchievements({
-      result, userTeamId: bracketState.userTeamId, matchContext: 'bracket',
-      bracketState: finalState,
-    });
-  }, [bracketState, pendingBracketStage, pendingBracketIdx, recordH2H, evaluateAchievements]);
-
   // ── Roteamento pós-stats ──────────────────────────────────────────────────
-  const handleContinueTournament = useCallback(() => {
-    setScreen(matchContext === 'league' ? 'league' : 'bracket');
-  }, [matchContext]);
-
   const handleViewStatsFromMatch = useCallback((result: MatchResult) => {
     if (matchContext === 'league') { handleLeagueMatchResult(result); return; }
     if (matchContext === 'bracket') { handleBracketMatchResult(result); return; }
     handleViewStats(result);
   }, [matchContext, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats]);
 
-  // ── Render ────────────────────────────────────────────────────────────────
-  const [resumePrompt, setResumePrompt] = useState<'league' | 'bracket' | null>(null);
-
-  useEffect(() => {
-    if (!resumePrompt) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setResumePrompt(null); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [resumePrompt]);
-
-  const goHome = useCallback(() => {
-    setScreen('home');
-  }, []);
+  // ── Resume prompt ─────────────────────────────────────────────────────────
+  const { resumePrompt, setResumePrompt, handleResumeContinue, handleResumeNew } = useResumePrompt({
+    setScreen, setTournamentMode,
+    setLeagueState: () => setLeagueState(null),
+    setBracketState: () => setBracketState(null),
+  });
 
   const handleLeagueFromHome = useCallback(() => {
-    if (leagueState && leagueState.phase !== 'done') {
-      setResumePrompt('league');
-    } else {
-      setTournamentMode('league');
-      setScreen('tournament-setup');
-    }
-  }, [leagueState]);
+    if (leagueState && leagueState.phase !== 'done') setResumePrompt('league');
+    else { setTournamentMode('league'); setScreen('tournament-setup'); }
+  }, [leagueState, setTournamentMode, setScreen, setResumePrompt]);
 
   const handleCupFromHome = useCallback(() => {
-    if (bracketState && bracketState.stage !== 'champion') {
-      setResumePrompt('bracket');
-    } else {
-      setTournamentMode('bracket');
-      setScreen('tournament-setup');
-    }
-  }, [bracketState]);
+    if (bracketState && bracketState.stage !== 'champion') setResumePrompt('bracket');
+    else { setTournamentMode('bracket'); setScreen('tournament-setup'); }
+  }, [bracketState, setTournamentMode, setScreen, setResumePrompt]);
 
-  const handleResumeContinue = useCallback(() => {
-    const target = resumePrompt;
-    setResumePrompt(null);
-    if (target === 'league') setScreen('league');
-    else if (target === 'bracket') setScreen('bracket');
-  }, [resumePrompt]);
-
-  const handleResumeNew = useCallback(() => {
-    const target = resumePrompt;
-    setResumePrompt(null);
-    if (target === 'league') { setLeagueState(null); setTournamentMode('league'); }
-    else if (target === 'bracket') { setBracketState(null); setTournamentMode('bracket'); }
-    setScreen('tournament-setup');
-  }, [resumePrompt, setLeagueState, setBracketState]);
-
+  // ── Render ────────────────────────────────────────────────────────────────
   let content: React.ReactNode;
   if (screen === 'home') {
     content = (
