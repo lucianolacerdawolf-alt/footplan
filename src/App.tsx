@@ -134,9 +134,7 @@ function App() {
           setSelectedLeague(league);
           setScreen('home');
         }}
-        onBack={() => {
-          if (selectedLeague) setScreen('home');
-        }}
+        onBack={() => setScreen('home')}
       />
     );
   } else if (screen === 'home') {
