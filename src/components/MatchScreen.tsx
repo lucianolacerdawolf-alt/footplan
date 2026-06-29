@@ -102,7 +102,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
-    paused, pauseReplay, resumeReplay, consumePause, pausesRemaining, setInjuryCallback,
+    paused, isGoalPause, pauseReplay, resumeReplay, consumePause, pausesRemaining, setInjuryCallback,
   } = useMatchSimulation(initialHome.id, speedRef, rng);
 
   const [injuredIds, setInjuredIds] = useState<string[]>([]);
@@ -605,8 +605,20 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             </div>
           )}
 
+          {/* Goal celebration overlay */}
+          {paused && isGoalPause && (
+            <div className="halftime-overlay" style={{ background: 'rgba(0,0,0,0.3)' }}>
+              <div className="halftime-inner" style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 64, marginBottom: 8 }}>⚽</div>
+                <div className="halftime-title" style={{ fontSize: 22 }}>
+                  {currentEvent?.description || 'GOL!'}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Substitution modal on pause */}
-          {paused && (
+          {paused && !isGoalPause && (
             <div className="halftime-overlay">
               <div className="halftime-inner">
                 <div className="halftime-title">

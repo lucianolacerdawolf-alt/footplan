@@ -35,6 +35,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const [fatigueMap, setFatigueMap] = useState<Record<string, number>>({});
   const [expelledIds, setExpelledIds] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
+  const [isGoalPause, setIsGoalPause] = useState(false);
   const [pausesRemaining, setPausesRemaining] = useState(1);
 
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -146,15 +147,16 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
           if (evt.teamId === initialHomeId) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
           else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
           sfx.goal();
-          // Dramatic pause on goal
           pausedRef.current = true;
           setPaused(true);
+          setIsGoalPause(true);
           setTimeout(() => {
             if (mountedRef.current && replayRef.current) {
               pausedRef.current = false;
               setPaused(false);
+              setIsGoalPause(false);
             }
-          }, 2000);
+          }, 2500);
         }
 
         if (evt.type === 'foul') {
@@ -180,12 +182,14 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
             sfx.goal();
             pausedRef.current = true;
             setPaused(true);
+            setIsGoalPause(true);
             setTimeout(() => {
               if (mountedRef.current && replayRef.current) {
                 pausedRef.current = false;
                 setPaused(false);
+                setIsGoalPause(false);
               }
-            }, 2000);
+            }, 2500);
           }
         }
 
@@ -282,6 +286,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef,
     runFirstHalf, runSecondHalf,
-    paused, pauseReplay, resumeReplay, consumePause, pausesRemaining, resetPauses, setInjuryCallback,
+    paused, isGoalPause, pauseReplay, resumeReplay, consumePause, pausesRemaining, resetPauses, setInjuryCallback,
   };
 }
