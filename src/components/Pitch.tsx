@@ -13,6 +13,7 @@ interface Props {
   awayTeam: Team;
   currentEvent: MatchEvent | null;
   phase: 'idle' | 'simulating' | 'done';
+  paused: boolean;
   result: {
     homeScore: number; awayScore: number;
     homePossession: number; awayPossession: number;
@@ -155,7 +156,7 @@ function ballPos(
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result, halftime, fatigueMap, expelledIds }: Props) {
+export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused, result, halftime, fatigueMap, expelledIds }: Props) {
   const expelledSet = useMemo(() => new Set(expelledIds ?? []), [expelledIds]);
   // Coordenadas base
   const homeBase = useMemo(() => buildBaseCoords(homeTeam, 'home'), [homeTeam.id, homeTeam.strategy.formation]);
@@ -207,7 +208,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, result,
 
   // Game loop com requestAnimationFrame
   useEffect(() => {
-    const running = phase === 'simulating';
+    const running = phase === 'simulating' && !paused;
     if (!running) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       return;

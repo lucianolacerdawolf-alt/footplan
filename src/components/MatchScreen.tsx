@@ -438,6 +438,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             homeTeam={home} awayTeam={away}
             currentEvent={currentEvent}
             phase={phase === 'halftime' || phase === 'done' ? 'done' : simulating || phase === 'simulating' ? 'simulating' : 'idle'}
+            paused={paused}
             result={pitchResult}
             halftime={phase === 'halftime' ? { homeScore, awayScore } : null}
             fatigueMap={fatigueMap}

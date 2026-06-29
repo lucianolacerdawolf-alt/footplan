@@ -233,7 +233,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
       engineStateRef.current = state;
       setFatigueMap(combineFatigue(state.fatigueHome, state.fatigueAway));
 
-      startReplay([...state.events], 0, state.homeScore, state.awayScore, () => {}, () => {});
+      startReplay([...state.events], 0, 0, 0, () => {}, () => {});
     }, 150);
   }, [startReplay]);
 
@@ -256,7 +256,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
       setResult(matchResult);
       setFatigueMap(combineFatigue(engineStateRef.current!.fatigueHome, engineStateRef.current!.fatigueAway));
 
-      const halfIdx = matchResult.events.findLastIndex(e => e.type === 'kickoff' && e.minute === 45);
+      const halfIdx = matchResult.events.findIndex(e => e.minute >= 45 && e.type !== 'halftime');
       const secondHalfEvents = halfIdx >= 0 ? matchResult.events.slice(halfIdx) : matchResult.events;
 
       startReplay(
