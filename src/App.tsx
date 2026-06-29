@@ -12,6 +12,7 @@ import LeagueScreen from './components/LeagueScreen';
 import BracketScreen from './components/BracketScreen';
 import AchievementsScreen from './components/AchievementsScreen';
 import OnlineLobbyScreen from './components/OnlineLobbyScreen';
+import LeagueSelectScreen from './components/LeagueSelectScreen';
 import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
 import { useAchievements } from './hooks/useAchievements';
@@ -40,6 +41,7 @@ function App() {
     isKnockout, setIsKnockout,
     tournamentMode, setTournamentMode,
     isTournamentEntry, setIsTournamentEntry,
+    selectedLeague, setSelectedLeague,
     goHome, handleContinueTournament,
   } = useAppShell();
 
@@ -60,6 +62,7 @@ function App() {
     handleSimulateLeagueRound, handleNextLeagueRound, handleLeagueMatchResult,
     handleEditLeagueTactics,
   } = useLeagueManager({
+    leagueId: selectedLeague?.id ?? 'pl',
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     evaluateAchievements, recordH2H, notifySave, setToastMsg,
   });
@@ -111,9 +114,10 @@ function App() {
   });
 
   const handleLeagueFromHome = useCallback(() => {
+    if (!selectedLeague) { setScreen('league-select'); return; }
     if (leagueState && leagueState.phase !== 'done') setResumePrompt('league');
     else { setTournamentMode('league'); setScreen('tournament-setup'); }
-  }, [leagueState, setTournamentMode, setScreen, setResumePrompt]);
+  }, [leagueState, setTournamentMode, setScreen, setResumePrompt, selectedLeague]);
 
   const handleCupFromHome = useCallback(() => {
     if (bracketState && bracketState.stage !== 'champion') setResumePrompt('bracket');
@@ -122,7 +126,20 @@ function App() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   let content: React.ReactNode;
-  if (screen === 'home') {
+  if (screen === 'league-select') {
+    content = (
+      <LeagueSelectScreen
+        onSelect={(league) => {
+          localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
+          setSelectedLeague(league);
+          setScreen('home');
+        }}
+        onBack={() => {
+          if (selectedLeague) setScreen('home');
+        }}
+      />
+    );
+  } else if (screen === 'home') {
     content = (
       <HomeScreen
         onSingleMatch={() => setScreen('select')}
@@ -130,6 +147,8 @@ function App() {
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
         onOnline={() => setScreen('online-lobby')}
+        selectedLeague={selectedLeague}
+        onChangeLeague={() => { setSelectedLeague(null); setScreen('league-select'); }}
       />
     );
   } else if (screen === 'select') {
@@ -137,11 +156,25 @@ function App() {
   } else if (screen === 'online-lobby') {
     content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={goHome} />;
   } else if (screen === 'tournament-setup') {
-    content = <TournamentSetupScreen mode={tournamentMode} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
+    if (!selectedLeague) {
+      content = (
+        <LeagueSelectScreen
+          onSelect={(league) => {
+            localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
+            setSelectedLeague(league);
+            setScreen('home');
+          }}
+          onBack={() => setScreen('home')}
+        />
+      );
+    } else {
+      content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
+    }
   } else if (screen === 'league' && leagueState) {
     content = (
       <LeagueScreen
         state={leagueState}
+        league={selectedLeague!}
         onPlayMatch={handlePlayLeagueMatch}
         onSimulateUserMatch={handleSimulateUserLeagueMatch}
         onSimulateRound={handleSimulateLeagueRound}
@@ -203,7 +236,7 @@ function App() {
         rng={onlineRngFn}
         online={onlineProps}
         onContinue={isTournament ? handleContinueTournament : undefined}
-        continueLabel={matchContext === 'league' ? 'Continuar Premier League' : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
+        continueLabel={matchContext === 'league' ? (selectedLeague ? `Continuar ${selectedLeague.name}` : 'Continuar Liga') : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
       />
     );
   } else if (screen === 'stats' && lastResult) {
@@ -215,7 +248,7 @@ function App() {
         onMenu={goHome}
         onClearHistory={clearHistory}
         onContinue={isTournament ? handleContinueTournament : undefined}
-        continueLabel={matchContext === 'league' ? 'Continuar Premier League' : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
+        continueLabel={matchContext === 'league' ? (selectedLeague ? `Continuar ${selectedLeague.name}` : 'Continuar Liga') : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
       />
     );
   } else if (screen === 'achievements') {
@@ -233,6 +266,8 @@ function App() {
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
         onOnline={() => setScreen('online-lobby')}
+        selectedLeague={selectedLeague}
+        onChangeLeague={() => { setSelectedLeague(null); setScreen('league-select'); }}
       />
     );
   }
@@ -246,7 +281,7 @@ function App() {
           <div className="resume-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="resume-title">
             <div className="resume-icon" aria-hidden="true">{resumePrompt === 'league' ? '📅' : '🏆'}</div>
             <div className="resume-title" id="resume-title">
-              {resumePrompt === 'league' ? 'Premier League em andamento' : 'FA Cup em andamento'}
+              {resumePrompt === 'league' ? (selectedLeague ? `${selectedLeague.name} em andamento` : 'Liga em andamento') : 'FA Cup em andamento'}
             </div>
             <div className="resume-body">
               {resumePrompt === 'league' && leagueState

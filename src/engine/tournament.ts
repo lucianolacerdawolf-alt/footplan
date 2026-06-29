@@ -1,4 +1,5 @@
 import type { Team } from './types';
+import type { CpuProfile } from '../data/leagues/types';
 import { simularPartidaRapida, simularKnockout } from './matchEngine';
 import { cloneTeam } from '../utils/teamUtils';
 
@@ -292,14 +293,38 @@ function pickOne<T>(arr: readonly T[], rng: () => number): T {
   return arr[Math.floor(rng() * arr.length)];
 }
 
-export function randomizeCPUTactics(teams: Team[], userTeamId: string, rng: () => number = Math.random): Team[] {
+export function randomizeCPUTactics(teams: Team[], userTeamId: string, rng: () => number = Math.random, cpuProfile?: CpuProfile): Team[] {
+  const p = cpuProfile ?? { pressingMod: 1.0, defensiveLineMod: 1.0, tempoMod: 1.0, passingFocusMod: 1.0 };
   return teams.map(t => {
     if (t.id === userTeamId) return t;
-    // 50% de chance de mudar mentalidade, 30% intensidade, 25% linha, 25% amplitude
     const s = { ...t.strategy };
-    if (rng() < 0.5) s.mentality = pickOne(MENTALITIES_ARR, rng);
-    if (rng() < 0.3) s.intensity = pickOne(INTENSITIES_ARR, rng);
-    if (rng() < 0.25) s.defensiveLine = pickOne(DEF_LINES_ARR, rng);
+    const mentChance = Math.min(0.8, 0.5 * p.pressingMod);
+    const intChance = Math.min(0.6, 0.3 * p.pressingMod);
+    if (rng() < mentChance) {
+      if (p.passingFocusMod > 1.05 && rng() < 0.3) {
+        s.mentality = 'possession';
+      } else {
+        s.mentality = pickOne(MENTALITIES_ARR, rng);
+      }
+    }
+    if (rng() < intChance) {
+      if (p.tempoMod > 1.03 && rng() < 0.3) {
+        s.intensity = 'high';
+      } else if (p.tempoMod < 0.97 && rng() < 0.3) {
+        s.intensity = 'low';
+      } else {
+        s.intensity = pickOne(INTENSITIES_ARR, rng);
+      }
+    }
+    if (rng() < 0.25) {
+      if (p.defensiveLineMod > 1.03 && rng() < 0.4) {
+        s.defensiveLine = 'low';
+      } else if (p.defensiveLineMod < 0.97 && rng() < 0.4) {
+        s.defensiveLine = 'high';
+      } else {
+        s.defensiveLine = pickOne(DEF_LINES_ARR, rng);
+      }
+    }
     if (rng() < 0.25) s.width = pickOne(WIDTHS_ARR, rng);
     return { ...t, strategy: s };
   });

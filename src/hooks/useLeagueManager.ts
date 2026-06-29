@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import type { Team, MatchResult } from '../engine/types';
 import type { LeagueState, LeagueFixture } from '../engine/tournament';
 import {
@@ -6,13 +6,14 @@ import {
   recoverFatigue, applyPostMatchInjuries, randomizeCPUTactics,
 } from '../engine/tournament';
 import { cloneTeam } from '../utils/teamUtils';
-import { premierLeagueTeams } from '../data/premierLeague';
+import { getLeague } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
 
 type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
 
 interface UseLeagueManagerParams {
+  leagueId: string;
   setScreen: (s: Screen) => void;
   setHomeTeam: (t: Team) => void;
   setAwayTeam: (t: Team) => void;
@@ -26,14 +27,30 @@ interface UseLeagueManagerParams {
 }
 
 export function useLeagueManager({
+  leagueId,
   setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
   evaluateAchievements, recordH2H, notifySave, setToastMsg,
 }: UseLeagueManagerParams) {
-  const [leagueState, setLeagueState] = usePersistedState<LeagueState | null>('fp:leagueState', null, { onPersist: notifySave });
+  // Legacy save migration
+  useEffect(() => {
+    if (localStorage.getItem('fp:leagueStateMigrated') === '1') return;
+    const legacy = localStorage.getItem('fp:leagueState');
+    const migrated = localStorage.getItem('fp:leagueState:pl');
+    if (legacy && !migrated) {
+      localStorage.setItem('fp:leagueState:pl', legacy);
+      localStorage.removeItem('fp:leagueState');
+    }
+    localStorage.setItem('fp:leagueStateMigrated', '1');
+  }, []);
+
+  const [leagueState, setLeagueState] = usePersistedState<LeagueState | null>(`fp:leagueState:${leagueId}`, null, { onPersist: notifySave });
   const [pendingLeagueFixture, setPendingLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
 
+  const league = getLeague(leagueId);
+
   const handleStartLeague = useCallback((userTeam: Team) => {
-    const all = premierLeagueTeams.map(t => cloneTeam(t));
+    if (!league) return;
+    const all = league.teams.map(t => cloneTeam(t));
     const rest = all.filter(t => t.id !== userTeam.id);
     const teams = [userTeam, ...rest];
     const fixtures = generateLeagueSchedule(teams);
@@ -44,7 +61,7 @@ export function useLeagueManager({
     setMatchContext('league'); setIsKnockout(false);
     setIsTournamentEntry(true);
     setScreen('setup');
-  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setLeagueState]);
+  }, [league, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setLeagueState]);
 
   const handleEditLeagueTactics = useCallback(() => {
     if (!leagueState) return;
@@ -125,7 +142,7 @@ export function useLeagueManager({
     if (!leagueState) return;
     const next = leagueState.currentRound + 1;
     const recoveredTeams = recoverFatigue(leagueState.teams);
-    const variedTeams = randomizeCPUTactics(recoveredTeams, leagueState.userTeamId);
+    const variedTeams = randomizeCPUTactics(recoveredTeams, leagueState.userTeamId, Math.random, league?.cpuProfile);
     const phase: LeagueState['phase'] = next >= leagueState.fixtures.length ? 'done' : 'playing';
     const updatedState: LeagueState = { ...leagueState, teams: variedTeams, currentRound: next, phase };
     setLeagueState(updatedState);
@@ -135,7 +152,7 @@ export function useLeagueManager({
         matchContext: 'league', leagueState: updatedState,
       });
     }
-  }, [leagueState, evaluateAchievements, setLeagueState]);
+  }, [leagueState, league, evaluateAchievements, setLeagueState]);
 
   const handleLeagueMatchResult = useCallback((result: MatchResult) => {
     if (!leagueState || !pendingLeagueFixture) return;

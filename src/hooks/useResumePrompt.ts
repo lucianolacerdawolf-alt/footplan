@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
-type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+type Screen = 'league-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
 type TournamentMode = 'league' | 'bracket';
 
 interface UseResumePromptParams {

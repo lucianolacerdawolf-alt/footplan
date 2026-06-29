@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Team } from '../engine/types';
-import { premierLeagueTeams } from '../data/premierLeague';
+import type { LeagueDefinition } from '../data/leagues/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 
@@ -8,20 +8,17 @@ export type TournamentMode = 'league' | 'bracket';
 
 interface Props {
   mode: TournamentMode;
+  league: LeagueDefinition;
   onBack: () => void;
   onStart: (userTeam: Team) => void;
 }
 
-const MODE_TITLE: Record<TournamentMode, string> = {
-  league: 'Premier League',
-  bracket: 'FA Cup',
-};
 const MODE_BTN: Record<TournamentMode, string> = {
   league: 'Iniciar Temporada →',
   bracket: 'Sortear Copa →',
 };
 
-export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) {
+export default function TournamentSetupScreen({ mode, league, onBack, onStart }: Props) {
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
 
   const getAvgOvr = (team: Team) => {
@@ -31,16 +28,18 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
 
   const handleStart = () => {
     if (!userTeamId) return;
-    onStart(cloneTeam(premierLeagueTeams.find(t => t.id === userTeamId)!));
+    onStart(cloneTeam(league.teams.find(t => t.id === userTeamId)!));
   };
 
-  const selectedTeam = premierLeagueTeams.find(t => t.id === userTeamId) ?? null;
+  const selectedTeam = league.teams.find(t => t.id === userTeamId) ?? null;
+
+  const title = mode === 'league' ? league.name : 'FA Cup';
 
   return (
     <div className="team-select-screen">
       <header className="app-header">
         <h1>FootPlan</h1>
-        <p className="subtitle">{MODE_TITLE[mode]}</p>
+        <p className="subtitle">{title}</p>
       </header>
 
       <div className="select-instruction">
@@ -74,7 +73,7 @@ export default function TournamentSetupScreen({ mode, onBack, onStart }: Props) 
       </div>
 
       <div className="team-grid">
-        {premierLeagueTeams.map(team => {
+        {league.teams.map(team => {
           const isSelected = team.id === userTeamId;
           return (
             <button

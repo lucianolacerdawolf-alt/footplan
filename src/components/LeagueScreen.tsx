@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, LeagueFixture, Standing } from '../engine/tournament';
+import type { LeagueDefinition } from '../data/leagues/types';
 import { computeStandings } from '../engine/tournament';
 import { FORMATION_COUNTS } from '../engine/constants';
 import styles from './LeagueScreen.module.css';
@@ -16,6 +17,7 @@ function squadHealth(team: Team) {
 
 interface Props {
   state: LeagueState;
+  league: LeagueDefinition;
   onPlayMatch: (fixture: LeagueFixture, homeTeam: Team, awayTeam: Team) => void;
   onSimulateUserMatch: () => void;
   onSimulateRound: (roundIndex: number) => void;
@@ -28,15 +30,19 @@ function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
 }
 
-function getZoneColor(pos: number): string {
-  if (pos <= 4) return '#1d9bf0';
-  if (pos === 5) return '#e85d04';
-  if (pos === 6) return '#38a169';
-  if (pos >= 18) return '#e53e3e';
+function getZoneColor(pos: number, league: LeagueDefinition): string {
+  const clEnd = league.europeanSlots.championsLeague;
+  const elEnd = clEnd + league.europeanSlots.europaLeague;
+  const ecolEnd = elEnd + league.europeanSlots.conferenceLeague;
+  const relStart = league.teams.length - league.relegationSpots + 1;
+  if (pos <= clEnd) return '#1d9bf0';
+  if (pos <= elEnd) return '#e85d04';
+  if (pos <= ecolEnd) return '#38a169';
+  if (pos >= relStart) return '#e53e3e';
   return 'transparent';
 }
 
-function StandingsTable({ standings, teams, userTeamId }: { standings: Standing[]; teams: Team[]; userTeamId: string }) {
+function StandingsTable({ standings, teams, userTeamId, league }: { standings: Standing[]; teams: Team[]; userTeamId: string; league: LeagueDefinition }) {
   return (
     <table className={styles.table}>
       <thead>
@@ -57,7 +63,7 @@ function StandingsTable({ standings, teams, userTeamId }: { standings: Standing[
           const sg = s.goalsFor - s.goalsAgainst;
           return (
             <tr key={s.teamId} className={`${styles.row} ${isUser ? styles.rowUser : ''}`}>
-              <td className={styles.tdZone} style={{ background: getZoneColor(pos) }} />
+              <td className={styles.tdZone} style={{ background: getZoneColor(pos, league) }} />
               <td className={styles.tdPos}>{pos}</td>
               <td className={styles.tdTeam}>
                 <img src={team.logoUrl} alt={team.abbreviation} className={styles.tableCrest} />
@@ -79,7 +85,7 @@ function StandingsTable({ standings, teams, userTeamId }: { standings: Standing[
   );
 }
 
-export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onBack }: Props) {
+export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onBack }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
   const standings = computeStandings(teams, fixtures);
   const [simulating, setSimulating] = useState(false);
@@ -106,7 +112,7 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
         <div className={styles.userResult}>
           Você terminou em <strong>{userPos}º lugar</strong> com {userStanding.points} pontos
         </div>
-        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
+        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} />
         <button className="start-btn" onClick={onBack}>Nova Partida</button>
       </div>
     );
@@ -128,7 +134,7 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
       <header className={styles.header}>
         <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
         <div className={styles.headerCenter}>
-          <span className={styles.leagueTitle}>Premier League</span>
+          <span className={styles.leagueTitle}>{league.name}</span>
           <span className={styles.roundLabel}>Rodada {currentRound + 1} / {fixtures.length}</span>
           {(() => {
             const user = teams.find(t => t.id === userTeamId);
@@ -255,7 +261,7 @@ export default function LeagueScreen({ state, onPlayMatch, onSimulateUserMatch, 
         <div className={styles.standingsCol}>
           <div className={styles.sectionLabel}>Classificação</div>
           <div className={styles.standingsScroll}>
-            <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} />
+            <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} />
           </div>
           <div className={styles.zoneLegend}>
             <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions League

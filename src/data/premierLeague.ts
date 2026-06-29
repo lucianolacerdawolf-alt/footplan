@@ -1,3 +1,5 @@
+// @deprecated — Legacy data file. Now used as data source for src/data/leagues/premierLeague.ts.
+// Do not import directly in new code — use getLeague('pl') from src/data/leagues instead.
 import type { Team, Player } from '../engine/types';
 
 // ---------------------------------------------------------------------------

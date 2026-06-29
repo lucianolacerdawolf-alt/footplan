@@ -4,7 +4,7 @@ import type { GameMode } from '../components/TeamSelectionScreen';
 import type { LeagueState, BracketState } from '../engine/tournament';
 import type { AchievementEvalInput } from './useAchievements';
 
-type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+type Screen = 'league-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
 type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
 
 interface UseGameFlowParams {
