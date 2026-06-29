@@ -40,7 +40,6 @@
   padding: 22px 18px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
@@ -50,6 +49,7 @@
 
 .card:hover {
   background: var(--surface-hover);
+  border-color: var(--accent);
   transform: translateY(-2px);
   box-shadow: 0 4px 18px rgba(0,0,0,0.12);
 }
@@ -58,19 +58,16 @@
   transform: translateY(0);
 }
 
-.flagBox {
-  flex-shrink: 0;
+.badge {
   width: 56px;
   height: 56px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .flag {
-  font-size: 2.4rem;
-  line-height: 1;
+  font-size: 1.2rem;
+  margin-right: 2px;
 }
 
 .info {

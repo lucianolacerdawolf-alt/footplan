@@ -50,6 +50,21 @@ function generatePlayer(id: string, name: string, number: number, pos: Player['p
   };
 }
 
+export function crestSvg(color: string, text: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:${color}"/>
+      <stop offset="100%" style="stop-color:${color}dd"/>
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="48" fill="url(#g)" stroke="${color}" stroke-width="3"/>
+  <text x="50" y="50" text-anchor="middle" dy=".35em" fill="white"
+    font-family="Arial, sans-serif" font-weight="bold" font-size="${text.length > 3 ? '22' : '28'}">${text}</text>
+</svg>`;
+  return 'data:image/svg+xml,' + encodeURIComponent(svg);
+}
+
 const DEFAULT_FORMATIONS = ['4-3-3', '4-4-2', '3-5-2', '4-2-3-1', '5-3-2'] as const;
 
 export function generateTeam(
@@ -88,5 +103,7 @@ export function generateTeam(
     players.push(generatePlayer(`${idPrefix}-b${i + 1}`, uniqueName(), 12 + i, benchPos, ovr - rand(4, 8)));
   }
 
-  return { id: idPrefix, name, abbreviation, color, secondaryColor, logoUrl, squad: players, strategy };
+  const crest = logoUrl || crestSvg(color, abbreviation);
+
+  return { id: idPrefix, name, abbreviation, color, secondaryColor, logoUrl: crest, squad: players, strategy };
 }

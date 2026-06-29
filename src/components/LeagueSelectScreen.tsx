@@ -1,10 +1,16 @@
 import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
+import { crestSvg } from '../data/leagues/generateTeam';
 import styles from './LeagueSelectScreen.module.css';
 
 interface Props {
   onSelect: (league: LeagueDefinition) => void;
   onBack: () => void;
+}
+
+function leagueBadge(league: LeagueDefinition): string {
+  const initials = league.name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
+  return crestSvg(league.color, initials);
 }
 
 export default function LeagueSelectScreen({ onSelect, onBack }: Props) {
@@ -20,14 +26,13 @@ export default function LeagueSelectScreen({ onSelect, onBack }: Props) {
           <button
             key={league.id}
             className={styles.card}
-            style={{ borderLeftColor: league.color }}
             onClick={() => onSelect(league)}
           >
-            <div className={styles.flagBox} style={{ background: league.color + '18' }}>
-              <span className={styles.flag}>{league.flag}</span>
-            </div>
+            <img src={leagueBadge(league)} alt={league.name} className={styles.badge} />
             <div className={styles.info}>
-              <div className={styles.leagueName}>{league.name}</div>
+              <div className={styles.leagueName}>
+                <span className={styles.flag}>{league.flag}</span> {league.name}
+              </div>
               <div className={styles.country}>{league.country}</div>
               <div className={styles.metaRow}>
                 <span className={styles.pill}>{league.teams.length} times</span>
