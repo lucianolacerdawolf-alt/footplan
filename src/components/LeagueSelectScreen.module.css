@@ -2,46 +2,47 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24px 16px 48px;
+  padding: 40px 16px 48px;
   min-height: 100dvh;
+  background: var(--bg);
 }
 
 .header {
   text-align: center;
-  margin-bottom: 28px;
+  margin-bottom: 36px;
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin: 0 0 6px;
 }
 
 .subtitle {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--text-secondary);
   margin: 0;
 }
 
 .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   width: 100%;
-  max-width: 520px;
+  max-width: 480px;
 }
 
 .card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 16px;
+  padding: 24px 20px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 14px;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
   text-align: left;
   color: var(--text-primary);
 }
@@ -49,7 +50,8 @@
 .card:hover {
   background: var(--surface-hover);
   border-color: var(--accent);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 
 .card:active {
@@ -57,10 +59,11 @@
 }
 
 .flag {
-  font-size: 1.6rem;
+  font-size: 2.6rem;
   flex-shrink: 0;
-  width: 36px;
+  width: 52px;
   text-align: center;
+  line-height: 1;
 }
 
 .info {
@@ -69,23 +72,58 @@
 }
 
 .leagueName {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1.15rem;
+  font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 2px;
 }
 
-.leagueMeta {
-  font-size: 0.75rem;
+.country {
+  font-size: 0.8rem;
   color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.metaRow {
+  display: flex;
+  gap: 6px;
 }
 
 .pill {
   display: inline-block;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 500;
   background: var(--surface-hover);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 5px;
-  margin-left: 6px;
+  border-radius: 5px;
+  padding: 2px 8px;
+  color: var(--text-secondary);
+}
+
+.arrow {
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  opacity: 0.4;
+}
+
+.card:hover .arrow {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.backBtn {
+  margin-top: 32px;
+  padding: 10px 32px;
+  font-size: 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.backBtn:hover {
+  background: var(--surface-hover);
 }

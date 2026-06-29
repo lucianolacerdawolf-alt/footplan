@@ -24,6 +24,7 @@ import { useBracketManager } from './hooks/useBracketManager';
 import { useGameFlow } from './hooks/useGameFlow';
 import { useOnlineMatch } from './hooks/useOnlineMatch';
 import { useResumePrompt } from './hooks/useResumePrompt';
+import { premierLeagueTeams } from './data/premierLeague';
 import Toast from './components/Toast';
 import './App.css';
 
@@ -140,17 +141,30 @@ function App() {
   } else if (screen === 'home') {
     content = (
       <HomeScreen
-        onSingleMatch={() => setScreen('select')}
+        onSingleMatch={() => {
+          if (!selectedLeague) { setScreen('league-select'); return; }
+          setScreen('select');
+        }}
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
-        onOnline={() => setScreen('online-lobby')}
+        onOnline={() => {
+          if (!selectedLeague) { setScreen('league-select'); return; }
+          setScreen('online-lobby');
+        }}
         selectedLeague={selectedLeague}
         onChangeLeague={() => { setSelectedLeague(null); setScreen('league-select'); }}
       />
     );
   } else if (screen === 'select') {
-    content = <TeamSelectionScreen onConfirm={handleTeamsSelected} onTournament={() => setScreen('home')} />;
+    content = (
+      <TeamSelectionScreen
+        teams={selectedLeague?.teams ?? premierLeagueTeams}
+        leagueName={selectedLeague?.name ?? 'Premier League'}
+        onConfirm={handleTeamsSelected}
+        onBack={() => setScreen('home')}
+      />
+    );
   } else if (screen === 'online-lobby') {
     content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={goHome} />;
   } else if (screen === 'tournament-setup') {
@@ -259,11 +273,17 @@ function App() {
   } else {
     content = (
       <HomeScreen
-        onSingleMatch={() => setScreen('select')}
+        onSingleMatch={() => {
+          if (!selectedLeague) { setScreen('league-select'); return; }
+          setScreen('select');
+        }}
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
-        onOnline={() => setScreen('online-lobby')}
+        onOnline={() => {
+          if (!selectedLeague) { setScreen('league-select'); return; }
+          setScreen('online-lobby');
+        }}
         selectedLeague={selectedLeague}
         onChangeLeague={() => { setSelectedLeague(null); setScreen('league-select'); }}
       />

@@ -1,5 +1,4 @@
 import type { Team } from '../engine/types';
-import { premierLeagueTeams } from '../data/premierLeague';
 import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import { useLocalStorage } from '../hooks/useLocalStorage';
@@ -7,21 +6,23 @@ import { useLocalStorage } from '../hooks/useLocalStorage';
 export type GameMode = 'cpu' | 'player';
 
 interface Props {
+  teams: Team[];
+  leagueName: string;
   onConfirm: (home: Team, away: Team, mode: GameMode) => void;
-  onTournament: () => void;
+  onBack: () => void;
 }
 
 type Uniform = 'home' | 'away';
 
-export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) {
+export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBack }: Props) {
   const [homeId, setHomeId] = useLocalStorage<string | null>('fp:homeId', null);
   const [awayId, setAwayId] = useLocalStorage<string | null>('fp:awayId', null);
   const [homeUniform, setHomeUniform] = useLocalStorage<Uniform>('fp:homeUniform', 'home');
   const [awayUniform, setAwayUniform] = useLocalStorage<Uniform>('fp:awayUniform', 'away');
   const [mode, setMode] = useLocalStorage<GameMode>('fp:mode', 'cpu');
 
-  const homeTeam = premierLeagueTeams.find(t => t.id === homeId) ?? null;
-  const awayTeam = premierLeagueTeams.find(t => t.id === awayId) ?? null;
+  const homeTeam = teams.find(t => t.id === homeId) ?? null;
+  const awayTeam = teams.find(t => t.id === awayId) ?? null;
 
   const displayColor = (team: Team, uniform: Uniform) =>
     uniform === 'home' ? team.color : team.secondaryColor;
@@ -38,7 +39,6 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
 
   const fixColorConflict = () => {
     if (!homeTeam || !awayTeam) return;
-    // Tenta trocar o kit do visitante; se ainda conflitar, troca o mandante
     const awayAlt: Uniform = awayUniform === 'home' ? 'away' : 'home';
     if (displayColor(homeTeam, homeUniform).toLowerCase() !== displayColor(awayTeam, awayAlt).toLowerCase()) {
       setAwayUniform(awayAlt);
@@ -110,7 +110,7 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
     <div className="team-select-screen">
       <header className="app-header">
         <h1>FootPlan</h1>
-        <p className="subtitle">Premier League</p>
+        <p className="subtitle">{leagueName}</p>
       </header>
 
       <div className="select-instruction">
@@ -120,7 +120,7 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
       </div>
 
       <div className="select-summary">
-        <button className="slot-nav-btn" onClick={onTournament}>← Menu Principal</button>
+        <button className="slot-nav-btn" onClick={onBack}>← Menu Principal</button>
         {renderSlot(homeTeam, homeUniform, setHomeUniform, 'home', 'CASA')}
         <div className="select-vs">VS</div>
         {renderSlot(awayTeam, awayUniform, setAwayUniform, 'away', 'FORA')}
@@ -150,7 +150,7 @@ export default function TeamSelectionScreen({ onConfirm, onTournament }: Props) 
       </div>
 
       <div className="team-grid">
-        {premierLeagueTeams.map(team => {
+        {teams.map(team => {
           const isHome = team.id === homeId;
           const isAway = team.id === awayId;
           const isSelected = isHome || isAway;

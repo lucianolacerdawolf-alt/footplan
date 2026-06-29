@@ -12,7 +12,7 @@ export default function LeagueSelectScreen({ onSelect, onBack }: Props) {
     <div className={styles.screen}>
       <header className={styles.header}>
         <h1 className={styles.title}>Escolher Campeonato</h1>
-        <p className={styles.subtitle}>Selecione uma liga para disputar a temporada</p>
+        <p className={styles.subtitle}>Selecione uma liga para jogar</p>
       </header>
 
       <div className={styles.grid}>
@@ -25,24 +25,19 @@ export default function LeagueSelectScreen({ onSelect, onBack }: Props) {
             <span className={styles.flag}>{league.flag}</span>
             <div className={styles.info}>
               <div className={styles.leagueName}>{league.name}</div>
-              <div className={styles.leagueMeta}>
-                {league.country}
+              <div className={styles.country}>{league.country}</div>
+              <div className={styles.metaRow}>
+                <span className={styles.pill}>{league.teams.length} times</span>
                 <span className={styles.pill}>{league.totalRounds} rodadas</span>
               </div>
             </div>
+            <span className={styles.arrow}>→</span>
           </button>
         ))}
       </div>
 
-      <button
-        onClick={onBack}
-        style={{
-          marginTop: 28, padding: '10px 28px', fontSize: '0.9rem',
-          background: 'var(--surface)', border: '1px solid var(--border)',
-          borderRadius: 8, color: 'var(--text-secondary)', cursor: 'pointer',
-        }}
-      >
-        Voltar
+      <button className={styles.backBtn} onClick={onBack}>
+        ← Voltar
       </button>
     </div>
   );
