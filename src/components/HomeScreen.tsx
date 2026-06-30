@@ -13,6 +13,7 @@ export default function HomeScreen({ onSingleMatch, onLeague, onCup, onAchieveme
     <div className={styles.screen}>
       <header className={styles.header}>
         <h1 className={styles.title}>FootPlan</h1>
+        <span className={styles.titleLine} />
         <p className={styles.subtitle}>Simulador Tático</p>
       </header>
 

@@ -8,7 +8,7 @@
 
 .header {
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: 32px;
   width: 100%;
   max-width: 480px;
 }
@@ -17,16 +17,17 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   padding: 5px 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 0.78rem;
+  font-weight: 700;
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text-secondary);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+  font-family: var(--sans);
 }
 
 .backBtn:hover {
@@ -35,58 +36,63 @@
 }
 
 .logo {
-  font-size: 2.4rem;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-family: var(--display);
+  font-size: 2.8rem;
+  letter-spacing: 0.06em;
+  font-weight: 400;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+  line-height: 1;
 }
 
 .subtitle {
-  font-size: 0.9rem;
+  font-size: 0.78rem;
+  font-weight: 700;
   color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
   margin: 0;
 }
 
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
   max-width: 480px;
 }
 
+/* ── Card ── */
 .card {
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border: 2px solid var(--border);
-  border-radius: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
   cursor: pointer;
   overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.2s;
   text-align: center;
   color: var(--text-primary);
   padding: 0;
 }
 
 .card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   border-color: var(--lc, var(--accent));
 }
 
-.card:active {
-  transform: translateY(-1px);
-}
+.card:active { transform: translateY(-1px); }
 
 .cardSelected {
   border-color: var(--lc, var(--accent));
-  box-shadow: 0 0 0 1px var(--lc, var(--accent));
+  box-shadow: 0 0 0 1px var(--lc, var(--accent)), 0 4px 16px rgba(0,0,0,0.3);
 }
 
+/* Barra colorida no topo */
 .cardStripe {
-  height: 8px;
+  height: 6px;
   background: var(--lc, var(--accent));
   display: flex;
   align-items: center;
@@ -96,10 +102,10 @@
 }
 
 .check {
-  font-size: 0.6rem;
+  font-size: 0.58rem;
   font-weight: 800;
   color: rgba(255, 255, 255, 0.9);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
   line-height: 1;
   position: absolute;
@@ -108,27 +114,30 @@
   transform: translateY(-50%);
 }
 
+/* Corpo do card */
 .cardBody {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 12px 20px;
-  gap: 5px;
+  padding: 18px 12px 18px;
+  gap: 4px;
 }
 
 .badge {
-  width: 72px;
-  height: 72px;
-  border-radius: 8px;
+  width: 64px;
+  height: 64px;
+  border-radius: 6px;
   margin-bottom: 6px;
   object-fit: contain;
 }
 
 .leagueName {
+  font-family: var(--heading);
   font-size: 1rem;
   font-weight: 800;
   color: var(--text-primary);
   line-height: 1.2;
+  letter-spacing: 0.2px;
 }
 
 .cardSelected .leagueName {
@@ -142,29 +151,30 @@
   justify-content: center;
 }
 
-.flag {
-  font-size: 0.85rem;
-}
+.flag { font-size: 0.82rem; }
 
 .country {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
+  font-weight: 500;
 }
 
 .stats {
   display: flex;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 5px;
+  margin-top: 5px;
   flex-wrap: wrap;
   justify-content: center;
 }
 
 .pill {
-  font-size: 0.65rem;
-  font-weight: 600;
-  background: var(--surface-hover);
+  font-size: 0.62rem;
+  font-weight: 700;
+  background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
-  border-radius: 5px;
+  border-radius: 4px;
   padding: 2px 7px;
   color: var(--text-secondary);
+  letter-spacing: 0.2px;
+  font-family: var(--mono);
 }
