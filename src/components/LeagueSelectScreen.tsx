@@ -1,16 +1,11 @@
 import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
-import { crestSvg } from '../data/leagues/generateTeam';
 import styles from './LeagueSelectScreen.module.css';
 
 interface Props {
   onSelect: (league: LeagueDefinition) => void;
   selectedLeague?: LeagueDefinition | null;
   onBack?: () => void;
-}
-
-function leagueInitials(name: string) {
-  return name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
 }
 
 export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }: Props) {
@@ -39,7 +34,7 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }:
               </div>
               <div className={styles.cardBody}>
                 <img
-                  src={crestSvg(league.color, leagueInitials(league.name))}
+                  src={league.logo}
                   alt={league.name}
                   className={styles.badge}
                 />

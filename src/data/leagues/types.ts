@@ -13,6 +13,7 @@ export interface LeagueDefinition {
   country: string;
   flag: string;
   color: string;
+  logo: string;
   totalRounds: number;
   teams: Team[];
   cupName: string;
