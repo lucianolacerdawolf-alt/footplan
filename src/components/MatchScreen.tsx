@@ -477,54 +477,69 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   );
                 })()}
 
-                <div className="halftime-teams">
-                  <div className="halftime-team">
-                    <strong style={{ color: home.color }}>{home.abbreviation} {online && online.isHost ? '(Você)' : ''}</strong>
-                    <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })} disabled={online && !online.isHost}>
-                      {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                    <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })} disabled={online && !online.isHost}>
-                      {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
-                    </select>
-                    <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })} disabled={online && !online.isHost}>
-                      {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
-                    </select>
-                    <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })} disabled={online && !online.isHost}>
-                      {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
-                    </select>
-                    <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })} disabled={online && !online.isHost}>
-                      {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
-                    </select>
+                {online ? (
+                  // Online: only own team's tactics
+                  <div className="halftime-teams" style={{ justifyContent: 'center' }}>
+                    <div className="halftime-team">
+                      <strong style={{ color: online.isHost ? home.color : away.color }}>
+                        {online.isHost ? home.abbreviation : away.abbreviation} (Você)
+                      </strong>
+                      {online.isHost ? <>
+                        <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                        <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
+                        <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
+                        <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
+                        <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
+                      </> : <>
+                        <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                        <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
+                        <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
+                        <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
+                        <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
+                      </>}
+                    </div>
                   </div>
-                  <span className="halftime-vs">vs</span>
-                  <div className="halftime-team">
-                    <strong style={{ color: away.secondaryColor }}>{away.abbreviation} {online && !online.isHost ? '(Você)' : ''}</strong>
-                    <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })} disabled={online && online.isHost}>
-                      {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                    </select>
-                    <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })} disabled={online && online.isHost}>
-                      {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
-                    </select>
-                    <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })} disabled={online && online.isHost}>
-                      {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
-                    </select>
-                    <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })} disabled={online && online.isHost}>
-                      {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
-                    </select>
-                    <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })} disabled={online && online.isHost}>
-                      {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
-                    </select>
+                ) : (
+                  // Offline: both teams
+                  <div className="halftime-teams">
+                    <div className="halftime-team">
+                      <strong style={{ color: home.color }}>{home.abbreviation}</strong>
+                      <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                      <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
+                      <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
+                      <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
+                      <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
+                    </div>
+                    <span className="halftime-vs">vs</span>
+                    <div className="halftime-team">
+                      <strong style={{ color: away.secondaryColor }}>{away.abbreviation}</strong>
+                      <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                      <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
+                      <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
+                      <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
+                      <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Substituições */}
                 <details className="ht-squad-details">
-                  <summary>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span></summary>
+                  <summary>
+                    {online
+                      ? <>Substituições · <span style={{ color: online.isHost ? home.color : away.color }}>{online.isHost ? home.abbreviation : away.abbreviation} {online.isHost ? subsHome : subsAway}/{MAX_SUBS}</span></>
+                      : <>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span></>
+                    }
+                  </summary>
                   <div className="ht-squad-grid">
-                    {([
-                      ['home', home, setHome, htHomePick, setHtHomePick, online?.isHost ?? true],
-                      ['away', away, setAway, htAwayPick, setHtAwayPick, online ? !online.isHost : true],
-                    ] as const).map(([side, team, setTeam, pick, setPick, canEdit]) => {
+                    {(online
+                      ? [online.isHost
+                          ? ['home', home, setHome, htHomePick, setHtHomePick, true] as const
+                          : ['away', away, setAway, htAwayPick, setHtAwayPick, true] as const]
+                      : [
+                          ['home', home, setHome, htHomePick, setHtHomePick, true],
+                          ['away', away, setAway, htAwayPick, setHtAwayPick, true],
+                        ] as const
+                    ).map(([side, team, setTeam, pick, setPick, canEdit]) => {
                       const benchPlayers = team.squad.slice(11);
                       const starters = team.squad.slice(0, 11);
                       const pickIdx = team.squad.findIndex(sp => sp.id === pick);

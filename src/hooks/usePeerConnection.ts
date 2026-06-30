@@ -8,6 +8,7 @@ export interface UsePeerConnectionReturn {
   roomId: string | null;
   error: string | null;
   isHost: boolean;
+  peerConnected: boolean;
   createRoom: () => void;
   joinRoom: (hostId: string) => void;
   send: (data: unknown) => void;
@@ -20,6 +21,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [peerConnected, setPeerConnected] = useState(false);
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
@@ -71,6 +73,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
       conn.on('open', () => {
         if (!mountedRef.current) return;
+        setPeerConnected(true);
       });
 
       conn.on('data', (data: unknown) => {
@@ -81,6 +84,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
       conn.on('close', () => {
         if (!mountedRef.current) return;
         connRef.current = null;
+        setPeerConnected(false);
         setState('error');
         setError('Conexão fechada pelo outro jogador');
       });
@@ -129,6 +133,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
       conn.on('open', () => {
         if (!mountedRef.current) { conn.close(); peer.destroy(); return; }
         setState('connected');
+        setPeerConnected(true);
       });
 
       conn.on('data', (data: unknown) => {
@@ -139,6 +144,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
       conn.on('close', () => {
         if (!mountedRef.current) return;
         connRef.current = null;
+        setPeerConnected(false);
         setState('error');
         setError('Conexão fechada pelo host');
       });
@@ -173,7 +179,8 @@ export function usePeerConnection(): UsePeerConnectionReturn {
     setRoomId(null);
     setError(null);
     setIsHost(false);
+    setPeerConnected(false);
   }, [cleanup]);
 
-  return { state, roomId, error, isHost, createRoom, joinRoom, send, setOnData, disconnect };
+  return { state, roomId, error, isHost, peerConnected, createRoom, joinRoom, send, setOnData, disconnect };
 }

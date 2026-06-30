@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Team, Strategy } from '../engine/types';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { Team, Strategy, Formation, Mentality, Intensity, DefensiveLine, Width } from '../engine/types';
+import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
+import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
 import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
@@ -12,86 +14,114 @@ interface Props {
   peer: UsePeerConnectionReturn;
 }
 
-interface PeerMessage {
-  type: 'host-team' | 'guest-team' | 'start';
-  teamId?: string;
-  leagueId?: string;
-  seed?: number;
-  homeTeamId?: string;
-  homeLeagueId?: string;
-  awayTeamId?: string;
-  awayLeagueId?: string;
-  homeStrategy?: Strategy;
-  awayStrategy?: Strategy;
-}
+type PeerMessage =
+  | { type: 'host-team'; teamId: string }
+  | { type: 'guest-team'; teamId: string }
+  | { type: 'confirm-tactics'; strategy: Strategy }
+  | { type: 'start'; seed: number; homeTeamId: string; awayTeamId: string; homeStrategy: Strategy; awayStrategy: Strategy };
 
-// Flat map of all teams across all leagues for fast lookup
 const allTeamsMap = new Map<string, Team>(
   allLeagues.flatMap(l => l.teams.map(t => [t.id, t]))
 );
+
+const getAvgOvr = (team: Team) => {
+  const starters = team.squad.slice(0, 11);
+  return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
+};
 
 export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer }: Props) {
   const [joinCode, setJoinCode] = useState('');
   const [copyLabel, setCopyLabel] = useState('Copiar');
 
-  // Each side's chosen team (by id)
   const [hostTeamId, setHostTeamId] = useState<string | null>(null);
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null);
 
-  // League filter for the local player's team picker
   const [filterLeagueId, setFilterLeagueId] = useState<string>(allLeagues[0].id);
+
+  // Tactics phase
+  const [myStrategy, setMyStrategy] = useState<Strategy | null>(null);
+  const [myConfirmed, setMyConfirmed] = useState(false);
+  const [opponentConfirmed, setOpponentConfirmed] = useState(false);
+  const [opponentStrategy, setOpponentStrategy] = useState<Strategy | null>(null);
 
   const filteredTeams = useMemo(
     () => allLeagues.find(l => l.id === filterLeagueId)?.teams ?? [],
     [filterLeagueId]
   );
 
-  const getAvgOvr = (team: Team) => {
-    const starters = team.squad.slice(0, 11);
-    return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
-  };
+  // Use ref to avoid stale closures in the data handler
+  const isHostRef = useRef(peer.isHost);
+  isHostRef.current = peer.isHost;
+  const onStartMatchRef = useRef(onStartMatch);
+  onStartMatchRef.current = onStartMatch;
 
-  const selectMyTeam = useCallback((teamId: string) => {
-    if (peer.isHost) {
-      setHostTeamId(teamId);
-      peer.send({ type: 'host-team', teamId, leagueId: filterLeagueId });
-    } else {
-      setGuestTeamId(teamId);
-      peer.send({ type: 'guest-team', teamId, leagueId: filterLeagueId });
-    }
-  }, [peer, filterLeagueId]);
-
-  // Handle incoming messages
+  // Register data handler once (stable)
   useEffect(() => {
     peer.setOnData((data: unknown) => {
       const msg = data as PeerMessage;
-      if (!msg || typeof msg !== 'object') return;
+      if (!msg || typeof msg !== 'object' || !('type' in msg)) return;
 
-      if (msg.type === 'host-team' && msg.teamId && !peer.isHost) {
+      if (msg.type === 'host-team' && !isHostRef.current) {
         setHostTeamId(msg.teamId);
       }
-      if (msg.type === 'guest-team' && msg.teamId && peer.isHost) {
+      if (msg.type === 'guest-team' && isHostRef.current) {
         setGuestTeamId(msg.teamId);
       }
-      if (msg.type === 'start' && msg.seed != null && msg.homeTeamId && msg.awayTeamId && !peer.isHost) {
+      if (msg.type === 'confirm-tactics') {
+        setOpponentConfirmed(true);
+        setOpponentStrategy(msg.strategy);
+      }
+      if (msg.type === 'start' && !isHostRef.current) {
         const home = allTeamsMap.get(msg.homeTeamId);
         const away = allTeamsMap.get(msg.awayTeamId);
         if (!home || !away) return;
         const h = cloneTeam(home);
         const a = cloneTeam(away);
-        if (msg.homeStrategy) h.strategy = msg.homeStrategy;
-        if (msg.awayStrategy) a.strategy = msg.awayStrategy;
-        onStartMatch(h, a, msg.seed!);
+        h.strategy = msg.homeStrategy;
+        a.strategy = msg.awayStrategy;
+        onStartMatchRef.current(h, a, msg.seed);
       }
     });
     return () => peer.setOnData(null);
-  }, [peer, onStartMatch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // stable — reads from refs
 
-  const handleCreateRoom = () => peer.createRoom();
-  const handleJoinRoom = () => {
-    const code = joinCode.trim().toUpperCase();
-    if (code) peer.joinRoom(code);
-  };
+  const selectMyTeam = useCallback((teamId: string) => {
+    const team = allTeamsMap.get(teamId);
+    if (!team) return;
+    // Reset tactics/confirmation when changing team
+    setMyStrategy({ ...team.strategy });
+    setMyConfirmed(false);
+    setOpponentConfirmed(false);
+    setOpponentStrategy(null);
+    if (peer.isHost) {
+      setHostTeamId(teamId);
+      peer.send({ type: 'host-team', teamId });
+    } else {
+      setGuestTeamId(teamId);
+      peer.send({ type: 'guest-team', teamId });
+    }
+  }, [peer]);
+
+  const handleConfirmTactics = useCallback(() => {
+    if (!myStrategy) return;
+    setMyConfirmed(true);
+    peer.send({ type: 'confirm-tactics', strategy: myStrategy });
+  }, [peer, myStrategy]);
+
+  const handleStart = useCallback(() => {
+    if (!hostTeamId || !guestTeamId || !peer.isHost) return;
+    const homeTeam = allTeamsMap.get(hostTeamId);
+    const awayTeam = allTeamsMap.get(guestTeamId);
+    if (!homeTeam || !awayTeam) return;
+    const seed = (Math.random() * 0xFFFFFFFF) >>> 0;
+    const h = cloneTeam(homeTeam);
+    const a = cloneTeam(awayTeam);
+    if (myStrategy) h.strategy = myStrategy;
+    if (opponentStrategy) a.strategy = opponentStrategy;
+    peer.send({ type: 'start', seed, homeTeamId: h.id, awayTeamId: a.id, homeStrategy: h.strategy, awayStrategy: a.strategy });
+    onStartMatch(h, a, seed);
+  }, [hostTeamId, guestTeamId, myStrategy, opponentStrategy, peer, onStartMatch]);
 
   const handleCopyRoom = async () => {
     if (!peer.roomId) return;
@@ -100,77 +130,71 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
     setTimeout(() => setCopyLabel('Copiar'), 2000);
   };
 
-  const handleStart = () => {
-    if (!hostTeamId || !guestTeamId || !peer.isHost) return;
-    const homeTeam = allTeamsMap.get(hostTeamId);
-    const awayTeam = allTeamsMap.get(guestTeamId);
-    if (!homeTeam || !awayTeam) return;
-    const seed = (Math.random() * 0xFFFFFFFF) >>> 0;
-    const h = cloneTeam(homeTeam);
-    const a = cloneTeam(awayTeam);
-    peer.send({
-      type: 'start', seed,
-      homeTeamId: h.id, awayTeamId: a.id,
-      homeStrategy: h.strategy, awayStrategy: a.strategy,
-    });
-    onStartMatch(h, a, seed);
-  };
-
   const hostTeam = hostTeamId ? allTeamsMap.get(hostTeamId) ?? null : null;
   const guestTeam = guestTeamId ? allTeamsMap.get(guestTeamId) ?? null : null;
   const myTeamId = peer.isHost ? hostTeamId : guestTeamId;
-  const picked = myTeamId !== null;
+  const myTeam = myTeamId ? allTeamsMap.get(myTeamId) ?? null : null;
+  const bothPicked = hostTeamId !== null && guestTeamId !== null;
+
+  const topNav = (disconnect?: boolean) => (
+    <div className="top-nav">
+      <button className="slot-nav-btn" onClick={() => { if (disconnect) peer.disconnect(); onBack(); }}>← Voltar</button>
+      <header className="app-header">
+        <h1>FootPlan</h1>
+        <p className="subtitle">Jogar Online</p>
+      </header>
+      <button className="slot-nav-btn" onClick={() => { if (disconnect) peer.disconnect(); onGoHome(); }}>Menu Principal</button>
+    </div>
+  );
+
+  const roomCodeBadge = peer.isHost && peer.roomId ? (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+      background: 'var(--code-bg)', border: '1px solid var(--border)', borderRadius: 10,
+      padding: '10px 20px', margin: '0 auto 4px', maxWidth: 340,
+    }}>
+      <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.5, fontFamily: 'var(--mono)' }}>Sala:</span>
+      <code style={{ fontSize: 28, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--accent)', letterSpacing: 6, userSelect: 'all' }}>
+        {peer.roomId}
+      </code>
+      <button className="slot-nav-btn" onClick={handleCopyRoom} style={{ padding: '4px 12px', fontSize: 11 }}>{copyLabel}</button>
+    </div>
+  ) : null;
 
   // ── Phase 1: connect ──────────────────────────────────────────────────────
-  if (peer.state !== 'connected') {
+  if (!peer.peerConnected && !(peer.isHost && peer.state === 'connected')) {
     return (
       <div className="team-select-screen">
-        <div className="top-nav">
-          <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
-          <header className="app-header">
-            <h1>FootPlan</h1>
-            <p className="subtitle">Jogar Online</p>
-          </header>
-          <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
-        </div>
-
+        {topNav()}
         {peer.error && (
           <div className="color-conflict-warning">
             <span>{peer.error}</span>
-            <button className="conflict-fix-btn" onClick={() => peer.disconnect()}>
-              Tentar novamente
-            </button>
+            <button className="conflict-fix-btn" onClick={() => peer.disconnect()}>Tentar novamente</button>
           </div>
         )}
-
         <div className="select-instruction">
           {peer.state === 'connecting' ? 'Conectando...' : 'Crie uma sala ou entre em uma existente'}
         </div>
-
         <div style={{ maxWidth: 400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <button
             className="slot-nav-btn slot-nav-btn-primary"
-            onClick={handleCreateRoom}
+            onClick={() => peer.createRoom()}
             disabled={peer.state === 'connecting'}
             style={{ width: '100%', padding: '14px 20px', fontSize: 15 }}
           >
             {peer.state === 'connecting' ? 'Conectando...' : '🌐 Criar Sala'}
           </button>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, opacity: 0.3 }}>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
             <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'var(--mono)' }}>OU</span>
             <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
           </div>
-
           <div style={{ display: 'flex', gap: 8 }}>
             <input
-              type="text"
-              placeholder="Código (4 letras)"
-              maxLength={4}
+              type="text" placeholder="Código (4 letras)" maxLength={4}
               value={joinCode}
               onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 4))}
-              onKeyDown={e => e.key === 'Enter' && handleJoinRoom()}
+              onKeyDown={e => e.key === 'Enter' && joinCode.trim().length === 4 && peer.joinRoom(joinCode.trim())}
               style={{
                 flex: 1, background: 'var(--code-bg)', border: '1.5px solid var(--border)',
                 borderRadius: 8, padding: '10px 14px', fontSize: 18, fontFamily: 'var(--mono)',
@@ -180,76 +204,52 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
             />
             <button
               className="slot-nav-btn slot-nav-btn-primary"
-              onClick={handleJoinRoom}
+              onClick={() => peer.joinRoom(joinCode.trim())}
               disabled={peer.state === 'connecting' || joinCode.trim().length < 4}
-            >
-              Entrar
-            </button>
+            >Entrar</button>
           </div>
         </div>
       </div>
     );
   }
 
-  // ── Phase 2: pick teams ───────────────────────────────────────────────────
-  return (
-    <div className="team-select-screen">
-      <div className="top-nav">
-        <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onBack(); }}>← Voltar</button>
-        <header className="app-header">
-          <h1>FootPlan</h1>
-          <p className="subtitle">Jogar Online</p>
-        </header>
-        <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onGoHome(); }}>Menu Principal</button>
-      </div>
-
-      {peer.isHost && peer.roomId && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-          background: 'var(--code-bg)', border: '1px solid var(--border)', borderRadius: 10,
-          padding: '10px 20px', margin: '0 auto 4px', maxWidth: 340,
-        }}>
-          <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.5, fontFamily: 'var(--mono)' }}>Sala:</span>
-          <code style={{
-            fontSize: 28, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--accent)',
-            letterSpacing: 6, userSelect: 'all',
-          }}>{peer.roomId}</code>
-          <button className="slot-nav-btn" onClick={handleCopyRoom} style={{ padding: '4px 12px', fontSize: 11 }}>
-            {copyLabel}
-          </button>
+  // ── Phase 1b: host waiting for guest ─────────────────────────────────────
+  if (peer.isHost && peer.state === 'connected' && !peer.peerConnected) {
+    return (
+      <div className="team-select-screen">
+        {topNav(true)}
+        {roomCodeBadge}
+        <div className="select-instruction" style={{ marginTop: 32 }}>
+          Aguardando adversário entrar com o código...
         </div>
-      )}
-      {!peer.isHost && (
-        <div className="select-instruction">● Conectado à sala</div>
-      )}
-
-      {/* Scoreboard */}
-      <div className="select-summary">
-        {renderSlot(hostTeam, 'home', 'CASA', 'home-slot')}
-        <div className="select-vs">VS</div>
-        {renderSlot(guestTeam, 'away', 'FORA', 'away-slot')}
+        <div style={{ fontSize: 28, textAlign: 'center', marginTop: 16, opacity: 0.3, letterSpacing: 4 }}>· · ·</div>
       </div>
+    );
+  }
 
-      {/* Start button (host only, when both picked) */}
-      <div className="select-action">
-        {peer.isHost && hostTeamId && guestTeamId
-          ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>Iniciar Partida →</button>
-          : !peer.isHost && hostTeamId && guestTeamId
-          ? <div className="select-instruction">Aguardando host iniciar...</div>
-          : <div className="select-instruction">{picked ? 'Aguardando oponente...' : 'Escolha seu time'}</div>
-        }
-      </div>
+  // ── Phase 2: pick teams ───────────────────────────────────────────────────
+  if (!bothPicked) {
+    const opponentPick = peer.isHost ? guestTeamId : hostTeamId;
+    return (
+      <div className="team-select-screen">
+        {topNav(true)}
+        {roomCodeBadge}
+        {!peer.isHost && <div className="select-instruction">● Conectado</div>}
 
-      {/* League filter tabs */}
-      <div style={{
-        display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center',
-        padding: '0 16px', maxWidth: 540, margin: '0 auto 8px',
-      }}>
-        {allLeagues.map(l => (
-          <button
-            key={l.id}
-            onClick={() => setFilterLeagueId(l.id)}
-            style={{
+        <div className="select-summary">
+          {renderSlot(hostTeam, 'CASA', 'home-slot')}
+          <div className="select-vs">VS</div>
+          {renderSlot(guestTeam, 'FORA', 'away-slot')}
+        </div>
+
+        <div className="select-instruction">
+          {myTeamId ? 'Aguardando adversário escolher...' : 'Escolha seu time'}
+        </div>
+
+        {/* League filter tabs */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '0 16px', maxWidth: 540, margin: '0 auto 8px' }}>
+          {allLeagues.map(l => (
+            <button key={l.id} onClick={() => setFilterLeagueId(l.id)} style={{
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
               fontFamily: 'var(--heading)', cursor: 'pointer',
@@ -257,43 +257,136 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
               background: filterLeagueId === l.id ? l.color + '18' : 'transparent',
               color: filterLeagueId === l.id ? 'var(--text-primary)' : 'var(--text-secondary)',
               transition: 'all 0.15s',
-            }}
-          >
-            <img src={l.logo} alt={l.name} style={{ width: 16, height: 16, objectFit: 'contain' }} />
-            {l.name}
-          </button>
-        ))}
+            }}>
+              <img src={l.logo} alt={l.name} style={{ width: 16, height: 16, objectFit: 'contain' }} />
+              {l.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="team-grid">
+          {filteredTeams.map(team => {
+            const isHostPick = team.id === hostTeamId;
+            const isGuestPick = team.id === guestTeamId;
+            const isMyPick = team.id === myTeamId;
+            const isOpponentPick = team.id === opponentPick;
+            return (
+              <button
+                key={team.id}
+                className={`team-tile ${isHostPick ? 'picked-home' : ''} ${isGuestPick ? 'picked-away' : ''} ${(isHostPick || isGuestPick) ? 'selected' : ''}`}
+                style={(isHostPick || isGuestPick) ? { borderColor: team.color, background: team.color + '10' } : undefined}
+                onClick={() => !isOpponentPick && selectMyTeam(team.id)}
+                disabled={isOpponentPick}
+              >
+                <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+                <span className="tile-name">{team.name}</span>
+                <span className="tile-ovr">{isMyPick ? '✓' : getAvgOvr(team)}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase 3: configure tactics ────────────────────────────────────────────
+  const myColor = peer.isHost ? (hostTeam?.color ?? 'var(--accent)') : (guestTeam?.color ?? 'var(--accent)');
+  const bothConfirmed = myConfirmed && opponentConfirmed;
+
+  return (
+    <div className="team-select-screen">
+      {topNav(true)}
+      {roomCodeBadge}
+
+      {/* Match preview */}
+      <div className="select-summary">
+        {renderSlot(hostTeam, 'CASA', 'home-slot')}
+        <div className="select-vs">VS</div>
+        {renderSlot(guestTeam, 'FORA', 'away-slot')}
       </div>
 
-      {/* Team grid */}
-      <div className="team-grid">
-        {filteredTeams.map(team => {
-          const isHostPick = team.id === hostTeamId;
-          const isGuestPick = team.id === guestTeamId;
-          const isMyPick = team.id === myTeamId;
-          const isOpponentPick = peer.isHost ? isGuestPick : isHostPick;
-          return (
-            <button
-              key={team.id}
-              className={`team-tile ${isHostPick ? 'picked-home' : ''} ${isGuestPick ? 'picked-away' : ''} ${(isHostPick || isGuestPick) ? 'selected' : ''}`}
-              style={(isHostPick || isGuestPick) ? { borderColor: team.color, background: team.color + '10' } : undefined}
-              onClick={() => !isOpponentPick && selectMyTeam(team.id)}
-              disabled={isOpponentPick}
-            >
-              <img className="tile-crest" src={team.logoUrl} alt={team.name} />
-              <span className="tile-name">{team.name}</span>
-              <span className="tile-ovr">{isMyPick ? '✓' : getAvgOvr(team)}</span>
-            </button>
-          );
-        })}
+      {/* Status */}
+      <div className="select-action">
+        {peer.isHost && bothConfirmed
+          ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>Iniciar Partida →</button>
+          : <div className="select-instruction">
+              {myConfirmed
+                ? (opponentConfirmed ? '✓ Ambos prontos!' : 'Aguardando adversário confirmar...')
+                : 'Configure suas táticas e confirme'}
+            </div>
+        }
       </div>
+
+      {/* Own team tactics editor */}
+      {myTeam && myStrategy && (
+        <div className="halftime-inner" style={{ maxWidth: 380, margin: '0 auto', width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <img src={myTeam.logoUrl} alt={myTeam.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+            <strong style={{ color: myColor, fontSize: 15, fontFamily: 'var(--heading)' }}>
+              {myTeam.name} — Seu Time
+            </strong>
+          </div>
+
+          <div className="halftime-team" style={{ width: '100%' }}>
+            <select
+              value={myStrategy.formation}
+              onChange={e => setMyStrategy(s => s ? { ...s, formation: e.target.value as Formation } : s)}
+              disabled={myConfirmed}
+            >
+              {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
+            </select>
+            <select
+              value={myStrategy.mentality}
+              onChange={e => setMyStrategy(s => s ? { ...s, mentality: e.target.value as Mentality } : s)}
+              disabled={myConfirmed}
+            >
+              {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
+            </select>
+            <select
+              value={myStrategy.intensity}
+              onChange={e => setMyStrategy(s => s ? { ...s, intensity: e.target.value as Intensity } : s)}
+              disabled={myConfirmed}
+            >
+              {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
+            </select>
+            <select
+              value={myStrategy.defensiveLine}
+              onChange={e => setMyStrategy(s => s ? { ...s, defensiveLine: e.target.value as DefensiveLine } : s)}
+              disabled={myConfirmed}
+            >
+              {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
+            </select>
+            <select
+              value={myStrategy.width}
+              onChange={e => setMyStrategy(s => s ? { ...s, width: e.target.value as Width } : s)}
+              disabled={myConfirmed}
+            >
+              {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
+            </select>
+          </div>
+
+          {!myConfirmed && (
+            <button
+              className="slot-nav-btn slot-nav-btn-primary"
+              onClick={handleConfirmTactics}
+              style={{ width: '100%', marginTop: 12, padding: '12px 20px' }}
+            >
+              ✓ Confirmar Táticas
+            </button>
+          )}
+          {myConfirmed && (
+            <div style={{ textAlign: 'center', marginTop: 12, color: 'var(--accent)', fontSize: 13, fontWeight: 700 }}>
+              ✓ Táticas confirmadas
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function renderSlot(
   team: { name: string; logoUrl: string; color: string } | null,
-  _side: 'home' | 'away',
   label: string,
   slotClass: string
 ) {
