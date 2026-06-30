@@ -20,7 +20,7 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }:
       </header>
 
       <div className={styles.grid}>
-        {allLeagues.map(league => {
+        {[...allLeagues].sort((a, b) => b.teams.length - a.teams.length).map(league => {
           const isSelected = selectedLeague?.id === league.id;
           return (
             <button
