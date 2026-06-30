@@ -43,7 +43,6 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }:
                 <div className={styles.leagueName}>{league.name}</div>
                 <div className={styles.meta}>
                   <span className={styles.flag}>{league.flag}</span>
-                  <span className={styles.country}>{league.country}</span>
                 </div>
                 <div className={styles.stats}>
                   <span className={styles.pill}>{league.teams.length} times</span>
