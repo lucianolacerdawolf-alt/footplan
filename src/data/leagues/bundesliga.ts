@@ -1,21 +1,19 @@
 import type { LeagueDefinition } from './types';
 import { generateTeam } from './generateTeam';
 
-const espn = (id: number) => `https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png`;
-
 const TEAMS: Array<[string, string, string, string, number, string]> = [
   ['Bayern München',           'BAY', '#DC052D', '#0066B2', 87, espn(132)],
-  ['Borussia Dortmund',        'BVB', '#FDE100', '#000000', 83, espn(124)],
+  ['Borussia Dortmund',        'BVB', '#FDE100', '#000000', 83, 'https://r2.thesportsdb.com/images/media/team/badge/tqo8ge1716960353.png'],
   ['RB Leipzig',               'RBL', '#DD0741', '#FFFFFF', 82, espn(11420)],
-  ['Bayer Leverkusen',         'B04', '#E32221', '#000000', 84, espn(3808)],
-  ['Eintracht Frankfurt',      'SGE', '#E1000F', '#000000', 79, espn(3810)],
+  ['Bayer Leverkusen',         'B04', '#E32221', '#000000', 84, 'https://r2.thesportsdb.com/images/media/team/badge/3x9k851726760113.png'],
+  ['Eintracht Frankfurt',      'SGE', '#E1000F', '#000000', 79, 'https://r2.thesportsdb.com/images/media/team/badge/rurwpy1473453269.png'],
   ['VfB Stuttgart',            'VFB', '#E32221', '#FFFFFF', 79, espn(3815)],
   ['VfL Wolfsburg',            'WOB', '#65A832', '#FFFFFF', 78, espn(3819)],
-  ['Borussia Mönchengladbach', 'BMG', '#000000', '#FFFFFF', 77, espn(3813)],
-  ['SC Freiburg',              'SCF', '#CC0000', '#000000', 77, espn(3818)],
-  ['TSG Hoffenheim',           'TSG', '#1C63B7', '#FFFFFF', 76, espn(3814)],
+  ['Borussia Mönchengladbach', 'BMG', '#000000', '#FFFFFF', 77, 'https://r2.thesportsdb.com/images/media/team/badge/sysurw1473453380.png'],
+  ['SC Freiburg',              'SCF', '#CC0000', '#000000', 77, 'https://r2.thesportsdb.com/images/media/team/badge/urwtup1473453288.png'],
+  ['TSG Hoffenheim',           'TSG', '#1C63B7', '#FFFFFF', 76, 'https://r2.thesportsdb.com/images/media/team/badge/9hwvb21621593919.png'],
   ['Werder Bremen',            'SVW', '#1D9058', '#FFFFFF', 75, espn(3820)],
-  ['FC Augsburg',              'FCA', '#BA3733', '#FFFFFF', 74, espn(3806)],
+  ['FC Augsburg',              'FCA', '#BA3733', '#FFFFFF', 74, 'https://r2.thesportsdb.com/images/media/team/badge/xqyyvq1473453233.png'],
   ['Mainz 05',                 'M05', '#ED1C24', '#FFFFFF', 74, espn(3811)],
   ['Union Berlin',             'FCU', '#D4011D', '#FFFFFF', 74, ''],
   ['VfL Bochum',               'BOC', '#005CA9', '#FFFFFF', 72, ''],

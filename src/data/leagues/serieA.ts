@@ -1,28 +1,26 @@
 import type { LeagueDefinition } from './types';
 import { generateTeam } from './generateTeam';
 
-const espn = (id: number) => `https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png`;
-
 const TEAMS: Array<[string, string, string, string, number, string]> = [
-  ['Inter Milan',    'INT', '#010E80', '#FFD700', 86, espn(110)],
-  ['AC Milan',       'ACM', '#FB090B', '#000000', 84, espn(103)],
-  ['Juventus',       'JUV', '#000000', '#FFFFFF', 84, espn(111)],
+  ['Inter Milan',    'INT', '#010E80', '#FFD700', 86, 'https://r2.thesportsdb.com/images/media/team/badge/ryhu6d1617113103.png'],
+  ['AC Milan',       'ACM', '#FB090B', '#000000', 84, 'https://r2.thesportsdb.com/images/media/team/badge/wvspur1448806617.png'],
+  ['Juventus',       'JUV', '#000000', '#FFFFFF', 84, 'https://r2.thesportsdb.com/images/media/team/badge/uxf0gr1742983727.png'],
   ['Napoli',         'NAP', '#12A0D2', '#FFFFFF', 83, espn(4066)],
-  ['Atalanta',       'ATA', '#1C2A5E', '#FFFFFF', 82, espn(4073)],
+  ['Atalanta',       'ATA', '#1C2A5E', '#FFFFFF', 82, 'https://r2.thesportsdb.com/images/media/team/badge/qix5ku1780561327.png'],
   ['Roma',           'ROM', '#9C142C', '#FFB612', 81, espn(104)],
   ['Lazio',          'LAZ', '#87CEEB', '#FFFFFF', 80, espn(4065)],
-  ['Fiorentina',     'FIO', '#5C2D91', '#FFFFFF', 79, espn(4064)],
-  ['Bologna',        'BOL', '#CE2939', '#0A1E47', 78, espn(4062)],
+  ['Fiorentina',     'FIO', '#5C2D91', '#FFFFFF', 79, 'https://r2.thesportsdb.com/images/media/team/badge/hc8nhu1656098030.png'],
+  ['Bologna',        'BOL', '#CE2939', '#0A1E47', 78, 'https://r2.thesportsdb.com/images/media/team/badge/2qi1u31655592366.png'],
   ['Torino',         'TOR', '#8B0000', '#FFFFFF', 77, espn(4067)],
   ['Udinese',        'UDI', '#000000', '#FFFFFF', 76, espn(4068)],
-  ['Genoa',          'GEN', '#E60000', '#1C2A5E', 75, espn(4063)],
+  ['Genoa',          'GEN', '#E60000', '#1C2A5E', 75, 'https://r2.thesportsdb.com/images/media/team/badge/52s8dn1655553600.png'],
   ['Monza',          'MON', '#E60000', '#FFFFFF', 75, ''],
   ['Hellas Verona',  'HEL', '#004C97', '#FFFF00', 74, espn(4070)],
   ['Lecce',          'LEC', '#FFD700', '#D50032', 73, ''],
-  ['Cagliari',       'CAG', '#003B73', '#D3212A', 73, espn(4061)],
+  ['Cagliari',       'CAG', '#003B73', '#D3212A', 73, 'https://r2.thesportsdb.com/images/media/team/badge/wvsvxt1447534471.png'],
   ['Empoli',         'EMP', '#1E5AA0', '#FFFFFF', 72, ''],
   ['Parma',          'PAR', '#FFD700', '#003399', 72, espn(4069)],
-  ['Como',           'COM', '#1E3A8A', '#FFFFFF', 70, ''],
+  ['Como',           'COM', '#1E3A8A', '#FFFFFF', 70, 'https://r2.thesportsdb.com/images/media/team/badge/02x81t1627405841.png'],
   ['Venezia',        'VEN', '#F57C00', '#004D00', 69, ''],
 ];
 
