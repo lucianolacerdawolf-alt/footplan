@@ -81,7 +81,7 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
       </div>
 
       <div className="team-grid">
-        {league.teams.map(team => {
+        {[...league.teams].sort((a, b) => a.name.localeCompare(b.name)).map(team => {
           const isSelected = team.id === userTeamId;
           return (
             <button

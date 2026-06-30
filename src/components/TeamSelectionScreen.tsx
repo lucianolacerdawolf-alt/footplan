@@ -157,7 +157,7 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
       </div>
 
       <div className="team-grid">
-        {teams.map(team => {
+        {[...teams].sort((a, b) => a.name.localeCompare(b.name)).map(team => {
           const isHome = team.id === homeId;
           const isAway = team.id === awayId;
           const isSelected = isHome || isAway;

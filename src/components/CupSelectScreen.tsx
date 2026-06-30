@@ -1,6 +1,6 @@
 import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
-import styles from './LeagueSelectScreen.module.css';
+import styles from './CupSelectScreen.module.css';
 
 interface Props {
   onSelect: (league: LeagueDefinition) => void;
@@ -33,7 +33,7 @@ export default function CupSelectScreen({ onSelect, onBack }: Props) {
                 alt={league.cupName}
                 className={styles.badge}
               />
-              <div className={styles.leagueName}>{league.cupName}</div>
+              <div className={styles.cupName}>{league.cupName}</div>
             </div>
           </button>
         ))}
