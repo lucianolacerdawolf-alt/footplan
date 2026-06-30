@@ -180,9 +180,9 @@ function App() {
       />
     );
   } else if (screen === 'online-lobby') {
-    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={goHome} teams={selectedLeague?.teams ?? premierLeagueTeams} />;
+    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={() => setScreen('league-select')} onGoHome={goHome} teams={selectedLeague?.teams ?? premierLeagueTeams} />;
   } else if (screen === 'tournament-setup') {
-    content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
+    content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => setScreen('league-select')} onGoHome={goHome} onStart={handleTournamentStart} />;
   } else if (screen === 'league' && leagueState) {
     content = (
       <LeagueScreen

@@ -10,6 +10,7 @@ interface Props {
   mode: TournamentMode;
   league: LeagueDefinition;
   onBack: () => void;
+  onGoHome: () => void;
   onStart: (userTeam: Team) => void;
 }
 
@@ -18,7 +19,7 @@ const MODE_BTN: Record<TournamentMode, string> = {
   bracket: 'Sortear Copa →',
 };
 
-export default function TournamentSetupScreen({ mode, league, onBack, onStart }: Props) {
+export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, onStart }: Props) {
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
 
   const getAvgOvr = (team: Team) => {
@@ -37,6 +38,11 @@ export default function TournamentSetupScreen({ mode, league, onBack, onStart }:
 
   return (
     <div className="team-select-screen">
+      <div className="top-nav">
+        <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
+        <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
+      </div>
+
       <header className="app-header">
         <h1>FootPlan</h1>
         <p className="subtitle">{title}</p>
@@ -46,10 +52,7 @@ export default function TournamentSetupScreen({ mode, league, onBack, onStart }:
         {userTeamId ? 'Time selecionado! Pode começar.' : 'Escolha seu time'}
       </div>
 
-      {/* Linha central: botão voltar | slot | botão iniciar */}
-      <div className="slot-nav-row">
-        <button className="slot-nav-btn" onClick={onBack}>← Menu Principal</button>
-
+      <div className="select-summary" style={{ justifyContent: 'center' }}>
         <div
           className={`select-slot home-slot ${selectedTeam ? 'filled' : ''}`}
           onClick={selectedTeam ? () => setUserTeamId(null) : undefined}
@@ -65,11 +68,12 @@ export default function TournamentSetupScreen({ mode, league, onBack, onStart }:
             <span className="slot-empty">SEU TIME</span>
           )}
         </div>
+      </div>
 
-        {selectedTeam
-          ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>{MODE_BTN[mode]}</button>
-          : <div className="slot-nav-spacer" />
-        }
+      <div className="select-action">
+        {selectedTeam && (
+          <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>{MODE_BTN[mode]}</button>
+        )}
       </div>
 
       <div className="team-grid">

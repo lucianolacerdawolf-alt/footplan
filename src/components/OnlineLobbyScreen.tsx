@@ -7,6 +7,7 @@ import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
   onBack: () => void;
+  onGoHome: () => void;
   peer: UsePeerConnectionReturn;
   teams: Team[];
 }
@@ -21,7 +22,7 @@ interface PeerMessage {
   awayStrategy?: Strategy;
 }
 
-export default function OnlineLobbyScreen({ onStartMatch, onBack, peer, teams }: Props) {
+export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer, teams }: Props) {
   const [joinCode, setJoinCode] = useState('');
   const [hostTeamId, setHostTeamId] = useState<string | null>(null);
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null);
@@ -119,6 +120,11 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer, teams }:
   if (peer.state !== 'connected') {
     return (
       <div className="team-select-screen">
+        <div className="top-nav">
+          <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
+          <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
+        </div>
+
         <header className="app-header">
           <h1>FootPlan</h1>
           <p className="subtitle">Jogar Online</p>
@@ -177,8 +183,6 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer, teams }:
             </button>
           </div>
         </div>
-
-        <button className="slot-nav-btn" onClick={onBack} style={{ alignSelf: 'center', marginTop: 8 }}>← Menu Principal</button>
       </div>
     );
   }
@@ -186,6 +190,11 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer, teams }:
   // Connected — lobby
   return (
     <div className="team-select-screen">
+      <div className="top-nav">
+        <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onBack(); }}>← Voltar</button>
+        <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onGoHome(); }}>Menu Principal</button>
+      </div>
+
       <header className="app-header">
         <h1>FootPlan</h1>
         <p className="subtitle">Jogar Online</p>
@@ -217,20 +226,18 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer, teams }:
         {canPick ? 'Escolha seu time' : 'Time selecionado! Aguardando oponente...'}
       </div>
 
-      <div className="slot-nav-row">
-        <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onBack(); }}>← Voltar</button>
-
+      <div className="select-summary">
         {renderSlot(hostTeam, 'home', 'CASA', 'home-slot')}
-
         <div className="select-vs">VS</div>
-
         {renderSlot(guestTeam, 'away', 'FORA', 'away-slot')}
+      </div>
 
+      <div className="select-action">
         {peer.isHost && hostTeamId && guestTeamId
           ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>Iniciar Partida →</button>
           : !peer.isHost && hostTeamId && guestTeamId
-          ? <div className="select-instruction" style={{ margin: 0 }}>Host irá iniciar...</div>
-          : <div className="slot-nav-spacer" />
+          ? <div className="select-instruction">Host irá iniciar...</div>
+          : null
         }
       </div>
 
