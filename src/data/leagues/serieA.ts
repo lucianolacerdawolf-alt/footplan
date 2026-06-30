@@ -1,6 +1,8 @@
 import type { LeagueDefinition } from './types';
 import { generateTeam } from './generateTeam';
 
+const espn = (id: number) => `https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png`;
+
 const TEAMS: Array<[string, string, string, string, number, string]> = [
   ['Inter Milan',    'INT', '#010E80', '#FFD700', 86, 'https://r2.thesportsdb.com/images/media/team/badge/ryhu6d1617113103.png'],
   ['AC Milan',       'ACM', '#FB090B', '#000000', 84, 'https://r2.thesportsdb.com/images/media/team/badge/wvspur1448806617.png'],

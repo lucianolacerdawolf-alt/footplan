@@ -1,6 +1,8 @@
 import type { LeagueDefinition } from './types';
 import { generateTeam } from './generateTeam';
 
+const espn = (id: number) => `https://a.espncdn.com/i/teamlogos/soccer/500/${id}.png`;
+
 const TEAMS: Array<[string, string, string, string, number, string]> = [
   ['Bayern München',           'BAY', '#DC052D', '#0066B2', 87, espn(132)],
   ['Borussia Dortmund',        'BVB', '#FDE100', '#000000', 83, 'https://r2.thesportsdb.com/images/media/team/badge/tqo8ge1716960353.png'],
