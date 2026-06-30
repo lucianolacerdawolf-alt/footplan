@@ -197,7 +197,7 @@ function simularBloco(
     // Aplica ao defTeam quando ELE está desesperado — cria contra-ataques matadores
     const defTeamIsTrailing = (isHome(defTeam) && state.homeScore < state.awayScore) ||
                                (!isHome(defTeam) && state.awayScore < state.homeScore);
-    const defPenaltyMod = (defTeamIsTrailing && isLate) ? 0.85 : 1.0;
+    const defPenaltyMod = (defTeamIsTrailing && isLate) ? 0.75 : 1.0;
 
     if (random() < ATK_CHANCE[possTeam.strategy.mentality] * urgencyMod) {
       const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A', momentumMod, state.injured, defPenaltyMod);
