@@ -503,6 +503,7 @@ export const ligue1: LeagueDefinition = {
   color: '#004899',
   logo: 'https://r2.thesportsdb.com/images/media/league/badge/9f7z9d1742983155.png',
   cupName: 'Coupe de France',
+  cupLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Coupe_de_France_trophy.png/250px-Coupe_de_France_trophy.png',
   totalRounds: 34,
   relegationSpots: 3,
   europeanSlots: {

@@ -17,6 +17,7 @@ export interface LeagueDefinition {
   totalRounds: number;
   teams: Team[];
   cupName: string;
+  cupLogo: string;
   europeanSlots: {
     championsLeague: number;
     europaLeague: number;

@@ -499,6 +499,7 @@ export const bundesliga: LeagueDefinition = {
   name: 'Bundesliga',
   country: 'Alemanha',
   cupName: 'DFB-Pokal',
+  cupLogo: 'https://crests.football-data.org/DFB_CUP.png',
   flag: '🇩🇪',
   color: '#e32221',
   logo: 'https://r2.thesportsdb.com/images/media/league/badge/teqh1b1679952008.png',

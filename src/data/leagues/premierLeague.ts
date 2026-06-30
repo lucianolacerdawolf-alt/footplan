@@ -6,6 +6,7 @@ export const premierLeague: LeagueDefinition = {
   name: 'Premier League',
   country: 'Inglaterra',
   cupName: 'FA Cup',
+  cupLogo: 'https://crests.football-data.org/fa_cup.png',
   flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
   color: '#3d195b',
   logo: 'https://r2.thesportsdb.com/images/media/league/badge/gasy9d1737743125.png',

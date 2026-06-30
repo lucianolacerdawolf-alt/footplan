@@ -551,6 +551,7 @@ export const serieA: LeagueDefinition = {
   name: 'Serie A',
   country: 'Itália',
   cupName: 'Coppa Italia',
+  cupLogo: 'https://crests.football-data.org/CIT.png',
   flag: '🇮🇹',
   color: '#004c97',
   logo: 'https://r2.thesportsdb.com/images/media/league/badge/67q3q21679951383.png',

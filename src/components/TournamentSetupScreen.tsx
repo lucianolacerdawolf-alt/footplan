@@ -34,14 +34,19 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
 
   const selectedTeam = league.teams.find(t => t.id === userTeamId) ?? null;
 
-  const title = mode === 'league' ? league.name : 'FA Cup';
+  const isCup = mode === 'bracket';
+  const title = isCup ? league.cupName : league.name;
 
   return (
     <div className="team-select-screen">
       <div className="top-nav">
         <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
-        <header className="app-header">
-          <h1>FootPlan</h1>
+        <header className="app-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          {isCup && league.cupLogo ? (
+            <img src={league.cupLogo} alt={league.cupName} style={{ width: 52, height: 52, objectFit: 'contain' }} />
+          ) : (
+            <h1>FootPlan</h1>
+          )}
           <p className="subtitle">{title}</p>
         </header>
         <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>

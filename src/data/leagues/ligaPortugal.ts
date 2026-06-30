@@ -503,6 +503,7 @@ export const ligaPortugal: LeagueDefinition = {
   color: '#006600',
   logo: 'https://www.thesportsdb.com/images/media/league/badge/3tgdke1782689102.png',
   cupName: 'Taça de Portugal',
+  cupLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Ta%C3%A7a_de_Portugal_Trophy.svg/250px-Ta%C3%A7a_de_Portugal_Trophy.svg.png',
   totalRounds: 34,
   relegationSpots: 3,
   europeanSlots: {
