@@ -150,7 +150,7 @@ export function useBracketManager({
         setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} jogo${inj.rounds > 1 ? 's' : ''}`);
       }
       return injured;
-    }), advanced.userTeamId) };
+    }), advanced.userTeamId, Math.random, league?.cpuProfile) };
     setBracketState(finalState);
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
     evaluateAchievements({
