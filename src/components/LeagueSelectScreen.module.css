@@ -4,7 +4,6 @@
   align-items: center;
   min-height: 100dvh;
   padding: 40px 16px 48px;
-  background: var(--bg);
 }
 
 .header {
