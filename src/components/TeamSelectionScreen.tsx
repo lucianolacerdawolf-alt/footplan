@@ -10,11 +10,12 @@ interface Props {
   leagueName: string;
   onConfirm: (home: Team, away: Team, mode: GameMode) => void;
   onBack: () => void;
+  onGoHome: () => void;
 }
 
 type Uniform = 'home' | 'away';
 
-export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBack }: Props) {
+export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBack, onGoHome }: Props) {
   const [homeId, setHomeId] = useLocalStorage<string | null>('fp:homeId', null);
   const [awayId, setAwayId] = useLocalStorage<string | null>('fp:awayId', null);
   const [homeUniform, setHomeUniform] = useLocalStorage<Uniform>('fp:homeUniform', 'home');
@@ -108,6 +109,11 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
 
   return (
     <div className="team-select-screen">
+      <div className="top-nav">
+        <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
+        <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
+      </div>
+
       <header className="app-header">
         <h1>FootPlan</h1>
         <p className="subtitle">{leagueName}</p>
@@ -120,13 +126,15 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
       </div>
 
       <div className="select-summary">
-        <button className="slot-nav-btn" onClick={onBack}>← Menu Principal</button>
         {renderSlot(homeTeam, homeUniform, setHomeUniform, 'home', 'CASA')}
         <div className="select-vs">VS</div>
         {renderSlot(awayTeam, awayUniform, setAwayUniform, 'away', 'FORA')}
+      </div>
+
+      <div className="select-action">
         {homeTeam && awayTeam
           ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleConfirm}>Montar Táticas →</button>
-          : <div className="slot-nav-spacer" />
+          : null
         }
       </div>
 

@@ -175,7 +175,8 @@ function App() {
         teams={selectedLeague?.teams ?? premierLeagueTeams}
         leagueName={selectedLeague?.name ?? 'Premier League'}
         onConfirm={handleTeamsSelected}
-        onBack={() => setScreen('home')}
+        onBack={() => setScreen('league-select')}
+        onGoHome={goHome}
       />
     );
   } else if (screen === 'online-lobby') {
