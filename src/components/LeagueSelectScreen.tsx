@@ -41,9 +41,6 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }:
                   className={styles.badge}
                 />
                 <div className={styles.leagueName}>{league.name}</div>
-                <div className={styles.meta}>
-                  <span className={styles.flag}>{league.flag}</span>
-                </div>
                 <div className={styles.stats}>
                   <span className={styles.pill}>{league.teams.length} times</span>
                   <span className={styles.pill}>{league.totalRounds} rodadas</span>
