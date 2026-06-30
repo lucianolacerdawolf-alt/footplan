@@ -6,6 +6,10 @@
 
 import type { Mentality, Intensity, DefensiveLine, Width, Formation } from './types';
 
+// Probabilidade Elo: garante ao menos 12% de chance para o time mais fraco em cada ataque
+export const MAX_WIN_PROBABILITY = 0.88;
+export const ELO_SCALE_FACTOR = 0.25;
+
 // Ciclos da partida (1 ciclo ≈ 2 minutos de jogo)
 export const CYCLE_MINUTES = 2;
 export const FIRST_HALF_CYCLES = 22;        // 0-21 → minutos 0-42 + intervalo
@@ -40,7 +44,10 @@ export const MENTALITY_MODIFIERS: Record<Mentality, {
 export const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 7 };
 
 export const ATK_CHANCE: Record<Mentality, number> = {
-  'possession': 1.32, 'counter-attack': 1.04, 'high-press': 1.28, 'defensive': 0.60,
+  'possession':     0.65,  // mais ataques por ciclo de posse
+  'high-press':     0.60,  // pressão gera oportunidades
+  'counter-attack': 0.48,  // menos ataques, mais eficientes
+  'defensive':      0.30,  // raramente arriscam o ataque
 };
 
 export const DEFENSIVE_LINE_MOD: Record<DefensiveLine, { possessionBias: number; defenseCompact: number }> = {
@@ -69,9 +76,6 @@ export const FORMATION_BONUS: Record<Formation, { atk: number; def: number; poss
 };
 
 // Intensidade afeta desarme, faltas e cartões (além da fadiga já existente)
-export const INTENSITY_TACKLE_BONUS: Record<Intensity, number> = {
-  'low': 0.92, 'medium': 1.00, 'high': 1.06,
-};
 export const INTENSITY_FOUL_MULT: Record<Intensity, number> = {
   'low': 0.60, 'medium': 1.00, 'high': 1.40,
 };
@@ -91,3 +95,21 @@ export const DEFENSIVE_LINE_COUNTER_RISK: Record<DefensiveLine, number> = {
 export const WIDTH_ATTACK_BONUS: Record<Width, number> = {
   'wide': 1.08, 'normal': 1.00, 'narrow': 0.94,
 };
+
+// Pedra-Papel-Tesoura tático: hard counters entre estilos
+export function getTacticalHardCounter(
+  atkMentality: Mentality, atkLine: DefensiveLine,
+  defMentality: Mentality, defLine: DefensiveLine,
+): { defBonus: number; atkBonus: number } {
+  // Retranca (defensivo + linha baixa) compacta contra posse/pressão alta
+  if (defMentality === 'defensive' && defLine === 'low') {
+    if (atkMentality === 'possession' || atkMentality === 'high-press') {
+      return { defBonus: 1.28, atkBonus: 1.0 };
+    }
+  }
+  // Counter-attack explora espaço atrás de linha alta
+  if (atkMentality === 'counter-attack' && defLine === 'high') {
+    return { defBonus: 1.0, atkBonus: 1.22 };
+  }
+  return { defBonus: 1.0, atkBonus: 1.0 };
+}

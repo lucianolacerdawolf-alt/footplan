@@ -58,6 +58,9 @@ export interface MatchState {
   momentumHome: number;
   momentumAway: number;
   injured: Set<string>;
+  consecutiveGoalTeam: string | null;
+  gkFormHome: number;  // modificador de "dia" do GK mandante (0.75–1.25), gerado no apito
+  gkFormAway: number;
 }
 
 export function createMatchState(home: Team, away: Team): MatchState {
@@ -74,6 +77,9 @@ export function createMatchState(home: Team, away: Team): MatchState {
     momentumHome: 0,
     momentumAway: 0,
     injured: new Set(),
+    consecutiveGoalTeam: null,
+    gkFormHome: 1.0,
+    gkFormAway: 1.0,
   };
 }
 
@@ -90,13 +96,17 @@ function simularBloco(
   random: RandomFn
 ): void {
   const isHome = (team: Team) => team.id === home.id;
-  const applyMomentum = (scoringSide: 'A' | 'B') => {
+  const applyMomentum = (scoringSide: 'A' | 'B', teamId: string) => {
+    // Retorno decrescente: 2º gol seguido dá apenas +10 (evita efeito bola de neve)
+    const isConsecutive = state.consecutiveGoalTeam === teamId;
+    const gain = isConsecutive ? 10 : 30;
+    state.consecutiveGoalTeam = teamId;
     if (scoringSide === 'A') {
-      state.momentumHome = Math.min(100, state.momentumHome + 30);
-      state.momentumAway = Math.max(-100, state.momentumAway - 30);
+      state.momentumHome = Math.min(100, state.momentumHome + gain);
+      state.momentumAway = Math.max(-100, state.momentumAway - gain);
     } else {
-      state.momentumAway = Math.min(100, state.momentumAway + 30);
-      state.momentumHome = Math.max(-100, state.momentumHome - 30);
+      state.momentumAway = Math.min(100, state.momentumAway + gain);
+      state.momentumHome = Math.max(-100, state.momentumHome - gain);
     }
   };
 
@@ -119,7 +129,8 @@ function simularBloco(
     const minute = cycle * CYCLE_MINUTES;
 
     // Decay momentum toward 0
-    state.momentumHome += state.momentumHome > 0 ? -8 : state.momentumHome < 0 ? 8 : 0;
+    // Fator casa: torcida empurra o mandante, recupera 1pt/ciclo mais rápido quando negativo
+    state.momentumHome += state.momentumHome > 0 ? -8 : state.momentumHome < 0 ? 9 : 0;
     state.momentumAway += state.momentumAway > 0 ? -8 : state.momentumAway < 0 ? 8 : 0;
     if (Math.abs(state.momentumHome) < 9) state.momentumHome = 0;
     if (Math.abs(state.momentumAway) < 9) state.momentumAway = 0;
@@ -151,6 +162,9 @@ function simularBloco(
     const trailing = (isHome(possTeam) && state.homeScore < state.awayScore) ||
                      (!isHome(possTeam) && state.awayScore < state.homeScore);
 
+    // Desespero: time perdendo nos últimos 15min ataca mais mas expõe a defesa
+    const desperationActive = trailing && isLate;
+
     // Passe
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.6) {
       const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'MID'),
@@ -177,11 +191,16 @@ function simularBloco(
     const atkFatigue = possessionWinner === 'A' ? state.fatigueHome : state.fatigueAway;
     const defFatigue = possessionWinner === 'A' ? state.fatigueAway : state.fatigueHome;
     const atkMomentum = isHome(possTeam) ? state.momentumHome : state.momentumAway;
-    const momentumMod = 1 + (atkMomentum / 250) + (trailing && isLate ? 0.08 : 0);
-    const urgencyMod = trailing && isLate ? 1.18 : 1;
+    const momentumMod = 1 + (atkMomentum / 250) + (desperationActive ? 0.08 : 0);
+    const urgencyMod = desperationActive ? 1.18 : 1;
+    // Desespero expõe a defesa do time que está PERDENDO (empurrou jogadores pra frente)
+    // Aplica ao defTeam quando ELE está desesperado — cria contra-ataques matadores
+    const defTeamIsTrailing = (isHome(defTeam) && state.homeScore < state.awayScore) ||
+                               (!isHome(defTeam) && state.awayScore < state.homeScore);
+    const defPenaltyMod = (defTeamIsTrailing && isLate) ? 0.85 : 1.0;
 
     if (random() < ATK_CHANCE[possTeam.strategy.mentality] * urgencyMod) {
-      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A', momentumMod, state.injured);
+      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A', momentumMod, state.injured, defPenaltyMod);
 
       if (atkResult.won && atkResult.attacker) {
         if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < DEFENSIVE_LINE_OFFSIDE[defTeam.strategy.defensiveLine] && defTeam.strategy.defensiveLine !== 'low') {
@@ -195,7 +214,8 @@ function simularBloco(
           cycleEvents++;
         }
 
-        const shot = resolveShot(atkResult.attacker, defTeam, possTeam.strategy.mentality, atkFatigue, defFatigue, state.cards, random);
+        const gkForm = defTeam.id === home.id ? state.gkFormHome : state.gkFormAway;
+        const shot = resolveShot(atkResult.attacker, defTeam, possTeam.strategy.mentality, atkFatigue, defFatigue, state.cards, random, atkMomentum, gkForm);
 
         if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
           const scoreStr = `${state.homeScore}-${state.awayScore}`;
@@ -204,7 +224,7 @@ function simularBloco(
             if (random() < goalTimingMultiplier(minute)) {
               state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id, scorer: shot.scorer.name });
               if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
-              applyMomentum(possessionWinner);
+              applyMomentum(possessionWinner, possTeam.id);
               if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.3) {
                 state.events.push({ minute, type: 'possession', description: generateMomentumShift(possTeam.name), teamId: possTeam.id });
                 cycleEvents++;
@@ -228,10 +248,14 @@ function simularBloco(
           state.events.push({ minute, type: 'corner', description: generateCorner(possTeam.name), teamId: possTeam.id });
           cycleEvents++;
 
-          // Corner → goal chance (10%)
-          if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.10) {
-            const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'DEF'),
-                              ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
+          // Corner → goal: chance dinâmica 5–15% baseada em poder aéreo relativo (positioning)
+          const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'DEF'),
+                            ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
+          const defCornerEligible = getPlayersByPosition(getStarters(defTeam, state.cards, state.injured), 'DEF');
+          const atkAerialPwr = eligible.reduce((s, p) => s + p.attributes.positioning, 0) / Math.max(1, eligible.length);
+          const defAerialPwr = defCornerEligible.reduce((s, p) => s + p.attributes.positioning, 0) / Math.max(1, defCornerEligible.length);
+          const cornerGoalChance = 0.05 + 0.10 * (atkAerialPwr / (atkAerialPwr + defAerialPwr));
+          if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < cornerGoalChance) {
             if (eligible.length > 0) {
               const header = pickRandom(eligible, 1, random)[0];
               const gk = getGoalkeeper(getStarters(defTeam, state.cards, state.injured));
@@ -242,7 +266,7 @@ function simularBloco(
                 const newScore = `${state.homeScore}-${state.awayScore}`;
                 state.events.push({ minute, type: 'goal', description: generateCornerGoal(possTeam.name, header, minute, newScore), teamId: possTeam.id, scorer: header.name });
                 if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
-                applyMomentum(possessionWinner);
+                applyMomentum(possessionWinner, possTeam.id);
                 cycleEvents++;
               }
             }
@@ -253,7 +277,9 @@ function simularBloco(
 
     // Faltas e cartões
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.15) {
-      const foulerTeam = random() < 0.5 ? home : away;
+      // Fator casa: pressão da torcida — visitante comete faltas com 6% mais frequência
+      // (P(home foul) ≈ 0.485, P(away foul) ≈ 0.515)
+      const foulerTeam = random() < 0.485 ? home : away;
       const otherTeam  = foulerTeam.id === home.id ? away : home;
       // Intensity affects foul frequency
       const foulMult = INTENSITY_FOUL_MULT[foulerTeam.strategy.intensity];
@@ -277,7 +303,7 @@ function simularBloco(
             if (scored && random() < goalTimingMultiplier(minute)) {
               state.events.push({ minute, type: 'penalty', description: generateMatchPenalty(otherTeam.name, taker, true, gk), teamId: otherTeam.id, scorer: taker.name });
               if (isHome(otherTeam)) state.homeScore++; else state.awayScore++;
-              applyMomentum(isHome(otherTeam) ? 'A' : 'B');
+              applyMomentum(isHome(otherTeam) ? 'A' : 'B', otherTeam.id);
             } else {
               state.events.push({ minute, type: 'penalty', description: generateMatchPenalty(otherTeam.name, taker, false, gk), teamId: otherTeam.id, scorer: taker.name });
             }
@@ -285,22 +311,29 @@ function simularBloco(
           }
         }
 
-        // Injury chance after foul (affected by intensity of BOTH teams)
-        const injMult = INTENSITY_INJURY_MULT[foulerTeam.strategy.intensity];
-        if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.08 * injMult) {
+        // Lesão por falta: risco gated pela fadiga da vítima
+        // 1º tempo com estamina verde: risco ~0.6%; 2º tempo com estamina vermelha: risco ~18%
+        if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
           const vicTeam = foulerTeam.id === home.id ? away : home;
           const victims = getStarters(vicTeam, state.cards, state.injured).filter(p => p.position !== 'GK');
           if (victims.length > 0) {
             const victim = victims[Math.floor(random() * victims.length)];
-            state.injured.add(victim.id);
-            state.events.push({ minute, type: 'injury', description: generateInjury(vicTeam.name, victim), teamId: vicTeam.id, playerId: victim.id });
-            cycleEvents++;
+            const vicFatigueMap = vicTeam.id === home.id ? state.fatigueHome : state.fatigueAway;
+            const playerFatigue = vicFatigueMap.get(victim.id) ?? 0;
+            const fatigueFactor = playerFatigue > 60 ? 1.5 : playerFatigue > 30 ? 0.4 : 0.05;
+            const intensityMult = INTENSITY_INJURY_MULT[foulerTeam.strategy.intensity];
+            if (random() < 0.08 * intensityMult * fatigueFactor) {
+              state.injured.add(victim.id);
+              state.events.push({ minute, type: 'injury', description: generateInjury(vicTeam.name, victim), teamId: vicTeam.id, playerId: victim.id });
+              cycleEvents++;
+            }
           }
         }
 
-        // Cards: intensity increases card risk
+        // Cards: intensity increases card risk; árbitro caseiro reduz 15% a chance do mandante
         const existingCard = state.cards.get(fouler.id);
-        if (!existingCard && random() < 0.25 * foulMult && cycleEvents < MAX_EVENTS_PER_CYCLE) {
+        const homeBias = foulerTeam.id === home.id ? 0.85 : 1.0;
+        if (!existingCard && random() < 0.25 * foulMult * homeBias && cycleEvents < MAX_EVENTS_PER_CYCLE) {
           state.events.push({ minute, type: 'yellowCard', description: generateYellowCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
           state.cards.set(fouler.id, 'yellow');
           cycleEvents++;
@@ -364,6 +397,10 @@ function goalTimingMultiplier(minute: number): number {
 
 export function simularPrimeiroTempo(home: Team, away: Team, random: RandomFn = Math.random): { state: MatchState } {
   const state = createMatchState(home, away);
+  // Dia de herói: gkForm único por partida, gerado no apito (0.75–1.25)
+  const rng = makeRng(random);
+  state.gkFormHome = rng(0.75, 1.25);
+  state.gkFormAway = rng(0.75, 1.25);
   simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, true, true, false, random);
   return { state };
 }
@@ -504,6 +541,9 @@ export function resolveKnockoutTiebreak(
 // ---------------------------------------------------------------------------
 export function simularPartidaRapida(home: Team, away: Team, random: RandomFn = Math.random): { homeScore: number; awayScore: number } {
   const state = createMatchState(home, away);
+  const rng = makeRng(random);
+  state.gkFormHome = rng(0.75, 1.25);
+  state.gkFormAway = rng(0.75, 1.25);
   simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, false, false, false, random);
   simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, state, false, false, false, random);
   return { homeScore: state.homeScore, awayScore: state.awayScore };
@@ -520,6 +560,9 @@ export function simularKnockout(home: Team, away: Team, random: RandomFn = Math.
   winner: 'home' | 'away';
 } {
   const state = createMatchState(home, away);
+  const rng = makeRng(random);
+  state.gkFormHome = rng(0.75, 1.25);
+  state.gkFormAway = rng(0.75, 1.25);
   simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, false, false, false, random);
   simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, state, false, false, false, random);
   const tiebreak = resolveKnockoutTiebreak(home, away, state, random);

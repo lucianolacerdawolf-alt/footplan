@@ -532,6 +532,9 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                           {starters.map((p, i) => {
                             const isPicked = p.id === pick;
                             const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
+                            const fatigue = fatigueMap?.get(p.id) ?? p.currentFatigue;
+                            const effOvr = Math.round(playerOvr(p) * (1 - fatigue / 200));
+                            const fatigueColor = fatigue > 70 ? '#ef4444' : fatigue > 45 ? '#f59e0b' : '#22c55e';
                             return (
                               <div key={p.id}
                                 className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap && canEdit ? 'clickable' : ''}`}
@@ -547,7 +550,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                 <span className="sq-num">#{p.number}</span>
                                 <span className="sq-name">{p.name}</span>
                                 <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                <span className="sq-ovr">{playerOvr(p)}</span>
+                                <span className="sq-ovr">
+                                  {playerOvr(p)}
+                                  {fatigue > 20 && <span style={{ color: fatigueColor, fontSize: 9, marginLeft: 3 }}>▶{effOvr}</span>}
+                                </span>
                               </div>
                             );
                           })}
@@ -555,6 +561,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                           {benchPlayers.map((p) => {
                             const isPicked = p.id === pick;
                             const bi = team.squad.findIndex(sp => sp.id === p.id);
+                            const benchFatigue = p.currentFatigue;
+                            const benchEffOvr = Math.round(playerOvr(p) * (1 - benchFatigue / 200));
                             return (
                               <div key={p.id}
                                 className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
@@ -569,7 +577,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                 <span className="sq-num">#{p.number}</span>
                                 <span className="sq-name">{p.name}</span>
                                 <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                <span className="sq-ovr">{playerOvr(p)}</span>
+                                <span className="sq-ovr">
+                                  {playerOvr(p)}
+                                  {benchFatigue > 20 && <span style={{ color: '#22c55e', fontSize: 9, marginLeft: 3 }}>▶{benchEffOvr}</span>}
+                                </span>
                               </div>
                             );
                           })}

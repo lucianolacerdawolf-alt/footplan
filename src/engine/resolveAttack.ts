@@ -4,7 +4,8 @@ import {
   MENTALITY_MODIFIERS, HOME_ADVANTAGE,
   DEFENSIVE_LINE_MOD, WIDTH_MOD, BASE_DEFENSE,
   FORMATION_BONUS, DEFENSIVE_LINE_COUNTER_RISK,
-  WIDTH_ATTACK_BONUS,
+  WIDTH_ATTACK_BONUS, getTacticalHardCounter,
+  MAX_WIN_PROBABILITY, ELO_SCALE_FACTOR,
 } from './matchConfig';
 import {
   effective, getPlayersByPosition, getStarters,
@@ -18,6 +19,7 @@ export function resolveAttack(
   isHomeAttack: boolean = false,
   momentumMod: number = 1,
   injured: Set<string> = new Set(),
+  defPenaltyMod: number = 1.0,
 ): { won: boolean; attacker: Player | null } {
   const rng = makeRng(random);
   const modAtk = MENTALITY_MODIFIERS[attackingTeam.strategy.mentality];
@@ -35,6 +37,10 @@ export function resolveAttack(
   const homeMod = isHomeAttack ? HOME_ADVANTAGE : 1;
   const counterRisk = DEFENSIVE_LINE_COUNTER_RISK[defendingTeam.strategy.defensiveLine];
   const atkWidthBonus = WIDTH_ATTACK_BONUS[attackingTeam.strategy.width];
+  const hardCounter = getTacticalHardCounter(
+    attackingTeam.strategy.mentality, attackingTeam.strategy.defensiveLine,
+    defendingTeam.strategy.mentality, defendingTeam.strategy.defensiveLine,
+  );
 
   const fwds = getPlayersByPosition(getStarters(attackingTeam, cards, injured), 'FWD');
   const mids = getPlayersByPosition(getStarters(attackingTeam, cards, injured), 'MID');
@@ -42,21 +48,29 @@ export function resolveAttack(
   const defenders = getPlayersByPosition(getStarters(defendingTeam, cards, injured), 'DEF');
   const chosenDef = pickRandom(defenders, 3, random);
 
-  // Attack power: attributes × mentality × formation × width × momentum × RNG
+  // Attack power: attributes × mentality × formation × width × momentum × hard counter × RNG
   const attackPower = attackers.reduce((sum, p) => {
     const f = fatigueAtk.get(p.id) ?? 0;
     return sum + effective(compressAttr(p.attributes.speed), f) * modAtk.speed
                + effective(compressAttr(p.attributes.dribbling), f) * modAtk.dribbling;
   }, 0) * atkFormMult * moraleMod * homeMod * momentumMod
-    * atkForm.atk * counterRisk * atkWidthBonus * rng(0.65, 1.35);
+    * atkForm.atk * counterRisk * atkWidthBonus * hardCounter.atkBonus * rng(0.65, 1.35);
 
-  // Defense power: attributes × formation × defensive line × width × RNG + floor
+  // Defense power: attributes × formation × defensive line × width × hard counter × RNG + floor
+  // Yellow card: defensor "tira o pé da dividida" → -25% desarme
   const defensePower = chosenDef.reduce((sum, p) => {
     const f = fatigueDef.get(p.id) ?? 0;
-    return sum + effective(compressAttr(p.attributes.tackling), f) * modDef.tackling
-               + effective(compressAttr(p.attributes.positioning), f) * modDef.positioning;
+    const yellowPenalty = cards.get(p.id) === 'yellow' ? 0.75 : 1.0;
+    return sum + effective(compressAttr(p.attributes.tackling), f) * modDef.tackling * yellowPenalty
+               + effective(compressAttr(p.attributes.positioning), f) * modDef.positioning * defPenaltyMod;
   }, 0) * defFormMult * defLineMult * defWidthMult
-    * defForm.def * rng(0.65, 1.35) + BASE_DEFENSE;
+    * defForm.def * hardCounter.defBonus * rng(0.65, 1.35) + BASE_DEFENSE;
 
-  return { won: attackPower > defensePower, attacker: attackPower > defensePower ? attackers[0] : null };
+  // Probabilidade Elo: evita dominância absoluta, garante 12% de chance ao time mais fraco
+  const diff = attackPower - defensePower;
+  const scale = Math.max(1, (attackPower + defensePower) / 2) * ELO_SCALE_FACTOR;
+  const rawProb = 1 / (1 + Math.exp(-diff / scale));
+  const winProb = Math.min(MAX_WIN_PROBABILITY, Math.max(1 - MAX_WIN_PROBABILITY, rawProb));
+  const won = random() < winProb;
+  return { won, attacker: won ? attackers[0] : null };
 }
