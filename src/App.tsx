@@ -182,7 +182,7 @@ function App() {
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
-        onOnline={() => { setReturnScreen('online-lobby'); setScreen('league-select'); }}
+        onOnline={() => setScreen('online-lobby')}
       />
     );
   } else if (screen === 'select') {
@@ -196,7 +196,7 @@ function App() {
       />
     );
   } else if (screen === 'online-lobby') {
-    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={() => { setReturnScreen('online-lobby'); setScreen('league-select'); }} onGoHome={goHome} teams={selectedLeague?.teams ?? premierLeagueTeams} leagueId={selectedLeague?.id ?? 'pl'} />;
+    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={() => setScreen('home')} onGoHome={goHome} />;
   } else if (screen === 'tournament-setup') {
     content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => { setScreen(tournamentMode === 'bracket' ? 'cup-select' : 'league-select'); }} onGoHome={goHome} onStart={handleTournamentStart} />;
   } else if (screen === 'league' && leagueState) {
@@ -295,7 +295,7 @@ function App() {
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
-        onOnline={() => { setReturnScreen('online-lobby'); setScreen('league-select'); }}
+        onOnline={() => setScreen('online-lobby')}
       />
     );
   }
