@@ -20,8 +20,8 @@ const TEAMS: Array<[string, string, string, string, number, string]> = [
   ['Alavés',            'ALA', '#004B9A', '#FFFFFF', 71, 'https://r2.thesportsdb.com/images/media/team/badge/mfn99h1734673842.png'],
   ['Las Palmas',        'LPA', '#FFDE00', '#004A9B', 70, espn(8773)],
   ['Espanyol',          'ESP', '#2167B0', '#FFFFFF', 70, 'https://r2.thesportsdb.com/images/media/team/badge/867nzz1681703222.png'],
-  ['Valladolid',        'VLL', '#7B2D8E', '#FFFFFF', 69, ''],
-  ['Leganés',           'LEG', '#007940', '#FFFFFF', 68, ''],
+  ['Valladolid',        'VLL', '#7B2D8E', '#FFFFFF', 69, 'https://r2.thesportsdb.com/images/media/team/badge/bnhu8b1719983736.png'],
+  ['Leganés',           'LEG', '#007940', '#FFFFFF', 68, 'https://r2.thesportsdb.com/images/media/team/badge/tm0adr1616443898.png'],
 ];
 
 export const laLiga: LeagueDefinition = {

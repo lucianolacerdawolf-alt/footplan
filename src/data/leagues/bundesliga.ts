@@ -15,11 +15,11 @@ const TEAMS: Array<[string, string, string, string, number, string]> = [
   ['Werder Bremen',            'SVW', '#1D9058', '#FFFFFF', 75, espn(3820)],
   ['FC Augsburg',              'FCA', '#BA3733', '#FFFFFF', 74, 'https://r2.thesportsdb.com/images/media/team/badge/xqyyvq1473453233.png'],
   ['Mainz 05',                 'M05', '#ED1C24', '#FFFFFF', 74, espn(3811)],
-  ['Union Berlin',             'FCU', '#D4011D', '#FFFFFF', 74, ''],
-  ['VfL Bochum',               'BOC', '#005CA9', '#FFFFFF', 72, ''],
-  ['FC St. Pauli',             'STP', '#825840', '#FFFFFF', 71, ''],
-  ['Holstein Kiel',            'KSV', '#0055A5', '#FFFFFF', 70, ''],
-  ['FC Heidenheim',            'FCH', '#D20021', '#FFFFFF', 70, ''],
+  ['Union Berlin',             'FCU', '#D4011D', '#FFFFFF', 74, 'https://r2.thesportsdb.com/images/media/team/badge/q0o5001599679795.png'],
+  ['VfL Bochum',               'BOC', '#005CA9', '#FFFFFF', 72, 'https://r2.thesportsdb.com/images/media/team/badge/kag3jy1599821108.png'],
+  ['FC St. Pauli',             'STP', '#825840', '#FFFFFF', 71, 'https://r2.thesportsdb.com/images/media/team/badge/5qupxa1608237013.png'],
+  ['Holstein Kiel',            'KSV', '#0055A5', '#FFFFFF', 70, 'https://r2.thesportsdb.com/images/media/team/badge/1fpmgs1514394524.png'],
+  ['FC Heidenheim',            'FCH', '#D20021', '#FFFFFF', 70, 'https://r2.thesportsdb.com/images/media/team/badge/lbj7g01608236988.png'],
 ];
 
 export const bundesliga: LeagueDefinition = {
