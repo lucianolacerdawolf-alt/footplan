@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Team, Strategy } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
-import { allLeagues, getLeague } from '../data/leagues';
+import { allLeagues } from '../data/leagues';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
@@ -13,69 +13,60 @@ interface Props {
 }
 
 interface PeerMessage {
-  type: 'host-team' | 'guest-team' | 'start' | 'league';
+  type: 'host-team' | 'guest-team' | 'start';
   teamId?: string;
+  leagueId?: string;
   seed?: number;
   homeTeamId?: string;
+  homeLeagueId?: string;
   awayTeamId?: string;
+  awayLeagueId?: string;
   homeStrategy?: Strategy;
   awayStrategy?: Strategy;
-  leagueId?: string;
 }
+
+// Flat map of all teams across all leagues for fast lookup
+const allTeamsMap = new Map<string, Team>(
+  allLeagues.flatMap(l => l.teams.map(t => [t.id, t]))
+);
 
 export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer }: Props) {
   const [joinCode, setJoinCode] = useState('');
+  const [copyLabel, setCopyLabel] = useState('Copiar');
+
+  // Each side's chosen team (by id)
   const [hostTeamId, setHostTeamId] = useState<string | null>(null);
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null);
-  const [copyLabel, setCopyLabel] = useState('Copiar');
-  const [activeLeagueId, setActiveLeagueId] = useState<string | null>(null);
-  const [activeTeams, setActiveTeams] = useState<Team[]>([]);
 
-  const activeLeague = activeLeagueId ? getLeague(activeLeagueId) ?? null : null;
+  // League filter for the local player's team picker
+  const [filterLeagueId, setFilterLeagueId] = useState<string>(allLeagues[0].id);
 
-  const lookupTeam = useCallback((id: string): Team | undefined =>
-    activeTeams.find(t => t.id === id), [activeTeams]);
+  const filteredTeams = useMemo(
+    () => allLeagues.find(l => l.id === filterLeagueId)?.teams ?? [],
+    [filterLeagueId]
+  );
 
   const getAvgOvr = (team: Team) => {
     const starters = team.squad.slice(0, 11);
     return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
   };
 
-  const selectLeague = useCallback((leagueId: string) => {
-    const league = getLeague(leagueId);
-    if (!league) return;
-    setActiveLeagueId(leagueId);
-    setActiveTeams(league.teams);
-    setHostTeamId(null);
-    setGuestTeamId(null);
-    peer.send({ type: 'league', leagueId });
-  }, [peer]);
+  const selectMyTeam = useCallback((teamId: string) => {
+    if (peer.isHost) {
+      setHostTeamId(teamId);
+      peer.send({ type: 'host-team', teamId, leagueId: filterLeagueId });
+    } else {
+      setGuestTeamId(teamId);
+      peer.send({ type: 'guest-team', teamId, leagueId: filterLeagueId });
+    }
+  }, [peer, filterLeagueId]);
 
-  const selectHostTeam = useCallback((id: string) => {
-    setHostTeamId(id);
-    peer.send({ type: 'host-team', teamId: id });
-  }, [peer]);
-
-  const selectGuestTeam = useCallback((id: string) => {
-    setGuestTeamId(id);
-    peer.send({ type: 'guest-team', teamId: id });
-  }, [peer]);
-
-  // Handle incoming data
+  // Handle incoming messages
   useEffect(() => {
     peer.setOnData((data: unknown) => {
       const msg = data as PeerMessage;
       if (!msg || typeof msg !== 'object') return;
 
-      if (msg.type === 'league' && msg.leagueId && !peer.isHost) {
-        const league = getLeague(msg.leagueId);
-        if (league) {
-          setActiveLeagueId(msg.leagueId);
-          setActiveTeams(league.teams);
-          setHostTeamId(null);
-          setGuestTeamId(null);
-        }
-      }
       if (msg.type === 'host-team' && msg.teamId && !peer.isHost) {
         setHostTeamId(msg.teamId);
       }
@@ -83,8 +74,8 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
         setGuestTeamId(msg.teamId);
       }
       if (msg.type === 'start' && msg.seed != null && msg.homeTeamId && msg.awayTeamId && !peer.isHost) {
-        const home = activeTeams.find(t => t.id === msg.homeTeamId);
-        const away = activeTeams.find(t => t.id === msg.awayTeamId);
+        const home = allTeamsMap.get(msg.homeTeamId);
+        const away = allTeamsMap.get(msg.awayTeamId);
         if (!home || !away) return;
         const h = cloneTeam(home);
         const a = cloneTeam(away);
@@ -94,10 +85,9 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
       }
     });
     return () => peer.setOnData(null);
-  }, [peer, activeTeams, onStartMatch]);
+  }, [peer, onStartMatch]);
 
   const handleCreateRoom = () => peer.createRoom();
-
   const handleJoinRoom = () => {
     const code = joinCode.trim().toUpperCase();
     if (code) peer.joinRoom(code);
@@ -105,41 +95,33 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
 
   const handleCopyRoom = async () => {
     if (!peer.roomId) return;
-    try {
-      await navigator.clipboard.writeText(peer.roomId);
-      setCopyLabel('Copiado!');
-      setTimeout(() => setCopyLabel('Copiar'), 2000);
-    } catch {
-      setCopyLabel('Copiado!');
-      setTimeout(() => setCopyLabel('Copiar'), 2000);
-    }
+    try { await navigator.clipboard.writeText(peer.roomId); } catch { /**/ }
+    setCopyLabel('Copiado!');
+    setTimeout(() => setCopyLabel('Copiar'), 2000);
   };
 
   const handleStart = () => {
     if (!hostTeamId || !guestTeamId || !peer.isHost) return;
-    const homeTeam = lookupTeam(hostTeamId);
-    const awayTeam = lookupTeam(guestTeamId);
+    const homeTeam = allTeamsMap.get(hostTeamId);
+    const awayTeam = allTeamsMap.get(guestTeamId);
     if (!homeTeam || !awayTeam) return;
     const seed = (Math.random() * 0xFFFFFFFF) >>> 0;
     const h = cloneTeam(homeTeam);
     const a = cloneTeam(awayTeam);
     peer.send({
-      type: 'start',
-      seed,
-      homeTeamId: h.id,
-      awayTeamId: a.id,
-      homeStrategy: h.strategy,
-      awayStrategy: a.strategy,
+      type: 'start', seed,
+      homeTeamId: h.id, awayTeamId: a.id,
+      homeStrategy: h.strategy, awayStrategy: a.strategy,
     });
     onStartMatch(h, a, seed);
   };
 
-  const sharedTeamIds = new Set([hostTeamId, guestTeamId].filter(Boolean) as string[]);
-  const hostTeam = hostTeamId ? lookupTeam(hostTeamId) ?? null : null;
-  const guestTeam = guestTeamId ? lookupTeam(guestTeamId) ?? null : null;
-  const canPick = peer.isHost ? !hostTeamId : !guestTeamId;
+  const hostTeam = hostTeamId ? allTeamsMap.get(hostTeamId) ?? null : null;
+  const guestTeam = guestTeamId ? allTeamsMap.get(guestTeamId) ?? null : null;
+  const myTeamId = peer.isHost ? hostTeamId : guestTeamId;
+  const picked = myTeamId !== null;
 
-  // Phase 1 — connection
+  // ── Phase 1: connect ──────────────────────────────────────────────────────
   if (peer.state !== 'connected') {
     return (
       <div className="team-select-screen">
@@ -209,72 +191,14 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
     );
   }
 
-  // Phase 2 — host picks league (guest waits)
-  if (!activeLeagueId) {
-    return (
-      <div className="team-select-screen">
-        <div className="top-nav">
-          <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onBack(); }}>← Voltar</button>
-          <header className="app-header">
-            <h1>FootPlan</h1>
-            <p className="subtitle">Jogar Online</p>
-          </header>
-          <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onGoHome(); }}>Menu Principal</button>
-        </div>
-
-        {peer.isHost && peer.roomId && (
-          <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-            background: 'var(--code-bg)', border: '1px solid var(--border)', borderRadius: 10,
-            padding: '10px 20px', margin: '0 auto 4px', maxWidth: 340,
-          }}>
-            <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.5, fontFamily: 'var(--mono)' }}>Sala:</span>
-            <code style={{
-              fontSize: 28, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--accent)',
-              letterSpacing: 6, userSelect: 'all',
-            }}>{peer.roomId}</code>
-            <button className="slot-nav-btn" onClick={handleCopyRoom} style={{ padding: '4px 12px', fontSize: 11 }}>
-              {copyLabel}
-            </button>
-          </div>
-        )}
-
-        {peer.isHost ? (
-          <>
-            <div className="select-instruction">Escolha o campeonato</div>
-            <div className="team-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', maxWidth: 480, margin: '0 auto' }}>
-              {allLeagues.map(league => (
-                <button
-                  key={league.id}
-                  className="team-tile"
-                  onClick={() => selectLeague(league.id)}
-                  style={{ flexDirection: 'column', gap: 6, padding: '14px 8px' }}
-                >
-                  <img className="tile-crest" src={league.logo} alt={league.name} />
-                  <span className="tile-name" style={{ fontSize: 11 }}>{league.name}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="select-instruction" style={{ marginTop: 48 }}>
-            ● Conectado — aguardando host escolher campeonato...
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Phase 3 — both pick teams
+  // ── Phase 2: pick teams ───────────────────────────────────────────────────
   return (
     <div className="team-select-screen">
       <div className="top-nav">
         <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onBack(); }}>← Voltar</button>
         <header className="app-header">
-          {activeLeague?.logo && (
-            <img src={activeLeague.logo} alt={activeLeague.name} style={{ width: 32, height: 32, objectFit: 'contain' }} />
-          )}
-          <p className="subtitle">{activeLeague?.name ?? 'Online'}</p>
+          <h1>FootPlan</h1>
+          <p className="subtitle">Jogar Online</p>
         </header>
         <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onGoHome(); }}>Menu Principal</button>
       </div>
@@ -296,72 +220,73 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
         </div>
       )}
       {!peer.isHost && (
-        <div className="select-instruction">● Conectado à sala — aguarde o host</div>
+        <div className="select-instruction">● Conectado à sala</div>
       )}
 
-      <div className="select-instruction">
-        {canPick ? 'Escolha seu time' : 'Time selecionado! Aguardando oponente...'}
-      </div>
-
+      {/* Scoreboard */}
       <div className="select-summary">
         {renderSlot(hostTeam, 'home', 'CASA', 'home-slot')}
         <div className="select-vs">VS</div>
         {renderSlot(guestTeam, 'away', 'FORA', 'away-slot')}
       </div>
 
+      {/* Start button (host only, when both picked) */}
       <div className="select-action">
         {peer.isHost && hostTeamId && guestTeamId
           ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>Iniciar Partida →</button>
           : !peer.isHost && hostTeamId && guestTeamId
-          ? <div className="select-instruction">Host irá iniciar...</div>
-          : null
+          ? <div className="select-instruction">Aguardando host iniciar...</div>
+          : <div className="select-instruction">{picked ? 'Aguardando oponente...' : 'Escolha seu time'}</div>
         }
       </div>
 
-      {canPick && (
-        <div className="team-grid">
-          {activeTeams.map(team => {
-            const isHostPick = team.id === hostTeamId;
-            const isGuestPick = team.id === guestTeamId;
-            const isSelected = isHostPick || isGuestPick;
-            return (
-              <button
-                key={team.id}
-                className={`team-tile ${isHostPick ? 'picked-home' : ''} ${isGuestPick ? 'picked-away' : ''} ${isSelected ? 'selected' : ''}`}
-                style={isSelected ? { borderColor: team.color, background: team.color + '10' } : undefined}
-                onClick={() => peer.isHost ? selectHostTeam(team.id) : selectGuestTeam(team.id)}
-                disabled={sharedTeamIds.has(team.id)}
-              >
-                <img className="tile-crest" src={team.logoUrl} alt={team.name} />
-                <span className="tile-name">{team.name}</span>
-                <span className="tile-ovr">{getAvgOvr(team)}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* League filter tabs */}
+      <div style={{
+        display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center',
+        padding: '0 16px', maxWidth: 540, margin: '0 auto 8px',
+      }}>
+        {allLeagues.map(l => (
+          <button
+            key={l.id}
+            onClick={() => setFilterLeagueId(l.id)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+              fontFamily: 'var(--heading)', cursor: 'pointer',
+              border: `1.5px solid ${filterLeagueId === l.id ? l.color : 'var(--border)'}`,
+              background: filterLeagueId === l.id ? l.color + '18' : 'transparent',
+              color: filterLeagueId === l.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+              transition: 'all 0.15s',
+            }}
+          >
+            <img src={l.logo} alt={l.name} style={{ width: 16, height: 16, objectFit: 'contain' }} />
+            {l.name}
+          </button>
+        ))}
+      </div>
 
-      {!canPick && hostTeam && guestTeam && (
-        <div className="team-grid">
-          {activeTeams.map(team => {
-            const isHostPick = team.id === hostTeamId;
-            const isGuestPick = team.id === guestTeamId;
-            const isSelected = isHostPick || isGuestPick;
-            return (
-              <button
-                key={team.id}
-                className={`team-tile ${isHostPick ? 'picked-home' : ''} ${isGuestPick ? 'picked-away' : ''} ${isSelected ? 'selected' : ''}`}
-                style={isSelected ? { borderColor: team.color, background: team.color + '10' } : undefined}
-                disabled
-              >
-                <img className="tile-crest" src={team.logoUrl} alt={team.name} />
-                <span className="tile-name">{team.name}</span>
-                <span className="tile-ovr">{getAvgOvr(team)}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      {/* Team grid */}
+      <div className="team-grid">
+        {filteredTeams.map(team => {
+          const isHostPick = team.id === hostTeamId;
+          const isGuestPick = team.id === guestTeamId;
+          const isMyPick = team.id === myTeamId;
+          const isOpponentPick = peer.isHost ? isGuestPick : isHostPick;
+          return (
+            <button
+              key={team.id}
+              className={`team-tile ${isHostPick ? 'picked-home' : ''} ${isGuestPick ? 'picked-away' : ''} ${(isHostPick || isGuestPick) ? 'selected' : ''}`}
+              style={(isHostPick || isGuestPick) ? { borderColor: team.color, background: team.color + '10' } : undefined}
+              onClick={() => !isOpponentPick && selectMyTeam(team.id)}
+              disabled={isOpponentPick}
+            >
+              <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+              <span className="tile-name">{team.name}</span>
+              <span className="tile-ovr">{isMyPick ? '✓' : getAvgOvr(team)}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
