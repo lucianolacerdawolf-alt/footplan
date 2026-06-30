@@ -96,7 +96,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateOthers, on
           <div className={styles.championCrown}>🏆</div>
           <img src={champion.logoUrl} alt={champion.name} className={styles.championCrest} />
           <div className={styles.championName} style={{ color: champion.color }}>{champion.name}</div>
-          <div className={styles.championSub}>Campeão da Copa</div>
+          <div className={styles.championSub}>Campeão da {state.cupName}</div>
           {!userWon && (
             <div className={styles.userEliminated}>
               <img src={userTeam.logoUrl} className={styles.smallCrest} alt="" />
@@ -155,7 +155,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateOthers, on
       <header className={styles.header}>
         <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
         <div className={styles.headerCenter}>
-          <span className={styles.title}>Copa · {stageLabels[stage]}</span>
+          <span className={styles.title}>{state.cupName} · {stageLabels[stage]}</span>
         </div>
         <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
       </header>

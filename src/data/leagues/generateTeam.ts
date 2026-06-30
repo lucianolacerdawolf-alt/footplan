@@ -50,17 +50,22 @@ function generatePlayer(id: string, name: string, number: number, pos: Player['p
   };
 }
 
-export function crestSvg(color: string, text: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+export function crestSvg(primaryColor: string, text: string, secondaryColor = '#ffffff'): string {
+  const fontSize = text.length > 3 ? '20' : text.length > 2 ? '26' : '30';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 116">
   <defs>
     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:${color}"/>
-      <stop offset="100%" style="stop-color:${color}dd"/>
+      <stop offset="0%" style="stop-color:${primaryColor};stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:${primaryColor};stop-opacity:0.85"/>
     </linearGradient>
   </defs>
-  <circle cx="50" cy="50" r="48" fill="url(#g)" stroke="${color}" stroke-width="3"/>
-  <text x="50" y="50" text-anchor="middle" dy=".35em" fill="white"
-    font-family="Arial, sans-serif" font-weight="bold" font-size="${text.length > 3 ? '22' : '28'}">${text}</text>
+  <path d="M50 4 L92 18 L92 60 Q92 92 50 112 Q8 92 8 60 L8 18 Z"
+    fill="url(#g)" stroke="${secondaryColor}" stroke-width="3" stroke-opacity="0.7"/>
+  <path d="M8 60 L92 60 Q92 92 50 112 Q8 92 8 60 Z"
+    fill="${secondaryColor}" fill-opacity="0.2"/>
+  <text x="50" y="52" text-anchor="middle" dominant-baseline="middle"
+    fill="${secondaryColor}" font-family="Arial Black,Arial,sans-serif"
+    font-weight="900" font-size="${fontSize}" letter-spacing="1">${text}</text>
 </svg>`;
   return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
@@ -103,7 +108,7 @@ export function generateTeam(
     players.push(generatePlayer(`${idPrefix}-b${i + 1}`, uniqueName(), 12 + i, benchPos, ovr - rand(4, 8)));
   }
 
-  const crest = logoUrl || crestSvg(color, abbreviation);
+  const crest = logoUrl || crestSvg(color, abbreviation, secondaryColor);
 
   return { id: idPrefix, name, abbreviation, color, secondaryColor, logoUrl: crest, squad: players, strategy };
 }

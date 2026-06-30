@@ -55,13 +55,8 @@ export function useLeagueManager({
     const teams = [userTeam, ...rest];
     const fixtures = generateLeagueSchedule(teams);
     setLeagueState({ teams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' });
-    const firstFixture = fixtures[0].find(f => f.homeTeamId === userTeam.id || f.awayTeamId === userTeam.id)!;
-    setHomeTeam(cloneTeam(teams.find(t => t.id === firstFixture.homeTeamId)!));
-    setAwayTeam(cloneTeam(teams.find(t => t.id === firstFixture.awayTeamId)!));
-    setMatchContext('league'); setIsKnockout(false);
-    setIsTournamentEntry(true);
-    setScreen('setup');
-  }, [league, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setLeagueState]);
+    setScreen('league');
+  }, [league, setScreen, setLeagueState]);
 
   const handleEditLeagueTactics = useCallback(() => {
     if (!leagueState) return;

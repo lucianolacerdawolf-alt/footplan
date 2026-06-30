@@ -6,16 +6,20 @@ import styles from './LeagueSelectScreen.module.css';
 interface Props {
   onSelect: (league: LeagueDefinition) => void;
   selectedLeague?: LeagueDefinition | null;
+  onBack?: () => void;
 }
 
 function leagueInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
 }
 
-export default function LeagueSelectScreen({ onSelect, selectedLeague }: Props) {
+export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }: Props) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
+        {onBack && (
+          <button className={styles.backBtn} onClick={onBack}>← Voltar</button>
+        )}
         <div className={styles.logo}>FootPlan</div>
         <p className={styles.subtitle}>Escolha seu campeonato</p>
       </header>

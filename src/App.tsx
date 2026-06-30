@@ -75,6 +75,7 @@ function App() {
     handleSimulateBracketMatch, handleBracketMatchResult,
     handleEditBracketTactics,
   } = useBracketManager({
+    league: selectedLeague,
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     evaluateAchievements, recordH2H, notifySave, setToastMsg,
   });
@@ -116,15 +117,16 @@ function App() {
   });
 
   const handleLeagueFromHome = useCallback(() => {
-    if (!selectedLeague) { setReturnScreen('tournament-setup'); setScreen('league-select'); return; }
-    if (leagueState && leagueState.phase !== 'done') setResumePrompt('league');
-    else { setTournamentMode('league'); setScreen('tournament-setup'); }
-  }, [leagueState, setTournamentMode, setScreen, setResumePrompt, selectedLeague]);
+    setTournamentMode('league');
+    setReturnScreen('tournament-setup');
+    setScreen('league-select');
+  }, [setTournamentMode, setReturnScreen, setScreen]);
 
   const handleCupFromHome = useCallback(() => {
-    if (bracketState && bracketState.stage !== 'champion') setResumePrompt('bracket');
-    else { setTournamentMode('bracket'); setScreen('tournament-setup'); }
-  }, [bracketState, setTournamentMode, setScreen, setResumePrompt]);
+    setTournamentMode('bracket');
+    setReturnScreen('tournament-setup');
+    setScreen('league-select');
+  }, [setTournamentMode, setReturnScreen, setScreen]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   let content: React.ReactNode;
@@ -132,11 +134,27 @@ function App() {
     content = (
       <LeagueSelectScreen
         selectedLeague={selectedLeague}
+        onBack={() => { setReturnScreen(null); setScreen('home'); }}
         onSelect={(league) => {
           localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
           setSelectedLeague(league);
           const target = returnScreen ?? 'home';
           setReturnScreen(null);
+          if (target === 'tournament-setup') {
+            if (tournamentMode === 'league') {
+              try {
+                const raw = localStorage.getItem(`fp:leagueState:${league.id}`);
+                const ls = raw ? (JSON.parse(raw) as { phase?: string }) : null;
+                if (ls && ls.phase !== 'done') { setResumePrompt('league'); return; }
+              } catch { /**/ }
+            } else if (tournamentMode === 'bracket') {
+              try {
+                const raw = localStorage.getItem('fp:bracketState');
+                const bs = raw ? (JSON.parse(raw) as { stage?: string; leagueId?: string }) : null;
+                if (bs && bs.leagueId === league.id && bs.stage !== 'champion') { setResumePrompt('bracket'); return; }
+              } catch { /**/ }
+            }
+          }
           setScreen(target);
         }}
       />
@@ -144,19 +162,11 @@ function App() {
   } else if (screen === 'home') {
     content = (
       <HomeScreen
-        onSingleMatch={() => {
-          if (!selectedLeague) { setReturnScreen('select'); setScreen('league-select'); return; }
-          setScreen('select');
-        }}
+        onSingleMatch={() => { setReturnScreen('select'); setScreen('league-select'); }}
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
-        onOnline={() => {
-          if (!selectedLeague) { setReturnScreen('online-lobby'); setScreen('league-select'); return; }
-          setScreen('online-lobby');
-        }}
-        selectedLeague={selectedLeague}
-        onBack={() => setScreen('league-select')}
+        onOnline={() => { setReturnScreen('online-lobby'); setScreen('league-select'); }}
       />
     );
   } else if (screen === 'select') {
@@ -169,7 +179,7 @@ function App() {
       />
     );
   } else if (screen === 'online-lobby') {
-    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={goHome} />;
+    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={goHome} teams={selectedLeague?.teams ?? premierLeagueTeams} />;
   } else if (screen === 'tournament-setup') {
     content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => setScreen('home')} onStart={handleTournamentStart} />;
   } else if (screen === 'league' && leagueState) {
@@ -210,11 +220,12 @@ function App() {
         awayTeam={awayTeam}
         onStartMatch={handleStartMatch}
         onBack={() => {
-          if (isTournamentEntry) { setIsTournamentEntry(false); setScreen('tournament-setup'); return; }
+          setIsTournamentEntry(false);
           if (matchContext === 'league') setScreen('league');
           else if (matchContext === 'bracket') setScreen('bracket');
           else setScreen('select');
         }}
+        isTacticsOnly={isTournamentEntry}
         lockAway={matchContext !== 'regular' || gameMode === 'cpu'}
       />
     );
@@ -238,7 +249,7 @@ function App() {
         rng={onlineRngFn}
         online={onlineProps}
         onContinue={isTournament ? handleContinueTournament : undefined}
-        continueLabel={matchContext === 'league' ? (selectedLeague ? `Continuar ${selectedLeague.name}` : 'Continuar Liga') : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
+        continueLabel={matchContext === 'league' ? (selectedLeague ? `Continuar ${selectedLeague.name}` : 'Continuar Liga') : matchContext === 'bracket' ? `Continuar ${bracketState?.cupName ?? 'Copa'}` : undefined}
       />
     );
   } else if (screen === 'stats' && lastResult) {
@@ -250,7 +261,7 @@ function App() {
         onMenu={goHome}
         onClearHistory={clearHistory}
         onContinue={isTournament ? handleContinueTournament : undefined}
-        continueLabel={matchContext === 'league' ? (selectedLeague ? `Continuar ${selectedLeague.name}` : 'Continuar Liga') : matchContext === 'bracket' ? 'Continuar FA Cup' : undefined}
+        continueLabel={matchContext === 'league' ? (selectedLeague ? `Continuar ${selectedLeague.name}` : 'Continuar Liga') : matchContext === 'bracket' ? `Continuar ${bracketState?.cupName ?? 'Copa'}` : undefined}
       />
     );
   } else if (screen === 'achievements') {
@@ -263,19 +274,11 @@ function App() {
   } else {
     content = (
       <HomeScreen
-        onSingleMatch={() => {
-          if (!selectedLeague) { setReturnScreen('select'); setScreen('league-select'); return; }
-          setScreen('select');
-        }}
+        onSingleMatch={() => { setReturnScreen('select'); setScreen('league-select'); }}
         onLeague={handleLeagueFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
-        onOnline={() => {
-          if (!selectedLeague) { setReturnScreen('online-lobby'); setScreen('league-select'); return; }
-          setScreen('online-lobby');
-        }}
-        selectedLeague={selectedLeague}
-        onBack={() => setScreen('league-select')}
+        onOnline={() => { setReturnScreen('online-lobby'); setScreen('league-select'); }}
       />
     );
   }
@@ -289,7 +292,7 @@ function App() {
           <div className="resume-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="resume-title">
             <div className="resume-icon" aria-hidden="true">{resumePrompt === 'league' ? '📅' : '🏆'}</div>
             <div className="resume-title" id="resume-title">
-              {resumePrompt === 'league' ? (selectedLeague ? `${selectedLeague.name} em andamento` : 'Liga em andamento') : 'FA Cup em andamento'}
+              {resumePrompt === 'league' ? (selectedLeague ? `${selectedLeague.name} em andamento` : 'Liga em andamento') : `${bracketState?.cupName ?? 'Copa'} em andamento`}
             </div>
             <div className="resume-body">
               {resumePrompt === 'league' && leagueState

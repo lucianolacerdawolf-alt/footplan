@@ -9,10 +9,12 @@ import { cloneTeam } from '../utils/teamUtils';
 import { premierLeagueTeams } from '../data/premierLeague';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
+import type { LeagueDefinition } from '../data/leagues/types';
 
 type Screen = 'league-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
 
 interface UseBracketManagerParams {
+  league: LeagueDefinition | null;
   setScreen: (s: Screen) => void;
   setHomeTeam: (t: Team) => void;
   setAwayTeam: (t: Team) => void;
@@ -26,6 +28,7 @@ interface UseBracketManagerParams {
 }
 
 export function useBracketManager({
+  league,
   setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
   evaluateAchievements, recordH2H, notifySave, setToastMsg,
 }: UseBracketManagerParams) {
@@ -34,21 +37,18 @@ export function useBracketManager({
   const [pendingBracketIdx, setPendingBracketIdx] = useState<number>(0);
 
   const handleStartBracket = useCallback((userTeam: Team) => {
-    const others = premierLeagueTeams
+    const pool = (league?.teams ?? premierLeagueTeams);
+    const others = pool
       .filter(t => t.id !== userTeam.id)
       .sort(() => Math.random() - 0.5)
       .slice(0, 15)
       .map(t => cloneTeam(t));
-    const bracket = createBracket(userTeam, others);
+    const cupName = league?.cupName ?? 'Copa';
+    const leagueId = league?.id ?? 'pl';
+    const bracket = createBracket(userTeam, others, cupName, leagueId);
     setBracketState(bracket);
-    const allTeams = [userTeam, ...others];
-    const userMatch = bracket.roundOf16.find(m => m.homeTeamId === userTeam.id || m.awayTeamId === userTeam.id)!;
-    setHomeTeam(cloneTeam(allTeams.find(t => t.id === userMatch.homeTeamId)!));
-    setAwayTeam(cloneTeam(allTeams.find(t => t.id === userMatch.awayTeamId)!));
-    setMatchContext('bracket'); setIsKnockout(true);
-    setIsTournamentEntry(true);
-    setScreen('setup');
-  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setBracketState]);
+    setScreen('bracket');
+  }, [league, setScreen, setBracketState]);
 
   const handleEditBracketTactics = useCallback(() => {
     if (!bracketState) return;

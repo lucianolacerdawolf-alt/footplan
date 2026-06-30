@@ -63,6 +63,8 @@ export interface BracketState {
   final: BracketMatch;
   stage: BracketStage;
   championId?: string;
+  cupName: string;
+  leagueId: string;
 }
 
 // =============================================================================
@@ -144,7 +146,7 @@ export function computeStandings(teams: Team[], fixtures: LeagueFixture[][]): St
 // COPA — criação do chaveamento (16 times)
 // =============================================================================
 
-export function createBracket(userTeam: Team, otherTeams: Team[], rng: () => number = Math.random): BracketState {
+export function createBracket(userTeam: Team, otherTeams: Team[], cupName: string, leagueId: string, rng: () => number = Math.random): BracketState {
   const shuffled = [...otherTeams].sort(() => rng() - 0.5);
   const teams = [userTeam, ...shuffled.slice(0, 15)];
 
@@ -175,6 +177,8 @@ export function createBracket(userTeam: Team, otherTeams: Team[], rng: () => num
     ],
     final: { id: 'final', homeTeamId: null, awayTeamId: null, played: false },
     stage: 'roundOf16',
+    cupName,
+    leagueId,
   };
 }
 

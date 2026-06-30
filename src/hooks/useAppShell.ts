@@ -7,8 +7,8 @@ type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
 type TournamentMode = 'league' | 'bracket';
 
 export function useAppShell() {
-  // Primeira tela é sempre league-select
-  const [screen, setScreen] = useState<Screen>('league-select');
+  // Primeira tela é sempre home (tipo de jogo primeiro, depois liga)
+  const [screen, setScreen] = useState<Screen>('home');
   const [matchContext, setMatchContext] = useState<MatchContext>('regular');
   const [isKnockout, setIsKnockout] = useState(false);
   const [tournamentMode, setTournamentMode] = useState<TournamentMode>('league');
@@ -28,8 +28,7 @@ export function useAppShell() {
 
   const [returnScreen, setReturnScreen] = useState<Screen | null>(null);
 
-  // Voltar = ir para league-select (ela é a tela raiz)
-  const goHome = useCallback(() => setScreen('league-select'), []);
+  const goHome = useCallback(() => setScreen('home'), []);
 
   const handleContinueTournament = useCallback(() => {
     setScreen(matchContext === 'league' ? 'league' : 'bracket');

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { premierLeagueTeams } from '../data/premierLeague';
 import type { Team, Strategy } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
@@ -9,6 +8,7 @@ interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
   onBack: () => void;
   peer: UsePeerConnectionReturn;
+  teams: Team[];
 }
 
 interface PeerMessage {
@@ -21,14 +21,14 @@ interface PeerMessage {
   awayStrategy?: Strategy;
 }
 
-export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props) {
+export default function OnlineLobbyScreen({ onStartMatch, onBack, peer, teams }: Props) {
   const [joinCode, setJoinCode] = useState('');
   const [hostTeamId, setHostTeamId] = useState<string | null>(null);
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null);
   const [copyLabel, setCopyLabel] = useState('Copiar');
 
   const lookupTeam = useCallback((id: string): Team | undefined =>
-    premierLeagueTeams.find(t => t.id === id), []);
+    teams.find(t => t.id === id), [teams]);
 
   const getAvgOvr = (team: Team) => {
     const starters = team.squad.slice(0, 11);
@@ -109,7 +109,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props)
     onStartMatch(h, a, seed);
   };
 
-  const teamList = premierLeagueTeams;
+  const teamList = teams;
   const sharedTeamIds = new Set([hostTeamId, guestTeamId].filter(Boolean) as string[]);
   const hostTeam = hostTeamId ? lookupTeam(hostTeamId) ?? null : null;
   const guestTeam = guestTeamId ? lookupTeam(guestTeamId) ?? null : null;

@@ -41,6 +41,7 @@ interface Props {
   onStartMatch: (home: Team, away: Team) => void;
   onBack: () => void;
   lockAway?: boolean;
+  isTacticsOnly?: boolean;
 }
 
 /** Move lesionados pro banco e promove substitutos saudaveis da mesma posicao */
@@ -85,7 +86,7 @@ function rebalanceSquad(team: Team, formation: Formation): Team {
 
 import { playerOvr } from '../utils/playerOvr';
 
-export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway }: Props) {
+export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, isTacticsOnly }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
@@ -289,7 +290,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           <p className="subtitle">Configuração Tática</p>
         </header>
         <button className="start-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
-          Iniciar Partida →
+          {isTacticsOnly ? 'Confirmar Táticas ✓' : 'Iniciar Partida →'}
         </button>
       </div>
 

@@ -5,6 +5,7 @@ export const premierLeague: LeagueDefinition = {
   id: 'pl',
   name: 'Premier League',
   country: 'Inglaterra',
+  cupName: 'FA Cup',
   flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
   color: '#3d195b',
   totalRounds: 38,

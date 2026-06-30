@@ -10,6 +10,29 @@
 .header {
   text-align: center;
   margin-bottom: 36px;
+  width: 100%;
+  max-width: 480px;
+}
+
+.backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.backBtn:hover {
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .logo {
