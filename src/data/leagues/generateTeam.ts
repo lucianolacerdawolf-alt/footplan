@@ -31,7 +31,7 @@ function pick<T>(arr: readonly T[]): T {
 }
 
 function generatePlayer(id: string, name: string, number: number, pos: Player['position'], ovr: number): Player {
-  const base = ovr - 30;
+  const base = ovr - 7;
   const spread = Math.min(10, Math.floor(ovr / 8));
   const attr = () => Math.max(1, Math.min(99, base + rand(-spread, spread)));
   const boost = (n: number) => Math.max(1, Math.min(99, attr() + n));
