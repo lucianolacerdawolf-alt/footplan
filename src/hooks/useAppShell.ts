@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { getLeague } from '../data/leagues';
 
-type Screen = 'league-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+type Screen = 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
 type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
 type TournamentMode = 'league' | 'bracket';
 

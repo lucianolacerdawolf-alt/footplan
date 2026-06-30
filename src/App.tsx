@@ -13,6 +13,7 @@ import BracketScreen from './components/BracketScreen';
 import AchievementsScreen from './components/AchievementsScreen';
 import OnlineLobbyScreen from './components/OnlineLobbyScreen';
 import LeagueSelectScreen from './components/LeagueSelectScreen';
+import CupSelectScreen from './components/CupSelectScreen';
 import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
 import { useAchievements } from './hooks/useAchievements';
@@ -124,13 +125,28 @@ function App() {
 
   const handleCupFromHome = useCallback(() => {
     setTournamentMode('bracket');
-    setReturnScreen('tournament-setup');
-    setScreen('league-select');
-  }, [setTournamentMode, setReturnScreen, setScreen]);
+    setScreen('cup-select');
+  }, [setTournamentMode, setScreen]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   let content: React.ReactNode;
-  if (screen === 'league-select') {
+  if (screen === 'cup-select') {
+    content = (
+      <CupSelectScreen
+        onBack={() => setScreen('home')}
+        onSelect={(league) => {
+          localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
+          setSelectedLeague(league);
+          try {
+            const raw = localStorage.getItem('fp:bracketState');
+            const bs = raw ? (JSON.parse(raw) as { stage?: string; leagueId?: string }) : null;
+            if (bs && bs.leagueId === league.id && bs.stage !== 'champion') { setResumePrompt('bracket'); return; }
+          } catch { /**/ }
+          setScreen('tournament-setup');
+        }}
+      />
+    );
+  } else if (screen === 'league-select') {
     content = (
       <LeagueSelectScreen
         selectedLeague={selectedLeague}
