@@ -175,14 +175,14 @@ function App() {
         teams={selectedLeague?.teams ?? premierLeagueTeams}
         leagueName={selectedLeague?.name ?? 'Premier League'}
         onConfirm={handleTeamsSelected}
-        onBack={() => setScreen('league-select')}
+        onBack={() => { setReturnScreen('select'); setScreen('league-select'); }}
         onGoHome={goHome}
       />
     );
   } else if (screen === 'online-lobby') {
-    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={() => setScreen('league-select')} onGoHome={goHome} teams={selectedLeague?.teams ?? premierLeagueTeams} />;
+    content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={() => { setReturnScreen('online-lobby'); setScreen('league-select'); }} onGoHome={goHome} teams={selectedLeague?.teams ?? premierLeagueTeams} />;
   } else if (screen === 'tournament-setup') {
-    content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => setScreen('league-select')} onGoHome={goHome} onStart={handleTournamentStart} />;
+    content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => { setReturnScreen('tournament-setup'); setScreen('league-select'); }} onGoHome={goHome} onStart={handleTournamentStart} />;
   } else if (screen === 'league' && leagueState) {
     content = (
       <LeagueScreen
