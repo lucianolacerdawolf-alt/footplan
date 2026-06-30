@@ -12,10 +12,12 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }:
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        {onBack && (
-          <button className={styles.backBtn} onClick={onBack}>← Voltar</button>
-        )}
-        <div className={styles.logo}>FootPlan</div>
+        <div className={styles.titleRow}>
+          {onBack && (
+            <button className={styles.backBtn} onClick={onBack}>←</button>
+          )}
+          <div className={styles.logo}>FootPlan</div>
+        </div>
         <p className={styles.subtitle}>Escolha seu campeonato</p>
       </header>
 
