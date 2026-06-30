@@ -98,7 +98,7 @@ export const WIDTH_ATTACK_BONUS: Record<Width, number> = {
 
 // Pedra-Papel-Tesoura tático: hard counters entre estilos
 export function getTacticalHardCounter(
-  atkMentality: Mentality, atkLine: DefensiveLine,
+  atkMentality: Mentality, _atkLine: DefensiveLine,
   defMentality: Mentality, defLine: DefensiveLine,
 ): { defBonus: number; atkBonus: number } {
   // Retranca (defensivo + linha baixa) compacta contra posse/pressão alta

@@ -532,7 +532,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                           {starters.map((p, i) => {
                             const isPicked = p.id === pick;
                             const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
-                            const fatigue = fatigueMap?.get(p.id) ?? p.currentFatigue;
+                            const fatigue = fatigueMap?.[p.id] ?? p.currentFatigue;
                             const effOvr = Math.round(playerOvr(p) * (1 - fatigue / 200));
                             const fatigueColor = fatigue > 70 ? '#ef4444' : fatigue > 45 ? '#f59e0b' : '#22c55e';
                             return (
