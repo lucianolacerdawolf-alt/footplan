@@ -122,13 +122,12 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
       <div className="team-select-screen">
         <div className="top-nav">
           <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
+          <header className="app-header">
+            <h1>FootPlan</h1>
+            <p className="subtitle">Jogar Online</p>
+          </header>
           <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
         </div>
-
-        <header className="app-header">
-          <h1>FootPlan</h1>
-          <p className="subtitle">Jogar Online</p>
-        </header>
 
         {peer.error && (
           <div className="color-conflict-warning">
@@ -192,13 +191,12 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
     <div className="team-select-screen">
       <div className="top-nav">
         <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onBack(); }}>← Voltar</button>
+        <header className="app-header">
+          <h1>FootPlan</h1>
+          <p className="subtitle">Jogar Online</p>
+        </header>
         <button className="slot-nav-btn" onClick={() => { peer.disconnect(); onGoHome(); }}>Menu Principal</button>
       </div>
-
-      <header className="app-header">
-        <h1>FootPlan</h1>
-        <p className="subtitle">Jogar Online</p>
-      </header>
 
       {peer.isHost && peer.roomId && (
         <div style={{

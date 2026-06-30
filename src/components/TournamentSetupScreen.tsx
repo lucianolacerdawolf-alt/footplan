@@ -40,13 +40,12 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
     <div className="team-select-screen">
       <div className="top-nav">
         <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
+        <header className="app-header">
+          <h1>FootPlan</h1>
+          <p className="subtitle">{title}</p>
+        </header>
         <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
       </div>
-
-      <header className="app-header">
-        <h1>FootPlan</h1>
-        <p className="subtitle">{title}</p>
-      </header>
 
       <div className="select-instruction">
         {userTeamId ? 'Time selecionado! Pode começar.' : 'Escolha seu time'}

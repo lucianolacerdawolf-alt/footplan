@@ -111,13 +111,12 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
     <div className="team-select-screen">
       <div className="top-nav">
         <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
+        <header className="app-header">
+          <h1>FootPlan</h1>
+          <p className="subtitle">{leagueName}</p>
+        </header>
         <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
       </div>
-
-      <header className="app-header">
-        <h1>FootPlan</h1>
-        <p className="subtitle">{leagueName}</p>
-      </header>
 
       <div className="select-instruction">
         {!homeId && !awayId && 'Escolha o time da CASA'}
