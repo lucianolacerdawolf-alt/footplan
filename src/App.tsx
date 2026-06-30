@@ -131,6 +131,7 @@ function App() {
   if (screen === 'league-select') {
     content = (
       <LeagueSelectScreen
+        selectedLeague={selectedLeague}
         onSelect={(league) => {
           localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
           setSelectedLeague(league);
@@ -138,7 +139,6 @@ function App() {
           setReturnScreen(null);
           setScreen(target);
         }}
-        onBack={() => setScreen('home')}
       />
     );
   } else if (screen === 'home') {
@@ -156,7 +156,7 @@ function App() {
           setScreen('online-lobby');
         }}
         selectedLeague={selectedLeague}
-        onChangeLeague={() => { setSelectedLeague(null); setReturnScreen(null); setScreen('league-select'); }}
+        onBack={() => setScreen('league-select')}
       />
     );
   } else if (screen === 'select') {
@@ -275,7 +275,7 @@ function App() {
           setScreen('online-lobby');
         }}
         selectedLeague={selectedLeague}
-        onChangeLeague={() => { setSelectedLeague(null); setReturnScreen(null); setScreen('league-select'); }}
+        onBack={() => setScreen('league-select')}
       />
     );
   }

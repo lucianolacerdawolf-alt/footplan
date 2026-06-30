@@ -7,6 +7,28 @@
 
 .header {
   text-align: center;
+  position: relative;
+}
+
+.backLeague {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding: 5px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.backLeague:hover {
+  background: var(--surface);
+  color: var(--text-primary);
 }
 .title {
   font-size: 72px; font-weight: 900; margin: 0 0 10px;

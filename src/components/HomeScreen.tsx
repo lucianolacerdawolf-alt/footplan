@@ -8,17 +8,18 @@ interface Props {
   onAchievements: () => void;
   onOnline: () => void;
   selectedLeague: LeagueDefinition | null;
-  onChangeLeague: () => void;
+  onBack: () => void;
 }
 
-export default function HomeScreen({ onSingleMatch, onLeague, onCup, onAchievements, onOnline, selectedLeague, onChangeLeague }: Props) {
+export default function HomeScreen({ onSingleMatch, onLeague, onCup, onAchievements, onOnline, selectedLeague, onBack }: Props) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
+        <button className={styles.backLeague} onClick={onBack}>
+          ← {selectedLeague ? `${selectedLeague.flag} ${selectedLeague.name}` : 'Ligas'}
+        </button>
         <h1 className={styles.title}>FootPlan</h1>
-        <p className={styles.subtitle}>
-          Simulador Tático{selectedLeague ? ` · ${selectedLeague.flag} ${selectedLeague.name}` : ''}
-        </p>
+        <p className={styles.subtitle}>Simulador Tático</p>
       </header>
 
       <div className={styles.modes}>
@@ -39,19 +40,6 @@ export default function HomeScreen({ onSingleMatch, onLeague, onCup, onAchieveme
           </div>
           <span className={styles.modeArrow}>›</span>
         </button>
-
-        {selectedLeague && (
-          <button
-            onClick={onChangeLeague}
-            style={{
-              margin: '6px auto 0', padding: '4px 12px', fontSize: '0.75rem',
-              background: 'transparent', border: '1px solid var(--border)',
-              borderRadius: 6, color: 'var(--text-secondary)', cursor: 'pointer',
-            }}
-          >
-            {selectedLeague.flag} Trocar Liga
-          </button>
-        )}
 
         <button className={styles.modeCard} onClick={onLeague}>
           <span className={styles.modeIcon}>📅</span>

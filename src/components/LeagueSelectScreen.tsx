@@ -5,48 +5,54 @@ import styles from './LeagueSelectScreen.module.css';
 
 interface Props {
   onSelect: (league: LeagueDefinition) => void;
-  onBack: () => void;
+  selectedLeague?: LeagueDefinition | null;
 }
 
-function leagueBadge(league: LeagueDefinition): string {
-  const initials = league.name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
-  return crestSvg(league.color, initials);
+function leagueInitials(name: string) {
+  return name.split(' ').map(w => w[0]).join('').slice(0, 3).toUpperCase();
 }
 
-export default function LeagueSelectScreen({ onSelect, onBack }: Props) {
+export default function LeagueSelectScreen({ onSelect, selectedLeague }: Props) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
-        <h1 className={styles.title}>Escolher Campeonato</h1>
-        <p className={styles.subtitle}>Selecione uma liga para jogar</p>
+        <div className={styles.logo}>FootPlan</div>
+        <p className={styles.subtitle}>Escolha seu campeonato</p>
       </header>
 
       <div className={styles.grid}>
-        {allLeagues.map(league => (
-          <button
-            key={league.id}
-            className={styles.card}
-            onClick={() => onSelect(league)}
-          >
-            <img src={leagueBadge(league)} alt={league.name} className={styles.badge} />
-            <div className={styles.info}>
-              <div className={styles.leagueName}>
-                <span className={styles.flag}>{league.flag}</span> {league.name}
+        {allLeagues.map(league => {
+          const isSelected = selectedLeague?.id === league.id;
+          return (
+            <button
+              key={league.id}
+              className={`${styles.card} ${isSelected ? styles.cardSelected : ''}`}
+              style={{ '--lc': league.color } as React.CSSProperties}
+              onClick={() => onSelect(league)}
+            >
+              <div className={styles.cardStripe}>
+                {isSelected && <span className={styles.check}>✓ Ativo</span>}
               </div>
-              <div className={styles.country}>{league.country}</div>
-              <div className={styles.metaRow}>
-                <span className={styles.pill}>{league.teams.length} times</span>
-                <span className={styles.pill}>{league.totalRounds} rodadas</span>
+              <div className={styles.cardBody}>
+                <img
+                  src={crestSvg(league.color, leagueInitials(league.name))}
+                  alt={league.name}
+                  className={styles.badge}
+                />
+                <div className={styles.leagueName}>{league.name}</div>
+                <div className={styles.meta}>
+                  <span className={styles.flag}>{league.flag}</span>
+                  <span className={styles.country}>{league.country}</span>
+                </div>
+                <div className={styles.stats}>
+                  <span className={styles.pill}>{league.teams.length} times</span>
+                  <span className={styles.pill}>{league.totalRounds} rodadas</span>
+                </div>
               </div>
-            </div>
-            <span className={styles.arrow}>→</span>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
-
-      <button className={styles.backBtn} onClick={onBack}>
-        ← Voltar
-      </button>
     </div>
   );
 }
