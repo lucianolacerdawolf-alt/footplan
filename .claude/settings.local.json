@@ -13,7 +13,20 @@
       "Bash(git *)",
       "Bash(npx vitest *)",
       "Bash(node --experimental-vm-modules -e ' *)",
-      "Bash(xargs wc -l)"
+      "Bash(xargs wc -l)",
+      "Bash(node *)",
+      "WebSearch",
+      "WebFetch(domain:www.thesportsdb.com)",
+      "Bash(npx vite *)",
+      "Bash(npm list *)",
+      "Bash(gh repo *)",
+      "Bash(gh api *)",
+      "Bash(wsl --status)",
+      "Bash(wsl --list --verbose)",
+      "Bash(npx rtk *)",
+      "WebFetch(domain:github.com)",
+      "Bash(cargo *)",
+      "Bash(gh release *)"
     ]
   }
 }
