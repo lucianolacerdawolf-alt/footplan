@@ -406,21 +406,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
               <div className="formation-preview-row">
                 <div className="formation-preview-team">
                   <span style={{ color: home.color, fontWeight: 800, fontSize: 13 }}>{home.abbreviation}</span>
-                  <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>
-                    {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                  <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>
-                    {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
-                  </select>
-                  <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>
-                    {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
-                  </select>
-                  <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>
-                    {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
-                  </select>
-                  <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>
-                    {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
-                  </select>
+                  <span style={{ fontSize: 18, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--text-h)' }}>{home.strategy.formation}</span>
                   <div className="formation-mini-pitch formation-mini-home">
                     <svg viewBox="0 0 100 100">
                       <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
@@ -434,21 +420,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                 <div className="formation-preview-vs">VS</div>
                 <div className="formation-preview-team">
                   <span style={{ color: away.color, fontWeight: 800, fontSize: 13 }}>{away.abbreviation}</span>
-                  <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>
-                    {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                  <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>
-                    {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
-                  </select>
-                  <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>
-                    {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
-                  </select>
-                  <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>
-                    {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
-                  </select>
-                  <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>
-                    {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
-                  </select>
+                  <span style={{ fontSize: 18, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--text-h)' }}>{away.strategy.formation}</span>
                   <div className="formation-mini-pitch formation-mini-away">
                     <svg viewBox="0 0 100 100">
                       <line x1="50" y1="0" x2="50" y2="100" stroke="rgba(255,255,255,0.12)" strokeWidth="0.5" />
