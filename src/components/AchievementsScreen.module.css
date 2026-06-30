@@ -10,19 +10,19 @@
   display: flex; align-items: baseline; gap: 10px;
 }
 .title {
-  font-size: 22px; font-weight: 900; font-family: var(--mono);
+  font-size: 28px; font-weight: 400; font-family: var(--display); letter-spacing: 0.05em;
 }
 .progress {
   font-size: 14px; font-weight: 700; opacity: 0.45; font-family: var(--mono);
 }
 
 .backBtn {
-  background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
-  padding: 6px 14px; font-size: 13px; font-weight: 700; color: var(--text);
-  cursor: pointer; font-family: var(--mono);
-  transition: border-color 0.15s;
+  background: transparent; border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
+  cursor: pointer; font-family: var(--sans);
+  transition: background 0.15s, color 0.15s;
 }
-.backBtn:hover { border-color: var(--accent); }
+.backBtn:hover { background: var(--surface); color: var(--text-primary); }
 
 .grid {
   display: grid;
@@ -40,6 +40,7 @@
 
 .unlocked {
   border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--accent) 5%, var(--surface));
 }
 
 .locked {
@@ -55,7 +56,7 @@
 }
 
 .name {
-  font-size: 15px; font-weight: 800; font-family: var(--mono); color: var(--text-h);
+  font-size: 15px; font-weight: 800; font-family: var(--heading); color: var(--text-primary); letter-spacing: 0.2px;
 }
 
 .desc {
