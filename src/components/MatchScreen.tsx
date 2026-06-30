@@ -15,7 +15,8 @@ type MatchSyncMsg =
   | { type: 'squad-update'; side: 'home' | 'away'; squad: Player[]; subsUsed: number }
   | { type: 'ready-halftime' }
   | { type: 'pause-game' }
-  | { type: 'ready-resume' };
+  | { type: 'ready-resume' }
+  | { type: 'start-simulate' };
 
 const Y_SLOTS: Record<number, number[]> = {
   1: [50], 2: [20, 80], 3: [10, 50, 90], 4: [5, 32, 68, 95], 5: [3, 22, 50, 78, 97],
@@ -179,6 +180,12 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       if (msg.type === 'ready-resume') {
         if (online.isHost) { setGuestReady(true); }
         else { setHostReady(true); }
+      }
+      if (msg.type === 'start-simulate' && !online.isHost) {
+        knockoutResolvedRef.current = false;
+        setKnockoutResult(null);
+        setSubsHome(0); setSubsAway(0); setInjuredIds([]);
+        runFirstHalf(home, away);
       }
     };
     online.setOnData(handler);
@@ -892,9 +899,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         {phase !== 'halftime' && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {!started ? (
-              <button className="simulate-btn" onClick={() => { knockoutResolvedRef.current = false; setKnockoutResult(null); setSubsHome(0); setSubsAway(0); setInjuredIds([]); runFirstHalf(home, away); }} disabled={simulating}>
-                Simular Partida
-              </button>
+              online && !online.isHost
+                ? <span style={{ fontSize: 12, opacity: 0.55, fontFamily: 'var(--mono)' }}>Aguardando host simular...</span>
+                : <button className="simulate-btn" onClick={() => { if (online?.isHost) online.send({ type: 'start-simulate' }); knockoutResolvedRef.current = false; setKnockoutResult(null); setSubsHome(0); setSubsAway(0); setInjuredIds([]); runFirstHalf(home, away); }} disabled={simulating}>
+                    Simular Partida
+                  </button>
             ) : phase === 'done' && (isKnockout ? knockoutResult : result) ? (
               <>
                 <button className="stats-btn" onClick={() => onViewStats((isKnockout ? knockoutResult : result)!)}>

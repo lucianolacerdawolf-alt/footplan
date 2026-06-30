@@ -3,6 +3,7 @@ import type { Team, Strategy } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
+import { getLeague } from '../data/leagues';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
@@ -10,23 +11,33 @@ interface Props {
   onGoHome: () => void;
   peer: UsePeerConnectionReturn;
   teams: Team[];
+  leagueId: string;
 }
 
 interface PeerMessage {
-  type: 'host-team' | 'guest-team' | 'start';
+  type: 'host-team' | 'guest-team' | 'start' | 'league';
   teamId?: string;
   seed?: number;
   homeTeamId?: string;
   awayTeamId?: string;
   homeStrategy?: Strategy;
   awayStrategy?: Strategy;
+  leagueId?: string;
 }
 
-export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer, teams }: Props) {
+export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer, teams, leagueId }: Props) {
   const [joinCode, setJoinCode] = useState('');
   const [hostTeamId, setHostTeamId] = useState<string | null>(null);
   const [guestTeamId, setGuestTeamId] = useState<string | null>(null);
   const [copyLabel, setCopyLabel] = useState('Copiar');
+  const [activeTeams, setActiveTeams] = useState<Team[]>(teams);
+
+  // Host envia a liga assim que conecta
+  useEffect(() => {
+    if (peer.state === 'connected' && peer.isHost && leagueId) {
+      peer.send({ type: 'league', leagueId });
+    }
+  }, [peer.state, peer.isHost, leagueId, peer]);
 
   const lookupTeam = useCallback((id: string): Team | undefined =>
     teams.find(t => t.id === id), [teams]);
@@ -52,6 +63,10 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
       const msg = data as PeerMessage;
       if (!msg || typeof msg !== 'object') return;
 
+      if (msg.type === 'league' && msg.leagueId && !peer.isHost) {
+        const league = getLeague(msg.leagueId);
+        if (league) setActiveTeams(league.teams);
+      }
       if (msg.type === 'host-team' && msg.teamId && !peer.isHost) {
         setHostTeamId(msg.teamId);
       }
@@ -110,7 +125,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
     onStartMatch(h, a, seed);
   };
 
-  const teamList = teams;
+  const teamList = activeTeams;
   const sharedTeamIds = new Set([hostTeamId, guestTeamId].filter(Boolean) as string[]);
   const hostTeam = hostTeamId ? lookupTeam(hostTeamId) ?? null : null;
   const guestTeam = guestTeamId ? lookupTeam(guestTeamId) ?? null : null;
