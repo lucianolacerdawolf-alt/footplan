@@ -1,5 +1,5 @@
 import type { Team, Player, Mentality, RandomFn } from './types';
-import { MENTALITY_MODIFIERS, BASE_GK } from './matchConfig';
+import { MENTALITY_MODIFIERS, BASE_GK, SHOT_CONVERSION } from './matchConfig';
 import {
   effective, getGoalkeeper, getStarters,
   makeRng, compressAttr,
@@ -20,7 +20,7 @@ export function resolveShot(
 
   // Confiança: momentum positivo melhora a precisão do chute (até +20% em momentum máximo)
   const confidenceBonus = 1 + Math.max(0, atkMomentum / 500);
-  const shotPower = effective(compressAttr(attacker.attributes.finishing), atkFatigue) * modAtk.finishing * confidenceBonus * rng(0.65, 1.35);
+  const shotPower = effective(compressAttr(attacker.attributes.finishing), atkFatigue) * modAtk.finishing * confidenceBonus * SHOT_CONVERSION * rng(0.65, 1.35);
   // Dia de herói do goleiro: gkForm 0.75–1.25, gerado no apito inicial
   const gkPower = effective(compressAttr(gk.attributes.positioning), gkFatigue) * gkForm * rng(0.65, 1.35) + BASE_GK;
 

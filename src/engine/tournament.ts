@@ -2,6 +2,7 @@ import type { Team } from './types';
 import type { CpuProfile } from '../data/leagues/types';
 import { simularPartidaRapida, simularKnockout } from './matchEngine';
 import { cloneTeam } from '../utils/teamUtils';
+import { shuffle } from './rng';
 
 // =============================================================================
 // TIPOS DE TORNEIO
@@ -147,7 +148,7 @@ export function computeStandings(teams: Team[], fixtures: LeagueFixture[][]): St
 // =============================================================================
 
 export function createBracket(userTeam: Team, otherTeams: Team[], cupName: string, leagueId: string, rng: () => number = Math.random): BracketState {
-  const shuffled = [...otherTeams].sort(() => rng() - 0.5);
+  const shuffled = shuffle(otherTeams, rng);
   const teams = [userTeam, ...shuffled.slice(0, 15)];
 
   const roundOf16: BracketMatch[] = [

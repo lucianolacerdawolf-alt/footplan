@@ -184,7 +184,7 @@ describe('createBracket', () => {
   it('cria 8 jogos nas oitavas com user incluído', () => {
     const user = makeTeam('user');
     const others = Array.from({ length: 20 }, (_, i) => makeTeam(`o${i}`));
-    const b = createBracket(user, others, seededRng(42));
+    const b = createBracket(user, others, 'Copa', 'pl', seededRng(42));
     expect(b.roundOf16.length).toBe(8);
     expect(b.teams.length).toBe(16);
     expect(b.teams[0].id).toBe('user');
@@ -195,8 +195,8 @@ describe('createBracket', () => {
   it('é determinístico com mesma seed', () => {
     const user = makeTeam('user');
     const others = Array.from({ length: 20 }, (_, i) => makeTeam(`o${i}`));
-    const b1 = createBracket(user, others, seededRng(7));
-    const b2 = createBracket(user, others, seededRng(7));
+    const b1 = createBracket(user, others, 'Copa', 'pl', seededRng(7));
+    const b2 = createBracket(user, others, 'Copa', 'pl', seededRng(7));
     expect(b1.teams.map(t => t.id)).toEqual(b2.teams.map(t => t.id));
   });
 });

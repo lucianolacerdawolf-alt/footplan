@@ -22,8 +22,11 @@ export const MAX_EVENTS_PER_CYCLE = 6;
 export const HOME_ADVANTAGE = 1.08;
 
 // Piso defensivo: todo time tem defesa mínima, evitando goleadas irreais
-export const BASE_DEFENSE = 22;
-export const BASE_GK = 12;
+export const BASE_DEFENSE = 10;
+export const BASE_GK = 6;
+
+// Fator de conversão de finalização: calibra a taxa de gol por chute
+export const SHOT_CONVERSION = 1.04;
 
 // Modificadores por mentalidade tática
 export const MENTALITY_MODIFIERS: Record<Mentality, {
@@ -44,10 +47,10 @@ export const MENTALITY_MODIFIERS: Record<Mentality, {
 export const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 7 };
 
 export const ATK_CHANCE: Record<Mentality, number> = {
-  'possession':     0.65,  // mais ataques por ciclo de posse
-  'high-press':     0.60,  // pressão gera oportunidades
-  'counter-attack': 0.48,  // menos ataques, mais eficientes
-  'defensive':      0.30,  // raramente arriscam o ataque
+  'possession':     0.82,  // mais ataques por ciclo de posse
+  'high-press':     0.74,  // pressão gera oportunidades
+  'counter-attack': 0.56,  // menos ataques, mais eficientes
+  'defensive':      0.36,  // raramente arriscam o ataque
 };
 
 export const DEFENSIVE_LINE_MOD: Record<DefensiveLine, { possessionBias: number; defenseCompact: number }> = {

@@ -6,6 +6,7 @@ import {
   applyPostMatchInjuries, randomizeCPUTactics,
 } from '../engine/tournament';
 import { cloneTeam } from '../utils/teamUtils';
+import { shuffle } from '../engine/rng';
 import { premierLeagueTeams } from '../data/premierLeague';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
@@ -38,9 +39,7 @@ export function useBracketManager({
 
   const handleStartBracket = useCallback((userTeam: Team) => {
     const pool = (league?.teams ?? premierLeagueTeams);
-    const others = pool
-      .filter(t => t.id !== userTeam.id)
-      .sort(() => Math.random() - 0.5)
+    const others = shuffle(pool.filter(t => t.id !== userTeam.id))
       .slice(0, 15)
       .map(t => cloneTeam(t));
     const cupName = league?.cupName ?? 'Copa';

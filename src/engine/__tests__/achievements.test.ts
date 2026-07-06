@@ -254,14 +254,8 @@ describe('achievements', () => {
 
   // ── No duplicate unlocks ────────────────────────────────────────────────
   it('returns empty array when all achievements already unlocked in data', () => {
-    // Build a context where no achievement should newly unlock (all conditions false or irrelevant)
-    const result = makeResult(home, away, 0, 0);
-    const ctx: AchievementCheckContext = {
-      result, userTeamId: home.id, matchContext: 'regular', totalMatchesPlayed: 0,
-    };
-    // With 0-0 draw, 0 matches, no debut, no hat-trick, no clean sheet, no rout, no comeback, no cards
-    // fair_play should unlock though (no cards)
-    // Let's test with cards to disable fair_play
+    // Build a context where no achievement should newly unlock (all conditions false or irrelevant).
+    // 0-0 draw, 0 matches, no debut/hat-trick/clean-sheet/rout/comeback, but a card to disable fair_play.
     const eventsWithCard: MatchEvent[] = [
       { minute: 10, type: 'yellowCard', description: 'Yellow', teamId: home.id, playerId: `${home.id}-m1` },
     ];

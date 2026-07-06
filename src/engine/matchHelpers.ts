@@ -6,6 +6,7 @@
 import type { Team, Player, MatchEvent, Position, RandomFn, TeamStats } from './types';
 import { FORMATION_COUNTS } from './constants';
 import { INTENSITY_FATIGUE, MENTALITY_MODIFIERS } from './matchConfig';
+import { shuffle } from './rng';
 
 /** Aplica redução por fadiga (0-100): cada 100% de fadiga = 50% do atributo. */
 export function effective(attr: number, fatigue: number): number {
@@ -26,8 +27,7 @@ export function getGoalkeeper(players: Player[]): Player {
 }
 
 export function pickRandom<T>(arr: T[], count: number, random: RandomFn): T[] {
-  const shuffled = [...arr].sort(() => random() - 0.5);
-  return shuffled.slice(0, Math.min(count, arr.length));
+  return shuffle(arr, random).slice(0, Math.min(count, arr.length));
 }
 
 /** Helper pra gerar números no intervalo [min, max). */
