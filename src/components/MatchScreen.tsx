@@ -190,7 +190,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     };
     online.setOnData(handler);
     return () => online.setOnData(null);
-  }, [online, pauseReplay]);
+  }, [online, pauseReplay, home, away, runFirstHalf]);
 
   // Reset ready states when entering halftime
   useEffect(() => {

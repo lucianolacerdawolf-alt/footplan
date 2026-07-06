@@ -211,7 +211,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
         onDone();
       }
     }, CLOCK_TICK_MS);
-  }, [initialHomeId]);
+  }, [initialHomeId, speedRef]);
 
   const runFirstHalf = useCallback((home: Team, away: Team) => {
     if (replayRef.current) clearInterval(replayRef.current);

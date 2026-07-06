@@ -156,7 +156,7 @@ export function useBracketManager({
       result, userTeamId: bracketState.userTeamId, matchContext: 'bracket',
       bracketState: finalState,
     });
-  }, [bracketState, pendingBracketStage, pendingBracketIdx, evaluateAchievements, recordH2H, setToastMsg, setBracketState]);
+  }, [bracketState, pendingBracketStage, pendingBracketIdx, evaluateAchievements, recordH2H, setToastMsg, setBracketState, league?.cpuProfile]);
 
   return {
     bracketState, setBracketState,

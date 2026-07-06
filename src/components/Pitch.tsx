@@ -158,8 +158,11 @@ function ballPos(
 // ---------------------------------------------------------------------------
 export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused, result, halftime, fatigueMap, expelledIds }: Props) {
   const expelledSet = useMemo(() => new Set(expelledIds ?? []), [expelledIds]);
-  // Coordenadas base
+  // Coordenadas base — deliberadamente recalculadas só quando id/formação mudam
+  // (evita resetar as posições dos jogadores quando morale/momentum/squad mudam).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const homeBase = useMemo(() => buildBaseCoords(homeTeam, 'home'), [homeTeam.id, homeTeam.strategy.formation]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const awayBase = useMemo(() => buildBaseCoords(awayTeam, 'away'), [awayTeam.id, awayTeam.strategy.formation]);
 
   // Estado mutável dos jogadores (steering)
@@ -351,7 +354,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
 
     rafRef.current = requestAnimationFrame(loop);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [phase, homeTeam.id]);
+  }, [phase, paused, homeTeam.id]);
 
   // Limpa no unmount
   useEffect(() => () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }, []);
