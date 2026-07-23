@@ -27,7 +27,6 @@ import { useBracketManager } from './hooks/useBracketManager';
 import { useGameFlow } from './hooks/useGameFlow';
 import { useOnlineMatch } from './hooks/useOnlineMatch';
 import { useResumePrompt } from './hooks/useResumePrompt';
-import { premierLeagueTeams } from './data/premierLeague';
 import Toast from './components/Toast';
 import './App.css';
 
@@ -248,7 +247,7 @@ function App() {
   } else if (screen === 'select') {
     content = (
       <TeamSelectionScreen
-        teams={selectedLeague?.teams ?? premierLeagueTeams}
+        teams={selectedLeague?.teams ?? getLeague('pl')!.teams}
         leagueName={selectedLeague?.name ?? 'Premier League'}
         onConfirm={handleTeamsSelected}
         onBack={() => { setReturnScreen('select'); setScreen('league-select'); }}

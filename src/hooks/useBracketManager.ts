@@ -7,7 +7,7 @@ import {
 } from '../engine/tournament';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from '../engine/rng';
-import { premierLeagueTeams } from '../data/premierLeague';
+import { getLeague } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -38,7 +38,7 @@ export function useBracketManager({
   const [pendingBracketIdx, setPendingBracketIdx] = useState<number>(0);
 
   const handleStartBracket = useCallback((userTeam: Team) => {
-    const pool = (league?.teams ?? premierLeagueTeams);
+    const pool = (league?.teams ?? getLeague('pl')!.teams);
     const others = shuffle(pool.filter(t => t.id !== userTeam.id))
       .slice(0, 15)
       .map(t => cloneTeam(t));

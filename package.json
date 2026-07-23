@@ -13,11 +13,9 @@
     "generate-icons": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
-    "@reduxjs/toolkit": "^2.11.2",
     "peerjs": "^1.5.5",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "react-redux": "^9.2.0"
+    "react-dom": "^19.2.7"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
