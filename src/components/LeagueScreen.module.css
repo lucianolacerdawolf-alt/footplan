@@ -42,14 +42,17 @@
   .standingsCol { order: -1; }
 }
 
-.fixturesCol { display: flex; flex-direction: column; gap: 12px; }
+.fixturesCol { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .standingsCol {
   display: flex; flex-direction: column; gap: 6px;
+  min-width: 0;
 }
 
 .standingsScroll {
   overflow-y: auto;
+  overflow-x: auto;
   max-height: 72vh;
+  width: 100%;
 }
 
 .section { display: flex; flex-direction: column; gap: 6px; }

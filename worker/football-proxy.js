@@ -22,6 +22,7 @@ const ALLOWED_CODES = new Set(['PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL']);
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'https://lucianolacerdawolf-alt.github.io',
+  'https://footplan.pages.dev',
 ];
 
 function corsHeaders(origin) {
