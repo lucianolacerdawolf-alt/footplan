@@ -4,10 +4,22 @@ import { beginMatchState, simularProximoBloco, buildMatchResult, type MatchState
 import { FIRST_HALF_CYCLES, TOTAL_CYCLES } from '../engine/matchConfig';
 import { cloneTeam } from '../utils/teamUtils';
 import { sfx } from '../utils/audio';
+import type { SubWindow } from '../utils/liveMatchPersistence';
 
 const BASE_HALF_DURATION_MS = 120000;
 const CLOCK_TICK_MS = 50;
 export const HALF_SECONDS = 45 * 60;
+
+export type MatchPhase = 'idle' | 'simulating' | 'halftime' | 'done';
+
+/** Qual das 3 janelas de pausa (pra fins de limite de substituições) a partida está
+ *  em cada momento — só existem essas 3 paradas possíveis (pausa no 1º tempo, intervalo,
+ *  pausa no 2º tempo), então o limite de "no máximo 3 janelas" é garantido pela própria
+ *  estrutura da partida, não precisa de checagem separada. */
+export function getSubWindow(phase: MatchPhase, clockSeconds: number): SubWindow {
+  if (phase === 'halftime') return 'halftime';
+  return clockSeconds < HALF_SECONDS ? 'firstHalfPause' : 'secondHalfPause';
+}
 const SPEED_DURATIONS: Record<number, number> = {
   1: 120000,   // 2 min
   2: 90000,    // 1 min 30s

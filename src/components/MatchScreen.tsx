@@ -59,7 +59,7 @@ function renderFormationDots(formation: string, side: 'home' | 'away', color: st
   ));
 }
 import { resolveKnockoutTiebreak } from '../engine/matchEngine';
-import { useMatchSimulation, HALF_SECONDS } from '../hooks/useMatchSimulation';
+import { useMatchSimulation, getSubWindow } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
 import CommentaryFeed from './CommentaryFeed';
 import Pitch from './Pitch';
@@ -282,10 +282,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     toastTimerRef.current = setTimeout(() => setSubToast(null), 2500);
   };
 
-  const currentSubWindow = (): SubWindow => {
-    if (phase === 'halftime') return 'halftime';
-    return clockSeconds < HALF_SECONDS ? 'firstHalfPause' : 'secondHalfPause';
-  };
+  const currentSubWindow = (): SubWindow => getSubWindow(phase, clockSeconds);
 
   const swapSquad = (team: Team, setTeam: (t: Team) => void, benchIdx: number, starterIdx: number, side: 'home' | 'away') => {
     const used = side === 'home' ? subsHome : subsAway;
