@@ -155,7 +155,7 @@
    ============================================================================= */
 .team-select-screen {
   max-width: 100%; margin: 0 auto; padding-bottom: 16px;
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .select-instruction {
