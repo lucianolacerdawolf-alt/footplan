@@ -44,7 +44,13 @@ export const MENTALITY_MODIFIERS: Record<Mentality, {
   'defensive':      { passing: 0.90, vision: 0.85, speed: 0.90, dribbling: 0.85, tackling: 1.30, positioning: 1.35, finishing: 0.80, staminaLossMultiplier: 0.70 },
 };
 
-export const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 7 };
+// A intensidade "high" antiga (7) fazia a fadiga bater no teto de 100 (-50% nos
+// atributos) já por volta do minuto 32 em times de pressão alta — bem antes do
+// intervalo. Reduzida pra 5: agora o teto só é atingido perto do intervalo (~min 45).
+// "low"/"medium" ficaram como estavam (já calibrados pela economia de gols em
+// calibration.test.ts) — o alívio de "medium" vem só da recuperação no intervalo
+// (ver HALFTIME_FATIGUE_RECOVERY em matchEngine.ts), não de mudar a taxa de ganho.
+export const INTENSITY_FATIGUE: Record<Intensity, number> = { 'low': 2, 'medium': 4, 'high': 5 };
 
 export const ATK_CHANCE: Record<Mentality, number> = {
   'possession':     0.82,  // mais ataques por ciclo de posse

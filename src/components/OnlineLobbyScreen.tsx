@@ -6,6 +6,7 @@ import { cloneTeam } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
 import { allLeagues } from '../data/leagues';
+import TacticLabel from './TacticLabel';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
@@ -328,41 +329,56 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
           </div>
 
           <div className="halftime-team" style={{ width: '100%' }}>
-            <select
-              value={myStrategy.formation}
-              onChange={e => setMyStrategy(s => s ? { ...s, formation: e.target.value as Formation } : s)}
-              disabled={myConfirmed}
-            >
-              {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-            <select
-              value={myStrategy.mentality}
-              onChange={e => setMyStrategy(s => s ? { ...s, mentality: e.target.value as Mentality } : s)}
-              disabled={myConfirmed}
-            >
-              {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
-            </select>
-            <select
-              value={myStrategy.intensity}
-              onChange={e => setMyStrategy(s => s ? { ...s, intensity: e.target.value as Intensity } : s)}
-              disabled={myConfirmed}
-            >
-              {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
-            </select>
-            <select
-              value={myStrategy.defensiveLine}
-              onChange={e => setMyStrategy(s => s ? { ...s, defensiveLine: e.target.value as DefensiveLine } : s)}
-              disabled={myConfirmed}
-            >
-              {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
-            </select>
-            <select
-              value={myStrategy.width}
-              onChange={e => setMyStrategy(s => s ? { ...s, width: e.target.value as Width } : s)}
-              disabled={myConfirmed}
-            >
-              {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
-            </select>
+            <div className="setup-select">
+              <TacticLabel tacticKey="formation" />
+              <select
+                value={myStrategy.formation}
+                onChange={e => setMyStrategy(s => s ? { ...s, formation: e.target.value as Formation } : s)}
+                disabled={myConfirmed}
+              >
+                {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+            <div className="setup-select">
+              <TacticLabel tacticKey="mentality" />
+              <select
+                value={myStrategy.mentality}
+                onChange={e => setMyStrategy(s => s ? { ...s, mentality: e.target.value as Mentality } : s)}
+                disabled={myConfirmed}
+              >
+                {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
+              </select>
+            </div>
+            <div className="setup-select">
+              <TacticLabel tacticKey="intensity" />
+              <select
+                value={myStrategy.intensity}
+                onChange={e => setMyStrategy(s => s ? { ...s, intensity: e.target.value as Intensity } : s)}
+                disabled={myConfirmed}
+              >
+                {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
+              </select>
+            </div>
+            <div className="setup-select">
+              <TacticLabel tacticKey="defensiveLine" />
+              <select
+                value={myStrategy.defensiveLine}
+                onChange={e => setMyStrategy(s => s ? { ...s, defensiveLine: e.target.value as DefensiveLine } : s)}
+                disabled={myConfirmed}
+              >
+                {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
+              </select>
+            </div>
+            <div className="setup-select">
+              <TacticLabel tacticKey="width" />
+              <select
+                value={myStrategy.width}
+                onChange={e => setMyStrategy(s => s ? { ...s, width: e.target.value as Width } : s)}
+                disabled={myConfirmed}
+              >
+                {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
+              </select>
+            </div>
           </div>
 
           {!myConfirmed && (

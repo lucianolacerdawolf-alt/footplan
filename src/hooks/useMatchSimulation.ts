@@ -1,18 +1,24 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { Team, MatchResult, MatchEvent, RandomFn } from '../engine/types';
-import { simularPrimeiroTempo, simularSegundoTempo, type MatchState } from '../engine/matchEngine';
+import { beginMatchState, simularProximoBloco, buildMatchResult, type MatchState } from '../engine/matchEngine';
+import { FIRST_HALF_CYCLES, TOTAL_CYCLES } from '../engine/matchConfig';
 import { cloneTeam } from '../utils/teamUtils';
 import { sfx } from '../utils/audio';
 
 const BASE_HALF_DURATION_MS = 120000;
 const CLOCK_TICK_MS = 50;
-const HALF_SECONDS = 45 * 60;
+export const HALF_SECONDS = 45 * 60;
 const SPEED_DURATIONS: Record<number, number> = {
   1: 120000,   // 2 min
   2: 90000,    // 1 min 30s
   3: 60000,    // 1 min
   4: 45000,    // 45s
 };
+// Ciclos simulados por vez (2 ciclos = 4min de jogo). Simular em blocos pequenos, em vez do
+// tempo inteiro de uma vez, é o que permite uma substituição feita numa pausa afetar os
+// ciclos seguintes de verdade — antes, o tempo inteiro já estava calculado antes da pausa
+// sequer existir, então trocar jogador na pausa não mudava nada no que já ia ser narrado.
+const CHUNK_CYCLES = 2;
 
 function combineFatigue(home: Map<string, number>, away: Map<string, number>): Record<string, number> {
   const out: Record<string, number> = {};
@@ -43,12 +49,48 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const hScoreRef = useRef(0);
   const aScoreRef = useRef(0);
   const engineStateRef = useRef<MatchState | null>(null);
+  // Espelham o state React em refs pra `resumeReplay` (useCallback estável) sempre ler o
+  // valor mais recente sem precisar recriar a função a cada mudança.
+  const replayEventsRef = useRef<MatchEvent[]>([]);
+  useEffect(() => { replayEventsRef.current = replayEvents; }, [replayEvents]);
+  const clockSecondsRef = useRef(0);
+  useEffect(() => { clockSecondsRef.current = clockSeconds; }, [clockSeconds]);
   const rngRef = useRef(rng);
   rngRef.current = rng;
   const pausedRef = useRef(false);
   const injuryCbRef = useRef<((playerId: string) => void) | null>(null);
   const mountedRef = useRef(true);
   useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+
+  // Elenco/tática "ao vivo" — atualizado a cada substituição/troca de tática feita durante
+  // uma pausa, pra que o PRÓXIMO bloco simulado (ainda não calculado) já reflita a mudança.
+  const liveHomeRef = useRef<Team | null>(null);
+  const liveAwayRef = useRef<Team | null>(null);
+  const isFirstHalfRef = useRef(true);
+  const nextCycleRef = useRef(0);
+
+  const updateLiveTeams = useCallback((home: Team, away: Team) => {
+    liveHomeRef.current = home;
+    liveAwayRef.current = away;
+  }, []);
+
+  /** Simula o próximo bloco de ciclos usando o elenco/tática mais recentes. Retorna null
+   *  quando o tempo atual já foi todo simulado (nada mais a gerar). */
+  const produceMoreEvents = useCallback((): MatchEvent[] | null => {
+    const state = engineStateRef.current;
+    const home = liveHomeRef.current;
+    const away = liveAwayRef.current;
+    if (!state || !home || !away) return null;
+    const isFirstHalf = isFirstHalfRef.current;
+    const halfEnd = isFirstHalf ? FIRST_HALF_CYCLES : TOTAL_CYCLES;
+    if (nextCycleRef.current >= halfEnd) return null;
+    const toCycle = Math.min(halfEnd, nextCycleRef.current + CHUNK_CYCLES);
+    const events = simularProximoBloco(home, away, state, nextCycleRef.current, toCycle, isFirstHalf, rngRef.current ?? Math.random);
+    nextCycleRef.current = toCycle;
+    return events;
+  }, []);
+  const produceMoreRef = useRef(produceMoreEvents);
+  produceMoreRef.current = produceMoreEvents;
 
   useEffect(() => () => {
     if (replayRef.current) clearInterval(replayRef.current);
@@ -58,11 +100,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const pauseReplay = useCallback(() => {
     pausedRef.current = true;
     setPaused(true);
-  }, []);
-
-  const resumeReplay = useCallback(() => {
-    pausedRef.current = false;
-    setPaused(false);
   }, []);
 
   const consumePause = useCallback((): boolean => {
@@ -83,6 +120,12 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     initialAwayScore: number,
     onHalftime: () => void,
     onDone: () => void,
+    /** Segundos já percorridos dentro do tempo atual — usado só ao retomar uma sessão
+     *  restaurada (F5) no meio de um tempo, pra não reiniciar o relógio do zero. */
+    initialElapsedInHalfSec = 0,
+    /** Eventos já mostrados antes da restauração — preserva o histórico na cronologia
+     *  em vez de zerar `replayEvents` (só relevante numa retomada pós-F5). */
+    priorReplayEvents: MatchEvent[] = [],
   ) => {
     if (replayRef.current) clearInterval(replayRef.current);
     pausedRef.current = false;
@@ -90,16 +133,18 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     const queue = [...events];
     const maxSec = halfOffsetSec + HALF_SECONDS;
-    let pauseAccumMs = 0;
+    const baseDuration = SPEED_DURATIONS[1] ?? BASE_HALF_DURATION_MS;
+    const clampedElapsed = Math.min(HALF_SECONDS, Math.max(0, initialElapsedInHalfSec));
+    let pauseAccumMs = (clampedElapsed / HALF_SECONDS) * baseDuration;
 
     hScoreRef.current = initialHomeScore;
     aScoreRef.current = initialAwayScore;
     setHomeScore(initialHomeScore);
     setAwayScore(initialAwayScore);
-    setReplayEvents([]);
-    setClockSeconds(halfOffsetSec);
+    setReplayEvents(priorReplayEvents);
+    setClockSeconds(halfOffsetSec + clampedElapsed);
 
-    if (queue.length > 0 && queue[0].minute * 60 <= halfOffsetSec + 1) {
+    if (priorReplayEvents.length === 0 && queue.length > 0 && queue[0].minute * 60 <= halfOffsetSec + 1) {
       const kickoff = queue.shift()!;
       setCurrentEvent(kickoff);
       setReplayEvents([kickoff]);
@@ -113,11 +158,15 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
       const speed = speedRef?.current ?? 1;
       pauseAccumMs += CLOCK_TICK_MS * speed;
-      const baseDuration = SPEED_DURATIONS[1] ?? BASE_HALF_DURATION_MS;
       const inGameSec = Math.min(HALF_SECONDS, Math.floor((pauseAccumMs / baseDuration) * HALF_SECONDS));
       const effectiveSec = halfOffsetSec + inGameSec;
 
       setClockSeconds(effectiveSec);
+
+      if (queue.length === 0) {
+        const more = produceMoreRef.current();
+        if (more && more.length > 0) queue.push(...more);
+      }
 
       if (queue.length > 0 && queue[0].minute * 60 <= effectiveSec) {
         const evt = queue.shift()!;
@@ -213,6 +262,107 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     }, CLOCK_TICK_MS);
   }, [initialHomeId, speedRef]);
 
+  /**
+   * Retoma a partida. Se o interval de replay ainda existir (pausa normal dentro da
+   * mesma sessão), só destrava. Se não existir (sessão restaurada após F5 — ver
+   * `restoreSnapshot`), recria o replay a partir do que já foi simulado, usando o
+   * elenco/tática atuais (`home`/`away`) — obrigatório nesse segundo caso.
+   */
+  const resumeReplay = useCallback((home?: Team, away?: Team) => {
+    if (replayRef.current) {
+      pausedRef.current = false;
+      setPaused(false);
+      return;
+    }
+    const state = engineStateRef.current;
+    if (!home || !away || !state) {
+      pausedRef.current = false;
+      setPaused(false);
+      return;
+    }
+    liveHomeRef.current = home;
+    liveAwayRef.current = away;
+    const isFirstHalf = isFirstHalfRef.current;
+    const halfOffsetSec = isFirstHalf ? 0 : HALF_SECONDS;
+    const elapsed = clockSecondsRef.current - halfOffsetSec;
+    const shown = replayEventsRef.current;
+    const remaining = state.events.slice(shown.length);
+    setSimulating(true);
+    setPhase('simulating');
+
+    if (isFirstHalf) {
+      startReplay(remaining, 0, hScoreRef.current, aScoreRef.current, () => {}, () => {}, elapsed, shown);
+    } else {
+      startReplay(
+        remaining, HALF_SECONDS, hScoreRef.current, aScoreRef.current,
+        () => {},
+        () => {
+          setSimulating(false);
+          setPhase('done');
+          setShowOverlay(true);
+          const finalHome = liveHomeRef.current ?? home;
+          const finalAway = liveAwayRef.current ?? away;
+          const matchResult = buildMatchResult(finalHome, finalAway, state);
+          setResult(matchResult);
+          setHomeScore(matchResult.homeScore);
+          setAwayScore(matchResult.awayScore);
+        },
+        elapsed, shown,
+      );
+    }
+  }, [startReplay]);
+
+  /**
+   * Restaura uma partida ao vivo salva (F5) — sempre aterrissa em estado pausado,
+   * mesmo que não estivesse pausada no momento do save. Retomar de verdade (recriar o
+   * replay) acontece só quando o usuário clica em "Retomar" (ver `resumeReplay` acima).
+   */
+  const restoreSnapshot = useCallback((snap: {
+    phase: 'idle' | 'simulating' | 'halftime' | 'done';
+    isFirstHalf: boolean;
+    nextCycle: number;
+    clockSeconds: number;
+    homeScore: number;
+    awayScore: number;
+    replayEvents: MatchEvent[];
+    fatigueMap: Record<string, number>;
+    expelledIds: string[];
+    pausesRemaining: number;
+    engineState: MatchState | null;
+  }) => {
+    if (replayRef.current) clearInterval(replayRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    engineStateRef.current = snap.engineState;
+    isFirstHalfRef.current = snap.isFirstHalf;
+    nextCycleRef.current = snap.nextCycle;
+    hScoreRef.current = snap.homeScore;
+    aScoreRef.current = snap.awayScore;
+    replayEventsRef.current = snap.replayEvents;
+    clockSecondsRef.current = snap.clockSeconds;
+
+    setStarted(snap.phase !== 'idle');
+    setSimulating(snap.phase === 'simulating');
+    setPhase(snap.phase);
+    setClockSeconds(snap.clockSeconds);
+    setHomeScore(snap.homeScore);
+    setAwayScore(snap.awayScore);
+    setReplayEvents(snap.replayEvents);
+    setCurrentEvent(snap.replayEvents.length > 0 ? snap.replayEvents[snap.replayEvents.length - 1] : null);
+    setFatigueMap(snap.fatigueMap);
+    setExpelledIds(snap.expelledIds);
+    setPausesRemaining(snap.pausesRemaining);
+    setResult(null);
+    setShowOverlay(false);
+
+    // Só o meio de um tempo (não intervalo, não fim) precisa aterrissar pausado — nos
+    // outros casos `paused` não é usado pela UI.
+    const shouldPause = snap.phase === 'simulating';
+    pausedRef.current = shouldPause;
+    setPaused(shouldPause);
+    setIsGoalPause(false);
+  }, []);
+
   const runFirstHalf = useCallback((home: Team, away: Team) => {
     if (replayRef.current) clearInterval(replayRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -233,11 +383,21 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
-      const { state } = simularPrimeiroTempo(cloneTeam(home, true), cloneTeam(away, true), rngRef.current);
+      const clonedHome = cloneTeam(home, true);
+      const clonedAway = cloneTeam(away, true);
+      liveHomeRef.current = clonedHome;
+      liveAwayRef.current = clonedAway;
+      isFirstHalfRef.current = true;
+      nextCycleRef.current = 0;
+
+      const state = beginMatchState(clonedHome, clonedAway, rngRef.current);
       engineStateRef.current = state;
       setFatigueMap(combineFatigue(state.fatigueHome, state.fatigueAway));
 
-      startReplay([...state.events], 0, 0, 0, () => {}, () => {});
+      const firstChunk = simularProximoBloco(clonedHome, clonedAway, state, 0, CHUNK_CYCLES, true, rngRef.current ?? Math.random);
+      nextCycleRef.current = Math.min(FIRST_HALF_CYCLES, CHUNK_CYCLES);
+
+      startReplay(firstChunk, 0, 0, 0, () => {}, () => {});
     }, 150);
   }, [startReplay]);
 
@@ -256,20 +416,29 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
-      const matchResult = simularSegundoTempo(cloneTeam(home, true), cloneTeam(away, true), engineStateRef.current!, rngRef.current);
-      setResult(matchResult);
-      setFatigueMap(combineFatigue(engineStateRef.current!.fatigueHome, engineStateRef.current!.fatigueAway));
+      const clonedHome = cloneTeam(home, true);
+      const clonedAway = cloneTeam(away, true);
+      liveHomeRef.current = clonedHome;
+      liveAwayRef.current = clonedAway;
+      isFirstHalfRef.current = false;
 
-      const halfIdx = matchResult.events.findIndex(e => e.minute >= 45 && e.type !== 'halftime');
-      const secondHalfEvents = halfIdx >= 0 ? matchResult.events.slice(halfIdx) : matchResult.events;
+      const state = engineStateRef.current!;
+      const firstChunkTo = Math.min(TOTAL_CYCLES, FIRST_HALF_CYCLES + CHUNK_CYCLES);
+      const firstChunk = simularProximoBloco(clonedHome, clonedAway, state, FIRST_HALF_CYCLES, firstChunkTo, false, rngRef.current ?? Math.random);
+      nextCycleRef.current = firstChunkTo;
+      setFatigueMap(combineFatigue(state.fatigueHome, state.fatigueAway));
 
       startReplay(
-        secondHalfEvents, HALF_SECONDS, firstHalfHome, firstHalfAway,
+        firstChunk, HALF_SECONDS, firstHalfHome, firstHalfAway,
         () => {},
         () => {
           setSimulating(false);
           setPhase('done');
           setShowOverlay(true);
+          const finalHome = liveHomeRef.current ?? clonedHome;
+          const finalAway = liveAwayRef.current ?? clonedAway;
+          const matchResult = buildMatchResult(finalHome, finalAway, state);
+          setResult(matchResult);
           setHomeScore(matchResult.homeScore);
           setAwayScore(matchResult.awayScore);
         }
@@ -284,8 +453,8 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   return {
     result, simulating, replayEvents, currentEvent,
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
-    fatigueMap, expelledIds, engineStateRef,
-    runFirstHalf, runSecondHalf,
+    fatigueMap, expelledIds, engineStateRef, isFirstHalfRef, nextCycleRef,
+    runFirstHalf, runSecondHalf, updateLiveTeams, restoreSnapshot,
     paused, isGoalPause, pauseReplay, resumeReplay, consumePause, pausesRemaining, resetPauses, setInjuryCallback,
   };
 }

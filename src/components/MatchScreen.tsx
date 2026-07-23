@@ -3,6 +3,21 @@ import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Wi
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
+import { TACTIC_PRESETS } from '../engine/tacticPresets';
+import TacticLabel from './TacticLabel';
+import type { SubWindow, LiveMatchSnapshot } from '../utils/liveMatchPersistence';
+import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchState } from '../utils/liveMatchPersistence';
+
+// Janelas de parada em que substituições podem ser feitas — estruturalmente só existem 3
+// (pausa no 1º tempo, intervalo, pausa no 2º tempo), então o limite de "até 3 pausas" já
+// é garantido pela própria contagem de janelas disponíveis; o que rastreamos aqui é só
+// quantas das 5 substituições totais foram usadas em cada uma, pra exibir ao usuário.
+const ZERO_SUB_WINDOWS: Record<SubWindow, number> = { firstHalfPause: 0, halftime: 0, secondHalfPause: 0 };
+const SUB_WINDOW_LABELS: Record<SubWindow, string> = { firstHalfPause: '1ºT', halftime: 'Intervalo', secondHalfPause: '2ºT' };
+function formatSubWindows(w: Record<SubWindow, number>): string {
+  return (['firstHalfPause', 'halftime', 'secondHalfPause'] as SubWindow[])
+    .map(k => `${SUB_WINDOW_LABELS[k]} ${w[k]}`).join(' · ');
+}
 
 interface OnlineProps {
   isHost: boolean;
@@ -44,7 +59,7 @@ function renderFormationDots(formation: string, side: 'home' | 'away', color: st
   ));
 }
 import { resolveKnockoutTiebreak } from '../engine/matchEngine';
-import { useMatchSimulation } from '../hooks/useMatchSimulation';
+import { useMatchSimulation, HALF_SECONDS } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
 import CommentaryFeed from './CommentaryFeed';
 import Pitch from './Pitch';
@@ -60,15 +75,25 @@ interface Props {
   online?: OnlineProps;
   continueLabel?: string;
   onContinue?: () => void;
+  /** 'regular'|'league'|'bracket'|'online' — só partidas 'regular' são persistidas
+   *  (ver comentário na seção de persistência mais abaixo). */
+  matchContext?: 'regular' | 'league' | 'bracket' | 'online';
+  /** Snapshot de uma partida salva (F5) pra restaurar em vez de começar do zero. */
+  resumeSnapshot?: LiveMatchSnapshot | null;
+  /** Chamado uma vez, logo após consumir o resumeSnapshot no mount — o App usa isso
+   *  pra não tentar restaurar de novo se essa tela remontar (ex: nova partida). */
+  onResumeConsumed?: () => void;
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, resumeSnapshot, onResumeConsumed }: Props) {
   const [home, setHome] = useState<Team>(() => {
+    if (resumeSnapshot) return resumeSnapshot.home;
     const t = cloneTeam(initialHome);
     t.strategy = { ...initialHome.strategy };
     return t;
   });
   const [away, setAway] = useState<Team>(() => {
+    if (resumeSnapshot) return resumeSnapshot.away;
     const t = cloneTeam(initialAway);
     t.strategy = { ...initialAway.strategy };
     return t;
@@ -77,8 +102,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [htHomePick, setHtHomePick] = useState<string | null>(null);
   const [htAwayPick, setHtAwayPick] = useState<string | null>(null);
   const [subToast, setSubToast] = useState<string | null>(null);
-  const [subsHome, setSubsHome] = useState(0);
-  const [subsAway, setSubsAway] = useState(0);
+  const [subsHome, setSubsHome] = useState(() => resumeSnapshot?.subsHome ?? 0);
+  const [subsAway, setSubsAway] = useState(() => resumeSnapshot?.subsAway ?? 0);
+  const [subWindowsHome, setSubWindowsHome] = useState<Record<SubWindow, number>>(() => resumeSnapshot?.subWindowsHome ?? ZERO_SUB_WINDOWS);
+  const [subWindowsAway, setSubWindowsAway] = useState<Record<SubWindow, number>>(() => resumeSnapshot?.subWindowsAway ?? ZERO_SUB_WINDOWS);
   const MAX_SUBS = 5;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
@@ -101,12 +128,12 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const {
     result, simulating, replayEvents, currentEvent,
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
-    fatigueMap, expelledIds, engineStateRef,
-    runFirstHalf, runSecondHalf,
+    fatigueMap, expelledIds, engineStateRef, isFirstHalfRef, nextCycleRef,
+    runFirstHalf, runSecondHalf, updateLiveTeams, restoreSnapshot,
     paused, isGoalPause, pauseReplay, resumeReplay, consumePause, pausesRemaining, setInjuryCallback,
   } = useMatchSimulation(initialHome.id, speedRef, rng);
 
-  const [injuredIds, setInjuredIds] = useState<string[]>([]);
+  const [injuredIds, setInjuredIds] = useState<string[]>(() => resumeSnapshot?.injuredIds ?? []);
   const [injuryToast, setInjuryToast] = useState<string | null>(null);
   const injuryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -122,6 +149,28 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       pauseReplay();
     }
   }, [home.squad, away.squad, pauseReplay]);
+
+  // Restaura uma partida salva (F5) — só roda uma vez, no mount. Sempre aterrissa em
+  // estado pausado (ver restoreSnapshot no hook); o usuário retoma clicando "Retomar".
+  useEffect(() => {
+    if (!resumeSnapshot) return;
+    restoreSnapshot({
+      phase: resumeSnapshot.phase,
+      isFirstHalf: resumeSnapshot.isFirstHalf,
+      nextCycle: resumeSnapshot.nextCycle,
+      clockSeconds: resumeSnapshot.clockSeconds,
+      homeScore: resumeSnapshot.homeScore,
+      awayScore: resumeSnapshot.awayScore,
+      replayEvents: resumeSnapshot.replayEvents,
+      fatigueMap: resumeSnapshot.fatigueMap,
+      expelledIds: resumeSnapshot.expelledIds,
+      pausesRemaining: resumeSnapshot.pausesRemaining,
+      engineState: resumeSnapshot.engineState ? deserializeMatchState(resumeSnapshot.engineState) : null,
+    });
+    updateLiveTeams(resumeSnapshot.home, resumeSnapshot.away);
+    onResumeConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     setInjuryCallback(handleInjury);
@@ -184,7 +233,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       if (msg.type === 'start-simulate' && !online.isHost) {
         knockoutResolvedRef.current = false;
         setKnockoutResult(null);
-        setSubsHome(0); setSubsAway(0); setInjuredIds([]);
+        setSubsHome(0); setSubsAway(0); setSubWindowsHome(ZERO_SUB_WINDOWS); setSubWindowsAway(ZERO_SUB_WINDOWS); setInjuredIds([]);
         runFirstHalf(home, away);
       }
     };
@@ -233,6 +282,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     toastTimerRef.current = setTimeout(() => setSubToast(null), 2500);
   };
 
+  const currentSubWindow = (): SubWindow => {
+    if (phase === 'halftime') return 'halftime';
+    return clockSeconds < HALF_SECONDS ? 'firstHalfPause' : 'secondHalfPause';
+  };
+
   const swapSquad = (team: Team, setTeam: (t: Team) => void, benchIdx: number, starterIdx: number, side: 'home' | 'away') => {
     const used = side === 'home' ? subsHome : subsAway;
     if (used >= MAX_SUBS) {
@@ -247,7 +301,16 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     [squad[benchIdx], squad[starterIdx]] = [squad[starterIdx], squad[benchIdx]];
     const updatedTeam = { ...team, squad };
     setTeam(updatedTeam);
-    if (side === 'home') setSubsHome(n => n + 1); else setSubsAway(n => n + 1);
+    const win = currentSubWindow();
+    if (side === 'home') {
+      setSubsHome(n => n + 1);
+      setSubWindowsHome(w => ({ ...w, [win]: w[win] + 1 }));
+      updateLiveTeams(updatedTeam, away);
+    } else {
+      setSubsAway(n => n + 1);
+      setSubWindowsAway(w => ({ ...w, [win]: w[win] + 1 }));
+      updateLiveTeams(home, updatedTeam);
+    }
     showSubToast(outPlayer, inPlayer);
     if (online) syncSquad(side, squad, (side === 'home' ? subsHome : subsAway) + 1);
   };
@@ -299,14 +362,79 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     setKnockoutResult(enriched);
   }, [phase, result, addMatch, engineStateRef]);
 
+  // Persistência de sessão — salva a partida ao vivo pra sobreviver a um F5. Escopo
+  // deliberadamente limitado a partidas 'regular' (Partida Única, CPU ou 2 jogadores
+  // locais): liga/copa dependem de estado adicional (ex. qual rodada/confronto exato
+  // estava em jogo) que não é persistido hoje, e partidas online dependem da conexão
+  // WebRTC — tentar restaurar essas duas categorias abriria mais riscos do que valeria.
+  useEffect(() => {
+    if (matchContext !== 'regular') return;
+    if (phase === 'done') { clearLiveMatch(); return; }
+    if (!started || phase === 'idle' || !engineStateRef.current) return;
+
+    const snapshot: LiveMatchSnapshot = {
+      version: 2,
+      savedAt: Date.now(),
+      matchContext: 'regular',
+      isKnockout: !!isKnockout,
+      initialHome, initialAway,
+      continueLabel,
+      home, away,
+      subsHome, subsAway, subWindowsHome, subWindowsAway,
+      injuredIds,
+      speed,
+      phase, isFirstHalf: isFirstHalfRef.current, nextCycle: nextCycleRef.current,
+      clockSeconds, homeScore, awayScore, replayEvents,
+      fatigueMap, expelledIds, pausesRemaining,
+      engineState: serializeMatchState(engineStateRef.current),
+    };
+    saveLiveMatch(snapshot);
+  }, [
+    matchContext, started, phase, replayEvents, subsHome, subsAway, subWindowsHome, subWindowsAway,
+    injuredIds, home, away, clockSeconds, pausesRemaining, isKnockout, initialHome, initialAway,
+    continueLabel, speed, homeScore, awayScore, fatigueMap, expelledIds,
+    engineStateRef, isFirstHalfRef, nextCycleRef,
+  ]);
+
   const updateHome = (s: Strategy) => {
-    setHome(prev => ({ ...prev, strategy: s }));
+    const next = { ...home, strategy: s };
+    setHome(next);
+    updateLiveTeams(next, away);
     if (online) syncStrategy('home', s);
   };
   const updateAway = (s: Strategy) => {
-    setAway(prev => ({ ...prev, strategy: s }));
+    const next = { ...away, strategy: s };
+    setAway(next);
+    updateLiveTeams(home, next);
     if (online) syncStrategy('away', s);
   };
+
+  const renderPresetButtons = (team: Team, onStrategy: (s: Strategy) => void) => (
+    <div className="preset-buttons">
+      {TACTIC_PRESETS.map(preset => {
+        const isActive = team.strategy.mentality === preset.mentality
+          && team.strategy.intensity === preset.intensity
+          && team.strategy.defensiveLine === preset.defensiveLine
+          && team.strategy.width === preset.width;
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            className={`preset-btn ${isActive ? 'active' : ''}`}
+            onClick={() => onStrategy({
+              ...team.strategy,
+              mentality: preset.mentality,
+              intensity: preset.intensity,
+              defensiveLine: preset.defensiveLine,
+              width: preset.width,
+            })}
+          >
+            {preset.icon} {preset.label}
+          </button>
+        );
+      })}
+    </div>
+  );
 
   const pitchResult = (showOverlay && result) ? {
     homeScore: result.homeScore, awayScore: result.awayScore,
@@ -319,7 +447,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     <div className="match-screen">
       {/* Topbar */}
       <header className="match-topbar">
-        <button className="back-btn" onClick={onBack} disabled={simulating && !paused}>
+        <button className="back-btn" onClick={() => { if (matchContext === 'regular') clearLiveMatch(); onBack(); }} disabled={simulating && !paused}>
           &larr; Voltar
         </button>
         <span className="match-title">{home.abbreviation} vs {away.abbreviation}</span>
@@ -328,7 +456,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           {phase === 'simulating' && started && !online && (
             <button
               className="speed-btn"
-              onClick={paused ? resumeReplay : (pausesRemaining > 0 ? () => { consumePause(); } : undefined)}
+              onClick={paused ? () => resumeReplay(home, away) : (pausesRemaining > 0 ? () => { consumePause(); } : undefined)}
               disabled={pausesRemaining <= 0 && !paused}
               title={paused ? 'Retomar' : pausesRemaining > 0 ? `Pausar (${pausesRemaining} restante${pausesRemaining > 1 ? 's' : ''})` : 'Pausas esgotadas'}
               aria-label={paused ? 'Retomar replay' : 'Pausar replay'}
@@ -379,12 +507,15 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         const homePct = totalPoss > 0 ? Math.round((homePoss / totalPoss) * 100) : 50;
         const awayPct = 100 - homePct;
         return (
-          <div className="possession-bar-wrap">
-            <span className="poss-pct poss-home" style={{ color: home.color }}>{homePct}%</span>
-            <div className="possession-bar">
-              <div className="possession-fill home-fill" style={{ width: `${homePct}%`, background: home.color }} />
+          <div className="possession-section">
+            <div className="poss-label-row">Posse de Bola</div>
+            <div className="possession-bar-wrap">
+              <span className="poss-pct poss-home" style={{ color: home.color }}>{homePct}%</span>
+              <div className="possession-bar">
+                <div className="possession-fill home-fill" style={{ width: `${homePct}%`, background: home.color }} />
+              </div>
+              <span className="poss-pct poss-away" style={{ color: away.color }}>{awayPct}%</span>
             </div>
-            <span className="poss-pct poss-away" style={{ color: away.color }}>{awayPct}%</span>
           </div>
         );
       })()}
@@ -446,6 +577,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             currentEvent={currentEvent}
             phase={phase === 'halftime' || phase === 'done' ? 'done' : simulating || phase === 'simulating' ? 'simulating' : 'idle'}
             paused={paused}
+            isGoalPause={isGoalPause}
             result={pitchResult}
             halftime={phase === 'halftime' ? { homeScore, awayScore } : null}
             fatigueMap={fatigueMap}
@@ -472,7 +604,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     <div className="ht-mini-stats">
                       <div className="ht-stat-row"><span style={{ color: home.color }}>{hShots}</span><span className="ht-stat-label">Finalizações</span><span style={{ color: away.color }}>{aShots}</span></div>
                       <div className="ht-stat-row"><span style={{ color: home.color }}>{hSoT}</span><span className="ht-stat-label">No Alvo</span><span style={{ color: away.color }}>{aSoT}</span></div>
-                      <div className="ht-stat-row"><span style={{ color: home.color }}>{homePct}%</span><span className="ht-stat-label">Posse</span><span style={{ color: away.color }}>{100 - homePct}%</span></div>
+                      <div className="ht-stat-row"><span style={{ color: home.color }}>{homePct}%</span><span className="ht-stat-label">Posse de Bola</span><span style={{ color: away.color }}>{100 - homePct}%</span></div>
                     </div>
                   );
                 })()}
@@ -485,16 +617,28 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                         {online.isHost ? home.abbreviation : away.abbreviation} (Você)
                       </strong>
                       {online.isHost ? <>
+                        {renderPresetButtons(home, updateHome)}
+                        <TacticLabel tacticKey="formation" />
                         <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                        <TacticLabel tacticKey="mentality" />
                         <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
+                        <TacticLabel tacticKey="intensity" />
                         <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
+                        <TacticLabel tacticKey="defensiveLine" />
                         <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
+                        <TacticLabel tacticKey="width" />
                         <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
                       </> : <>
+                        {renderPresetButtons(away, updateAway)}
+                        <TacticLabel tacticKey="formation" />
                         <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                        <TacticLabel tacticKey="mentality" />
                         <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
+                        <TacticLabel tacticKey="intensity" />
                         <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
+                        <TacticLabel tacticKey="defensiveLine" />
                         <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
+                        <TacticLabel tacticKey="width" />
                         <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
                       </>}
                     </div>
@@ -504,19 +648,31 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   <div className="halftime-teams">
                     <div className="halftime-team">
                       <strong style={{ color: home.color }}>{home.abbreviation}</strong>
+                      {renderPresetButtons(home, updateHome)}
+                      <TacticLabel tacticKey="formation" />
                       <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                      <TacticLabel tacticKey="mentality" />
                       <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
+                      <TacticLabel tacticKey="intensity" />
                       <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
+                      <TacticLabel tacticKey="defensiveLine" />
                       <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
+                      <TacticLabel tacticKey="width" />
                       <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
                     </div>
                     <span className="halftime-vs">vs</span>
                     <div className="halftime-team">
                       <strong style={{ color: away.secondaryColor }}>{away.abbreviation}</strong>
+                      {renderPresetButtons(away, updateAway)}
+                      <TacticLabel tacticKey="formation" />
                       <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
+                      <TacticLabel tacticKey="mentality" />
                       <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
+                      <TacticLabel tacticKey="intensity" />
                       <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
+                      <TacticLabel tacticKey="defensiveLine" />
                       <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
+                      <TacticLabel tacticKey="width" />
                       <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
                     </div>
                   </div>
@@ -526,8 +682,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                 <details className="ht-squad-details">
                   <summary>
                     {online
-                      ? <>Substituições · <span style={{ color: online.isHost ? home.color : away.color }}>{online.isHost ? home.abbreviation : away.abbreviation} {online.isHost ? subsHome : subsAway}/{MAX_SUBS}</span></>
-                      : <>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span></>
+                      ? <>Substituições · <span style={{ color: online.isHost ? home.color : away.color }}>{online.isHost ? home.abbreviation : away.abbreviation} {online.isHost ? subsHome : subsAway}/{MAX_SUBS}</span>
+                          <span className="sub-window-breakdown"> ({formatSubWindows(online.isHost ? subWindowsHome : subWindowsAway)})</span></>
+                      : <>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
+                          <span className="sub-window-breakdown"> ({formatSubWindows(subWindowsHome)} / {formatSubWindows(subWindowsAway)})</span></>
                     }
                   </summary>
                   <div className="ht-squad-grid">
@@ -662,6 +820,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   <>
                     <div style={{ fontSize: 12, opacity: 0.6, textAlign: 'center', marginBottom: 4 }}>
                       Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
+                      <span className="sub-window-breakdown"> ({formatSubWindows(subWindowsHome)} / {formatSubWindows(subWindowsAway)})</span>
                     </div>
                     <div className="ht-squad-grid">
                       {(() => {
@@ -774,36 +933,48 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     <div className="halftime-team" style={{ marginBottom: 8 }}>
                       {!showOpponent ? (
                         <>
+                          {renderPresetButtons(home, updateHome)}
+                          <TacticLabel tacticKey="formation" />
                           <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>
                             {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
                           </select>
+                          <TacticLabel tacticKey="mentality" />
                           <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>
                             {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
                           </select>
+                          <TacticLabel tacticKey="intensity" />
                           <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>
                             {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
                           </select>
+                          <TacticLabel tacticKey="defensiveLine" />
                           <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>
                             {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
                           </select>
+                          <TacticLabel tacticKey="width" />
                           <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>
                             {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
                           </select>
                         </>
                       ) : (
                         <>
+                          {renderPresetButtons(away, updateAway)}
+                          <TacticLabel tacticKey="formation" />
                           <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>
                             {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
                           </select>
+                          <TacticLabel tacticKey="mentality" />
                           <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>
                             {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
                           </select>
+                          <TacticLabel tacticKey="intensity" />
                           <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>
                             {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
                           </select>
+                          <TacticLabel tacticKey="defensiveLine" />
                           <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>
                             {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
                           </select>
+                          <TacticLabel tacticKey="width" />
                           <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>
                             {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
                           </select>
@@ -812,7 +983,9 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     </div>
 
                     <details className="ht-squad-details" open>
-                      <summary>Substituições · <span style={{ color: showOpponent ? away.color : home.color }}>{showOpponent ? away.abbreviation : home.abbreviation} {showOpponent ? subsAway : subsHome}/{MAX_SUBS}</span></summary>
+                      <summary>Substituições · <span style={{ color: showOpponent ? away.color : home.color }}>{showOpponent ? away.abbreviation : home.abbreviation} {showOpponent ? subsAway : subsHome}/{MAX_SUBS}</span>
+                        <span className="sub-window-breakdown"> ({formatSubWindows(showOpponent ? subWindowsAway : subWindowsHome)})</span>
+                      </summary>
                       <div className="ht-squad-grid">
                         {(() => {
                           const side = showOpponent ? 'away' : 'home';
@@ -901,7 +1074,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                       <div className="sub-toast">{subToast}</div>
                     )}
 
-                    <button className="simulate-btn" onClick={resumeReplay}>
+                    <button className="simulate-btn" onClick={() => resumeReplay(home, away)}>
                       ▶ Retomar Jogo
                     </button>
                   </>
@@ -916,7 +1089,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             {!started ? (
               online && !online.isHost
                 ? <span style={{ fontSize: 12, opacity: 0.55, fontFamily: 'var(--mono)' }}>Aguardando host simular...</span>
-                : <button className="simulate-btn" onClick={() => { if (online?.isHost) online.send({ type: 'start-simulate' }); knockoutResolvedRef.current = false; setKnockoutResult(null); setSubsHome(0); setSubsAway(0); setInjuredIds([]); runFirstHalf(home, away); }} disabled={simulating}>
+                : <button className="simulate-btn" onClick={() => { if (online?.isHost) online.send({ type: 'start-simulate' }); knockoutResolvedRef.current = false; setKnockoutResult(null); setSubsHome(0); setSubsAway(0); setSubWindowsHome(ZERO_SUB_WINDOWS); setSubWindowsAway(ZERO_SUB_WINDOWS); setInjuredIds([]); runFirstHalf(home, away); }} disabled={simulating}>
                     Simular Partida
                   </button>
             ) : phase === 'done' && (isKnockout ? knockoutResult : result) ? (

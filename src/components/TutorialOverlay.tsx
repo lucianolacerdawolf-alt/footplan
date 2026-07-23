@@ -1,37 +1,12 @@
 import { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { TACTIC_EXPLANATIONS } from '../engine/tacticExplanations';
 
 interface Props {
   onClose: () => void;
 }
 
-const STEPS = [
-  {
-    icon: '⚽',
-    title: 'Formação',
-    body: 'Distribuição dos 10 jogadores de linha: 4-3-3 ataca mais, 5-3-2 defende mais. Mudar formação reorganiza o time automaticamente.',
-  },
-  {
-    icon: '🧠',
-    title: 'Mentalidade',
-    body: 'Posse de bola controla o ritmo. Pressão alta força erros. Contra-ataque espera o adversário. Retranca segura o resultado.',
-  },
-  {
-    icon: '🔥',
-    title: 'Intensidade',
-    body: 'Alta cansa rápido mas pressiona mais. Baixa preserva o físico pra reta final. Média é equilibrada.',
-  },
-  {
-    icon: '🛡️',
-    title: 'Linha Defensiva',
-    body: 'Alta encurta o campo e cria impedimentos, mas deixa espaço atrás. Baixa fecha a área mas convida pressão.',
-  },
-  {
-    icon: '↔️',
-    title: 'Amplitude',
-    body: 'Estreito concentra jogadores no meio. Amplo usa as pontas. Normal é equilibrado.',
-  },
-];
+const STEPS = Object.values(TACTIC_EXPLANATIONS);
 
 export default function TutorialOverlay({ onClose }: Props) {
   const [step, setStep] = useState(0);

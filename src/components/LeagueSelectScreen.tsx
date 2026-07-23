@@ -2,13 +2,23 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
 import styles from './LeagueSelectScreen.module.css';
 
+export interface ResumableSave {
+  type: 'league' | 'bracket';
+  league: LeagueDefinition;
+  label: string;
+}
+
 interface Props {
   onSelect: (league: LeagueDefinition) => void;
   selectedLeague?: LeagueDefinition | null;
   onBack?: () => void;
+  /** Jogos salvos (liga/copa) prontos pra retomar, em qualquer liga — independente de
+   *  como o usuário chegou nessa tela ou de qual card ele vai clicar em seguida. */
+  resumable?: ResumableSave[];
+  onResume?: (save: ResumableSave) => void;
 }
 
-export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }: Props) {
+export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack, resumable, onResume }: Props) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
@@ -20,6 +30,23 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack }:
         </div>
         <p className={styles.subtitle}>Escolha seu campeonato</p>
       </header>
+
+      {resumable && resumable.length > 0 && onResume && (
+        <div className={styles.resumeBanner}>
+          {resumable.map((save) => (
+            <button
+              key={`${save.type}-${save.league.id}`}
+              className={styles.resumeBannerBtn}
+              style={{ '--lc': save.league.color } as React.CSSProperties}
+              onClick={() => onResume(save)}
+            >
+              <span className={styles.resumeBannerIcon} aria-hidden="true">{save.type === 'league' ? '📅' : '🏆'}</span>
+              <span className={styles.resumeBannerText}>Continuar · {save.label}</span>
+              <span className={styles.resumeBannerArrow} aria-hidden="true">→</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className={styles.grid}>
         {[...allLeagues].sort((a, b) => b.teams.length - a.teams.length).map(league => {

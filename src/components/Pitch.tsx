@@ -14,6 +14,9 @@ interface Props {
   currentEvent: MatchEvent | null;
   phase: 'idle' | 'simulating' | 'done';
   paused: boolean;
+  /** Pausa curta de comemoração de gol — jogadores continuam visíveis (só a pausa "de
+   *  verdade", pra substituição/tática, esconde os jogadores). */
+  isGoalPause?: boolean;
   result: {
     homeScore: number; awayScore: number;
     homePossession: number; awayPossession: number;
@@ -156,7 +159,7 @@ function ballPos(
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused, result, halftime, fatigueMap, expelledIds }: Props) {
+export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused, isGoalPause, result, halftime, fatigueMap, expelledIds }: Props) {
   const expelledSet = useMemo(() => new Set(expelledIds ?? []), [expelledIds]);
   // Coordenadas base — deliberadamente recalculadas só quando id/formação mudam
   // (evita resetar as posições dos jogadores quando morale/momentum/squad mudam).
@@ -171,6 +174,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
   const ballRef = useRef({ x: 60, y: 35, visible: true });
   const svgElsRef = useRef<Map<string, SVGGElement>>(new Map());
   const ballElRef = useRef<SVGCircleElement | null>(null);
+  const ballShadowRef = useRef<SVGCircleElement | null>(null);
   const rafRef = useRef<number>(0);
   const carrierIdRef = useRef<string | null>(null);
   const carrierTimerRef = useRef<number>(0);
@@ -254,6 +258,7 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
         defLine(home.strategy.defensiveLine), defLine(away.strategy.defensiveLine),
         width(home.strategy.width), width(away.strategy.width),
         ballEstimateX, ballEstimateY,
+        dt,
       );
 
       // Sincroniza DOM
@@ -268,7 +273,28 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
       carrierTimerRef.current += dt;
       const prevCarrierId = carrierIdRef.current;
       let carrier: PlayerCoord | null = null;
-      if (event && event.teamId && (event.type === 'possession' || event.type === 'attack' || event.type === 'pass')) {
+      if (event && event.type === 'pass' && event.receiverId) {
+        // Passe real do motor: a bola viaja do passador pro receptor nomeados no evento,
+        // não mais um par aleatório reatribuído a cada 0.8s.
+        const receiver = carriersRef.current.find(p => p.id === event.receiverId) ?? null;
+        const passer = event.passerId ? carriersRef.current.find(p => p.id === event.passerId) : null;
+        if (receiver) {
+          if (carrierIdRef.current !== receiver.id) {
+            const srcPlayer = (passer && players.get(passer.id)) || (prevCarrierId ? players.get(prevCarrierId) : null);
+            const dstPlayer = players.get(receiver.id);
+            if (srcPlayer && dstPlayer) {
+              ballTravelRef.current = {
+                srcX: srcPlayer.x, srcY: srcPlayer.y,
+                dstX: dstPlayer.x, dstY: dstPlayer.y,
+                t: 0,
+              };
+            }
+            carrierIdRef.current = receiver.id;
+            carrierTimerRef.current = 0;
+          }
+          carrier = receiver;
+        }
+      } else if (event && event.teamId && (event.type === 'possession' || event.type === 'attack')) {
         const isHome = event.teamId === home.id;
         const eligible = carriersRef.current.filter(p => {
           const match = isHome ? p.team === 'home' : p.team === 'away';
@@ -327,17 +353,26 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
         carrierTimerRef.current = 0;
       }
 
-      // Posição da bola com animação de passe
+      // Posição da bola com animação de passe — arco parabólico simples (altura via
+      // separação sombra/bola + leve aumento de raio) e duração proporcional à distância
+      // real percorrida, em vez de velocidade fixa.
       const b = ballPos(event, carrier?.id ?? null, players, home.id, eventSeedRef.current);
       const travel = ballTravelRef.current;
+      let arcHeight = 0;
       if (travel && travel.t < 1) {
         const isShot = event && ['goal', 'miss', 'post', 'save'].includes(event.type);
-        const speed = isShot ? 5 : 3;
-        travel.t += dt * speed;
+        const dist = Math.hypot(travel.dstX - travel.srcX, travel.dstY - travel.srcY);
+        const unitsPerSecond = isShot ? 150 : 85;
+        const duration = isShot
+          ? Math.min(0.55, Math.max(0.15, dist / unitsPerSecond))
+          : Math.min(1.3, Math.max(0.18, dist / unitsPerSecond));
+        travel.t += dt / duration;
         const t = Math.min(1, travel.t);
         const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t; // easeInOutQuad
         const bx = travel.srcX + (travel.dstX - travel.srcX) * ease;
         const by = travel.srcY + (travel.dstY - travel.srcY) * ease;
+        // Perfil parabólico de altura (0 nas pontas, pico no meio do trajeto)
+        arcHeight = 4 * t * (1 - t) * Math.min(2.2, dist * (isShot ? 0.02 : 0.09));
         ballRef.current = { x: bx, y: by, visible: true };
         if (t >= 1) ballTravelRef.current = null;
       } else {
@@ -346,7 +381,14 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
       if (ballElRef.current) {
         ballElRef.current.setAttribute('cx', ballRef.current.x.toFixed(2));
         ballElRef.current.setAttribute('cy', ballRef.current.y.toFixed(2));
+        ballElRef.current.setAttribute('r', (1.3 + arcHeight * 0.4).toFixed(2));
         ballElRef.current.setAttribute('visibility', ballRef.current.visible ? 'visible' : 'hidden');
+      }
+      if (ballShadowRef.current) {
+        const off = 0.16 + arcHeight * 0.9;
+        ballShadowRef.current.setAttribute('cx', (ballRef.current.x - off).toFixed(2));
+        ballShadowRef.current.setAttribute('cy', (ballRef.current.y - off).toFixed(2));
+        ballShadowRef.current.setAttribute('r', (0.2 + arcHeight * 0.12).toFixed(2));
       }
 
       rafRef.current = requestAnimationFrame(loop);
@@ -362,13 +404,20 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
   // Renderiza um jogador (SVG estático + ref para posicionamento dinâmico)
   const renderPlayer = (p: PlayerCoord) => {
     const gradId = `grad-${p.team}`;
+    const isGk = p.position === 'GK';
+    // Goleiro mantém o amarelo (identifica a posição), mas ganha um anel na cor do
+    // time por trás — sem isso os dois goleiros ficavam idênticos entre si.
+    const teamColor = p.team === 'home' ? homeTeam.color : awayTeam.color;
     return (
       <g key={p.id}
          ref={(el) => { if (el) svgElsRef.current.set(p.id, el); }}
          className={`player-group ${phase === 'idle' ? 'idle-sway' : ''}`}
          style={{ transformOrigin: `${p.x}px ${p.y}px` }}>
+        {isGk && (
+          <circle cx={p.x} cy={p.y} r="3.65" fill="none" stroke={teamColor} strokeWidth="0.55" opacity={0.9} />
+        )}
         <circle cx={p.x} cy={p.y} r="3"
-          fill={p.position === 'GK' ? 'url(#gkGrad)' : `url(#${gradId})`}
+          fill={isGk ? 'url(#gkGrad)' : `url(#${gradId})`}
           stroke="#fff" strokeWidth="0.22" filter="url(#glow)" />
         <text x={p.x} y={p.y + 0.55} textAnchor="middle" fill="#fff"
           fontSize="1.4" fontWeight="bold" fontFamily="system-ui">{p.number}</text>
@@ -446,18 +495,19 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
           </>
         )}
 
-        {/* Jogadores */}
-        {phase !== 'done' && (
+        {/* Jogadores — somem da tela numa pausa "de verdade" (substituição/tática); a
+            pausa curta de comemoração de gol mantém todo mundo visível. */}
+        {phase !== 'done' && (!paused || isGoalPause) && (
           <>
             {homeBase.filter(p => !expelledSet.has(p.id)).map(renderPlayer)}
             {awayBase.filter(p => !expelledSet.has(p.id)).map(renderPlayer)}
 
             {/* Bola */}
             <g filter="url(#shadow)">
-              <circle ref={ballElRef} cx="60" cy="35" r="1.3" fill="#fefefe"
+              <circle ref={ballShadowRef} cx={ballRef.current.x - 0.16} cy={ballRef.current.y - 0.16}
+                r="0.2" fill="rgba(0,0,0,0.08)" />
+              <circle ref={ballElRef} cx={ballRef.current.x} cy={ballRef.current.y} r="1.3" fill="#fefefe"
                 stroke="#ccc" strokeWidth="0.12" className="ball-dot" />
-              <circle cx={-0.16} cy={-0.16} r="0.2" fill="rgba(0,0,0,0.08)"
-                style={{ transform: `translate(${(ballRef.current.x - 0.16).toFixed(2)}px, ${(ballRef.current.y - 0.16).toFixed(2)}px)` }} />
             </g>
           </>
         )}

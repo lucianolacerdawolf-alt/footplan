@@ -4,6 +4,8 @@ import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 import { FORMATION_BONUS } from '../engine/matchConfig';
+import { TACTIC_PRESETS } from '../engine/tacticPresets';
+import TacticLabel from './TacticLabel';
 import { useH2H } from '../hooks/useH2H';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import TutorialOverlay from './TutorialOverlay';
@@ -245,33 +247,62 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         <span className="squad-badge fwd">FWD {countByPos(team, 'FWD')}</span>
       </div>
 
+      <div className="setup-presets">
+        <label>Táticas Predefinidas</label>
+        <div className="preset-buttons">
+          {TACTIC_PRESETS.map(preset => {
+            const isActive = team.strategy.mentality === preset.mentality
+              && team.strategy.intensity === preset.intensity
+              && team.strategy.defensiveLine === preset.defensiveLine
+              && team.strategy.width === preset.width;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                className={`preset-btn ${isActive ? 'active' : ''}`}
+                disabled={disabled}
+                onClick={() => onStrategy({
+                  ...team.strategy,
+                  mentality: preset.mentality,
+                  intensity: preset.intensity,
+                  defensiveLine: preset.defensiveLine,
+                  width: preset.width,
+                })}
+              >
+                {preset.icon} {preset.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="setup-controls">
         <div className="setup-select">
-          <label>Formação</label>
+          <TacticLabel tacticKey="formation" />
           <select value={team.strategy.formation} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, formation: e.target.value as Formation })}>
             {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
           </select>
         </div>
         <div className="setup-select">
-          <label>Mentalidade</label>
+          <TacticLabel tacticKey="mentality" />
           <select value={team.strategy.mentality} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, mentality: e.target.value as Mentality })}>
             {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
           </select>
         </div>
         <div className="setup-select">
-          <label>Intensidade</label>
+          <TacticLabel tacticKey="intensity" />
           <select value={team.strategy.intensity} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, intensity: e.target.value as Intensity })}>
             {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
           </select>
         </div>
         <div className="setup-select">
-          <label>Linha Defensiva</label>
+          <TacticLabel tacticKey="defensiveLine" />
           <select value={team.strategy.defensiveLine} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, defensiveLine: e.target.value as DefensiveLine })}>
             {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
           </select>
         </div>
         <div className="setup-select">
-          <label>Amplitude</label>
+          <TacticLabel tacticKey="width" />
           <select value={team.strategy.width} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, width: e.target.value as Width })}>
             {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
           </select>

@@ -30,7 +30,10 @@ function pick<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function generatePlayer(id: string, name: string, number: number, pos: Player['position'], ovr: number): Player {
+/** Exportado pra ser reaproveitado pela sincronização de elenco via API (src/services) —
+ *  gera atributos calibrados pra jogadores novos que a API traz mas que a gente ainda
+ *  não tem dados reais (ex: uma transferência recente). */
+export function generatePlayer(id: string, name: string, number: number, pos: Player['position'], ovr: number): Player {
   const base = ovr - 7;
   const spread = Math.min(10, Math.floor(ovr / 8));
   const attr = () => Math.max(1, Math.min(99, base + rand(-spread, spread)));
@@ -45,7 +48,10 @@ function generatePlayer(id: string, name: string, number: number, pos: Player['p
       tackling: pos === 'DEF' ? boost(12) : pos === 'MID' ? boost(4) : attr(),
       dribbling: pos === 'FWD' || pos === 'MID' ? boost(6) : attr(),
       vision: pos === 'MID' ? boost(8) : pos === 'FWD' ? boost(4) : attr(),
-      positioning: boost(4),
+      // Goleiro carrega 47% do peso de playerOvr em "positioning" (o resto das posições
+      // usa boost(4) genérico aqui) — sem um boost equivalente ao boost(12) que as outras
+      // posições recebem no atributo-chave, o GK gerado saía ~5 pontos de OVR abaixo do alvo.
+      positioning: pos === 'GK' ? boost(14) : boost(4),
     },
   };
 }

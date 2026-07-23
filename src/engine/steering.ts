@@ -31,6 +31,11 @@ const SEPARATION_DIST = 5;
 const SEPARATION_FORCE = 55;
 const DT = 1 / 60;
 const FRICTION = 0.995;
+// FRICTION foi calibrado como "por chamada a 60fps" — convertido pra uma taxa de
+// decaimento por segundo real, aplicável a qualquer dt (ver updatePlayers).
+const FRICTION_PER_SECOND = Math.pow(FRICTION, 1 / DT);
+// Goleiro usa um atrito levemente menor (0.98/chamada) — mesma conversão pro dt real.
+const GK_FRICTION_PER_SECOND = Math.pow(0.98, 1 / DT);
 
 function getMaxSpeed(p: SteeringPlayer): number {
   const base = BASE_MAX_SPEED[p.position] ?? 40;
@@ -219,6 +224,7 @@ export function updatePlayers(
   awayWidth: number,
   ballX: number,
   ballY: number,
+  dt: number = DT,
 ): void {
   const all = [...players.values()];
 
@@ -246,9 +252,10 @@ export function updatePlayers(
     const fx = arr.fx * 0.7 + sep.fx * 0.3;
     const fy = arr.fy * 0.7 + sep.fy * 0.3;
 
-    // Integração de Euler
-    p.vx += fx * DT;
-    p.vy += fy * DT;
+    // Integração de Euler — usa dt real (não um DT fixo) pra que velocidade/atrito não
+    // fiquem dependentes da taxa de frames do dispositivo
+    p.vx += fx * dt;
+    p.vy += fy * dt;
 
     // Clamp velocidade
     const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
@@ -257,12 +264,13 @@ export function updatePlayers(
       p.vy = (p.vy / speed) * maxSpd;
     }
 
-    p.x += p.vx * DT;
-    p.y += p.vy * DT;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
 
-    // Friction (desaceleração leve)
-    p.vx *= FRICTION;
-    p.vy *= FRICTION;
+    // Friction (desaceleração leve, normalizada pro dt real em vez de por-chamada)
+    const frictionFactor = Math.pow(FRICTION_PER_SECOND, dt);
+    p.vx *= frictionFactor;
+    p.vy *= frictionFactor;
 
     // Clamp dentro do campo
     p.x = Math.max(2, Math.min(118, p.x));
@@ -303,14 +311,15 @@ export function updatePlayers(
     p.targetY = gkTargetY;
 
     const arr = arrive(p.x, p.y, p.vx, p.vy, p.targetX, p.targetY, maxSpd, maxFrc);
-    p.vx += arr.fx * DT;
-    p.vy += arr.fy * DT;
+    p.vx += arr.fx * dt;
+    p.vy += arr.fy * dt;
     const spd = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
     if (spd > maxSpd) { p.vx = (p.vx / spd) * maxSpd; p.vy = (p.vy / spd) * maxSpd; }
-    p.x += p.vx * DT;
-    p.y += p.vy * DT;
-    p.vx *= 0.98;
-    p.vy *= 0.98;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    const gkFrictionFactor = Math.pow(GK_FRICTION_PER_SECOND, dt);
+    p.vx *= gkFrictionFactor;
+    p.vy *= gkFrictionFactor;
     p.x = Math.max(isHome ? 2 : 100, Math.min(isHome ? 18 : 118, p.x));
     p.y = Math.max(18, Math.min(52, p.y));
   }

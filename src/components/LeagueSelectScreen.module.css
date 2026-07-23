@@ -65,6 +65,51 @@
   margin: 0;
 }
 
+/* ── Banner "Continuar" ── */
+.resumeBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 480px;
+  margin-bottom: 18px;
+}
+
+.resumeBannerBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface);
+  border: 1.5px solid var(--lc, var(--accent));
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-primary);
+  text-align: left;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.resumeBannerBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+}
+
+.resumeBannerIcon { font-size: 1.1rem; flex-shrink: 0; }
+
+.resumeBannerText {
+  flex: 1;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--lc, var(--accent));
+}
+
+.resumeBannerArrow {
+  font-size: 1rem;
+  color: var(--lc, var(--accent));
+  flex-shrink: 0;
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import type { Team, MatchResult, RandomFn } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { PlayableStage } from './engine/tournament';
@@ -12,8 +12,10 @@ import LeagueScreen from './components/LeagueScreen';
 import BracketScreen from './components/BracketScreen';
 import AchievementsScreen from './components/AchievementsScreen';
 import OnlineLobbyScreen from './components/OnlineLobbyScreen';
-import LeagueSelectScreen from './components/LeagueSelectScreen';
+import LeagueSelectScreen, { type ResumableSave } from './components/LeagueSelectScreen';
 import CupSelectScreen from './components/CupSelectScreen';
+import { getLeague } from './data/leagues';
+import { loadLiveMatch, type LiveMatchSnapshot } from './utils/liveMatchPersistence';
 import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
 import { useAchievements } from './hooks/useAchievements';
@@ -29,6 +31,39 @@ import { premierLeagueTeams } from './data/premierLeague';
 import Toast from './components/Toast';
 import './App.css';
 
+/**
+ * Varre TODAS as ligas/copas salvas no localStorage (não só a liga selecionada no
+ * momento) — é o que permite mostrar "Continuar" na tela de seleção de liga
+ * independente de como o usuário chegou ali ou de qual card ele vai clicar depois.
+ */
+function getResumableSaves(): ResumableSave[] {
+  const results: ResumableSave[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k || !k.startsWith('fp:leagueState:')) continue;
+      const leagueId = k.slice('fp:leagueState:'.length);
+      const league = getLeague(leagueId);
+      if (!league) continue;
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const ls = JSON.parse(raw) as { phase?: string; currentRound?: number; fixtures?: unknown[] };
+      if (ls.phase && ls.phase !== 'done') {
+        results.push({ type: 'league', league, label: `${league.name} — rodada ${(ls.currentRound ?? 0) + 1}` });
+      }
+    }
+    const bsRaw = localStorage.getItem('fp:bracketState');
+    if (bsRaw) {
+      const bs = JSON.parse(bsRaw) as { stage?: string; leagueId?: string };
+      if (bs.stage && bs.stage !== 'champion' && bs.leagueId) {
+        const league = getLeague(bs.leagueId);
+        if (league) results.push({ type: 'bracket', league, label: `Copa ${league.name}` });
+      }
+    }
+  } catch { /* noop */ }
+  return results;
+}
+
 function App() {
   const [homeTeam, setHomeTeam] = useState<Team | null>(null);
   const [awayTeam, setAwayTeam] = useState<Team | null>(null);
@@ -36,6 +71,8 @@ function App() {
   const [lastResult, setLastResult] = useState<MatchResult | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const notifySave = useCallback(() => setToastMsg('✓ Progresso salvo'), []);
+  const dismissToast = useCallback(() => setToastMsg(null), []);
+  const [pendingResumeSnapshot, setPendingResumeSnapshot] = useState<LiveMatchSnapshot | null>(null);
 
   const {
     screen, setScreen,
@@ -97,6 +134,21 @@ function App() {
     setLastResult, recordH2H, evaluateAchievements, homeTeam,
   });
 
+  // ── Restaura partida ao vivo salva (F5) ──────────────────────────────────────
+  // Só existe save pra partidas 'regular' (ver MatchScreen.tsx) — roda uma vez, no
+  // mount do App inteiro.
+  useEffect(() => {
+    const snap = loadLiveMatch();
+    if (!snap || snap.matchContext !== 'regular') return;
+    setHomeTeam(snap.initialHome);
+    setAwayTeam(snap.initialAway);
+    setMatchContext('regular');
+    setIsKnockout(false);
+    setPendingResumeSnapshot(snap);
+    setScreen('match');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── Torneio: setup ────────────────────────────────────────────────────────
   const handleTournamentStart = useCallback((userTeam: Team) => {
     if (tournamentMode === 'league') handleStartLeague(userTeam);
@@ -150,6 +202,14 @@ function App() {
     content = (
       <LeagueSelectScreen
         selectedLeague={selectedLeague}
+        resumable={getResumableSaves()}
+        onResume={(save) => {
+          localStorage.setItem('fp:selectedLeague', JSON.stringify(save.league.id));
+          setSelectedLeague(save.league);
+          setTournamentMode(save.type);
+          setReturnScreen(null);
+          setScreen(save.type === 'league' ? 'league' : 'bracket');
+        }}
         onBack={() => { setReturnScreen(null); setScreen('home'); }}
         onSelect={(league) => {
           localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
@@ -198,7 +258,7 @@ function App() {
   } else if (screen === 'online-lobby') {
     content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={() => setScreen('home')} onGoHome={goHome} />;
   } else if (screen === 'tournament-setup') {
-    content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => { setScreen(tournamentMode === 'bracket' ? 'cup-select' : 'league-select'); }} onGoHome={goHome} onStart={handleTournamentStart} />;
+    content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => { setScreen(tournamentMode === 'bracket' ? 'cup-select' : 'league-select'); }} onGoHome={goHome} onStart={handleTournamentStart} onRosterSynced={setSelectedLeague} />;
   } else if (screen === 'league' && leagueState) {
     content = (
       <LeagueScreen
@@ -267,6 +327,9 @@ function App() {
         online={onlineProps}
         onContinue={isTournament ? handleContinueTournament : undefined}
         continueLabel={matchContext === 'league' ? (selectedLeague ? `Continuar ${selectedLeague.name}` : 'Continuar Liga') : matchContext === 'bracket' ? `Continuar ${bracketState?.cupName ?? 'Copa'}` : undefined}
+        matchContext={matchContext}
+        resumeSnapshot={pendingResumeSnapshot}
+        onResumeConsumed={() => setPendingResumeSnapshot(null)}
       />
     );
   } else if (screen === 'stats' && lastResult) {
@@ -303,7 +366,7 @@ function App() {
   return (
     <>
       <div className="screen-fade" key={screen}>{content}</div>
-      <Toast message={toastMsg} onDismiss={() => setToastMsg(null)} />
+      <Toast message={toastMsg} onDismiss={dismissToast} />
       {resumePrompt && (
         <div className="resume-overlay" onClick={() => setResumePrompt(null)} role="presentation">
           <div className="resume-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="resume-title">

@@ -149,21 +149,15 @@ function simularBloco(
     if (possessionWinner === 'A') state.homePossessionWins++;
     else state.awayPossessionWins++;
 
-    const possTeam = possessionWinner === 'A' ? home : away;
-    const defTeam  = possessionWinner === 'A' ? away : home;
+    let possTeam = possessionWinner === 'A' ? home : away;
+    let defTeam  = possessionWinner === 'A' ? away : home;
 
     if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
       state.events.push({ minute, type: 'possession', description: generatePossession(possTeam.name), teamId: possTeam.id });
       cycleEvents++;
     }
 
-    // Momentum bonus for trailing team in last 15 minutes
     const isLate = minute >= 75;
-    const trailing = (isHome(possTeam) && state.homeScore < state.awayScore) ||
-                     (!isHome(possTeam) && state.awayScore < state.homeScore);
-
-    // Desespero: time perdendo nos últimos 15min ataca mais mas expõe a defesa
-    const desperationActive = trailing && isLate;
 
     // Passe
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.6) {
@@ -171,12 +165,14 @@ function simularBloco(
                         ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
       if (eligible.length >= 2) {
         const [a, b] = pickRandom(eligible, 2, random);
-        state.events.push({ minute, type: 'pass', description: generatePass(possTeam.name, a, b), teamId: possTeam.id });
+        state.events.push({ minute, type: 'pass', description: generatePass(possTeam.name, a, b), teamId: possTeam.id, passerId: a.id, receiverId: b.id });
         cycleEvents++;
       }
     }
 
-    // Desarme
+    // Desarme — o time defensor rouba a bola de verdade: assume o ataque pelo resto do ciclo
+    // (antes o desarme era só narrativo e o ataque seguinte ainda era resolvido a favor do
+    // time original, dando a impressão de "passou pro adversário e voltou")
     if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.45) {
       const eligible = [...getPlayersByPosition(getStarters(defTeam, state.cards, state.injured), 'DEF'),
                         ...getPlayersByPosition(getStarters(defTeam, state.cards, state.injured), 'MID')];
@@ -184,12 +180,21 @@ function simularBloco(
         const tackler = pickRandom(eligible, 1, random)[0];
         state.events.push({ minute, type: 'tackle', description: generateTackle(defTeam.name, tackler), teamId: defTeam.id });
         cycleEvents++;
+        [possTeam, defTeam] = [defTeam, possTeam];
       }
     }
 
+    // Momentum bonus for trailing team in last 15 minutes (calculado depois do desarme,
+    // pra refletir quem está de fato atacando neste ciclo)
+    const trailing = (isHome(possTeam) && state.homeScore < state.awayScore) ||
+                     (!isHome(possTeam) && state.awayScore < state.homeScore);
+
+    // Desespero: time perdendo nos últimos 15min ataca mais mas expõe a defesa
+    const desperationActive = trailing && isLate;
+
     // Ataque
-    const atkFatigue = possessionWinner === 'A' ? state.fatigueHome : state.fatigueAway;
-    const defFatigue = possessionWinner === 'A' ? state.fatigueAway : state.fatigueHome;
+    const atkFatigue = isHome(possTeam) ? state.fatigueHome : state.fatigueAway;
+    const defFatigue = isHome(possTeam) ? state.fatigueAway : state.fatigueHome;
     const atkMomentum = isHome(possTeam) ? state.momentumHome : state.momentumAway;
     const momentumMod = 1 + (atkMomentum / 250) + (desperationActive ? 0.08 : 0);
     const urgencyMod = desperationActive ? 1.18 : 1;
@@ -200,7 +205,7 @@ function simularBloco(
     const defPenaltyMod = (defTeamIsTrailing && isLate) ? 0.75 : 1.0;
 
     if (random() < ATK_CHANCE[possTeam.strategy.mentality] * urgencyMod) {
-      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, possessionWinner === 'A', momentumMod, state.injured, defPenaltyMod);
+      const atkResult = resolveAttack(possTeam, defTeam, atkFatigue, defFatigue, state.cards, random, isHome(possTeam), momentumMod, state.injured, defPenaltyMod);
 
       if (atkResult.won && atkResult.attacker) {
         if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < DEFENSIVE_LINE_OFFSIDE[defTeam.strategy.defensiveLine] && defTeam.strategy.defensiveLine !== 'low') {
@@ -224,7 +229,7 @@ function simularBloco(
             if (random() < goalTimingMultiplier(minute)) {
               state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id, scorer: shot.scorer.name });
               if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
-              applyMomentum(possessionWinner, possTeam.id);
+              applyMomentum(isHome(possTeam) ? 'A' : 'B', possTeam.id);
               if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.3) {
                 state.events.push({ minute, type: 'possession', description: generateMomentumShift(possTeam.name), teamId: possTeam.id });
                 cycleEvents++;
@@ -266,7 +271,7 @@ function simularBloco(
                 const newScore = `${state.homeScore}-${state.awayScore}`;
                 state.events.push({ minute, type: 'goal', description: generateCornerGoal(possTeam.name, header, minute, newScore), teamId: possTeam.id, scorer: header.name });
                 if (isHome(possTeam)) state.homeScore++; else state.awayScore++;
-                applyMomentum(possessionWinner, possTeam.id);
+                applyMomentum(isHome(possTeam) ? 'A' : 'B', possTeam.id);
                 cycleEvents++;
               }
             }
@@ -379,6 +384,24 @@ function rngFallback(random: RandomFn, min: number, max: number): number {
   return min + random() * (max - min);
 }
 
+// Recuperação parcial de fadiga no intervalo — sem isso a fadiga acumulada no 1º tempo
+// nunca é aliviada, fazendo o 2º tempo começar já perto do teto em intensidades altas.
+// Valor deliberadamente modesto: como só o atacante (nunca o goleiro) sofre a penalidade
+// de fadiga na finalização, qualquer recuperação infla a conversão de chutes — acima de
+// ~7 pontos a média de gols de calibration.test.ts passa de 3.0/partida (limite calibrado).
+const HALFTIME_FATIGUE_RECOVERY = 6;
+
+function recoverHalftimeFatigue(home: Team, away: Team, state: MatchState): void {
+  for (const player of getStarters(home)) {
+    const current = state.fatigueHome.get(player.id) ?? 0;
+    state.fatigueHome.set(player.id, Math.max(0, current - HALFTIME_FATIGUE_RECOVERY));
+  }
+  for (const player of getStarters(away)) {
+    const current = state.fatigueAway.get(player.id) ?? 0;
+    state.fatigueAway.set(player.id, Math.max(0, current - HALFTIME_FATIGUE_RECOVERY));
+  }
+}
+
 // Real football goal timing distribution: few early, peak near halftime + end
 function goalTimingMultiplier(minute: number): number {
   if (minute <= 4) return 0.50;    // ritmo de estudo
@@ -395,35 +418,80 @@ function goalTimingMultiplier(minute: number): number {
 // API PÚBLICA
 // ---------------------------------------------------------------------------
 
-export function simularPrimeiroTempo(home: Team, away: Team, random: RandomFn = Math.random): { state: MatchState } {
+/** Cria o MatchState e sorteia o "dia" dos goleiros (0.75-1.25) — chamado uma vez no apito. */
+export function beginMatchState(home: Team, away: Team, random: RandomFn = Math.random): MatchState {
   const state = createMatchState(home, away);
-  // Dia de herói: gkForm único por partida, gerado no apito (0.75–1.25)
   const rng = makeRng(random);
   state.gkFormHome = rng(0.75, 1.25);
   state.gkFormAway = rng(0.75, 1.25);
+  return state;
+}
+
+/** Monta o MatchResult final a partir do state acumulado — reaproveitável pelo fluxo em blocos. */
+export function buildMatchResult(home: Team, away: Team, state: MatchState): MatchResult {
+  const totalCycles = state.homePossessionWins + state.awayPossessionWins;
+  return {
+    homeTeam: home, awayTeam: away,
+    homeScore: state.homeScore, awayScore: state.awayScore,
+    events: state.events,
+    homePossession: totalCycles > 0 ? Math.round((state.homePossessionWins / totalCycles) * 100) : 50,
+    awayPossession: totalCycles > 0 ? Math.round((state.awayPossessionWins / totalCycles) * 100) : 50,
+    homeStats: computeStats(state.events, home.id, away.id),
+    awayStats: computeStats(state.events, away.id, home.id),
+  };
+}
+
+/**
+ * Simula um trecho (bloco de ciclos) de um dos tempos, pra uso incremental — permite que
+ * substituições/táticas feitas numa pausa afetem os ciclos AINDA NÃO simulados, em vez de
+ * calcular o tempo inteiro de uma vez só antes da pausa existir (ver useMatchSimulation.ts).
+ * `home`/`away` devem refletir o elenco/tática mais recentes no momento da chamada.
+ */
+export function simularProximoBloco(
+  home: Team, away: Team, state: MatchState,
+  fromCycle: number, toCycle: number,
+  isFirstHalf: boolean,
+  random: RandomFn = Math.random,
+): MatchEvent[] {
+  const halfEnd = isFirstHalf ? FIRST_HALF_CYCLES : TOTAL_CYCLES;
+  const clampedTo = Math.min(toCycle, halfEnd);
+  const includeKickoff = isFirstHalf && fromCycle === 0;
+  const includeSecondHalfKickoff = !isFirstHalf && fromCycle === FIRST_HALF_CYCLES;
+  const reachedHalfEnd = clampedTo >= halfEnd;
+  const includeHalftime = isFirstHalf && reachedHalfEnd;
+
+  if (includeSecondHalfKickoff) recoverHalftimeFatigue(home, away, state);
+
+  const before = state.events.length;
+  simularBloco(home, away, fromCycle, clampedTo, state, includeKickoff, includeHalftime, includeSecondHalfKickoff, random);
+
+  if (!isFirstHalf && reachedHalfEnd) {
+    state.events.push({
+      minute: 90, type: 'fulltime',
+      description: generateFulltime(home.name, away.name, state.homeScore, state.awayScore),
+      teamId: null,
+    });
+  }
+  return state.events.slice(before);
+}
+
+export function simularPrimeiroTempo(home: Team, away: Team, random: RandomFn = Math.random): { state: MatchState } {
+  const state = beginMatchState(home, away, random);
   simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, true, true, false, random);
   return { state };
 }
 
 export function simularSegundoTempo(home: Team, away: Team, prevState: MatchState, random: RandomFn = Math.random): MatchResult {
+  recoverHalftimeFatigue(home, away, prevState);
   simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, prevState, false, false, true, random);
 
-  const totalCycles = prevState.homePossessionWins + prevState.awayPossessionWins;
   prevState.events.push({
     minute: 90, type: 'fulltime',
     description: generateFulltime(home.name, away.name, prevState.homeScore, prevState.awayScore),
     teamId: null,
   });
 
-  return {
-    homeTeam: home, awayTeam: away,
-    homeScore: prevState.homeScore, awayScore: prevState.awayScore,
-    events: prevState.events,
-    homePossession: totalCycles > 0 ? Math.round((prevState.homePossessionWins / totalCycles) * 100) : 50,
-    awayPossession: totalCycles > 0 ? Math.round((prevState.awayPossessionWins / totalCycles) * 100) : 50,
-    homeStats: computeStats(prevState.events, home.id, away.id),
-    awayStats: computeStats(prevState.events, away.id, home.id),
-  };
+  return buildMatchResult(home, away, prevState);
 }
 
 export function simularPartida(home: Team, away: Team, random: RandomFn = Math.random): MatchResult {
@@ -545,6 +613,7 @@ export function simularPartidaRapida(home: Team, away: Team, random: RandomFn = 
   state.gkFormHome = rng(0.75, 1.25);
   state.gkFormAway = rng(0.75, 1.25);
   simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, false, false, false, random);
+  recoverHalftimeFatigue(home, away, state);
   simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, state, false, false, false, random);
   return { homeScore: state.homeScore, awayScore: state.awayScore };
 }
@@ -564,6 +633,7 @@ export function simularKnockout(home: Team, away: Team, random: RandomFn = Math.
   state.gkFormHome = rng(0.75, 1.25);
   state.gkFormAway = rng(0.75, 1.25);
   simularBloco(home, away, 0, FIRST_HALF_CYCLES, state, false, false, false, random);
+  recoverHalftimeFatigue(home, away, state);
   simularBloco(home, away, FIRST_HALF_CYCLES, TOTAL_CYCLES, state, false, false, false, random);
   const tiebreak = resolveKnockoutTiebreak(home, away, state, random);
   const winner = tiebreak.penaltyResult

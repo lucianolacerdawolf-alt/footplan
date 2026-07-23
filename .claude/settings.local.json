@@ -26,7 +26,31 @@
       "Bash(npx rtk *)",
       "WebFetch(domain:github.com)",
       "Bash(cargo *)",
-      "Bash(gh release *)"
+      "Bash(gh release *)",
+      "Bash(rtk gain *)",
+      "Bash(rtk init *)",
+      "Bash(rtk *)",
+      "Skill(frontend-design:frontend-design)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); l=d['leagues'][0]; print\\(l['strLeague'], '|', l.get\\('strBadge',''\\)\\)\")",
+      "Bash(curl -s \"https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=1453\")",
+      "Bash(curl -s \"https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=1455\")",
+      "Bash(curl -s \"https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=1456\")",
+      "Bash(curl -s \"https://www.thesportsdb.com/api/v1/json/3/lookupleague.php?id=1457\")",
+      "Bash(rtk read *)",
+      "Bash(rtk lint *)",
+      "Bash(rtk tsc *)",
+      "Bash(rtk proxy *)",
+      "Bash(rtk vitest *)",
+      "Bash(rtk git *)",
+      "Bash(git checkout *)",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(rtk git commit -m '@ *)",
+      "Bash(rtk ls *)",
+      "Bash(rtk find *)",
+      "Bash(rtk wc *)",
+      "Bash(rtk grep *)",
+      "Bash(git -C \"C:\\\\SLOT01\\\\Footplan\" remote -v)",
+      "Bash(git -C \"C:\\\\SLOT01\\\\Footplan\" branch -a)"
     ]
   }
 }
