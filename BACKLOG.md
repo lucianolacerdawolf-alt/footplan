@@ -8,138 +8,90 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
-*(vazio)*
+### 🟢 `src/data/premierLeague.ts` legado ainda referenciado
+
+**Por que sobrou:** a migração pra `src/data/leagues/*` (6 ligas) não removeu o arquivo antigo — `App.tsx` e `useBracketManager.ts` ainda importam dele em paralelo ao `data/leagues/premierLeague.ts` novo.
+
+**O que envolve:** confirmar se as duas fontes divergem (elenco/OVR diferentes) e, se não houver motivo pra manter as duas, apontar os dois call sites pra `data/leagues/premierLeague.ts` e apagar o arquivo legado.
+
+**Posso retomar quando:** quiser eliminar a duplicação — risco baixo, mas precisa confirmar que nada depende do formato antigo primeiro.
 
 ---
 
-## 🎮 Gameplay / UX
+### 🟢 Redux Toolkit instalado, mas sem uso
 
-### 🟡 Substituições durante o 2º tempo
+**Por que sobrou:** `@reduxjs/toolkit` e `react-redux` estão no `package.json` e `src/store/index.ts` existe, mas o `reducer` está vazio (`{}`) — nenhuma tela usa o store hoje. Ou é scaffolding de um começo de migração que não foi adiante, ou entrou por engano.
 
-**Por que sobrou:** o próprio plano original marcou como "trabalho real" (3h+).
+**O que envolve:** decidir entre (a) remover a dependência e `src/store/` se não há plano de usar, ou (b) migrar algum estado real pra lá se a intenção é reduzir prop drilling no `App.tsx`.
 
-**O que envolve:**
-1. Pausar o `setInterval` do replay no `useMatchSimulation.startReplay` + congelar `clockSeconds`
-2. Adicionar botão "Pausar" no `MatchScreen` durante o 2º tempo
-3. Reaproveitar a UI de substituição do intervalo num modal flutuante
-4. Re-instanciar o steering dos jogadores no `Pitch.tsx` (refs mutáveis: `playersRef`, `carriersRef`, `svgElsRef`)
-5. Aplicar a nova escalação no `MatchState` mid-flight sem perder fadiga acumulada nem `state.cards`
-6. Respeitar o limite de 3 subs já implementado (`subsHome`/`subsAway`)
-7. Resumir o `setInterval` sem perder eventos pendentes nem dessincronizar `clockSeconds` com `Date.now()`
-
-**Risco:** médio-alto — mexe no loop central da partida (`useMatchSimulation`) e no steering visual (`Pitch.tsx`). Testes não cobrem replay (cobrem o motor puro).
-
-**Posso retomar quando:** você decidir que vale (vai dar ~3-4h de trabalho e debugging). Sugestão: testa antes em modo "Simular Partida" pra validar o pause/resume sem complicar com swap.
+**Posso retomar quando:** você esclarecer a intenção original.
 
 ---
 
 ## 🏗️ Saúde do código
 
-### 🔴 `App.tsx` god component (504 linhas, 40+ hooks)
+### 🔴 `App.tsx` god component
 
-**Por que sobrou:** tentei na Fase 4 e desisti — refactor grande em código que funciona = risco de regressão alto sem ganho funcional.
+**Por que sobrou:** tentativa anterior de refactor foi descartada — risco de regressão alto sem ganho funcional imediato em código que funciona.
 
 **O que envolve:**
 - Extrair `useTournamentNavigation()` hook que retorne `{ screen, setScreen, matchContext, ... }`
-- OU mover lógica de torneio pra `hooks/useLeague.ts` e `hooks/useBracket.ts`
-- Reorganizar callbacks (`handleStartLeague`, `handlePlayLeagueMatch`, etc) em arquivos menores
-- Decidir se mantém useState ou migra pra useReducer/Zustand
-- Garantir que todos os fluxos continuam: regular vs CPU, league entry, league match, league simulate (round, user, opponent), bracket entry, bracket match, bracket simulate, resume modal, edit tactics, post-match routing
+- OU mover lógica de torneio pra hooks dedicados (parte já foi: `useLeagueManager`, `useBracketManager`, `useGameFlow`, `useAppShell` existem, mas `App.tsx` ainda orquestra a colagem entre eles)
+- Garantir que todos os fluxos continuam: regular vs CPU, 6 ligas, 6 copas, online, resume de sessão ao vivo (F5)
 
-**Risco:** alto. Esse arquivo orquestra 8 telas e ~20 transições. Bug aqui quebra navegação inteira.
+**Risco:** alto — esse arquivo orquestra a navegação entre todas as telas.
 
-**Posso retomar quando:** você quiser pagar a dívida técnica. Sugestão: fazer com testes E2E (Playwright) cobrindo os 4 fluxos principais (partida única vs CPU, vs player, liga completa, copa completa) antes de mexer.
-
----
-
-### 🟡 Premier League hardcoded em `data/premierLeague.ts`
-
-**Por que sobrou:** precisa de **design de API**, não só de código. Sem suas decisões, eu chutaria.
-
-**Decisões necessárias (do usuário):**
-- **Onde mora a lista de ligas?** Múltiplos arquivos em `data/leagues/` (uma por liga)? Um único arquivo `data/leagues.ts`?
-- **Como o usuário escolhe?** Tela nova de "Escolher Liga" antes da HomeScreen? Dropdown na própria HomeScreen?
-- **Liga afeta só os times?** Ou também regras (38 vs 30 rodadas, número de classificados pra Europa, etc)?
-- **E o save?** Vincular `leagueState.leagueId`? O que acontece se trocar de liga com torneio em andamento? Apaga ou mantém separado?
-- **CPU varia?** Bots têm comportamento diferente em ligas mais defensivas (italianas) vs ofensivas (alemãs)?
-
-**O que envolve depois das decisões:**
-- Criar interface `League { id, name, teams[], totalRounds, europeanSlots: { championsLeague, europaLeague, conferenceLeague }, ... }`
-- Refatorar `generateLeagueSchedule` pra receber `totalRounds`
-- Refatorar `computeStandings` pra usar `europeanSlots`
-- Refatorar `LeagueScreen` (zonas coloridas hardcoded com `pos <= 4 ? Champions...`)
-- Adicionar `leagueId` em `LeagueState` + lógica de save separado por liga
-
-**Posso retomar quando:** você definir as decisões acima. Te mando perguntas via AskUserQuestion se quiser.
+**Posso retomar quando:** você quiser pagar a dívida técnica. Sugestão: cobrir os fluxos principais com um teste de integração leve antes de mexer.
 
 ---
 
 ### 🟡 Zero testes de componente UI
 
-**Por que sobrou:** dependência nova + ROI baixo.
+**Por que sobrou:** dependência nova (`@testing-library/react` + `jsdom`) + ROI historicamente baixo comparado ao ganho de cobrir o motor.
 
 **O que envolve:**
-- Instalar `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`
-- Configurar `vitest.config.ts` com `environment: 'jsdom'` + setup file
-- Escrever testes pra componentes complexos: `MatchStatsScreen` (renderiza MOTM com a maior nota?), `BracketScreen` (mostra só fase atual?), `LeagueScreen` (zona da tabela colorida certa?)
-- Manter os testes — eles quebram com mudança visual mesmo sem regressão real
+- Configurar `vitest.config.ts` com `environment: 'jsdom'` (hoje é `'node'`, adequado só pro motor)
+- Testes pros componentes com mais lógica: `MatchScreen` (janelas de substituição, restauração de sessão), `LeagueScreen` (zona da tabela colorida certa, scroll horizontal contido), `rosterSync`-dependent UI
 
-**ROI:** baixo. O motor (`engine/*`) já tem 79 testes blindando a lógica. Testes de UI tradicionalmente:
-- Cobrem casos óbvios (já visíveis no Storybook ou inspeção manual)
-- Quebram em todo refactor visual (false positive)
-- Não pegam bugs sutis de UX (timing, hover state, etc) — pra isso precisaria E2E (Playwright)
-
-**Posso retomar quando:** você quiser cobertura formal pra mostrar pra terceiros (PR review, contratação, certificação). Senão, testes manuais + os 79 do engine bastam.
+**Posso retomar quando:** quiser cobertura formal de UI. Os 170 testes atuais cobrem o motor e a sincronização de elenco, não a camada visual.
 
 ---
 
-## 📦 Features que ficaram da Fase 5 (não implementadas)
+## 📦 Features grandes
 
-### 🔴 5.2 Mercado de transferências
+### 🔴 Modo Carreira (multi-temporada)
 
-**Por que sobrou:** precisa de **infraestrutura de temporadas múltiplas** primeiro — hoje a liga acaba e a opção é "Nova Temporada", que zera tudo.
+**Por que sobrou:** precisa de infraestrutura de temporadas múltiplas — hoje a liga acaba e a única opção é "Nova Temporada", que zera tudo.
 
 **O que envolve (em ordem):**
 1. **Conceito de temporada**: `Season { year, league: LeagueState, cup?: BracketState }` em vez dos estados soltos atuais
-2. **Tela "Fim de Temporada"** após o último jogo: mostra resultado, oferece "Avançar pra próxima temporada"
-3. **Pool de jogadores livres**: ~50 jogadores fictícios gerados ou hardcoded em `data/freeAgents.ts`
-4. **Tela de mercado**: lista jogadores livres, OVR, "valor de mercado" virtual, botão "Contratar"
-5. **Limite de movimentação**: 1 contratação + 1 dispensa por temporada (pra não virar FIFA)
-6. **Persistência**: `fp:season` em vez de `fp:leagueState`/`fp:bracketState`
-7. **Histórico de temporadas**: lista das anteriores (campeão, sua posição)
+2. **Tela "Fim de Temporada"**: mostra resultado, oferece "Avançar pra próxima temporada"
+3. **Progressão de jogadores**: idade, evolução/declínio de atributos entre temporadas
+4. **Transferências simples**: pool de jogadores livres ou mercado básico entre times
+5. **Persistência**: `fp:season` em vez de `fp:leagueState`/`fp:bracketState` soltos
+6. **Histórico de temporadas**: campeão, sua posição, por ano
 
-**Posso retomar quando:** você quiser que o jogo tenha progressão de longo prazo. Cuidado: muda fluxo principal, vai mexer em `App.tsx` (já god component).
+**Posso retomar quando:** você quiser que o jogo tenha progressão de longo prazo — é a próxima feature principal planejada.
 
 ---
 
 ## ✅ Já entregue (referência)
 
-- Fase 1: sons, toast, fade entre telas, H2H, loading state
-- Fase 2: tela pós-jogo (Man of the Match, notas, scorers, cartões)
-- Fase 3: tutorial, lesões, limite de 3 substituições
-- Fase 4: refactor `usePersistedState`, `PlayableStage` centralizado, testes de calibração
-- Fase 5.1: sistema de conquistas (15 achievements, `engine/achievements.ts`, `useAchievements`, `AchievementsScreen`, avaliação pós-partida com toast)
-- Otimização: `fundo.png` 5.5 MB → `fundo.webp` 32 KB (WebP qualidade 70)
-- Refactor `matchEngine.ts`: `resolveAttack`, `resolveShot`, `calculatePossession`, `applyFatigue` extraídos pra módulos próprios (380 linhas finais)
-- Fase 5.3: tema escuro fixo
-- Fase 5.4: ajustes mobile
-- Calibração: gols 1.4 → 2.74 por partida
-- Retomar progresso ao voltar pra liga/copa
-- Botão "Editar Táticas" entre rodadas (liga e copa)
-- Botão único "Simular Outros" na copa
-- Slider de velocidade do replay (1x/2x/4x)
-- CPU varia tática entre rodadas
-- Resumo de fadiga/lesão no header da liga
-- `Math.random` substituído por RandomFn em `tournament.ts` e `commentary.ts`
-- `Pitch.tsx`: removido `as any` (PlayerCoord exportado de steering.ts)
-- `MatchScreen.tsx`: removido `eslint-disable` do useEffect (refs pra capturar estado)
-- `TutorialOverlay`/`SetupScreen`: migrados pra `useLocalStorage`
-- Modal Resume fecha com tecla `Escape`
-- Badge de moral no SetupScreen (😄/😊/😐/😕/😟 com valor +/-)
-- Lesões aplicadas pra CPU também (5% de chance em jogos simulados)
-- Acessibilidade: roles ARIA em modais (resume, tutorial), `role="status"` em toast, aria-label em botões de velocidade, aria-label semântico em pills de H2H, alt descritivo em escudos não-decorativos
-- `key={i}` substituído por chave composta com identidade real (`MatchStatsScreen` gols/cartões)
-- Mando de campo no engine (+8% no ataque do mandante, teste de regressão incluído)
-- H2H detalhado: `H2HRecord.log` com até 5 jogos completos (data + placar), exibido em `<details>` expansível no SetupScreen
-- 29 testes novos: `tournament.test.ts` (16) e `playerRating.test.ts` (13). Total: 79 testes
-- Refactor completo do `matchEngine.ts`: constantes → `matchConfig.ts`, helpers → `matchHelpers.ts`, `resolveAttack`/`resolveShot`/`calculatePossession` → módulos próprios. matchEngine: 562 → 380 linhas
+- **6 ligas europeias** com elencos reais (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal) + **6 copas nacionais** correspondentes
+- **Sincronização de elenco ao vivo** via football-data.org (proxy Cloudflare Worker, cache 7 dias, fallback offline, algoritmo de matching por confiança sem colisões falsas)
+- **PWA instalável** (manifest, service worker, ícones, funciona offline)
+- **Persistência de sessão de partida ao vivo** — sobrevive a F5, restaura em pausa
+- **Motor de simulação em blocos**: substituições numa pausa do 2º tempo afetam o resto do jogo de verdade
+- **5 substituições em até 3 janelas de parada** (não é mais um contador único)
+- **3 presets de tática** com tooltips explicativos
+- **Fix**: desarme agora muda a posse de fato (antes a narração e o resultado divergiam)
+- **Fix**: fadiga recalibrada (sem mais quedas irreais de OVR durante a partida)
+- **Fix**: OVR de goleiro gerado proceduralmente calibrado corretamente
+- **Fix**: bola segue passador/receptor real do evento, com arco proporcional à distância
+- **Fix**: layout mobile — campo e tabela de classificação não estouram mais a tela; `box-sizing: border-box` global elimina scroll vertical fantasma
+- **UI**: label "Posse de Bola" padronizado, goleiro com anel na cor do time, jogadores não somem mais ao pausar, banner "Continuar" cobre todos os fluxos de entrada
+- Sistema de conquistas (15 achievements)
+- Tema escuro, fade entre telas, som procedural (zero arquivos de áudio)
+- Tela pós-jogo completa (MOTM, notas, gols, cartões, breakdown tático)
+- Tutorial interativo, H2H detalhado, CPU varia tática por rodada e por liga
+- 170 testes automatizados (motor + sincronização de elenco)
