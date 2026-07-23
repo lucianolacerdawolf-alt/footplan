@@ -5,12 +5,9 @@ import type { PlayableStage } from './engine/tournament';
 import HomeScreen from './components/HomeScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SetupScreen from './components/SetupScreen';
-import MatchScreen from './components/MatchScreen';
-import MatchStatsScreen from './components/MatchStatsScreen';
 import TournamentSetupScreen from './components/TournamentSetupScreen';
 import LeagueScreen from './components/LeagueScreen';
 import BracketScreen from './components/BracketScreen';
-import AchievementsScreen from './components/AchievementsScreen';
 import OnlineLobbyScreen from './components/OnlineLobbyScreen';
 import LeagueSelectScreen, { type ResumableSave } from './components/LeagueSelectScreen';
 import CupSelectScreen from './components/CupSelectScreen';
@@ -29,6 +26,13 @@ import { useOnlineMatch } from './hooks/useOnlineMatch';
 import { useResumePrompt } from './hooks/useResumePrompt';
 import Toast from './components/Toast';
 import './App.css';
+
+// Lazy: telas que só aparecem depois de fluxos específicos (partida em andamento,
+// pós-jogo, conquistas) — não fazem parte do primeiro carregamento da Home/menu.
+// Reduz o bundle inicial, relevante em conexão de dados móvel.
+const MatchScreen = React.lazy(() => import('./components/MatchScreen'));
+const MatchStatsScreen = React.lazy(() => import('./components/MatchStatsScreen'));
+const AchievementsScreen = React.lazy(() => import('./components/AchievementsScreen'));
 
 /**
  * Varre TODAS as ligas/copas salvas no localStorage (não só a liga selecionada no
@@ -364,7 +368,9 @@ function App() {
 
   return (
     <>
-      <div className="screen-fade" key={screen}>{content}</div>
+      <React.Suspense fallback={<div className="lazy-loading">Carregando…</div>}>
+        <div className="screen-fade" key={screen}>{content}</div>
+      </React.Suspense>
       <Toast message={toastMsg} onDismiss={dismissToast} />
       {resumePrompt && (
         <div className="resume-overlay" onClick={() => setResumePrompt(null)} role="presentation">

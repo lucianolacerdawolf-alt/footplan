@@ -83,10 +83,17 @@
 /* Tooltip "?" de explicação de tática */
 .info-tooltip { position: relative; display: inline-flex; vertical-align: middle; margin-left: 2px; }
 .info-tooltip-btn {
+  position: relative;
   width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--border);
   background: var(--bg); color: var(--text-h); font-size: 9px; font-weight: 700;
   line-height: 1; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center;
   opacity: 0.55; transition: opacity 0.15s, border-color 0.15s;
+}
+/* Área de toque real de 24x24 (mínimo recomendado, WCAG 2.5.8) centrada no ícone
+   visível de 13px — sem mudar a aparência, só facilita acertar o toque no celular. */
+.info-tooltip-btn::before {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 24px; height: 24px; transform: translate(-50%, -50%);
 }
 .info-tooltip-btn:hover, .info-tooltip-btn[aria-expanded="true"] { opacity: 1; border-color: var(--accent); color: var(--accent); }
 .info-tooltip-popover {
@@ -103,7 +110,7 @@
 .setup-presets label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.45; }
 .preset-buttons { display: flex; gap: 4px; }
 .preset-btn {
-  flex: 1; padding: 5px 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
+  flex: 1; min-height: 40px; padding: 5px 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
   color: var(--text-h); font-size: 11px; font-weight: 600; font-family: var(--sans); cursor: pointer;
   transition: border-color 0.2s, background 0.2s; white-space: nowrap;
 }
@@ -656,6 +663,12 @@
 }
 .screen-fade { animation: fpScreenFade 180ms ease-out; }
 
+.lazy-loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 60dvh; font-size: 13px; font-weight: 600; opacity: 0.4;
+  font-family: var(--mono);
+}
+
 /* ── Toast ─────────────────────────────────────────────────────────── */
 .fp-toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
@@ -806,7 +819,7 @@
 /* ── Controle de velocidade do replay ──────────────────────────────── */
 .speed-control { display: inline-flex; gap: 2px; }
 .speed-btn {
-  padding: 3px 8px; font-size: 11px; font-weight: 700; font-family: var(--mono);
+  min-width: 32px; min-height: 32px; padding: 3px 8px; font-size: 11px; font-weight: 700; font-family: var(--mono);
   border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
   background: var(--bg); color: var(--text); transition: all 0.15s;
 }
