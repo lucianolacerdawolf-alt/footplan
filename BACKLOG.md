@@ -8,52 +8,15 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
-### 🟢 `src/data/premierLeague.ts` legado ainda referenciado
-
-**Por que sobrou:** a migração pra `src/data/leagues/*` (6 ligas) não removeu o arquivo antigo — `App.tsx` e `useBracketManager.ts` ainda importam dele em paralelo ao `data/leagues/premierLeague.ts` novo.
-
-**O que envolve:** confirmar se as duas fontes divergem (elenco/OVR diferentes) e, se não houver motivo pra manter as duas, apontar os dois call sites pra `data/leagues/premierLeague.ts` e apagar o arquivo legado.
-
-**Posso retomar quando:** quiser eliminar a duplicação — risco baixo, mas precisa confirmar que nada depende do formato antigo primeiro.
-
----
-
-### 🟢 Redux Toolkit instalado, mas sem uso
-
-**Por que sobrou:** `@reduxjs/toolkit` e `react-redux` estão no `package.json` e `src/store/index.ts` existe, mas o `reducer` está vazio (`{}`) — nenhuma tela usa o store hoje. Ou é scaffolding de um começo de migração que não foi adiante, ou entrou por engano.
-
-**O que envolve:** decidir entre (a) remover a dependência e `src/store/` se não há plano de usar, ou (b) migrar algum estado real pra lá se a intenção é reduzir prop drilling no `App.tsx`.
-
-**Posso retomar quando:** você esclarecer a intenção original.
+*(vazio)*
 
 ---
 
 ## 🏗️ Saúde do código
 
-### 🔴 `App.tsx` god component
+### ✅ `App.tsx` — avaliado, não precisa mais de refactor grande
 
-**Por que sobrou:** tentativa anterior de refactor foi descartada — risco de regressão alto sem ganho funcional imediato em código que funciona.
-
-**O que envolve:**
-- Extrair `useTournamentNavigation()` hook que retorne `{ screen, setScreen, matchContext, ... }`
-- OU mover lógica de torneio pra hooks dedicados (parte já foi: `useLeagueManager`, `useBracketManager`, `useGameFlow`, `useAppShell` existem, mas `App.tsx` ainda orquestra a colagem entre eles)
-- Garantir que todos os fluxos continuam: regular vs CPU, 6 ligas, 6 copas, online, resume de sessão ao vivo (F5)
-
-**Risco:** alto — esse arquivo orquestra a navegação entre todas as telas.
-
-**Posso retomar quando:** você quiser pagar a dívida técnica. Sugestão: cobrir os fluxos principais com um teste de integração leve antes de mexer.
-
----
-
-### 🟡 Zero testes de componente UI
-
-**Por que sobrou:** dependência nova (`@testing-library/react` + `jsdom`) + ROI historicamente baixo comparado ao ganho de cobrir o motor.
-
-**O que envolve:**
-- Configurar `vitest.config.ts` com `environment: 'jsdom'` (hoje é `'node'`, adequado só pro motor)
-- Testes pros componentes com mais lógica: `MatchScreen` (janelas de substituição, restauração de sessão), `LeagueScreen` (zona da tabela colorida certa, scroll horizontal contido), `rosterSync`-dependent UI
-
-**Posso retomar quando:** quiser cobertura formal de UI. Os 170 testes atuais cobrem o motor e a sincronização de elenco, não a camada visual.
+Uma tentativa anterior de refactor tinha sido descartada por risco alto sem ganho claro. Reavaliado de perto: o arquivo já foi bem decomposto em sessões anteriores — `screen`/`matchContext`/navegação centralizados em `useAppShell()`, e liga/copa/fluxo de jogo/online/resume cada um com hook dedicado (`useLeagueManager`, `useBracketManager`, `useGameFlow`, `useOnlineMatch`, `useResumePrompt`). Do que sobra (356 linhas), a maior parte é o `if/else` de roteamento entre telas (inerente a um app sem router) + um modal — não é mais um "god component". Extrair mais um hook por cima disso só moveria complexidade, não reduziria. Decisão: deixar como está.
 
 ---
 
@@ -71,7 +34,7 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 5. **Persistência**: `fp:season` em vez de `fp:leagueState`/`fp:bracketState` soltos
 6. **Histórico de temporadas**: campeão, sua posição, por ano
 
-**Posso retomar quando:** você quiser que o jogo tenha progressão de longo prazo — é a próxima feature principal planejada.
+**Posso retomar quando:** você quiser que o jogo tenha progressão de longo prazo — é a próxima feature principal planejada. Precisa de uma sessão de discussão de design antes de codar.
 
 ---
 
@@ -79,7 +42,7 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 - **6 ligas europeias** com elencos reais (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal) + **6 copas nacionais** correspondentes
 - **Sincronização de elenco ao vivo** via football-data.org (proxy Cloudflare Worker, cache 7 dias, fallback offline, algoritmo de matching por confiança sem colisões falsas)
-- **PWA instalável** (manifest, service worker, ícones, funciona offline)
+- **PWA instalável** (manifest, service worker, ícones, safe-area insets pro notch/Dynamic Island no iOS, funciona offline)
 - **Persistência de sessão de partida ao vivo** — sobrevive a F5, restaura em pausa
 - **Motor de simulação em blocos**: substituições numa pausa do 2º tempo afetam o resto do jogo de verdade
 - **5 substituições em até 3 janelas de parada** (não é mais um contador único)
@@ -88,10 +51,13 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - **Fix**: fadiga recalibrada (sem mais quedas irreais de OVR durante a partida)
 - **Fix**: OVR de goleiro gerado proceduralmente calibrado corretamente
 - **Fix**: bola segue passador/receptor real do evento, com arco proporcional à distância
-- **Fix**: layout mobile — campo e tabela de classificação não estouram mais a tela; `box-sizing: border-box` global elimina scroll vertical fantasma
+- **Fix**: layout mobile — campo, tabela de classificação e botões de nav (`min-width` fixo cortando texto) não estouram mais a tela pequena; `box-sizing: border-box` global elimina scroll vertical fantasma
 - **UI**: label "Posse de Bola" padronizado, goleiro com anel na cor do time, jogadores não somem mais ao pausar, banner "Continuar" cobre todos os fluxos de entrada
+- **Débito técnico**: removido Redux Toolkit não utilizado; `App.tsx`/`useBracketManager.ts` não importam mais direto do arquivo de dados legado (`data/premierLeague.ts`, agora só usado internamente por `data/leagues/premierLeague.ts`)
+- **Performance**: code-splitting (`React.lazy`) de `MatchScreen`, `MatchStatsScreen` e `AchievementsScreen` — bundle inicial ~10.5% menor (gzip); auditoria de touch targets (tooltips, presets de tática, controle de velocidade) pro mínimo recomendado de toque no mobile
+- **Testes de UI**: `@testing-library/react` + `jsdom` configurados (ambiente isolado por arquivo, motor continua em `node`); cobertura pras 3 telas de seleção de time e pra tabela de classificação
 - Sistema de conquistas (15 achievements)
 - Tema escuro, fade entre telas, som procedural (zero arquivos de áudio)
 - Tela pós-jogo completa (MOTM, notas, gols, cartões, breakdown tático)
 - Tutorial interativo, H2H detalhado, CPU varia tática por rodada e por liga
-- 170 testes automatizados (motor + sincronização de elenco)
+- 178 testes automatizados (motor + sincronização de elenco + componentes UI)
