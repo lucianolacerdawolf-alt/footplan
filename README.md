@@ -148,7 +148,7 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 |--------|-------|
 | **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Testes** | Vitest 3 (178 testes) + Testing Library (componentes) |
+| **Testes** | Vitest 3 (215 testes) + Testing Library (componentes) |
 | **Estilo** | CSS Modules + App.css/index.css globais |
 | **Renderização** | SVG (campo tático) + HTML/CSS |
 | **Áudio** | Web Audio API (sons procedurais, zero arquivos) |
@@ -240,7 +240,7 @@ worker/
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # gera dist/
-npm run test     # 178 testes
+npm run test     # 215 testes
 ```
 
 ### Sincronização de elenco ao vivo (opcional)
@@ -256,7 +256,7 @@ cp .env.example .env
 
 ## 🧪 Testes
 
-**178 testes** cobrindo:
+**215 testes** cobrindo:
 - `matchEngine.test.ts` — invariantes, determinismo, cartões/expulsões, OVR
 - `calibration.test.ts` — 1000 partidas: média de gols, dominância OVR, empates, mando de campo
 - `tournament.test.ts` — fadiga, lesões, calendário, chaveamento, classificação
@@ -264,7 +264,8 @@ cp .env.example .env
 - `achievements.test.ts` / `steering.test.ts` / `tacticalCommentary.test.ts` / `resolveAttack.test.ts` / `resolveShot.test.ts` / `rng.test.ts`
 - `rosterSync.test.ts` — sincronização de elenco: fallback sem chave, modo proxy, mesclagem, cache, erros de rede/rate-limit, e regressão específica pra colisões de nome (ex: "Barcelona" vs "RCD Espanyol de Barcelona")
 - `useMatchSimulation.test.ts` — qual janela de pausa está ativa em cada momento da partida (substituições)
-- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): smoke test das 3 telas de seleção de time, tabela de classificação da liga
+- `career.test.ts` / `useCareerManager.test.ts` — progressão de jogador, avaliação de troca (RNG determinístico), reputação, avanço de temporada
+- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, tabela de classificação da liga, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão)
 
 ---
 

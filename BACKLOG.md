@@ -33,12 +33,6 @@ Uma tentativa anterior de refactor tinha sido descartada por risco alto sem ganh
 
 **Posso retomar quando:** você quiser expandir as transferências além da troca direta — precisa de discussão de design antes de codar (orçamento inicial, como valorar jogadores, janela de mercado).
 
-### 🟡 Mais testes de componente
-
-**Por que sobrou:** a cobertura de UI feita até agora cobre só `LeagueScreen` e as 3 telas de seleção de time. `MatchStatsScreen` e as telas de copa/bracket ainda não têm teste.
-
-**Posso retomar quando:** quiser reforçar a rede de segurança antes de mexer nessas telas de novo.
-
 ---
 
 ## ✅ Já entregue (referência)
@@ -59,9 +53,9 @@ Uma tentativa anterior de refactor tinha sido descartada por risco alto sem ganh
 - **UI**: label "Posse de Bola" padronizado, goleiro com anel na cor do time, jogadores não somem mais ao pausar, banner "Continuar" cobre todos os fluxos de entrada
 - **Débito técnico**: removido Redux Toolkit não utilizado; `App.tsx`/`useBracketManager.ts` não importam mais direto do arquivo de dados legado (`data/premierLeague.ts`, agora só usado internamente por `data/leagues/premierLeague.ts`)
 - **Performance**: code-splitting (`React.lazy`) de `MatchScreen`, `MatchStatsScreen` e `AchievementsScreen` — bundle inicial ~10.5% menor (gzip); auditoria de touch targets (tooltips, presets de tática, controle de velocidade) pro mínimo recomendado de toque no mobile
-- **Testes de UI**: `@testing-library/react` + `jsdom` configurados (ambiente isolado por arquivo, motor continua em `node`); cobertura pras 3 telas de seleção de time e pra tabela de classificação
+- **Testes de UI**: `@testing-library/react` + `jsdom` configurados (ambiente isolado por arquivo, motor continua em `node`); cobertura pras 3 telas de seleção de time, tabela de classificação, tela de estatísticas pós-jogo (artilheiros, melhor em campo, cartões, histórico) e chaveamento de copa (partida do usuário, simular outros, fase de campeão)
 - Sistema de conquistas (15 achievements)
 - Tema escuro, fade entre telas, som procedural (zero arquivos de áudio)
 - Tela pós-jogo completa (MOTM, notas, gols, cartões, breakdown tático)
 - Tutorial interativo, H2H detalhado, CPU varia tática por rodada e por liga
-- 178 testes automatizados (motor + sincronização de elenco + componentes UI)
+- 215 testes automatizados (motor + sincronização de elenco + componentes UI)

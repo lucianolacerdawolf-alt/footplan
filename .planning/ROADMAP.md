@@ -86,10 +86,10 @@ Plans:
 - UI de mercado
 - Orçamento e negociação
 
-### Phase 4.6: UI Component Tests 🔴 Backlog
+### Phase 4.6: UI Component Tests ✅ CONCLUÍDA
 **Goal:** Testes de componente com @testing-library/react.
-- MatchStatsScreen, LeagueScreen, BracketScreen
-- Setup jsdom environment no vitest config
+- jsdom environment isolado por arquivo (`// @vitest-environment jsdom`), motor continua em `node`
+- `LeagueScreen`, `MatchStatsScreen`, `BracketScreen` (oitavas, simular outros, fase de campeão) + 3 telas de seleção de time
 
 ---
 
