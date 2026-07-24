@@ -70,14 +70,14 @@
 - Histórico de temporadas com posição/campeão/resultado de copa por ano
 - Save único de carreira em chave isolada (`fp:career`), separado de `fp:leagueState:{id}`/`fp:bracketState`
 
-**Plans:** 5/7 plans executed
+**Plans:** 6/7 plans executed
 Plans:
 - [x] 04.4-01-PLAN.md — Career engine: player aging/progression, trade evaluation, reputation, season builder (pure functions)
 - [x] 04.4-02-PLAN.md — HomeScreen/LeagueSelectScreen/TournamentSetupScreen reuse-via-flag + manager-name capture
 - [x] 04.4-03-PLAN.md — Screen/MatchContext union unification across 5 hooks + isCareerMode flag
 - [x] 04.4-04-PLAN.md — useCareerManager part 1: start career (seeds all 6 leagues) + league-leg handlers
 - [x] 04.4-05-PLAN.md — New screens: CareerHubScreen, TradeProposalScreen, SeasonEndScreen
-- [ ] 04.4-06-PLAN.md — useCareerManager part 2: cup-leg handlers + trades + season advance
+- [x] 04.4-06-PLAN.md — useCareerManager part 2: cup-leg handlers + trades + season advance
 - [ ] 04.4-07-PLAN.md — App.tsx wiring: hook call, adapter setters, screen routing, entry flow, overwrite confirmation
 
 ### Phase 4.5: Transfer Market Completo 🔴 Backlog
