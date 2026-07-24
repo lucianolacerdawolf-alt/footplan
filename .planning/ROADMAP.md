@@ -62,13 +62,23 @@
 - Floating substitution modal no MatchScreen
 - Preservar fadiga, cartões e steering state mid-flight
 
-### Phase 4.4: Modo Carreira 🔴 Planejado (próxima sessão)
+### Phase 4.4: Modo Carreira 📋 Planejada (7 plans, 4 waves)
 **Goal:** Progressão multi-temporada com identidade de técnico.
 - Múltiplas temporadas com histórico persistente
 - Progressão de jogadores (OVR sobe/desce por desempenho e idade)
-- Transferências simples entre temporadas (free agents ou troca direta)
-- Histórico de temporadas com replay de classificações
-- Salvar estado de carreira separado por liga/time
+- Transferências simples entre temporadas (troca direta 1-por-1, sem dinheiro — mercado com orçamento fica pra Fase 4.5)
+- Histórico de temporadas com posição/campeão/resultado de copa por ano
+- Save único de carreira em chave isolada (`fp:career`), separado de `fp:leagueState:{id}`/`fp:bracketState`
+
+**Plans:** 7 plans
+Plans:
+- [ ] 04.4-01-PLAN.md — Career engine: player aging/progression, trade evaluation, reputation, season builder (pure functions)
+- [ ] 04.4-02-PLAN.md — HomeScreen/LeagueSelectScreen/TournamentSetupScreen reuse-via-flag + manager-name capture
+- [ ] 04.4-03-PLAN.md — Screen/MatchContext union unification across 5 hooks + isCareerMode flag
+- [ ] 04.4-04-PLAN.md — useCareerManager part 1: start career (seeds all 6 leagues) + league-leg handlers
+- [ ] 04.4-05-PLAN.md — New screens: CareerHubScreen, TradeProposalScreen, SeasonEndScreen
+- [ ] 04.4-06-PLAN.md — useCareerManager part 2: cup-leg handlers + trades + season advance
+- [ ] 04.4-07-PLAN.md — App.tsx wiring: hook call, adapter setters, screen routing, entry flow, overwrite confirmation
 
 ### Phase 4.5: Transfer Market Completo 🔴 Backlog
 **Goal:** Mercado de transferências entre temporadas.
