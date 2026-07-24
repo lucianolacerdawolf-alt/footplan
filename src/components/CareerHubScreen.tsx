@@ -10,6 +10,7 @@ interface Props {
   onViewCup: () => void;
   onProposeTrade: () => void;
   onAdvanceSeason: () => void;
+  onNewCareer: () => void;
   onBack: () => void;
 }
 
@@ -34,7 +35,7 @@ function reputationSign(delta: number): string {
   return delta > 0 ? '+' : '';
 }
 
-export default function CareerHubScreen({ state, league, onViewLeague, onViewCup, onProposeTrade, onAdvanceSeason, onBack }: Props) {
+export default function CareerHubScreen({ state, league, onViewLeague, onViewCup, onProposeTrade, onAdvanceSeason, onNewCareer, onBack }: Props) {
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
   const userPosition = standings.findIndex(s => s.teamId === state.season.league.userTeamId) + 1;
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
@@ -116,6 +117,12 @@ export default function CareerHubScreen({ state, league, onViewLeague, onViewCup
             </div>
           ))}
         </div>
+      </div>
+
+      <div className={styles.newCareerRow}>
+        <button className={styles.newCareerBtn} onClick={onNewCareer}>
+          Começar nova carreira noutra liga
+        </button>
       </div>
     </div>
   );

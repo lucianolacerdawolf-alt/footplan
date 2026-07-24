@@ -106,6 +106,15 @@
   font-size: 14px; color: #f87171; font-weight: 900; flex-shrink: 0; font-family: var(--mono);
 }
 
+.newCareerRow { text-align: center; }
+.newCareerBtn {
+  background: transparent; border: none; padding: 4px;
+  font-size: 11px; font-weight: 600; opacity: 0.45; text-decoration: underline;
+  cursor: pointer; font-family: var(--sans); color: var(--text-secondary);
+  transition: opacity 0.15s;
+}
+.newCareerBtn:hover { opacity: 0.8; }
+
 @media (max-width: 640px) {
   .screen { padding: 12px 10px 24px; gap: 12px; }
   .title { font-size: 18px; }

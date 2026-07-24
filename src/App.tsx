@@ -244,6 +244,16 @@ function App() {
     setScreen('league-select');
   }, [careerState, setIsCareerMode, setTournamentMode, setReturnScreen, setScreen]);
 
+  // D-14: entry point CareerHubScreen uses to start a career in a different league —
+  // does NOT clear careerState here; handleCareerTournamentStart's existing
+  // pendingCareerStart overwrite-confirmation gate (already built, was previously
+  // unreachable) fires when the user picks a team on the screen this routes to.
+  const handleNewCareerFromHub = useCallback(() => {
+    setTournamentMode('league');
+    setReturnScreen('tournament-setup');
+    setScreen('league-select');
+  }, [setTournamentMode, setReturnScreen, setScreen]);
+
   const handleCareerTournamentStart = useCallback((userTeam: Team, managerName?: string) => {
     const name = managerName ?? '';
     if (careerState) { setPendingCareerStart({ userTeam, managerName: name }); return; }
@@ -439,6 +449,7 @@ function App() {
         onViewCup={() => setScreen('career-bracket')}
         onProposeTrade={() => setScreen('trade-propose')}
         onAdvanceSeason={handleAdvanceSeason}
+        onNewCareer={handleNewCareerFromHub}
         onBack={() => { setIsCareerMode(false); goHome(); }}
       />
     );
