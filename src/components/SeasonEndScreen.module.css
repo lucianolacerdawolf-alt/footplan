@@ -1,0 +1,54 @@
+.screen {
+  max-width: 720px; margin: 0 auto; padding: 12px 16px 32px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+
+.headerTitle {
+  text-align: center; font-size: 22px; font-weight: 400; font-family: var(--display); letter-spacing: 0.05em;
+}
+
+.champion {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 24px 16px;
+  background: var(--surface); border: 2px solid var(--accent-2); border-radius: 14px;
+  box-shadow: 0 0 32px rgba(245,158,11,0.12);
+}
+.championCrown { font-size: 40px; }
+.championCrest { width: 72px; height: 72px; object-fit: contain; }
+.championName { font-size: 30px; font-weight: 400; font-family: var(--display); letter-spacing: 0.05em; color: var(--text-primary); }
+.championSub { font-size: 11px; font-weight: 700; opacity: 0.5; text-transform: uppercase; letter-spacing: 1.2px; }
+
+.userResult { text-align: center; font-size: 14px; opacity: 0.7; }
+
+.statsCard {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 14px; border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--code-bg);
+}
+.statRow {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.statLabel {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+  opacity: 0.55; font-family: var(--sans);
+}
+.statValue {
+  font-size: 14px; font-weight: 800; font-family: var(--heading); color: var(--text-primary);
+}
+
+.repPositive {
+  font-size: 14px; font-weight: 800; font-family: var(--mono); color: #22c55e;
+}
+.repNegative {
+  font-size: 14px; font-weight: 800; font-family: var(--mono); color: #f87171;
+}
+
+.action { text-align: center; }
+
+@media (max-width: 640px) {
+  .screen { padding: 12px 10px 24px; gap: 12px; }
+  .headerTitle { font-size: 17px; }
+  .championName { font-size: 22px; }
+  .championCrest { width: 56px; height: 56px; }
+}
