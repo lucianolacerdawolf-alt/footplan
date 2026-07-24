@@ -80,6 +80,7 @@ function App() {
   const notifySave = useCallback(() => setToastMsg('✓ Progresso salvo'), []);
   const dismissToast = useCallback(() => setToastMsg(null), []);
   const [pendingResumeSnapshot, setPendingResumeSnapshot] = useState<LiveMatchSnapshot | null>(null);
+  const [pendingCareerStart, setPendingCareerStart] = useState<{ userTeam: Team; managerName: string } | null>(null);
 
   const {
     screen, setScreen,
@@ -234,6 +235,21 @@ function App() {
     setScreen('cup-select');
   }, [setTournamentMode, setScreen]);
 
+  // ── Modo Carreira: entrada ────────────────────────────────────────────────
+  const handleCareerFromHome = useCallback(() => {
+    setIsCareerMode(true);
+    if (careerState) { setScreen('career-hub'); return; }
+    setTournamentMode('league');
+    setReturnScreen('tournament-setup');
+    setScreen('league-select');
+  }, [careerState, setIsCareerMode, setTournamentMode, setReturnScreen, setScreen]);
+
+  const handleCareerTournamentStart = useCallback((userTeam: Team, managerName?: string) => {
+    const name = managerName ?? '';
+    if (careerState) { setPendingCareerStart({ userTeam, managerName: name }); return; }
+    handleStartCareer(userTeam, selectedLeague!, name);
+  }, [careerState, selectedLeague, handleStartCareer]);
+
   // ── Render ────────────────────────────────────────────────────────────────
   let content: React.ReactNode;
   if (screen === 'cup-select') {
@@ -256,7 +272,8 @@ function App() {
     content = (
       <LeagueSelectScreen
         selectedLeague={selectedLeague}
-        resumable={getResumableSaves()}
+        isCareer={isCareerMode}
+        resumable={isCareerMode ? [] : getResumableSaves()}
         onResume={(save) => {
           localStorage.setItem('fp:selectedLeague', JSON.stringify(save.league.id));
           setSelectedLeague(save.league);
@@ -268,6 +285,11 @@ function App() {
         onSelect={(league) => {
           localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
           setSelectedLeague(league);
+          if (isCareerMode) {
+            setReturnScreen(null);
+            setScreen('tournament-setup');
+            return;
+          }
           const target = returnScreen ?? 'home';
           setReturnScreen(null);
           if (target === 'tournament-setup') {
@@ -294,6 +316,7 @@ function App() {
       <HomeScreen
         onSingleMatch={() => { setReturnScreen('select'); setScreen('league-select'); }}
         onLeague={handleLeagueFromHome}
+        onCareer={handleCareerFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
         onOnline={() => setScreen('online-lobby')}
@@ -312,7 +335,7 @@ function App() {
   } else if (screen === 'online-lobby') {
     content = <OnlineLobbyScreen peer={peer} onStartMatch={handleStartOnlineMatch} onBack={() => setScreen('home')} onGoHome={goHome} />;
   } else if (screen === 'tournament-setup') {
-    content = <TournamentSetupScreen mode={tournamentMode} league={selectedLeague!} onBack={() => { setScreen(tournamentMode === 'bracket' ? 'cup-select' : 'league-select'); }} onGoHome={goHome} onStart={handleTournamentStart} onRosterSynced={setSelectedLeague} />;
+    content = <TournamentSetupScreen mode={isCareerMode ? 'career' : tournamentMode} league={selectedLeague!} onBack={() => { setScreen(tournamentMode === 'bracket' ? 'cup-select' : 'league-select'); }} onGoHome={goHome} onStart={isCareerMode ? handleCareerTournamentStart : handleTournamentStart} onRosterSynced={setSelectedLeague} />;
   } else if (screen === 'league' && leagueState) {
     content = (
       <LeagueScreen
@@ -474,6 +497,7 @@ function App() {
       <HomeScreen
         onSingleMatch={() => { setReturnScreen('select'); setScreen('league-select'); }}
         onLeague={handleLeagueFromHome}
+        onCareer={handleCareerFromHome}
         onCup={handleCupFromHome}
         onAchievements={() => setScreen('achievements')}
         onOnline={() => setScreen('online-lobby')}
@@ -509,6 +533,30 @@ function App() {
                 Nova temporada
               </button>
               <button className="resume-btn-cancel" onClick={() => setResumePrompt(null)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {pendingCareerStart && (
+        <div className="resume-overlay" onClick={() => setPendingCareerStart(null)} role="presentation">
+          <div className="resume-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="career-overwrite-title">
+            <div className="resume-icon" aria-hidden="true">👔</div>
+            <div className="resume-title" id="career-overwrite-title">
+              Carreira em andamento
+            </div>
+            <div className="resume-body">
+              {`Você já tem uma carreira como ${careerState?.manager.name} (Temporada ${careerState?.currentSeasonYear}). Iniciar uma nova carreira vai substituir esse save.`}
+            </div>
+            <div className="resume-actions">
+              <button
+                className="resume-btn-primary"
+                onClick={() => { handleStartCareer(pendingCareerStart!.userTeam, selectedLeague!, pendingCareerStart!.managerName); setPendingCareerStart(null); }}
+              >
+                Sim, substituir
+              </button>
+              <button className="resume-btn-cancel" onClick={() => setPendingCareerStart(null)}>
                 Cancelar
               </button>
             </div>
