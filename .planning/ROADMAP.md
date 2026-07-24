@@ -91,6 +91,12 @@ Plans:
 - jsdom environment isolado por arquivo (`// @vitest-environment jsdom`), motor continua em `node`
 - `LeagueScreen`, `MatchStatsScreen`, `BracketScreen` (oitavas, simular outros, fase de campeão) + 3 telas de seleção de time
 
+### Mobile UX — Split da tela de liga ✅ CONCLUÍDA (ad-hoc, sem plano GSD formal)
+**Goal:** "Ver Liga" misturava classificação + jogo do usuário + outros jogos numa tela só — ~580px de scroll no celular.
+- `LeagueScreen` virou só "dia de jogo" (seu confronto, outros jogos, avançar rodada); nova `LeagueTableScreen` é consulta pura (só a tabela)
+- Aplicado nos dois modos (Campeonatos e Modo Carreira, mesmo componente compartilhado)
+- Hub da carreira ganhou botão de destaque "⚽ Jogar" — pula direto pra tática do próximo jogo da liga
+
 ---
 
 ## Backlog (não agendado)

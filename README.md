@@ -18,6 +18,7 @@ Simulador de partidas com foco em **escolhas estratégicas** e **simulação bas
 | **Partida Única** | Escolha 2 times de qualquer uma das 6 ligas, configure as táticas e jogue uma partida avulsa (vs CPU ou hot-seat). |
 | **Campeonatos** | Temporada completa em qualquer uma das 6 ligas: 18-20 times, pontos corridos. Você controla seu time e simula os demais. Estado salvo automaticamente. |
 | **Copas** | Copa eliminatória nacional correspondente à liga escolhida (FA Cup, Copa del Rey, DFB-Pokal, Coppa Italia, Coupe de France, Taça de Portugal). Oitavas → Quartas → Semis → Final. Prorrogação e pênaltis em caso de empate. |
+| **Modo Carreira** | Progressão multi-temporada: todas as 6 ligas evoluem em paralelo, jogadores envelhecem/evoluem, reputação de técnico, trocas diretas entre clubes, histórico de temporadas. Ver seção dedicada abaixo. |
 | **Conquistas** | 15 conquistas desbloqueáveis com progresso persistido. |
 
 ---
@@ -76,8 +77,17 @@ Cada escolha do jogador afeta diretamente a simulação:
 - **Lista de gols**, histórico de cartões, estatísticas completas (posse, chutes, faltas)
 - **Breakdown tático**: ficha do que cada time usou e os bônus aplicados
 
+### Modo Carreira
+- **Progressão multi-temporada**: todas as 6 ligas evoluem em paralelo (não só a liga ativa) — jogadores envelhecem, evoluem/declinam por desempenho e idade, se aposentam e são substituídos por gerados proceduralmente
+- **Reputação de técnico**: sobe com títulos/boa colocação, afeta a chance de clubes CPU aceitarem propostas de troca
+- **Trocas diretas entre clubes**: 1-por-1 sem dinheiro, limitadas a 3 por temporada — CPU avalia a proposta por diferença de OVR, superávit de posição e sua reputação
+- **Liga + copa disputadas juntas** a cada temporada, com histórico (posição, resultado da copa, trocas usadas, delta de reputação) por ano
+- **Hub da carreira** (`CareerHubScreen`) como tela central: botão de destaque "⚽ Jogar" pula direto pra tática do próximo jogo da liga (some quando a temporada tá pronta pra avançar), "Ver Liga" abre só a classificação (consulta pura, sem controles de jogo — ver "Hub de Torneio" abaixo), "Ver Copa", "Propor Troca", histórico de temporadas
+- **Save único** em `fp:career`, separado dos saves de Campeonatos/Copas avulsos — começar uma carreira nova pede confirmação se já existir uma em andamento
+
 ### Hub de Torneio
-- **LeagueScreen**: tabela de classificação com zonas coloridas (Champions, Europa, Conference, Rebaixamento), rolagem horizontal contida em telas estreitas
+- **LeagueScreen** (dia de jogo): seu confronto da rodada (Jogar/Simular), outros jogos da rodada (Simular Todos), avançar rodada — sem a tabela, pra caber numa tela só no celular
+- **LeagueTableScreen** (consulta pura): só a classificação, com zonas coloridas (Champions, Europa, Conference, Rebaixamento) e rolagem horizontal contida — tela separada, sem nenhum controle de jogo, acessada via link/botão a partir do LeagueScreen ou do Hub da carreira
 - **BracketScreen**: mostra apenas a fase atual, botão único "Simular Outros"
 - **Histórico H2H**: confrontos passados exibidos no SetupScreen
 
@@ -95,12 +105,18 @@ Cada escolha do jogador afeta diretamente a simulação:
 HomeScreen
 ├── Jogar Online → OnlineLobbyScreen → SetupScreen → MatchScreen → MatchStatsScreen
 ├── Partida Única → LeagueSelectScreen → TeamSelectionScreen → SetupScreen → MatchScreen → MatchStatsScreen
-├── Campeonatos → LeagueSelectScreen → [Continuar?] → TournamentSetupScreen → SetupScreen → LeagueScreen
+├── Campeonatos → LeagueSelectScreen → [Continuar?] → TournamentSetupScreen → SetupScreen → LeagueScreen ⇄ LeagueTableScreen
 │                                                                                     ↓
 │                                                          MatchScreen → MatchStatsScreen → LeagueScreen
 ├── Copas → CupSelectScreen → [Continuar?] → TournamentSetupScreen → SetupScreen → BracketScreen
 │                                                                              ↓
 │                                                   MatchScreen → MatchStatsScreen → BracketScreen
+├── Modo Carreira → [tela de time, 1ª vez] → CareerHubScreen
+│                     ├── ⚽ Jogar → SetupScreen → MatchScreen → MatchStatsScreen → LeagueScreen (rodada) ⇄ LeagueTableScreen
+│                     ├── Ver Liga → LeagueTableScreen (consulta pura)
+│                     ├── Ver Copa → BracketScreen → SetupScreen → MatchScreen → MatchStatsScreen → BracketScreen
+│                     ├── Propor Troca → TradeProposalScreen
+│                     └── Avançar Temporada → SeasonEndScreen → CareerHubScreen (temporada seguinte)
 └── Conquistas → AchievementsScreen
 ```
 
@@ -148,7 +164,7 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 |--------|-------|
 | **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Testes** | Vitest 3 (215 testes) + Testing Library (componentes) |
+| **Testes** | Vitest 3 (220 testes) + Testing Library (componentes) |
 | **Estilo** | CSS Modules + App.css/index.css globais |
 | **Renderização** | SVG (campo tático) + HTML/CSS |
 | **Áudio** | Web Audio API (sons procedurais, zero arquivos) |
@@ -179,6 +195,7 @@ src/
 │   ├── tacticPresets.ts         # 3 presets de tática (Ofensivo/Equilibrado/Defensivo)
 │   ├── tacticExplanations.ts    # Textos explicativos usados nos tooltips e no tutorial
 │   ├── tournament.ts            # Liga, Copa, fadiga, lesões, CPU tática
+│   ├── career.ts                # Modo Carreira: progressão de jogador, trocas, reputação, temporada
 │   ├── playerRating.ts          # Notas 4-10 e Man of the Match
 │   ├── steering.ts              # Movimentação dos jogadores no SVG
 │   ├── rng.ts                   # RNG com seed (SeededRng para multiplayer)
@@ -206,8 +223,12 @@ src/
 │   ├── InfoTooltip / TacticLabel Tooltips explicativos de tática
 │   ├── CommentaryFeed            Feed de comentários
 │   ├── MatchStatsScreen          Pós-jogo: MOTM, notas, gols, cartões, stats, tática
-│   ├── LeagueScreen               Hub de liga + classificação + stats da temporada
+│   ├── LeagueScreen               Dia de jogo: seu confronto da rodada, outros jogos, avançar rodada
+│   ├── LeagueTableScreen          Classificação (consulta pura, sem controles de jogo)
 │   ├── BracketScreen              Hub de copa
+│   ├── CareerHubScreen            Hub do Modo Carreira: reputação, resumo da temporada, histórico
+│   ├── TradeProposalScreen        Propor troca direta com clube adversário
+│   ├── SeasonEndScreen            Resumo de fim de temporada + avançar
 │   ├── AchievementsScreen         Grade de conquistas
 │   ├── TutorialOverlay            Tutorial interativo
 │   └── Toast                      Notificações
@@ -218,7 +239,8 @@ src/
 │   ├── useAchievements           Persistência e avaliação de conquistas
 │   ├── useMatchHistory / useH2H  Histórico de partidas / head-to-head
 │   ├── useAppShell / useGameFlow Navegação entre telas e orquestração de fluxo
-│   ├── useLeagueManager / useBracketManager  Estado de liga / copa
+│   ├── useLeagueManager / useBracketManager  Estado de liga / copa (Campeonatos)
+│   ├── useCareerManager          Estado da carreira: progressão, trocas, avanço de temporada
 │   └── useLocalStorage / usePersistedState   Persistência genérica
 ├── utils/
 │   ├── liveMatchPersistence.ts  Serializa/restaura o estado ao vivo da partida (Maps/Sets)
@@ -240,7 +262,7 @@ worker/
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # gera dist/
-npm run test     # 215 testes
+npm run test     # 220 testes
 ```
 
 ### Sincronização de elenco ao vivo (opcional)
@@ -256,7 +278,7 @@ cp .env.example .env
 
 ## 🧪 Testes
 
-**215 testes** cobrindo:
+**220 testes** cobrindo:
 - `matchEngine.test.ts` — invariantes, determinismo, cartões/expulsões, OVR
 - `calibration.test.ts` — 1000 partidas: média de gols, dominância OVR, empates, mando de campo
 - `tournament.test.ts` — fadiga, lesões, calendário, chaveamento, classificação
@@ -265,7 +287,7 @@ cp .env.example .env
 - `rosterSync.test.ts` — sincronização de elenco: fallback sem chave, modo proxy, mesclagem, cache, erros de rede/rate-limit, e regressão específica pra colisões de nome (ex: "Barcelona" vs "RCD Espanyol de Barcelona")
 - `useMatchSimulation.test.ts` — qual janela de pausa está ativa em cada momento da partida (substituições)
 - `career.test.ts` / `useCareerManager.test.ts` — progressão de jogador, avaliação de troca (RNG determinístico), reputação, avanço de temporada
-- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, tabela de classificação da liga, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão)
+- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, dia de jogo da liga (LeagueScreen) e classificação (LeagueTableScreen) como telas separadas, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão)
 
 ---
 
@@ -273,9 +295,11 @@ cp .env.example .env
 
 | Chave | Conteúdo |
 |---|---|
-| `fp:leagueState:{ligaId}` | Estado da liga em andamento, por liga |
-| `fp:bracketState` | Estado completo da copa |
+| `fp:leagueState:{ligaId}` | Estado da liga em andamento, por liga (Campeonatos) |
+| `fp:bracketState` | Estado completo da copa (Copas) |
+| `fp:career` | Save único da carreira: manager, temporada atual (liga+copa das 6 ligas), histórico |
 | `fp:liveMatch` | Snapshot da partida ao vivo em andamento (sobrevive a F5) |
+| `fp:selectedLeague` | Última liga selecionada, pra destacar na LeagueSelectScreen |
 | `fp:rosterCache:{ligaId}` | Cache de 7 dias do elenco sincronizado via API |
 | `fp:achievements` | Conquistas desbloqueadas + contador de partidas |
 | `fp:history` | Últimas partidas avulsas |

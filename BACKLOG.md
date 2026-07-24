@@ -38,6 +38,7 @@ Uma tentativa anterior de refactor tinha sido descartada por risco alto sem ganh
 ## ✅ Já entregue (referência)
 
 - **Modo Carreira**: progressão multi-temporada (todas as 6 ligas evoluem junto), envelhecimento/evolução de jogadores, troca direta entre clubes (limitada a 3/temporada), reputação de técnico que afeta aceitação de trocas, liga+copa disputadas juntas por temporada, histórico de temporadas, save único (`fp:career`)
+- **Mobile — tela de liga dividida**: "Ver Liga" era uma tela só misturando classificação + jogo do usuário + outros jogos da rodada (~580px de scroll no celular). Dividida em `LeagueScreen` (dia de jogo) + `LeagueTableScreen` (classificação, consulta pura) — aplicado nos dois modos (Campeonatos e Carreira). Hub da carreira ganhou botão de destaque "⚽ Jogar" que pula direto pra tática do próximo jogo, sem passar pela tela de rodada
 - **6 ligas europeias** com elencos reais (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal) + **6 copas nacionais** correspondentes
 - **Sincronização de elenco ao vivo** via football-data.org (proxy Cloudflare Worker, cache 7 dias, fallback offline, algoritmo de matching por confiança sem colisões falsas)
 - **PWA instalável** (manifest, service worker, ícones, safe-area insets pro notch/Dynamic Island no iOS, funciona offline)
@@ -58,4 +59,4 @@ Uma tentativa anterior de refactor tinha sido descartada por risco alto sem ganh
 - Tema escuro, fade entre telas, som procedural (zero arquivos de áudio)
 - Tela pós-jogo completa (MOTM, notas, gols, cartões, breakdown tático)
 - Tutorial interativo, H2H detalhado, CPU varia tática por rodada e por liga
-- 215 testes automatizados (motor + sincronização de elenco + componentes UI)
+- 220 testes automatizados (motor + sincronização de elenco + componentes UI)
