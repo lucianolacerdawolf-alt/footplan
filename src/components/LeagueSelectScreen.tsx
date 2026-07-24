@@ -16,9 +16,11 @@ interface Props {
    *  como o usuário chegou nessa tela ou de qual card ele vai clicar em seguida. */
   resumable?: ResumableSave[];
   onResume?: (save: ResumableSave) => void;
+  /** Quando true, exibe subtítulo específico do Modo Carreira em vez de "Escolha seu campeonato". */
+  isCareer?: boolean;
 }
 
-export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack, resumable, onResume }: Props) {
+export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack, resumable, onResume, isCareer = false }: Props) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
@@ -28,7 +30,7 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack, r
           )}
           <div className={styles.logo}>FootPlan</div>
         </div>
-        <p className={styles.subtitle}>Escolha seu campeonato</p>
+        <p className={styles.subtitle}>{isCareer ? 'Escolha a liga da sua carreira' : 'Escolha seu campeonato'}</p>
       </header>
 
       {resumable && resumable.length > 0 && onResume && (
