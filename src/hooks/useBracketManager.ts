@@ -12,7 +12,10 @@ import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
 import type { LeagueDefinition } from '../data/leagues/types';
 
-type Screen = 'league-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+type Screen =
+  | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
+  | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
+  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end';
 
 interface UseBracketManagerParams {
   league: LeagueDefinition | null;

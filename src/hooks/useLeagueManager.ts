@@ -10,7 +10,10 @@ import { getLeague } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
 
-type Screen = 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+type Screen =
+  | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
+  | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
+  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end';
 
 interface UseLeagueManagerParams {
   leagueId: string;

@@ -4,7 +4,10 @@ import type { GameMode } from '../components/TeamSelectionScreen';
 import type { LeagueState, BracketState } from '../engine/tournament';
 import type { AchievementEvalInput } from './useAchievements';
 
-type Screen = 'league-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+type Screen =
+  | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
+  | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
+  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end';
 type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
 
 interface UseGameFlowParams {
