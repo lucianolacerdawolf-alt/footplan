@@ -3,12 +3,13 @@ import styles from './HomeScreen.module.css';
 interface Props {
   onSingleMatch: () => void;
   onLeague: () => void;
+  onCareer: () => void;
   onCup: () => void;
   onAchievements: () => void;
   onOnline: () => void;
 }
 
-export default function HomeScreen({ onSingleMatch, onLeague, onCup, onAchievements, onOnline }: Props) {
+export default function HomeScreen({ onSingleMatch, onLeague, onCareer, onCup, onAchievements, onOnline }: Props) {
   return (
     <div className={styles.screen}>
       <header className={styles.header}>
@@ -41,6 +42,15 @@ export default function HomeScreen({ onSingleMatch, onLeague, onCup, onAchieveme
           <div className={styles.modeText}>
             <span className={styles.modeName}>Campeonatos</span>
             <span className={styles.modeDesc}>Pontos corridos com o campeonato que você escolher</span>
+          </div>
+          <span className={styles.modeArrow}>›</span>
+        </button>
+
+        <button className={styles.modeCard} onClick={onCareer}>
+          <span className={styles.modeIcon}>👔</span>
+          <div className={styles.modeText}>
+            <span className={styles.modeName}>Modo Carreira</span>
+            <span className={styles.modeDesc}>Progrida por temporadas com seu elenco, transferências e reputação de técnico</span>
           </div>
           <span className={styles.modeArrow}>›</span>
         </button>
