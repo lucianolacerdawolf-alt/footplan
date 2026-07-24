@@ -56,6 +56,13 @@ export function generatePlayer(id: string, name: string, number: number, pos: Pl
   };
 }
 
+// No uniqueness tracking: over many seasons of retirements across 6 leagues, duplicate names can occur — cosmetic only, since player.id (not name) is the unique identifier everywhere else in the codebase.
+export function generateRandomName(rng: () => number = Math.random): string {
+  const first = FIRST_NAMES[Math.floor(rng() * FIRST_NAMES.length)];
+  const last = LAST_NAMES[Math.floor(rng() * LAST_NAMES.length)];
+  return `${first} ${last}`;
+}
+
 export function crestSvg(primaryColor: string, text: string, secondaryColor = '#ffffff'): string {
   const fontSize = text.length > 3 ? '20' : text.length > 2 ? '26' : '30';
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 116">

@@ -58,6 +58,7 @@ export interface Player {
   attributes: PlayerAttributes;
   currentFatigue: number; // Cansaço Atual (0-100, 0 = descansado)
   injuredRounds?: number; // > 0: jogador lesionado e indisponível
+  age?: number; // Só populado em elencos do Modo Carreira
 }
 
 // =============================================================================
