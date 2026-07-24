@@ -10,11 +10,18 @@ interface Props {
   onPropose: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string) => { accepted: boolean; reason: string };
 }
 
-const REASON_LABELS: Record<string, string> = {
-  'value-favorable': 'A proposta favorece o time adversário em valor.',
-  'value-unfavorable': 'A proposta não favorece o time adversário em valor.',
-  'trade-limit-reached': 'Limite de trocas da temporada atingido.',
-};
+function getResultMessage(result: { accepted: boolean; reason: string }): string {
+  if (result.reason === 'trade-limit-reached') return 'Limite de trocas da temporada atingido.';
+  const favorable = result.reason === 'value-favorable';
+  if (result.accepted) {
+    return favorable
+      ? 'A proposta favorecia o adversário em valor — aceitaram sem hesitar.'
+      : 'Mesmo não sendo a proposta mais vantajosa pra eles, aceitaram.';
+  }
+  return favorable
+    ? 'A proposta favorecia o adversário em valor, mas ainda assim recusaram.'
+    : 'A proposta não favorecia o adversário em valor — recusaram.';
+}
 
 function getAvgOvr(team: Team): number {
   const starters = team.squad.slice(0, 11);
@@ -141,7 +148,7 @@ export default function TradeProposalScreen({ userTeam, opponentTeams, tradesRem
               {result && (
                 <div className="select-instruction">
                   {result.accepted ? '✅ Troca aceita!' : '❌ Troca recusada.'}{' '}
-                  {REASON_LABELS[result.reason] ?? result.reason}
+                  {getResultMessage(result)}
                 </div>
               )}
             </>

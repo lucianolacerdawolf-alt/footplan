@@ -22,24 +22,28 @@ Uma tentativa anterior de refactor tinha sido descartada por risco alto sem ganh
 
 ## 📦 Features grandes
 
-### 🔴 Modo Carreira (multi-temporada)
+### 🔴 Mercado de Transferências completo
 
-**Por que sobrou:** precisa de infraestrutura de temporadas múltiplas — hoje a liga acaba e a única opção é "Nova Temporada", que zera tudo.
+**Por que sobrou:** o Modo Carreira (entregue) só tem troca direta 1-por-1 sem dinheiro, limitada a 3 por temporada — decisão explícita de escopo pra manter a primeira versão simples. Orçamento, negociação e agentes livres ficaram de fora de propósito.
 
-**O que envolve (em ordem):**
-1. **Conceito de temporada**: `Season { year, league: LeagueState, cup?: BracketState }` em vez dos estados soltos atuais
-2. **Tela "Fim de Temporada"**: mostra resultado, oferece "Avançar pra próxima temporada"
-3. **Progressão de jogadores**: idade, evolução/declínio de atributos entre temporadas
-4. **Transferências simples**: pool de jogadores livres ou mercado básico entre times
-5. **Persistência**: `fp:season` em vez de `fp:leagueState`/`fp:bracketState` soltos
-6. **Histórico de temporadas**: campeão, sua posição, por ano
+**O que envolve:**
+1. Pool de agentes livres (jogadores sem clube, disponíveis pra contratar)
+2. Orçamento por clube + negociação (proposta de valor, contraproposta)
+3. UI de mercado dedicada (hoje é só a tela de troca direta)
 
-**Posso retomar quando:** você quiser que o jogo tenha progressão de longo prazo — é a próxima feature principal planejada. Precisa de uma sessão de discussão de design antes de codar.
+**Posso retomar quando:** você quiser expandir as transferências além da troca direta — precisa de discussão de design antes de codar (orçamento inicial, como valorar jogadores, janela de mercado).
+
+### 🟡 Mais testes de componente
+
+**Por que sobrou:** a cobertura de UI feita até agora cobre só `LeagueScreen` e as 3 telas de seleção de time. `MatchStatsScreen` e as telas de copa/bracket ainda não têm teste.
+
+**Posso retomar quando:** quiser reforçar a rede de segurança antes de mexer nessas telas de novo.
 
 ---
 
 ## ✅ Já entregue (referência)
 
+- **Modo Carreira**: progressão multi-temporada (todas as 6 ligas evoluem junto), envelhecimento/evolução de jogadores, troca direta entre clubes (limitada a 3/temporada), reputação de técnico que afeta aceitação de trocas, liga+copa disputadas juntas por temporada, histórico de temporadas, save único (`fp:career`)
 - **6 ligas europeias** com elencos reais (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal) + **6 copas nacionais** correspondentes
 - **Sincronização de elenco ao vivo** via football-data.org (proxy Cloudflare Worker, cache 7 dias, fallback offline, algoritmo de matching por confiança sem colisões falsas)
 - **PWA instalável** (manifest, service worker, ícones, safe-area insets pro notch/Dynamic Island no iOS, funciona offline)

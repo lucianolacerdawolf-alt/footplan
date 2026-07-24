@@ -56,13 +56,13 @@
 - Fix: `cpuProfile` passado corretamente ao modo copa (`useBracketManager`)
 - Fix: `returnScreen` restaurado ao voltar à `LeagueSelectScreen`
 
-### Phase 4.3: Mid-Match Substitutions 🔴 Backlog
+### Phase 4.3: Mid-Match Substitutions ✅ CONCLUÍDA (entregue antes da numeração M4)
 **Goal:** Permitir substituições durante o 2° tempo sem quebrar o replay loop.
-- Pause/resume mechanism em `useMatchSimulation`
-- Floating substitution modal no MatchScreen
-- Preservar fadiga, cartões e steering state mid-flight
+- `pausesRemaining`/`subsUsedByWindow` em `useMatchSimulation` — 5 subs distribuídas em até 3 janelas de parada
+- `simularSegundoTempo` roda em blocos, então uma troca na pausa do 2° tempo afeta o resto do jogo de verdade
+- Fadiga, cartões e steering state preservados entre pausas
 
-### Phase 4.4: Modo Carreira 📋 Planejada (7 plans, 4 waves)
+### Phase 4.4: Modo Carreira ✅ CONCLUÍDA (7/7 plans)
 **Goal:** Progressão multi-temporada com identidade de técnico.
 - Múltiplas temporadas com histórico persistente
 - Progressão de jogadores (OVR sobe/desce por desempenho e idade)
@@ -95,7 +95,6 @@ Plans:
 
 ## Backlog (não agendado)
 
-- PWA (vite-plugin-pwa) — aguardando ícones 192px/512px do usuário
 - Playwright E2E tests para 4 fluxos principais
 - Custom team builder
 - AI difficulty levels além da variação de táticas do CPU
