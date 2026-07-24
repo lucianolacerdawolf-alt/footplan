@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Team, MatchResult } from '../engine/types';
-import type { LeagueFixture } from '../engine/tournament';
+import type { LeagueFixture, BracketMatch, PlayableStage } from '../engine/tournament';
 import {
   simularFixtureAuto, simularRodadaAuto,
   recoverFatigue, applyPostMatchInjuries, randomizeCPUTactics,
+  advanceBracket, simularBracketMatch,
 } from '../engine/tournament';
 import { cloneTeam } from '../utils/teamUtils';
 import { allLeagues } from '../data/leagues';
@@ -47,6 +48,8 @@ export function useCareerManager({
   }, []);
 
   const [pendingCareerLeagueFixture, setPendingCareerLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
+  const [pendingCareerBracketStage, setPendingCareerBracketStage] = useState<PlayableStage | null>(null);
+  const [pendingCareerBracketIdx, setPendingCareerBracketIdx] = useState<number>(0);
 
   const handleStartCareer = useCallback((userTeam: Team, leagueDef: LeagueDefinition, managerName: string) => {
     const rosters: Record<string, Team[]> = {};
@@ -177,9 +180,119 @@ export function useCareerManager({
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
   }, [careerState, pendingCareerLeagueFixture, recordH2H, setToastMsg, setCareerState]);
 
+  const handleEditCareerBracketTactics = useCallback(() => {
+    if (!careerState) return;
+    const cup = careerState.season.cup;
+    const userTeam = cup.teams.find(t => t.id === cup.userTeamId);
+    if (!userTeam) return;
+    setHomeTeam(cloneTeam(userTeam, true));
+    setAwayTeam(cloneTeam(userTeam, true));
+    setMatchContext('bracket'); setIsKnockout(true);
+    setIsTournamentEntry(true);
+    setScreen('setup');
+  }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
+
+  const handlePlayCareerBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
+    setPendingCareerBracketStage(stage);
+    setPendingCareerBracketIdx(matchIdx);
+    setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
+    setMatchContext('bracket'); setIsKnockout(true);
+    setScreen('setup');
+  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
+
+  const handleSimulateOtherCareerBracketMatches = useCallback(() => {
+    if (!careerState) return;
+    const cupState = careerState.season.cup;
+    const stage = cupState.stage as PlayableStage;
+    const matches = stage === 'roundOf16' ? cupState.roundOf16
+      : stage === 'quarterfinals' ? cupState.quarterFinals
+      : stage === 'semifinals' ? cupState.semiFinals
+      : [cupState.final];
+    let s = { ...cupState };
+    const injuredIds = new Set<string>();
+    matches.forEach((match, idx) => {
+      const isUser = match.homeTeamId === cupState.userTeamId || match.awayTeamId === cupState.userTeamId;
+      if (isUser || match.played) return;
+      const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
+      const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
+      const sim = simularBracketMatch(home, away);
+      const updated: BracketMatch = { ...match, ...sim };
+      if (stage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[idx] = updated; s = { ...s, roundOf16: r16 }; }
+      else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[idx] = updated; s = { ...s, quarterFinals: qf }; }
+      else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[idx] = updated; s = { ...s, semiFinals: sf }; }
+      else { s = { ...s, final: updated }; }
+      injuredIds.add(home.id); injuredIds.add(away.id);
+    });
+    s = { ...s, teams: s.teams.map(t => injuredIds.has(t.id) ? applyPostMatchInjuries(t, 0.05).team : t) };
+    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: advanceBracket(s) } } : prev);
+  }, [careerState, setCareerState]);
+
+  const handleSimulateCareerBracketMatch = useCallback((stage: PlayableStage, matchIdx: number) => {
+    if (!careerState) return;
+    const cupState = careerState.season.cup;
+    const stageMatches = stage === 'roundOf16' ? cupState.roundOf16
+      : stage === 'quarterfinals' ? cupState.quarterFinals
+      : stage === 'semifinals' ? cupState.semiFinals
+      : [cupState.final];
+    const match = stageMatches[matchIdx];
+    const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
+    const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
+    const sim = simularBracketMatch(home, away);
+    const updated: BracketMatch = { ...match, ...sim };
+    let s = { ...cupState };
+    if (stage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[matchIdx] = updated; s = { ...s, roundOf16: r16 }; }
+    else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[matchIdx] = updated; s = { ...s, quarterFinals: qf }; }
+    else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[matchIdx] = updated; s = { ...s, semiFinals: sf }; }
+    else { s = { ...s, final: updated }; }
+    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: advanceBracket(s) } } : prev);
+  }, [careerState, setCareerState]);
+
+  const handleCareerBracketMatchResult = useCallback((result: MatchResult) => {
+    if (!careerState || !pendingCareerBracketStage) return;
+    const cupState = careerState.season.cup;
+    const stageMatches = pendingCareerBracketStage === 'roundOf16' ? cupState.roundOf16
+      : pendingCareerBracketStage === 'quarterfinals' ? cupState.quarterFinals
+      : pendingCareerBracketStage === 'semifinals' ? cupState.semiFinals
+      : [cupState.final];
+    const match = stageMatches[pendingCareerBracketIdx];
+    const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
+    const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
+    const winnerId = result.winner?.id
+      ?? (result.penaltyResult ? (result.penaltyResult.winner === 'home' ? home.id : away.id)
+        : result.homeScore >= result.awayScore ? home.id : away.id);
+    const updated: BracketMatch = {
+      ...match,
+      homeScore: result.homeScore, awayScore: result.awayScore,
+      wentToExtraTime: result.wentToExtraTime,
+      extraTimeHomeScore: result.extraTimeHomeScore,
+      extraTimeAwayScore: result.extraTimeAwayScore,
+      penaltyHomeScore: result.penaltyResult?.homeScore,
+      penaltyAwayScore: result.penaltyResult?.awayScore,
+      winnerId, played: true,
+    };
+    let s = { ...cupState };
+    if (pendingCareerBracketStage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[pendingCareerBracketIdx] = updated; s = { ...s, roundOf16: r16 }; }
+    else if (pendingCareerBracketStage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[pendingCareerBracketIdx] = updated; s = { ...s, quarterFinals: qf }; }
+    else if (pendingCareerBracketStage === 'semifinals') { const sf = [...s.semiFinals]; sf[pendingCareerBracketIdx] = updated; s = { ...s, semiFinals: sf }; }
+    else { s = { ...s, final: updated }; }
+    const advanced = advanceBracket(s);
+    const finalState = { ...advanced, teams: randomizeCPUTactics(advanced.teams.map(t => {
+      if (t.id !== advanced.userTeamId) return t;
+      const { team: injured, injuries } = applyPostMatchInjuries(t);
+      if (injuries.length > 0) {
+        const inj = injuries[0];
+        setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} jogo${inj.rounds > 1 ? 's' : ''}`);
+      }
+      return injured;
+    }), advanced.userTeamId, Math.random, undefined) };
+    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: finalState } } : prev);
+    recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
+  }, [careerState, pendingCareerBracketStage, pendingCareerBracketIdx, recordH2H, setToastMsg, setCareerState]);
+
   return {
     careerState, setCareerState,
     pendingCareerLeagueFixture,
+    pendingCareerBracketStage, pendingCareerBracketIdx,
     handleStartCareer,
     handleEditCareerLeagueTactics,
     handlePlayCareerLeagueMatch,
@@ -187,5 +300,10 @@ export function useCareerManager({
     handleSimulateCareerLeagueRound,
     handleNextCareerLeagueRound,
     handleCareerLeagueMatchResult,
+    handleEditCareerBracketTactics,
+    handlePlayCareerBracketMatch,
+    handleSimulateOtherCareerBracketMatches,
+    handleSimulateCareerBracketMatch,
+    handleCareerBracketMatchResult,
   };
 }
