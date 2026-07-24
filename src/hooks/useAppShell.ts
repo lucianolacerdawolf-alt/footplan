@@ -5,7 +5,8 @@ import { getLeague } from '../data/leagues';
 type Screen =
   | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
   | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
-  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end';
+  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end'
+  | 'league-table' | 'career-league-table';
 type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
 type TournamentMode = 'league' | 'bracket';
 

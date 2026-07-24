@@ -41,6 +41,15 @@
   font-size: 14px; font-weight: 800; font-family: var(--heading); color: var(--text-primary);
 }
 
+.playRow { text-align: center; }
+.playBtn {
+  padding: 13px 32px; font-size: 15px; font-weight: 700; font-family: var(--sans); border: none;
+  border-radius: 10px; cursor: pointer;
+  background: var(--accent); color: #fff;
+  letter-spacing: 0.3px; transition: all 0.2s;
+}
+.playBtn:hover { opacity: 0.9; }
+
 .navRow {
   display: flex; gap: 10px; flex-wrap: wrap;
 }

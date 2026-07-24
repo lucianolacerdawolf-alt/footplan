@@ -1,13 +1,7 @@
 // @vitest-environment jsdom
-//
-// jsdom não computa layout real (getBoundingClientRect zera tudo), então isso não
-// substitui a verificação visual da tabela de classificação com scroll contido (esse
-// bug só foi pego testando num navegador real). Cobre a estrutura (wrapper de scroll
-// presente, todas as linhas renderizam) e a lógica de zona de classificação, que é
-// JS puro e testável independente de layout.
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import LeagueScreen from '../LeagueScreen';
 import { generateLeagueSchedule, type LeagueState } from '../../engine/tournament';
 import { makeLeague, testTeams } from './testFixtures';
@@ -22,27 +16,49 @@ function makeState(): LeagueState {
   };
 }
 
-describe('LeagueScreen — tabela de classificação', () => {
-  it('renderiza a tabela com uma linha por time, dentro de um wrapper com scroll', () => {
-    const league = makeLeague();
+describe('LeagueScreen — dia de jogo (matchday)', () => {
+  it('renderiza "Seu Jogo" e "Outros Jogos", sem a tabela de classificação', () => {
     render(
       <LeagueScreen
-        state={makeState()} league={league}
+        state={makeState()} league={makeLeague()}
         onPlayMatch={vi.fn()} onSimulateUserMatch={vi.fn()} onSimulateRound={vi.fn()}
-        onNextRound={vi.fn()} onEditTactics={vi.fn()} onBack={vi.fn()}
+        onNextRound={vi.fn()} onEditTactics={vi.fn()} onViewTable={vi.fn()} onBack={vi.fn()}
       />
     );
 
-    const table = screen.getByRole('table');
-    // Uma linha de <thead> + uma por time.
-    expect(screen.getAllByRole('row')).toHaveLength(1 + testTeams.length);
-    for (const team of testTeams) {
-      expect(screen.getByText(team.name)).toBeInTheDocument();
-    }
+    expect(screen.getByText('Seu Jogo')).toBeInTheDocument();
+    expect(screen.getByText('Outros Jogos')).toBeInTheDocument();
+    expect(screen.getByText('Jogar')).toBeInTheDocument();
+    // A tabela de classificação saiu pra LeagueTableScreen — não deve mais aparecer aqui.
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
 
-    // O wrapper de scroll (`.standingsScroll` via CSS Module) precisa existir — é ele
-    // que contém o `overflow-x` pra tabela não estourar a página (ver fix de mobile).
-    const wrapper = table.parentElement!;
-    expect(wrapper.className).toMatch(/standingsScroll/);
+  it('aciona onViewTable ao clicar em "Ver Classificação"', () => {
+    const onViewTable = vi.fn();
+    render(
+      <LeagueScreen
+        state={makeState()} league={makeLeague()}
+        onPlayMatch={vi.fn()} onSimulateUserMatch={vi.fn()} onSimulateRound={vi.fn()}
+        onNextRound={vi.fn()} onEditTactics={vi.fn()} onViewTable={onViewTable} onBack={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByText(/Ver Classificação/));
+    expect(onViewTable).toHaveBeenCalledTimes(1);
+  });
+
+  it('aciona onPlayMatch com a fixture do usuário ao clicar em "Jogar"', () => {
+    const onPlayMatch = vi.fn();
+    const state = makeState();
+    render(
+      <LeagueScreen
+        state={state} league={makeLeague()}
+        onPlayMatch={onPlayMatch} onSimulateUserMatch={vi.fn()} onSimulateRound={vi.fn()}
+        onNextRound={vi.fn()} onEditTactics={vi.fn()} onViewTable={vi.fn()} onBack={vi.fn()}
+      />
+    );
+    fireEvent.click(screen.getByText('Jogar'));
+    expect(onPlayMatch).toHaveBeenCalledTimes(1);
+    const [fixture] = onPlayMatch.mock.calls[0];
+    expect(fixture.homeTeamId === state.userTeamId || fixture.awayTeamId === state.userTeamId).toBe(true);
   });
 });

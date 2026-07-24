@@ -20,7 +20,8 @@ import {
 type Screen =
   | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
   | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
-  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end';
+  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end'
+  | 'league-table' | 'career-league-table';
 
 interface UseCareerManagerParams {
   setScreen: (s: Screen) => void;
@@ -98,6 +99,18 @@ export function useCareerManager({
     setMatchContext('league'); setIsKnockout(false);
     setScreen('setup');
   }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
+
+  /** Atalho do Hub: pula direto pra tática do próximo jogo da liga, sem passar pela tela de rodada. */
+  const handlePlayNextCareerMatch = useCallback(() => {
+    if (!careerState) return;
+    const { league } = careerState.season;
+    const round = league.fixtures[league.currentRound];
+    const fixture = round.find(f => (f.homeTeamId === league.userTeamId || f.awayTeamId === league.userTeamId) && !f.played);
+    if (!fixture) { setScreen('career-league'); return; }
+    const home = league.teams.find(t => t.id === fixture.homeTeamId)!;
+    const away = league.teams.find(t => t.id === fixture.awayTeamId)!;
+    handlePlayCareerLeagueMatch(fixture, home, away);
+  }, [careerState, setScreen, handlePlayCareerLeagueMatch]);
 
   const handleSimulateUserCareerLeagueMatch = useCallback(() => {
     if (!careerState) return;
@@ -401,6 +414,7 @@ export function useCareerManager({
     handleStartCareer,
     handleEditCareerLeagueTactics,
     handlePlayCareerLeagueMatch,
+    handlePlayNextCareerMatch,
     handleSimulateUserCareerLeagueMatch,
     handleSimulateCareerLeagueRound,
     handleNextCareerLeagueRound,

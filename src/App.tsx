@@ -7,6 +7,7 @@ import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SetupScreen from './components/SetupScreen';
 import TournamentSetupScreen from './components/TournamentSetupScreen';
 import LeagueScreen from './components/LeagueScreen';
+import LeagueTableScreen from './components/LeagueTableScreen';
 import BracketScreen from './components/BracketScreen';
 import OnlineLobbyScreen from './components/OnlineLobbyScreen';
 import LeagueSelectScreen, { type ResumableSave } from './components/LeagueSelectScreen';
@@ -132,6 +133,7 @@ function App() {
     handleStartCareer,
     handleEditCareerLeagueTactics,
     handlePlayCareerLeagueMatch,
+    handlePlayNextCareerMatch,
     handleSimulateUserCareerLeagueMatch,
     handleSimulateCareerLeagueRound,
     handleNextCareerLeagueRound,
@@ -356,7 +358,16 @@ function App() {
         onSimulateRound={handleSimulateLeagueRound}
         onNextRound={handleNextLeagueRound}
         onEditTactics={handleEditLeagueTactics}
+        onViewTable={() => setScreen('league-table')}
         onBack={goHome}
+      />
+    );
+  } else if (screen === 'league-table' && leagueState) {
+    content = (
+      <LeagueTableScreen
+        state={leagueState}
+        league={selectedLeague!}
+        onBack={() => setScreen('league')}
       />
     );
   } else if (screen === 'bracket' && bracketState) {
@@ -445,8 +456,9 @@ function App() {
       <CareerHubScreen
         state={careerState}
         league={getLeague(careerState.leagueId)!}
-        onViewLeague={() => setScreen('career-league')}
+        onViewLeague={() => setScreen('career-league-table')}
         onViewCup={() => setScreen('career-bracket')}
+        onPlayNext={handlePlayNextCareerMatch}
         onProposeTrade={() => setScreen('trade-propose')}
         onAdvanceSeason={handleAdvanceSeason}
         onNewCareer={handleNewCareerFromHub}
@@ -463,6 +475,15 @@ function App() {
         onSimulateRound={handleSimulateCareerLeagueRound}
         onNextRound={handleNextCareerLeagueRound}
         onEditTactics={handleEditCareerLeagueTactics}
+        onViewTable={() => setScreen('career-league-table')}
+        onBack={() => setScreen('career-hub')}
+      />
+    );
+  } else if (screen === 'career-league-table' && careerState) {
+    content = (
+      <LeagueTableScreen
+        state={careerState.season.league}
+        league={getLeague(careerState.leagueId)!}
         onBack={() => setScreen('career-hub')}
       />
     );

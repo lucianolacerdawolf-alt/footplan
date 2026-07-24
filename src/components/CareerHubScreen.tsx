@@ -8,6 +8,7 @@ interface Props {
   league: LeagueDefinition;
   onViewLeague: () => void;
   onViewCup: () => void;
+  onPlayNext: () => void;
   onProposeTrade: () => void;
   onAdvanceSeason: () => void;
   onNewCareer: () => void;
@@ -35,7 +36,7 @@ function reputationSign(delta: number): string {
   return delta > 0 ? '+' : '';
 }
 
-export default function CareerHubScreen({ state, league, onViewLeague, onViewCup, onProposeTrade, onAdvanceSeason, onNewCareer, onBack }: Props) {
+export default function CareerHubScreen({ state, league, onViewLeague, onViewCup, onPlayNext, onProposeTrade, onAdvanceSeason, onNewCareer, onBack }: Props) {
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
   const userPosition = standings.findIndex(s => s.teamId === state.season.league.userTeamId) + 1;
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
@@ -43,6 +44,10 @@ export default function CareerHubScreen({ state, league, onViewLeague, onViewCup
   const tradeLimitReached = tradesUsed >= 3;
   const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
   const history = [...state.history].reverse();
+
+  const leagueRound = state.season.league.fixtures[state.season.league.currentRound];
+  const hasNextMatch = state.season.league.phase !== 'done'
+    && leagueRound.some(f => (f.homeTeamId === state.season.league.userTeamId || f.awayTeamId === state.season.league.userTeamId) && !f.played);
 
   return (
     <div className={styles.screen}>
@@ -78,6 +83,12 @@ export default function CareerHubScreen({ state, league, onViewLeague, onViewCup
           <span className={styles.summaryValue}>{tradesUsed}/3</span>
         </div>
       </div>
+
+      {hasNextMatch && !seasonReady && (
+        <div className={styles.playRow}>
+          <button className={styles.playBtn} onClick={onPlayNext}>⚽ Jogar Rodada {state.season.league.currentRound + 1}</button>
+        </div>
+      )}
 
       <div className={styles.navRow}>
         <button className={styles.navBtn} onClick={onViewLeague}>Ver Liga →</button>

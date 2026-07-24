@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import type { Team } from '../engine/types';
-import type { LeagueState, LeagueFixture, Standing } from '../engine/tournament';
+import type { LeagueState, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { computeStandings } from '../engine/tournament';
 import { FORMATION_COUNTS } from '../engine/constants';
+import { StandingsTable } from './LeagueTableScreen';
 import styles from './LeagueScreen.module.css';
 
 function squadHealth(team: Team) {
@@ -23,6 +24,7 @@ interface Props {
   onSimulateRound: (roundIndex: number) => void;
   onNextRound: () => void;
   onEditTactics: () => void;
+  onViewTable: () => void;
   onBack: () => void;
 }
 
@@ -30,64 +32,8 @@ function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
 }
 
-function getZoneColor(pos: number, league: LeagueDefinition): string {
-  const clEnd = league.europeanSlots.championsLeague;
-  const elEnd = clEnd + league.europeanSlots.europaLeague;
-  const ecolEnd = elEnd + league.europeanSlots.conferenceLeague;
-  const relStart = league.teams.length - league.relegationSpots + 1;
-  if (pos <= clEnd) return '#1d9bf0';
-  if (pos <= elEnd) return '#e85d04';
-  if (pos <= ecolEnd) return '#38a169';
-  if (pos >= relStart) return '#e53e3e';
-  return 'transparent';
-}
-
-function StandingsTable({ standings, teams, userTeamId, league }: { standings: Standing[]; teams: Team[]; userTeamId: string; league: LeagueDefinition }) {
-  return (
-    <table className={styles.table}>
-      <thead>
-        <tr>
-          <th className={styles.thZone} />
-          <th className={styles.thPos}>#</th>
-          <th className={styles.thTeam}>Clube</th>
-          <th className={styles.thPts}>Pts</th>
-          <th>J</th><th>V</th><th>E</th><th>D</th>
-          <th>GP</th><th>GC</th><th className={styles.thSg}>SG</th>
-        </tr>
-      </thead>
-      <tbody>
-        {standings.map((s, i) => {
-          const pos = i + 1;
-          const team = teamById(teams, s.teamId);
-          const isUser = s.teamId === userTeamId;
-          const sg = s.goalsFor - s.goalsAgainst;
-          return (
-            <tr key={s.teamId} className={`${styles.row} ${isUser ? styles.rowUser : ''}`}>
-              <td className={styles.tdZone} style={{ background: getZoneColor(pos, league) }} />
-              <td className={styles.tdPos}>{pos}</td>
-              <td className={styles.tdTeam}>
-                <img src={team.logoUrl} alt={team.abbreviation} className={styles.tableCrest} />
-                <span className={styles.teamName}>{team.name}</span>
-              </td>
-              <td className={styles.tdPts}>{s.points}</td>
-              <td>{s.played}</td>
-              <td>{s.won}</td>
-              <td>{s.drawn}</td>
-              <td>{s.lost}</td>
-              <td>{s.goalsFor}</td>
-              <td>{s.goalsAgainst}</td>
-              <td className={sg >= 0 ? styles.sgPos : styles.sgNeg}>{sg > 0 ? '+' : ''}{sg}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
-}
-
-export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onBack }: Props) {
+export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
-  const standings = computeStandings(teams, fixtures);
   const [simulating, setSimulating] = useState(false);
   const runSim = (fn: () => void) => {
     setSimulating(true);
@@ -95,6 +41,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
   };
 
   if (phase === 'done') {
+    const standings = computeStandings(teams, fixtures);
     const champion = teamById(teams, standings[0].teamId);
     const userStanding = standings.find(s => s.teamId === userTeamId)!;
     const userPos = standings.findIndex(s => s.teamId === userTeamId) + 1;
@@ -181,95 +128,82 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
         );
       })()}
 
-      <div className={styles.body}>
-        {/* Coluna esquerda — jogos */}
-        <div className={styles.fixturesCol}>
-          {/* Jogo do usuário */}
-          <div className={styles.section}>
-            <div className={styles.sectionLabel}>Seu Jogo</div>
-            <div className={`${styles.fixture} ${styles.fixtureUser}`}>
-              <div className={styles.fixtureTeam}>
-                <img src={teamById(teams, userFixture.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
-                <span style={{ color: teamById(teams, userFixture.homeTeamId).color }}>
-                  {teamById(teams, userFixture.homeTeamId).abbreviation}
-                </span>
-              </div>
-              {renderScore(userFixture)}
-              <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
-                <span style={{ color: teamById(teams, userFixture.awayTeamId).color }}>
-                  {teamById(teams, userFixture.awayTeamId).abbreviation}
-                </span>
-                <img src={teamById(teams, userFixture.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
-              </div>
-              {!userFixture.played && (
-                <div className={styles.userMatchBtns}>
-                  <button
-                    className={styles.playBtn}
-                    onClick={() => onPlayMatch(
-                      userFixture,
-                      teamById(teams, userFixture.homeTeamId),
-                      teamById(teams, userFixture.awayTeamId)
-                    )}
-                  >
-                    Jogar
-                  </button>
-                  <button className={styles.simOwnBtn} onClick={() => runSim(onSimulateUserMatch)} disabled={simulating}>
-                    {simulating ? 'Simulando…' : 'Simular'}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+      <div className={styles.viewTableRow}>
+        <button className={styles.viewTableLink} onClick={onViewTable}>📊 Ver Classificação →</button>
+      </div>
 
-          {/* Outros jogos */}
-          <div className={styles.section}>
-            <div className={styles.sectionLabelRow}>
-              <span className={styles.sectionLabel}>Outros Jogos</span>
-              {!othersComplete && (
-                <button className={styles.simAllBtn} onClick={() => runSim(() => onSimulateRound(currentRound))} disabled={simulating}>
-                  {simulating ? 'Simulando…' : 'Simular Todos'}
+      <div className={styles.fixturesCol}>
+        {/* Jogo do usuário */}
+        <div className={styles.section}>
+          <div className={styles.sectionLabel}>Seu Jogo</div>
+          <div className={`${styles.fixture} ${styles.fixtureUser}`}>
+            <div className={styles.fixtureTeam}>
+              <img src={teamById(teams, userFixture.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+              <span style={{ color: teamById(teams, userFixture.homeTeamId).color }}>
+                {teamById(teams, userFixture.homeTeamId).abbreviation}
+              </span>
+            </div>
+            {renderScore(userFixture)}
+            <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
+              <span style={{ color: teamById(teams, userFixture.awayTeamId).color }}>
+                {teamById(teams, userFixture.awayTeamId).abbreviation}
+              </span>
+              <img src={teamById(teams, userFixture.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+            </div>
+            {!userFixture.played && (
+              <div className={styles.userMatchBtns}>
+                <button
+                  className={styles.playBtn}
+                  onClick={() => onPlayMatch(
+                    userFixture,
+                    teamById(teams, userFixture.homeTeamId),
+                    teamById(teams, userFixture.awayTeamId)
+                  )}
+                >
+                  Jogar
                 </button>
-              )}
-            </div>
-            {otherFixtures.map(f => (
-              <div key={f.id} className={styles.fixture}>
-                <div className={styles.fixtureTeam}>
-                  <img src={teamById(teams, f.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
-                  <span style={{ color: teamById(teams, f.homeTeamId).color }}>
-                    {teamById(teams, f.homeTeamId).abbreviation}
-                  </span>
-                </div>
-                {renderScore(f)}
-                <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
-                  <span style={{ color: teamById(teams, f.awayTeamId).color }}>
-                    {teamById(teams, f.awayTeamId).abbreviation}
-                  </span>
-                  <img src={teamById(teams, f.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
-                </div>
+                <button className={styles.simOwnBtn} onClick={() => runSim(onSimulateUserMatch)} disabled={simulating}>
+                  {simulating ? 'Simulando…' : 'Simular'}
+                </button>
               </div>
-            ))}
-          </div>
-
-          {roundComplete && (
-            <button className="start-btn" onClick={onNextRound}>
-              {currentRound + 1 < fixtures.length ? `Rodada ${currentRound + 2} →` : 'Ver Classificação Final →'}
-            </button>
-          )}
-        </div>
-
-        {/* Coluna direita — tabela */}
-        <div className={styles.standingsCol}>
-          <div className={styles.sectionLabel}>Classificação</div>
-          <div className={styles.standingsScroll}>
-            <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} />
-          </div>
-          <div className={styles.zoneLegend}>
-            <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions League
-            <span className={styles.zoneDot} style={{ background: '#e85d04' }} />Europa League
-            <span className={styles.zoneDot} style={{ background: '#38a169' }} />Conference League
-            <span className={styles.zoneDot} style={{ background: '#e53e3e' }} />Rebaixamento
+            )}
           </div>
         </div>
+
+        {/* Outros jogos */}
+        <div className={styles.section}>
+          <div className={styles.sectionLabelRow}>
+            <span className={styles.sectionLabel}>Outros Jogos</span>
+            {!othersComplete && (
+              <button className={styles.simAllBtn} onClick={() => runSim(() => onSimulateRound(currentRound))} disabled={simulating}>
+                {simulating ? 'Simulando…' : 'Simular Todos'}
+              </button>
+            )}
+          </div>
+          {otherFixtures.map(f => (
+            <div key={f.id} className={styles.fixture}>
+              <div className={styles.fixtureTeam}>
+                <img src={teamById(teams, f.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+                <span style={{ color: teamById(teams, f.homeTeamId).color }}>
+                  {teamById(teams, f.homeTeamId).abbreviation}
+                </span>
+              </div>
+              {renderScore(f)}
+              <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
+                <span style={{ color: teamById(teams, f.awayTeamId).color }}>
+                  {teamById(teams, f.awayTeamId).abbreviation}
+                </span>
+                <img src={teamById(teams, f.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {roundComplete && (
+          <button className="start-btn" onClick={onNextRound}>
+            {currentRound + 1 < fixtures.length ? `Rodada ${currentRound + 2} →` : 'Ver Classificação Final →'}
+          </button>
+        )}
       </div>
     </div>
   );
