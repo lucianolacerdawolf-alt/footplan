@@ -2,6 +2,15 @@
    FootPlan - UI Refinada
    ============================================================================= */
 
+/* ── Shared screen wrapper ──────────────────────────────────────────── */
+.app-screen {
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+  padding: 12px 16px 32px;
+  width: 100%;
+}
+
 /* --- Top nav (back button no topo-esquerdo, start no topo-direito) --- */
 .top-nav {
   display: flex; align-items: center; justify-content: space-between;
@@ -410,12 +419,12 @@
   padding: 7px 26px; font-size: 13px; font-weight: 700; font-family: var(--sans); border: none;
   border-radius: 7px; cursor: pointer;
   background: var(--accent); color: #fff;
-  letter-spacing: 0.3px; box-shadow: 0 2px 10px rgba(6,182,212,0.3); transition: all 0.2s;
+  letter-spacing: 0.3px;   filter: drop-shadow(0 2px 10px rgba(6,182,212,0.45)); transition: all 0.2s;
   animation: btnGlow 2.5s ease-in-out infinite;
 }
 @keyframes btnGlow {
-  0%, 100% { box-shadow: 0 2px 10px rgba(6,182,212,0.3); }
-  50% { box-shadow: 0 2px 20px rgba(6,182,212,0.55); }
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 .simulate-btn:hover:not(:disabled) { opacity: 0.9; transform: scale(1.04); }
 .simulate-btn:active:not(:disabled) { transform: scale(0.96); }
@@ -443,6 +452,22 @@
 }
 .poss-home { text-align: right; }
 .poss-away { text-align: left; }
+
+/* Momentum indicator */
+.momentum-indicator {
+  display: flex; flex-direction: column; gap: 3px;
+  width: 100%; max-width: 320px; margin: 2px auto 0; padding: 0 12px;
+}
+.momentum-track {
+  height: 4px; background: var(--border); border-radius: 2px;
+  overflow: hidden;
+}
+.momentum-track-away { direction: rtl; }
+.momentum-bar {
+  height: 100%; border-radius: 2px;
+  transition: width 0.6s ease, box-shadow 0.6s ease;
+  opacity: 0.65;
+}
 
 /* Timeline de gols */
 .goal-timeline {
@@ -866,3 +891,56 @@
   opacity: 0.5;
 }
 .resume-btn-cancel:hover { opacity: 0.9; }
+
+/* =============================================================================
+   PENALTY SHOOTOUT OVERLAY
+   ============================================================================= */
+.penalty-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 100;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.penalty-shooter {
+  font-size: 20px; font-weight: 700; color: var(--text-h); margin-bottom: 4px;
+}
+.penalty-gk {
+  font-size: 14px; color: var(--text-secondary); margin-bottom: 24px;
+}
+.penalty-corners {
+  display: flex; gap: 12px;
+}
+.penalty-corner-btn {
+  padding: 16px 24px; border-radius: 10px; border: 2px solid var(--border);
+  background: var(--bg-card); color: var(--text-h);
+  font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+}
+.penalty-corner-btn:hover {
+  border-color: var(--accent); background: rgba(59,130,246,0.1);
+}
+.penalty-score {
+  display: flex; gap: 24px; margin-bottom: 20px;
+  font-size: 36px; font-weight: 900;
+}
+.penalty-kick-history {
+  display: flex; gap: 4px; margin-bottom: 16px;
+}
+.penalty-kick-dot {
+  width: 12px; height: 12px; border-radius: 50%;
+}
+.penalty-result-flash {
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 48px; font-weight: 900; z-index: 101;
+  animation: flashIn 0.3s ease; pointer-events: none;
+}
+.penalty-sudden-death {
+  font-size: 14px; font-weight: 800; color: #f87171;
+  text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;
+  animation: flashIn 0.3s ease;
+}
+.penalty-waiting {
+  font-size: 14px; color: var(--text-secondary); opacity: 0.6;
+}
+
+@keyframes flashIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}

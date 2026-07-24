@@ -13,7 +13,7 @@ import { render, screen } from '@testing-library/react';
 import TeamSelectionScreen from '../TeamSelectionScreen';
 import TournamentSetupScreen from '../TournamentSetupScreen';
 import OnlineLobbyScreen from '../OnlineLobbyScreen';
-import type { UsePeerConnectionReturn } from '../../hooks/usePeerConnection';
+import type { UsePeerConnectionReturn } from '@/hooks/usePeerConnection';
 import { testTeams, makeLeague } from './testFixtures';
 
 function makePeer(overrides: Partial<UsePeerConnectionReturn> = {}): UsePeerConnectionReturn {

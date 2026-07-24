@@ -22,7 +22,7 @@ interface Props {
 
 export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack, resumable, onResume, isCareer = false }: Props) {
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
         <div className={styles.titleRow}>
           {onBack && (

@@ -22,12 +22,17 @@ export function useLiveRoster(): UseLiveRosterReturn {
 
   const sync = useCallback(async (league: LeagueDefinition, opts?: { force?: boolean }) => {
     setSyncing(true);
+    setLastError(null);
     try {
       const result = await syncLeagueRoster(league, opts);
       setLastSource(result.source);
       setLastStats(result.stats);
       setLastError(result.error ?? null);
       return result.league;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro desconhecido ao sincronizar';
+      setLastError(msg);
+      return league;
     } finally {
       setSyncing(false);
     }

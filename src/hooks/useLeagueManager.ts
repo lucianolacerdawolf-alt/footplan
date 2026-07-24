@@ -5,16 +5,14 @@ import {
   generateLeagueSchedule, simularFixtureAuto, simularRodadaAuto,
   recoverFatigue, applyPostMatchInjuries, randomizeCPUTactics,
 } from '../engine/tournament';
+import { moraleDelta, applyMoraleToTeam } from '../engine/morale';
 import { cloneTeam } from '../utils/teamUtils';
+import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries } from './shared/matchHandlers';
 import { getLeague } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
 
-type Screen =
-  | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
-  | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
-  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end'
-  | 'league-table' | 'career-league-table';
+import type { Screen } from '../types/navigation';
 
 interface UseLeagueManagerParams {
   leagueId: string;
@@ -115,39 +113,29 @@ export function useLeagueManager({
   const handleSimulateLeagueRound = useCallback((roundIndex: number) => {
     if (!leagueState) return;
     const newRound = simularRodadaAuto(leagueState.fixtures[roundIndex], leagueState.teams, leagueState.userTeamId);
-    const moraleMap = new Map<string, number>();
-    for (const f of newRound) {
-      if (!f.played || f.homeScore == null || f.awayScore == null) continue;
-      const hWon = f.homeScore > f.awayScore;
-      const draw = f.homeScore === f.awayScore;
-      const delta = draw ? 0 : 2;
-      const hDelta = hWon ? delta : -delta;
-      const aDelta = hWon ? -delta : delta;
-      moraleMap.set(f.homeTeamId, (moraleMap.get(f.homeTeamId) ?? 0) + hDelta);
-      moraleMap.set(f.awayTeamId, (moraleMap.get(f.awayTeamId) ?? 0) + aDelta);
-    }
-    const newTeams = leagueState.teams.map(t => {
-      const delta = moraleMap.get(t.id) ?? 0;
-      let team = delta === 0 ? t : { ...t, morale: Math.max(-10, Math.min(10, (t.morale ?? 0) + delta)) };
-      if (t.id !== leagueState!.userTeamId) {
-        team = applyPostMatchInjuries(team, 0.05).team;
-      }
-      return team;
-    });
+    const newTeams = applyLeagueRoundMoraleAndInjuries(newRound, leagueState.teams, leagueState.userTeamId);
     setLeagueState({ ...leagueState, fixtures: leagueState.fixtures.map((r, i) => i === roundIndex ? newRound : r), teams: newTeams });
   }, [leagueState, setLeagueState]);
 
   const handleNextLeagueRound = useCallback(() => {
     if (!leagueState) return;
-    const next = leagueState.currentRound + 1;
-    const recoveredTeams = recoverFatigue(leagueState.teams);
-    const variedTeams = randomizeCPUTactics(recoveredTeams, leagueState.userTeamId, Math.random, league?.cpuProfile);
-    const phase: LeagueState['phase'] = next >= leagueState.fixtures.length ? 'done' : 'playing';
-    const updatedState: LeagueState = { ...leagueState, teams: variedTeams, currentRound: next, phase };
+    const currentRound = leagueState.currentRound;
+    const currentFixtures = leagueState.fixtures[currentRound];
+    let state = leagueState;
+    if (currentFixtures.some(f => !f.played)) {
+      const newRound = simularRodadaAuto(currentFixtures, state.teams, state.userTeamId);
+      const newTeams = applyLeagueRoundMoraleAndInjuries(newRound, state.teams, state.userTeamId);
+      state = { ...state, fixtures: state.fixtures.map((r, i) => i === currentRound ? newRound : r), teams: newTeams };
+    }
+    const next = currentRound + 1;
+    const recoveredTeams = recoverFatigue(state.teams);
+    const variedTeams = randomizeCPUTactics(recoveredTeams, state.userTeamId, Math.random, league?.cpuProfile);
+    const phase: LeagueState['phase'] = next >= state.fixtures.length ? 'done' : 'playing';
+    const updatedState: LeagueState = { ...state, teams: variedTeams, currentRound: next, phase };
     setLeagueState(updatedState);
     if (phase === 'done') {
       evaluateAchievements({
-        result: null as unknown as MatchResult, userTeamId: leagueState.userTeamId,
+        result: null as unknown as MatchResult, userTeamId: state.userTeamId,
         matchContext: 'league', leagueState: updatedState,
       });
     }
@@ -160,16 +148,12 @@ export function useLeagueManager({
     const userIsHome = fixture.homeTeamId === leagueState.userTeamId;
     const userScore = userIsHome ? result.homeScore : result.awayScore;
     const oppScore = userIsHome ? result.awayScore : result.homeScore;
-    const moraleDelta = userScore > oppScore ? 2 : userScore === oppScore ? 0 : -2;
-    const newFixtures = leagueState.fixtures.map((round, ri) =>
-      ri === roundIdx
-        ? round.map((f, fi) => fi === fixtureIdx ? { ...f, homeScore: result.homeScore, awayScore: result.awayScore, played: true } : f)
-        : round
-    );
+    const delta = moraleDelta(userScore, oppScore);
+    const newFixtures = recordLeagueFixtureResult(leagueState.fixtures, roundIdx, fixtureIdx, result.homeScore, result.awayScore);
     const newTeams = leagueState.teams.map(t => {
       if (t.id !== leagueState.userTeamId) return t;
       const current = t.morale ?? 0;
-      const withMorale = { ...t, morale: Math.max(-10, Math.min(10, current + moraleDelta)) };
+      const withMorale = applyMoraleToTeam(t, current, delta);
       const { team: injured, injuries } = applyPostMatchInjuries(withMorale);
       if (injuries.length > 0) {
         const inj = injuries[0];

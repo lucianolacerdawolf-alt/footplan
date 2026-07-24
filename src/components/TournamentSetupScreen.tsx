@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
-import { cloneTeam } from '../utils/teamUtils';
-import { playerOvr } from '../utils/playerOvr';
+import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLiveRoster } from '../hooks/useLiveRoster';
 
 export type TournamentMode = 'league' | 'bracket' | 'career';
@@ -38,11 +37,6 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
   const handleSyncRoster = async () => {
     const updated = await sync(league);
     if (updated !== league) onRosterSynced?.(updated);
-  };
-
-  const getAvgOvr = (team: Team) => {
-    const starters = team.squad.slice(0, 11);
-    return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
   };
 
   const handleStart = () => {

@@ -24,8 +24,8 @@ export interface SteeringPlayer {
 // ---------------------------------------------------------------------------
 // Parâmetros base (multiplicados pelos atributos do jogador)
 // ---------------------------------------------------------------------------
-const BASE_MAX_SPEED: Record<string, number> = { GK: 56, DEF: 76, MID: 92, FWD: 108 };
-const MAX_FORCE: Record<string, number> = { GK: 120, DEF: 170, MID: 190, FWD: 220 };
+const BASE_MAX_SPEED: Record<SteeringPlayer['position'], number> = { GK: 56, DEF: 76, MID: 92, FWD: 108 };
+const MAX_FORCE: Record<SteeringPlayer['position'], number> = { GK: 120, DEF: 170, MID: 190, FWD: 220 };
 const SLOWING_RADIUS = 10;
 const SEPARATION_DIST = 5;
 const SEPARATION_FORCE = 55;
@@ -52,7 +52,7 @@ function getMaxSpeed(p: SteeringPlayer): number {
 export function determineState(
   player: SteeringPlayer,
   hasBall: boolean,
-  eventType: string | null,
+  eventType: MatchEvent['type'] | null,
   mentality: string
 ): PlayerState {
   if (!eventType) return 'IDLE';

@@ -6,6 +6,9 @@
     "types": ["node", "vitest/globals"],
     "skipLibCheck": true,
 
+    /* Strict */
+    "strict": true,
+
     /* Bundler mode */
     "module": "nodenext",
     "allowImportingTsExtensions": true,

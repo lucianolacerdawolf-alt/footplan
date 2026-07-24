@@ -74,7 +74,7 @@ export default function LeagueTableScreen({ state, league, onBack }: Props) {
   const standings: Standing[] = computeStandings(teams, fixtures);
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
         <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
         <div className={styles.headerCenter}>

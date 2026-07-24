@@ -38,28 +38,23 @@ export function useAchievements(): UseAchievementsReturn {
 
   const evaluate = useCallback(
     (input: AchievementEvalInput): Achievement[] => {
-      const newTotal = data.totalMatchesPlayed + 1;
-      const ctx: AchievementCheckContext = { ...input, totalMatchesPlayed: newTotal };
-
       const newlyUnlocked: Achievement[] = [];
-      const alreadyIds = new Set(data.unlocked.map(u => u.id));
-
-      const eligible = checkAchievements(ctx);
-      let newUnlocked = data.unlocked;
-      for (const ach of eligible) {
-        if (alreadyIds.has(ach.id)) continue;
-        newUnlocked = [...newUnlocked, { id: ach.id, unlockedAt: Date.now() }];
-        newlyUnlocked.push(ach);
-      }
-
-      setData({
-        unlocked: newUnlocked,
-        totalMatchesPlayed: newTotal,
+      setData(prev => {
+        const newTotal = prev.totalMatchesPlayed + 1;
+        const ctx: AchievementCheckContext = { ...input, totalMatchesPlayed: newTotal };
+        const alreadyIds = new Set(prev.unlocked.map(u => u.id));
+        const eligible = checkAchievements(ctx);
+        let newUnlocked = prev.unlocked;
+        for (const ach of eligible) {
+          if (alreadyIds.has(ach.id)) continue;
+          newUnlocked = [...newUnlocked, { id: ach.id, unlockedAt: Date.now() }];
+          newlyUnlocked.push(ach);
+        }
+        return { unlocked: newUnlocked, totalMatchesPlayed: newTotal };
       });
-
       return newlyUnlocked;
     },
-    [data, setData],
+    [setData],
   );
 
   return { data, unlocked: data.unlocked, evaluate, isUnlocked, getAll };

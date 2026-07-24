@@ -1,4 +1,4 @@
-import type { Team } from '../../engine/types';
+import type { Team } from '@/engine/types';
 
 export interface CpuProfile {
   pressingMod: number;

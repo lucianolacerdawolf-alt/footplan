@@ -7,21 +7,20 @@ import {
   advanceBracket, simularBracketMatch,
   computeStandings,
 } from '../engine/tournament';
+import { moraleDelta, applyMoraleToTeam } from '../engine/morale';
 import { cloneTeam } from '../utils/teamUtils';
+import { getStageMatches, updateStageMatch } from '../engine/bracketHelpers';
 import { allLeagues, getLeague } from '../data/leagues';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
+import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult } from './shared/matchHandlers';
 import type { CareerState, CareerSeasonHistoryEntry } from '../engine/career';
 import {
   isValidCareerState, assignInitialAges, createCareerSeason,
   evaluateTradeOffer, canProposeTrade, computeReputationDelta, progressAllLeagues, deriveCupResult,
 } from '../engine/career';
 
-type Screen =
-  | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
-  | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
-  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end'
-  | 'league-table' | 'career-league-table';
+import type { Screen } from '../types/navigation';
 
 interface UseCareerManagerParams {
   setScreen: (s: Screen) => void;
@@ -133,25 +132,7 @@ export function useCareerManager({
     if (!careerState) return;
     const leg = careerState.season.league;
     const newRound = simularRodadaAuto(leg.fixtures[roundIndex], leg.teams, leg.userTeamId);
-    const moraleMap = new Map<string, number>();
-    for (const f of newRound) {
-      if (!f.played || f.homeScore == null || f.awayScore == null) continue;
-      const hWon = f.homeScore > f.awayScore;
-      const draw = f.homeScore === f.awayScore;
-      const delta = draw ? 0 : 2;
-      const hDelta = hWon ? delta : -delta;
-      const aDelta = hWon ? -delta : delta;
-      moraleMap.set(f.homeTeamId, (moraleMap.get(f.homeTeamId) ?? 0) + hDelta);
-      moraleMap.set(f.awayTeamId, (moraleMap.get(f.awayTeamId) ?? 0) + aDelta);
-    }
-    const newTeams = leg.teams.map(t => {
-      const delta = moraleMap.get(t.id) ?? 0;
-      let team = delta === 0 ? t : { ...t, morale: Math.max(-10, Math.min(10, (t.morale ?? 0) + delta)) };
-      if (t.id !== leg.userTeamId) {
-        team = applyPostMatchInjuries(team, 0.05).team;
-      }
-      return team;
-    });
+    const newTeams = applyLeagueRoundMoraleAndInjuries(newRound, leg.teams, leg.userTeamId);
     const updatedState = { ...leg, fixtures: leg.fixtures.map((r, i) => i === roundIndex ? newRound : r), teams: newTeams };
     setCareerState(prev => prev ? { ...prev, season: { ...prev.season, league: updatedState } } : prev);
   }, [careerState, setCareerState]);
@@ -175,16 +156,12 @@ export function useCareerManager({
     const userIsHome = fixture.homeTeamId === leg.userTeamId;
     const userScore = userIsHome ? result.homeScore : result.awayScore;
     const oppScore = userIsHome ? result.awayScore : result.homeScore;
-    const moraleDelta = userScore > oppScore ? 2 : userScore === oppScore ? 0 : -2;
-    const newFixtures = leg.fixtures.map((round, ri) =>
-      ri === roundIdx
-        ? round.map((f, fi) => fi === fixtureIdx ? { ...f, homeScore: result.homeScore, awayScore: result.awayScore, played: true } : f)
-        : round
-    );
+    const delta = moraleDelta(userScore, oppScore);
+    const newFixtures = recordLeagueFixtureResult(leg.fixtures, roundIdx, fixtureIdx, result.homeScore, result.awayScore);
     const newTeams = leg.teams.map(t => {
       if (t.id !== leg.userTeamId) return t;
       const current = t.morale ?? 0;
-      const withMorale = { ...t, morale: Math.max(-10, Math.min(10, current + moraleDelta)) };
+      const withMorale = applyMoraleToTeam(t, current, delta);
       const { team: injured, injuries } = applyPostMatchInjuries(withMorale);
       if (injuries.length > 0) {
         const inj = injuries[0];
@@ -219,79 +196,34 @@ export function useCareerManager({
 
   const handleSimulateOtherCareerBracketMatches = useCallback(() => {
     if (!careerState) return;
-    const cupState = careerState.season.cup;
-    const stage = cupState.stage as PlayableStage;
-    const matches = stage === 'roundOf16' ? cupState.roundOf16
-      : stage === 'quarterfinals' ? cupState.quarterFinals
-      : stage === 'semifinals' ? cupState.semiFinals
-      : [cupState.final];
-    let s = { ...cupState };
-    const injuredIds = new Set<string>();
-    matches.forEach((match, idx) => {
-      const isUser = match.homeTeamId === cupState.userTeamId || match.awayTeamId === cupState.userTeamId;
-      if (isUser || match.played) return;
-      const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
-      const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
-      const sim = simularBracketMatch(home, away);
-      const updated: BracketMatch = { ...match, ...sim };
-      if (stage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[idx] = updated; s = { ...s, roundOf16: r16 }; }
-      else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[idx] = updated; s = { ...s, quarterFinals: qf }; }
-      else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[idx] = updated; s = { ...s, semiFinals: sf }; }
-      else { s = { ...s, final: updated }; }
-      injuredIds.add(home.id); injuredIds.add(away.id);
-    });
-    s = { ...s, teams: s.teams.map(t => injuredIds.has(t.id) ? applyPostMatchInjuries(t, 0.05).team : t) };
-    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: advanceBracket(s) } } : prev);
+    const updated = simulateAllCpuBracketMatches(careerState.season.cup);
+    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: updated } } : prev);
   }, [careerState, setCareerState]);
 
-  const handleSimulateCareerBracketMatch = useCallback((stage: PlayableStage, matchIdx: number) => {
+  const handleSimulateCareerBracketMatch = useCallback((_stage: PlayableStage, matchIdx: number) => {
     if (!careerState) return;
     const cupState = careerState.season.cup;
-    const stageMatches = stage === 'roundOf16' ? cupState.roundOf16
-      : stage === 'quarterfinals' ? cupState.quarterFinals
-      : stage === 'semifinals' ? cupState.semiFinals
-      : [cupState.final];
+    const stageMatches = getStageMatches(cupState);
     const match = stageMatches[matchIdx];
     const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
     const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
     const sim = simularBracketMatch(home, away);
     const updated: BracketMatch = { ...match, ...sim };
     let s = { ...cupState };
-    if (stage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[matchIdx] = updated; s = { ...s, roundOf16: r16 }; }
-    else if (stage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[matchIdx] = updated; s = { ...s, quarterFinals: qf }; }
-    else if (stage === 'semifinals') { const sf = [...s.semiFinals]; sf[matchIdx] = updated; s = { ...s, semiFinals: sf }; }
-    else { s = { ...s, final: updated }; }
+    s = updateStageMatch(s, matchIdx, updated);
     setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: advanceBracket(s) } } : prev);
   }, [careerState, setCareerState]);
 
   const handleCareerBracketMatchResult = useCallback((result: MatchResult) => {
     if (!careerState || !pendingCareerBracketStage) return;
     const cupState = careerState.season.cup;
-    const stageMatches = pendingCareerBracketStage === 'roundOf16' ? cupState.roundOf16
-      : pendingCareerBracketStage === 'quarterfinals' ? cupState.quarterFinals
-      : pendingCareerBracketStage === 'semifinals' ? cupState.semiFinals
-      : [cupState.final];
+    const stageMatches = getStageMatches(cupState);
     const match = stageMatches[pendingCareerBracketIdx];
     const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
     const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
-    const winnerId = result.winner?.id
-      ?? (result.penaltyResult ? (result.penaltyResult.winner === 'home' ? home.id : away.id)
-        : result.homeScore >= result.awayScore ? home.id : away.id);
-    const updated: BracketMatch = {
-      ...match,
-      homeScore: result.homeScore, awayScore: result.awayScore,
-      wentToExtraTime: result.wentToExtraTime,
-      extraTimeHomeScore: result.extraTimeHomeScore,
-      extraTimeAwayScore: result.extraTimeAwayScore,
-      penaltyHomeScore: result.penaltyResult?.homeScore,
-      penaltyAwayScore: result.penaltyResult?.awayScore,
-      winnerId, played: true,
-    };
+    const updated = buildBracketMatchFromResult(match, result, home.id, away.id);
     let s = { ...cupState };
-    if (pendingCareerBracketStage === 'roundOf16') { const r16 = [...s.roundOf16]; r16[pendingCareerBracketIdx] = updated; s = { ...s, roundOf16: r16 }; }
-    else if (pendingCareerBracketStage === 'quarterfinals') { const qf = [...s.quarterFinals]; qf[pendingCareerBracketIdx] = updated; s = { ...s, quarterFinals: qf }; }
-    else if (pendingCareerBracketStage === 'semifinals') { const sf = [...s.semiFinals]; sf[pendingCareerBracketIdx] = updated; s = { ...s, semiFinals: sf }; }
-    else { s = { ...s, final: updated }; }
+    s = updateStageMatch(s, pendingCareerBracketIdx, updated);
     const advanced = advanceBracket(s);
     const finalState = { ...advanced, teams: randomizeCPUTactics(advanced.teams.map(t => {
       if (t.id !== advanced.userTeamId) return t;
@@ -311,8 +243,11 @@ export function useCareerManager({
   // other handler in this file which only fires state updates.
   function handleProposeTrade(offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string): { accepted: boolean; reason: string } {
     if (!careerState) return { accepted: false, reason: 'no-career' };
-    // D-06: the cap is absolute — checked before evaluateTradeOffer is even called.
     if (!canProposeTrade(careerState.season.tradesUsedThisSeason)) return { accepted: false, reason: 'trade-limit-reached' };
+
+    const cr = careerState.season.league.currentRound;
+    const windowOpen = cr <= 4 || (cr >= 18 && cr <= 23);
+    if (!windowOpen) return { accepted: false, reason: 'window-closed' };
 
     // D-04: scoped to the user's own league — never search across all 6 leagues here,
     // even though all 6 are progressed together at season-advance.

@@ -19,6 +19,8 @@ export interface SerializedMatchState {
   consecutiveGoalTeam: string | null;
   gkFormHome: number;
   gkFormAway: number;
+  halftimeHomeScore: number;
+  halftimeAwayScore: number;
 }
 
 export function serializeMatchState(state: MatchState): SerializedMatchState {
@@ -37,6 +39,8 @@ export function serializeMatchState(state: MatchState): SerializedMatchState {
     consecutiveGoalTeam: state.consecutiveGoalTeam,
     gkFormHome: state.gkFormHome,
     gkFormAway: state.gkFormAway,
+    halftimeHomeScore: state.halftimeHomeScore,
+    halftimeAwayScore: state.halftimeAwayScore,
   };
 }
 
@@ -56,6 +60,8 @@ export function deserializeMatchState(s: SerializedMatchState): MatchState {
     consecutiveGoalTeam: s.consecutiveGoalTeam,
     gkFormHome: s.gkFormHome,
     gkFormAway: s.gkFormAway,
+    halftimeHomeScore: s.halftimeHomeScore,
+    halftimeAwayScore: s.halftimeAwayScore,
   };
 }
 

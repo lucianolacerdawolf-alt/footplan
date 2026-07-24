@@ -160,6 +160,9 @@ export interface MatchResult {
   awayPossession: number;
   homeStats: TeamStats;
   awayStats: TeamStats;
+  // Halftime scores (populated when a halftime event exists)
+  halftimeHomeScore?: number;
+  halftimeAwayScore?: number;
   // Optional knockout fields (populated only for elimination matches)
   wentToExtraTime?: boolean;
   extraTimeHomeScore?: number;

@@ -1,5 +1,5 @@
-import type { Team, Player, Strategy } from '../../engine/types';
-import type { LeagueDefinition } from '../../data/leagues/types';
+import type { Team, Player, Strategy } from '@/engine/types';
+import type { LeagueDefinition } from '@/data/leagues/types';
 
 const strategy: Strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
 

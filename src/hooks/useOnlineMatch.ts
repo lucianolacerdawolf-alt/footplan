@@ -3,7 +3,7 @@ import type { Team, MatchResult } from '../engine/types';
 import { SeededRng } from '../engine/rng';
 import type { AchievementEvalInput } from './useAchievements';
 
-type Screen = 'league-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+import type { Screen } from '../types/navigation';
 
 interface UseOnlineMatchParams {
   setScreen: (s: Screen) => void;

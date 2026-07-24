@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import styles from './MatchStatsScreen.module.css';
 import type { MatchResult, Strategy } from '../engine/types';
 import type { MatchRecord } from '../hooks/useMatchHistory';
@@ -100,14 +101,14 @@ function ratingColor(r: number): string {
 
 export default function MatchStatsScreen({ result, history, onMenu, onClearHistory, onContinue, continueLabel }: Props) {
   const { homeTeam, awayTeam, homeScore, awayScore, homePossession, awayPossession, homeStats, awayStats } = result;
-  const ratings = calculateRatings(result);
-  const motm = manOfTheMatch(ratings);
-  const scorers = goalScorers(result);
-  const cards = cardEvents(result);
-  const topPerformers = ratings.slice(0, 5);
+  const ratings = useMemo(() => calculateRatings(result), [result]);
+  const motm = useMemo(() => manOfTheMatch(ratings), [ratings]);
+  const scorers = useMemo(() => goalScorers(result), [result]);
+  const cards = useMemo(() => cardEvents(result), [result]);
+  const topPerformers = useMemo(() => ratings.slice(0, 5), [ratings]);
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.team}>

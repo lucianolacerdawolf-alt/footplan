@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { TACTIC_EXPLANATIONS } from '../engine/tacticExplanations';
 
@@ -11,6 +11,8 @@ const STEPS = Object.values(TACTIC_EXPLANATIONS);
 export default function TutorialOverlay({ onClose }: Props) {
   const [step, setStep] = useState(0);
   const [, setSeen] = useLocalStorage<string>('fp:tutorialSeen', '');
+  const prevFocusRef = useRef<HTMLElement | null>(null);
+  const skipRef = useRef<HTMLButtonElement>(null);
   const isLast = step === STEPS.length - 1;
   const current = STEPS[step];
 
@@ -23,6 +25,14 @@ export default function TutorialOverlay({ onClose }: Props) {
     }
   };
 
+  useEffect(() => {
+    prevFocusRef.current = document.activeElement as HTMLElement;
+    skipRef.current?.focus();
+    return () => {
+      prevFocusRef.current?.focus();
+    };
+  }, []);
+
   const handleSkip = () => {
     setSeen('1');
     onClose();
@@ -31,7 +41,7 @@ export default function TutorialOverlay({ onClose }: Props) {
   return (
     <div className="tutorial-overlay" onClick={handleSkip} role="presentation">
       <div className="tutorial-card" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="tutorial-title">
-        <button className="tutorial-skip" onClick={handleSkip} aria-label="Pular tutorial">Pular ✕</button>
+        <button ref={skipRef} className="tutorial-skip" onClick={handleSkip} aria-label="Pular tutorial">Pular ✕</button>
         <div className="tutorial-icon" aria-hidden="true">{current.icon}</div>
         <div className="tutorial-title" id="tutorial-title">{current.title}</div>
         <div className="tutorial-body">{current.body}</div>

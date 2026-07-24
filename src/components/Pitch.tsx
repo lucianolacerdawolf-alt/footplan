@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, memo } from 'react';
 import type { Team, MatchEvent } from '../engine/types';
 import {
   buildBaseCoords,
@@ -27,6 +27,8 @@ interface Props {
   } | null;
   fatigueMap?: Record<string, number>;
   expelledIds?: string[];
+  /** No 2º tempo, os times trocam de lado — home ataca pra esquerda, away pra direita. */
+  isSecondHalf?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,7 +161,9 @@ function ballPos(
 // ---------------------------------------------------------------------------
 // Componente
 // ---------------------------------------------------------------------------
-export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused, isGoalPause, result, halftime, fatigueMap, expelledIds }: Props) {
+const Pitch = memo(function Pitch({ homeTeam: rawHome, awayTeam: rawAway, currentEvent, phase, paused, isGoalPause, result, halftime, fatigueMap, expelledIds, isSecondHalf = false }: Props) {
+  const homeTeam = isSecondHalf ? rawAway : rawHome;
+  const awayTeam = isSecondHalf ? rawHome : rawAway;
   const expelledSet = useMemo(() => new Set(expelledIds ?? []), [expelledIds]);
   // Coordenadas base — deliberadamente recalculadas só quando id/formação mudam
   // (evita resetar as posições dos jogadores quando morale/momentum/squad mudam).
@@ -552,4 +556,6 @@ export default function Pitch({ homeTeam, awayTeam, currentEvent, phase, paused,
       </div>
     </div>
   );
-}
+});
+
+export default Pitch;

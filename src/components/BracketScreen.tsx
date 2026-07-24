@@ -88,7 +88,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateOthers, on
     const userTeam = teamById(teams, userTeamId)!;
     const userWon = championId === userTeamId;
     return (
-      <div className={styles.screen}>
+      <div className={`${styles.screen} app-screen`}>
         <header className={styles.header}>
           <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
         </header>
@@ -151,7 +151,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateOthers, on
   };
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
         <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
         <div className={styles.headerCenter}>

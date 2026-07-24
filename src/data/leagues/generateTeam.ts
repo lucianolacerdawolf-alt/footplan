@@ -1,4 +1,4 @@
-import type { Team, Player, Strategy } from '../../engine/types';
+import type { Team, Player, Strategy } from '@/engine/types';
 
 const FIRST_NAMES = [
   'Marco', 'Luca', 'André', 'Diego', 'Hugo', 'Rui', 'Tiago', 'Nico', 'Pablo', 'Sergio',

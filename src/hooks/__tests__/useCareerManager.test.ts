@@ -2,8 +2,8 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCareerManager } from '../useCareerManager';
-import { makeTeam } from '../../components/__tests__/testFixtures';
-import { getLeague } from '../../data/leagues';
+import { makeTeam } from '@/components/__tests__/testFixtures';
+import { getLeague } from '@/data/leagues';
 
 // Node 22+'s built-in global `localStorage` shadows jsdom's window.localStorage
 // in vitest's jsdom environment (it's excluded from vitest's window-key copy

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { cloneTeam } from '../teamUtils';
-import type { Team } from '../../engine/types';
+import type { Team } from '@/engine/types';
 
 function makeTeam(fatigue = 0): Team {
   return {

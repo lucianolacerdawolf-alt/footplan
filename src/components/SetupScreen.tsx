@@ -4,8 +4,8 @@ import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 import { FORMATION_BONUS } from '../engine/matchConfig';
-import { TACTIC_PRESETS } from '../engine/tacticPresets';
 import TacticLabel from './TacticLabel';
+import TacticPresets from './shared/TacticPresets';
 import { useH2H } from '../hooks/useH2H';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import TutorialOverlay from './TutorialOverlay';
@@ -44,6 +44,7 @@ interface Props {
   onBack: () => void;
   lockAway?: boolean;
   isTacticsOnly?: boolean;
+  mode?: 'single' | 'league' | 'cup' | 'career' | 'online';
 }
 
 /** Move lesionados pro banco e promove substitutos saudaveis da mesma posicao */
@@ -88,7 +89,7 @@ function rebalanceSquad(team: Team, formation: Formation): Team {
 
 import { playerOvr } from '../utils/playerOvr';
 
-export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, isTacticsOnly }: Props) {
+export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, isTacticsOnly, mode }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
@@ -166,6 +167,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
               <div
                 key={p.id}
                 className={`squad-row starter ${isSelected ? 'selected' : ''} ${canSwap || (!selected && !locked) ? 'clickable' : ''}`}
+                role="button"
+                tabIndex={0}
                 onClick={() => {
                   if (locked) return;
                   if (selected) {
@@ -179,6 +182,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                     setSelected(p.id);
                   }
                 }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}
               >
                 <span className="sq-num">#{p.number}</span>
                 <span className="sq-name">{p.name}</span>
@@ -199,6 +203,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                 <div
                   key={p.id}
                   className={`squad-row bench ${isSelected ? 'selected' : ''} ${!locked ? 'clickable' : ''}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => {
                     if (locked) return;
                     if (selected && !selectedIsBench && team.squad[selectedIdx].position === p.position) {
@@ -208,6 +214,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                       setSelected(isSelected ? null : p.id);
                     }
                   }}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}
                 >
                   <span className="sq-num">#{p.number}</span>
                   <span className="sq-name">{p.name}</span>
@@ -249,31 +256,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
       <div className="setup-presets">
         <label>Táticas Predefinidas</label>
-        <div className="preset-buttons">
-          {TACTIC_PRESETS.map(preset => {
-            const isActive = team.strategy.mentality === preset.mentality
-              && team.strategy.intensity === preset.intensity
-              && team.strategy.defensiveLine === preset.defensiveLine
-              && team.strategy.width === preset.width;
-            return (
-              <button
-                key={preset.id}
-                type="button"
-                className={`preset-btn ${isActive ? 'active' : ''}`}
-                disabled={disabled}
-                onClick={() => onStrategy({
-                  ...team.strategy,
-                  mentality: preset.mentality,
-                  intensity: preset.intensity,
-                  defensiveLine: preset.defensiveLine,
-                  width: preset.width,
-                })}
-              >
-                {preset.icon} {preset.label}
-              </button>
-            );
-          })}
-        </div>
+        <TacticPresets onApply={onStrategy} currentStrategy={team.strategy} />
       </div>
 
       <div className="setup-controls">
@@ -318,7 +301,9 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
         <header className="app-header" style={{ flex: 1 }}>
           <h1>FootPlan</h1>
-          <p className="subtitle">Configuração Tática</p>
+          <p className="subtitle">
+            {mode === 'league' ? 'Campeonato' : mode === 'cup' ? 'Mata-mata' : mode === 'career' ? 'Modo Carreira' : mode === 'online' ? 'Online' : 'Configuração Tática'}
+          </p>
         </header>
         <button className="start-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
           {isTacticsOnly ? 'Confirmar Táticas ✓' : 'Iniciar Partida →'}

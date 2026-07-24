@@ -3,7 +3,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import LeagueScreen from '../LeagueScreen';
-import { generateLeagueSchedule, type LeagueState } from '../../engine/tournament';
+import { generateLeagueSchedule, type LeagueState } from '@/engine/tournament';
 import { makeLeague, testTeams } from './testFixtures';
 
 function makeState(): LeagueState {

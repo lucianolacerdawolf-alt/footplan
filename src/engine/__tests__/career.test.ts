@@ -13,7 +13,7 @@ import {
 } from '../career';
 import type { Player, Team } from '../types';
 import type { BracketState, BracketMatch } from '../tournament';
-import type { LeagueDefinition } from '../../data/leagues/types';
+import type { LeagueDefinition } from '@/data/leagues/types';
 
 function seededRng(seed: number): () => number {
   let s = seed >>> 0;

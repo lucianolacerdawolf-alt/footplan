@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { playerOvr } from '../playerOvr';
-import type { Player } from '../../engine/types';
+import type { Player } from '@/engine/types';
 
 function makePlayer(attrs: Partial<Player['attributes']> = {}, position: Player['position'] = 'MID'): Player {
   return {

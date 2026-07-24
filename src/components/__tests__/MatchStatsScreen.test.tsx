@@ -3,8 +3,8 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import MatchStatsScreen from '../MatchStatsScreen';
-import type { MatchResult, MatchEvent, TeamStats } from '../../engine/types';
-import type { MatchRecord } from '../../hooks/useMatchHistory';
+import type { MatchResult, MatchEvent, TeamStats } from '@/engine/types';
+import type { MatchRecord } from '@/hooks/useMatchHistory';
 import { testTeams } from './testFixtures';
 
 const [home, away] = testTeams;

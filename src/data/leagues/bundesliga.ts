@@ -1,5 +1,5 @@
 import type { LeagueDefinition } from './types';
-import type { Team, Player } from '../../engine/types';
+import type { Team, Player } from '@/engine/types';
 
 // ---------------------------------------------------------------------------
 // BUNDESLIGA 2024/25 — 18 times com elencos realistas

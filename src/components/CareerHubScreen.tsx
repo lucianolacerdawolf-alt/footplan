@@ -1,6 +1,8 @@
 import type { CareerState, CareerSeasonHistoryEntry } from '../engine/career';
 import type { LeagueDefinition } from '../data/leagues/types';
+import type { LeagueFixture } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
+import { getStageMatches } from '../engine/bracketHelpers';
 import styles from './CareerHubScreen.module.css';
 
 interface Props {
@@ -32,6 +34,56 @@ const CUP_RESULT_LABELS: Record<CareerSeasonHistoryEntry['cupResult'], string> =
   'not-played': 'Não disputada',
 };
 
+type NextMatch =
+  | { type: 'league'; fixture: LeagueFixture; homeName: string; awayName: string; round: number }
+  | { type: 'cup'; homeName: string; awayName: string; stage: string; stageLabel: string }
+  | null;
+
+function determineNextMatch(state: CareerState): NextMatch {
+  const { season } = state;
+  const { league, cup } = season;
+  const userId = league.userTeamId;
+
+  if (cup.stage !== 'champion') {
+    const stageMatches = getStageMatches(cup);
+    const userMatch = stageMatches.find(m =>
+      !m.played &&
+      (m.homeTeamId === userId || m.awayTeamId === userId)
+    );
+    if (userMatch) {
+      const homeTeam = cup.teams.find(t => t.id === userMatch.homeTeamId);
+      const awayTeam = cup.teams.find(t => t.id === userMatch.awayTeamId);
+      return {
+        type: 'cup',
+        homeName: homeTeam?.name ?? '???',
+        awayName: awayTeam?.name ?? '???',
+        stage: cup.stage,
+        stageLabel: CUP_STAGE_LABELS[cup.stage] ?? cup.stage,
+      };
+    }
+  }
+
+  if (league.phase !== 'done') {
+    const round = league.fixtures[league.currentRound];
+    const fixture = round.find(f =>
+      (f.homeTeamId === userId || f.awayTeamId === userId) && !f.played
+    );
+    if (fixture) {
+      const home = league.teams.find(t => t.id === fixture.homeTeamId);
+      const away = league.teams.find(t => t.id === fixture.awayTeamId);
+      return {
+        type: 'league',
+        fixture,
+        homeName: home?.name ?? '???',
+        awayName: away?.name ?? '???',
+        round: league.currentRound,
+      };
+    }
+  }
+
+  return null;
+}
+
 function reputationSign(delta: number): string {
   return delta > 0 ? '+' : '';
 }
@@ -45,12 +97,13 @@ export default function CareerHubScreen({ state, league, onViewLeague, onViewCup
   const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
   const history = [...state.history].reverse();
 
-  const leagueRound = state.season.league.fixtures[state.season.league.currentRound];
-  const hasNextMatch = state.season.league.phase !== 'done'
-    && leagueRound.some(f => (f.homeTeamId === state.season.league.userTeamId || f.awayTeamId === state.season.league.userTeamId) && !f.played);
+  const nextMatch = determineNextMatch(state);
+
+  const currentRound = state.season.league.currentRound;
+  const isWindowOpen = currentRound <= 4 || (currentRound >= 18 && currentRound <= 23);
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
         <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">
           ← Voltar
@@ -82,11 +135,30 @@ export default function CareerHubScreen({ state, league, onViewLeague, onViewCup
           <span className={styles.summaryLabel}>Trocas usadas</span>
           <span className={styles.summaryValue}>{tradesUsed}/3</span>
         </div>
+        <div className={styles.summaryRow}>
+          <span className={styles.summaryLabel}>Janela de transferências</span>
+          <span className={styles.summaryValue} style={{ color: isWindowOpen ? '#22c55e' : '#ef4444' }}>
+            {isWindowOpen ? 'Aberta' : 'Fechada'}
+          </span>
+        </div>
       </div>
 
-      {hasNextMatch && !seasonReady && (
-        <div className={styles.playRow}>
-          <button className={styles.playBtn} onClick={onPlayNext}>⚽ Jogar Rodada {state.season.league.currentRound + 1}</button>
+      {nextMatch && !seasonReady && (
+        <div className={styles.nextMatchCard}>
+          <div className={styles.nextMatchLabel}>
+            {nextMatch.type === 'cup' ? '🏆' : '📅'} Próxima Partida · {nextMatch.type === 'cup' ? `Copa (${nextMatch.stageLabel})` : `Liga (Rodada ${nextMatch.round + 1})`}
+          </div>
+          <div className={styles.nextMatchTeams}>
+            <strong>{nextMatch.homeName}</strong>
+            <span className={styles.nextMatchVs}>vs</span>
+            <strong>{nextMatch.awayName}</strong>
+          </div>
+          <button className={styles.playBtn} onClick={() => {
+            if (nextMatch.type === 'league') onPlayNext();
+            else onViewCup();
+          }}>
+            ⚽ Jogar
+          </button>
         </div>
       )}
 

@@ -25,5 +25,5 @@ export function playerOvr(p: Player): number {
     a.dribbling * (w.dribbling ?? 0) +
     a.vision * (w.vision ?? 0) +
     a.positioning * (w.positioning ?? 0);
-  return Math.round(sum / total);
+  return Math.min(99, Math.round(sum / total * 1.15 + 3));
 }

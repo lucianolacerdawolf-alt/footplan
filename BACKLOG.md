@@ -14,9 +14,11 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🏗️ Saúde do código
 
-### ✅ `App.tsx` — avaliado, não precisa mais de refactor grande
+### ✅ Auditoria 2024-07-24 — melhoria contínua (concluída)
 
-Uma tentativa anterior de refactor tinha sido descartada por risco alto sem ganho claro. Reavaliado de perto: o arquivo já foi bem decomposto em sessões anteriores — `screen`/`matchContext`/navegação centralizados em `useAppShell()`, e liga/copa/fluxo de jogo/online/resume cada um com hook dedicado (`useLeagueManager`, `useBracketManager`, `useGameFlow`, `useOnlineMatch`, `useResumePrompt`). Do que sobra (356 linhas), a maior parte é o `if/else` de roteamento entre telas (inerente a um app sem router) + um modal — não é mais um "god component". Extrair mais um hook por cima disso só moveria complexidade, não reduziria. Decisão: deixar como está.
+Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
+
+
 
 ---
 
@@ -60,3 +62,33 @@ Uma tentativa anterior de refactor tinha sido descartada por risco alto sem ganh
 - Tela pós-jogo completa (MOTM, notas, gols, cartões, breakdown tático)
 - Tutorial interativo, H2H detalhado, CPU varia tática por rodada e por liga
 - 220 testes automatizados (motor + sincronização de elenco + componentes UI)
+
+### ✅ Melhorias de código (auditoria 2024-07-24) — parte 2
+
+- **Path aliases `@/`**: configurado em `tsconfig.app.json`, `vite.config.ts`, `vitest.config.ts`. 40 imports atualizados de `../../../` para `@/`
+- **TacticPresets + TacticEditor integrados**: `MatchScreen.tsx` (-71 linhas), `SetupScreen.tsx` (-53 linhas), `HalftimePanel.tsx` (-48 linhas). Total: -172 linhas de duplicação
+- **Momentum visual**: barras coloridas no placar que pulsan com o momentum de cada time (lê de `engineStateRef.current.momentumHome`/`momentumAway`)
+- **OnlineLobbyScreen CSS Module**: ~30 inline styles migrados para `OnlineLobbyScreen.module.css` — classes como `.roomCodeBadge`, `.teamCard`, `.connectBtn`, `.tacticsPanel`
+- **CSS do momentum**: classes `.momentum-indicator`, `.momentum-track`, `.momentum-bar` em App.css com transições e animação de glow
+- **`range()` doc corrigido**: documentação dizia `[min, max]` inclusivo, código sempre foi `[min, max)` exclusivo
+- **`getGoalkeeper()` sem crash**: retorna `Player | null` em vez de estourar com `!` se não houver GK. Todos os 5 callers tratam null seguramente
+- **`MatchResult.halftimeHomeScore` / `halftimeAwayScore`**: campos tipados no resultado em vez de parse frágil de string de narração. `achievements.ts` parou de depender do formato exato do texto em português
+- **`App.tsx` refatorado**: 273 linhas de `if/else` substituídas por mapa declarativo `Record<Screen, ScreenRenderer>` em `src/components/AppScreens.tsx`. App.tsx de 602→344 linhas (-43%)
+- **Tipos centralizados**: `Screen`, `MatchContext`, `TournamentMode` em `src/types/navigation.ts` — removidos de 7 hooks duplicados. `useOnlineMatch.ts` tinha versão defasada sem as telas de carreira
+- **`src/engine/morale.ts`**: cálculo de moral extraído de 2 hooks duplicados (`useLeagueManager`, `useCareerManager`)
+- **`src/engine/bracketHelpers.ts`**: `getStageMatches()` + `updateStageMatch()` substituem 6 blocos if/else duplicados nos hooks de bracket. `useBracketManager` -18 linhas, `useCareerManager` -30 linhas
+- **Componentes compartilhados**: `TeamSlot`, `SquadList`, `TacticEditor`, `TacticPresets` em `src/components/shared/` — prontos para uso nos componentes existentes
+- **`getAvgOvr()`**: removido de 4 componentes, centralizado em `utils/teamUtils.ts`
+- **`useLiveRoster`**: reseta `lastError` antes de cada sync + bloco `catch` para exceções não-tratadas
+- **`useAchievements`**: usa `setData(prev => ...)` funcional para evitar race condition em avaliações rápidas
+- **`MatchStatsScreen`**: `useMemo` em `calculateRatings`, `manOfTheMatch`, `goalScorers`, `cardEvents`, `topPerformers`
+- **`usePeerConnection`**: timeout de 15s com mensagem "Tempo limite de conexão" — evita estado "conectando" eterno
+- **`TutorialOverlay`**: focus trap — foca botão "Pular" ao abrir, restaura foco ao fechar
+- **Acessibilidade**: `role="button"`, `tabIndex={0}`, `onKeyDown` (Enter/Space) em 10+ divs interativos (squad-row, select-slot)
+- **`Pitch.tsx`**: `React.memo` no componente SVG mais caro do app (22+ jogadores + animação)
+- **`LeagueScreen`**: stats da temporada em `useMemo` em vez de IIFE no render
+- **`steering.ts`**: `Record<Position, number>` substitui `Record<string, number>`; `determineState` usa `MatchEvent['type']` em vez de `string`
+- **`btnGlow`**: anima `opacity` (GPU-composited) em vez de `box-shadow` (repaint)
+- **Tactical counter**: condição `high-line` reordenada antes de `high-press` — bônus 1.22 não é mais shadowado pelo 1.18
+- **`simulateRegulationTime()`**: helper extraído do boilerplate "run two halves" duplicado em `simularPartidaRapida` e `simularKnockout`
+- **`progressPlayer`**: preserva proporções de atributos ao envelhecer (escala existentes em vez de regenerar do zero)

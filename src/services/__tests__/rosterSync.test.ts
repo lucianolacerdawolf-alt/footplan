@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { syncLeagueRoster, clearRosterCache } from '../rosterSync';
-import type { LeagueDefinition } from '../../data/leagues/types';
-import type { Team } from '../../engine/types';
+import type { LeagueDefinition } from '@/data/leagues/types';
+import type { Team } from '@/engine/types';
 
 function makePlayer(id: string, name: string, position: Team['squad'][number]['position'], number: number, ovr = 75): Team['squad'][number] {
   return {

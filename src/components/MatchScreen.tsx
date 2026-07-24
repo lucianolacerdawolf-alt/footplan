@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn, Player } from '../engine/types';
+import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn, Player, PenaltyResult } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
-import { TACTIC_PRESETS } from '../engine/tacticPresets';
 import TacticLabel from './TacticLabel';
+import TacticPresets from './shared/TacticPresets';
 import type { SubWindow, LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchState } from '../utils/liveMatchPersistence';
 
@@ -23,6 +23,7 @@ interface OnlineProps {
   isHost: boolean;
   send: (data: unknown) => void;
   setOnData: (handler: ((data: unknown) => void) | null) => void;
+  peerConnected: boolean;
 }
 
 type MatchSyncMsg =
@@ -58,12 +59,15 @@ function renderFormationDots(formation: string, side: 'home' | 'away', color: st
       fill={p.pos === 'GK' ? '#facc15' : color} opacity={0.85} />
   ));
 }
-import { resolveKnockoutTiebreak } from '../engine/matchEngine';
-import { useMatchSimulation, getSubWindow } from '../hooks/useMatchSimulation';
+import { resolveKnockoutExtraTime, getShooters, buildMatchResult, type MatchState } from '../engine/matchEngine';
+import { useMatchSimulation, getSubWindow, HALF_SECONDS } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
 import CommentaryFeed from './CommentaryFeed';
 import Pitch from './Pitch';
 import { playerOvr } from '../utils/playerOvr';
+import TopBar from './MatchScreen/TopBar';
+import HalftimePanel from './MatchScreen/HalftimePanel';
+import PenaltyShootoutOverlay from './MatchScreen/PenaltyShootoutOverlay';
 
 interface Props {
   homeTeam: Team;
@@ -78,6 +82,8 @@ interface Props {
   /** 'regular'|'league'|'bracket'|'online' — só partidas 'regular' são persistidas
    *  (ver comentário na seção de persistência mais abaixo). */
   matchContext?: 'regular' | 'league' | 'bracket' | 'online';
+  /** Qual lado o usuário controla em modos league/bracket (home ou away da partida). */
+  userSide?: 'home' | 'away';
   /** Snapshot de uma partida salva (F5) pra restaurar em vez de começar do zero. */
   resumeSnapshot?: LiveMatchSnapshot | null;
   /** Chamado uma vez, logo após consumir o resumeSnapshot no mount — o App usa isso
@@ -85,7 +91,7 @@ interface Props {
   onResumeConsumed?: () => void;
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, resumeSnapshot, onResumeConsumed }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed }: Props) {
   const [home, setHome] = useState<Team>(() => {
     if (resumeSnapshot) return resumeSnapshot.home;
     const t = cloneTeam(initialHome);
@@ -276,6 +282,36 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     }
   }, [pausesRemaining, consumePause, online, sendPauseGame]);
 
+  const handleBack = useCallback(() => {
+    if (matchContext === 'regular') clearLiveMatch();
+    onBack();
+  }, [matchContext, onBack]);
+
+  const handlePenaltyComplete = useCallback((penaltyResult: PenaltyResult) => {
+    setShowPenaltyShootout(false);
+    const { home: h, away: a, state, result: storedResult } = penaltyStateRef.current;
+    if (!h || !a || !state || !storedResult) return;
+    const winner = penaltyResult.winner === 'home' ? h : a;
+    const enriched: MatchResult = {
+      ...storedResult,
+      homeScore: state.homeScore,
+      awayScore: state.awayScore,
+      wentToExtraTime: true,
+      extraTimeHomeScore: state.homeScore - storedResult.homeScore,
+      extraTimeAwayScore: state.awayScore - storedResult.awayScore,
+      penaltyResult,
+      winner,
+    };
+    addMatch(enriched);
+    setKnockoutResult(enriched);
+  }, [addMatch]);
+
+  const handleTopBarResumeReplay = useCallback(() => {
+    resumeReplay(home, away);
+  }, [resumeReplay, home, away]);
+
+  const handleTopBarConsumePause = useCallback(() => { consumePause(); }, [consumePause]);
+
   const showSubToast = (outName: string, inName: string) => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setSubToast(`↕ ${inName} entra · ${outName} sai`);
@@ -316,6 +352,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   const knockoutResolvedRef = useRef(false);
   const [knockoutResult, setKnockoutResult] = useState<MatchResult | null>(null);
+  const [showPenaltyShootout, setShowPenaltyShootout] = useState(false);
+  const penaltyStateRef = useRef<{
+    home: Team; away: Team; state: MatchState | null; result: MatchResult | null;
+  }>({ home: initialHome, away: initialAway, state: null, result: null });
 
   // Refs pra capturar estado atual sem disparar o effect quando mudam
   const homeRef = useRef(home);
@@ -341,22 +381,28 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     }
 
     const state = engineStateRef.current!;
-    const tiebreak = resolveKnockoutTiebreak(cloneTeam(h), cloneTeam(a), state);
-    const winner = tiebreak.penaltyResult
-      ? (tiebreak.penaltyResult.winner === 'home' ? h : a)
-      : (state.homeScore > state.awayScore ? h : a);
-    const enriched: MatchResult = {
-      ...result,
-      homeScore: state.homeScore,
-      awayScore: state.awayScore,
-      wentToExtraTime: tiebreak.wentToExtraTime,
-      extraTimeHomeScore: tiebreak.extraTimeHomeScore,
-      extraTimeAwayScore: tiebreak.extraTimeAwayScore,
-      penaltyResult: tiebreak.penaltyResult,
-      winner,
-    };
-    addMatch(enriched);
-    setKnockoutResult(enriched);
+    const clonedHome = cloneTeam(h);
+    const clonedAway = cloneTeam(a);
+    const extraTimeResult = resolveKnockoutExtraTime(clonedHome, clonedAway, state);
+
+    if (!extraTimeResult.tiedAfterET) {
+      const winner = state.homeScore > state.awayScore ? h : a;
+      const enriched: MatchResult = {
+        ...result,
+        homeScore: state.homeScore,
+        awayScore: state.awayScore,
+        wentToExtraTime: extraTimeResult.wentToExtraTime,
+        extraTimeHomeScore: extraTimeResult.extraTimeHomeScore,
+        extraTimeAwayScore: extraTimeResult.extraTimeAwayScore,
+        winner,
+      };
+      addMatch(enriched);
+      setKnockoutResult(enriched);
+      return;
+    }
+
+    penaltyStateRef.current = { home: clonedHome, away: clonedAway, state, result };
+    setShowPenaltyShootout(true);
   }, [phase, result, addMatch, engineStateRef]);
 
   // Persistência de sessão — salva a partida ao vivo pra sobreviver a um F5. Escopo
@@ -406,33 +452,6 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     if (online) syncStrategy('away', s);
   };
 
-  const renderPresetButtons = (team: Team, onStrategy: (s: Strategy) => void) => (
-    <div className="preset-buttons">
-      {TACTIC_PRESETS.map(preset => {
-        const isActive = team.strategy.mentality === preset.mentality
-          && team.strategy.intensity === preset.intensity
-          && team.strategy.defensiveLine === preset.defensiveLine
-          && team.strategy.width === preset.width;
-        return (
-          <button
-            key={preset.id}
-            type="button"
-            className={`preset-btn ${isActive ? 'active' : ''}`}
-            onClick={() => onStrategy({
-              ...team.strategy,
-              mentality: preset.mentality,
-              intensity: preset.intensity,
-              defensiveLine: preset.defensiveLine,
-              width: preset.width,
-            })}
-          >
-            {preset.icon} {preset.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-
   const pitchResult = (showOverlay && result) ? {
     homeScore: result.homeScore, awayScore: result.awayScore,
     homePossession: result.homePossession, awayPossession: result.awayPossession,
@@ -440,46 +459,27 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     goals: result.events.filter(e => e.type === 'goal').length,
   } : null;
 
+  const isSecondHalf = started && clockSeconds >= HALF_SECONDS && phase === 'simulating';
+
   return (
     <div className="match-screen">
       {/* Topbar */}
-      <header className="match-topbar">
-        <button className="back-btn" onClick={() => { if (matchContext === 'regular') clearLiveMatch(); onBack(); }} disabled={simulating && !paused}>
-          &larr; Voltar
-        </button>
-        <span className="match-title">{home.abbreviation} vs {away.abbreviation}</span>
-        <span className="match-formations">{home.strategy.formation} x {away.strategy.formation}</span>
-        <div className="speed-control" role="group" aria-label="Velocidade do replay">
-          {phase === 'simulating' && started && !online && (
-            <button
-              className="speed-btn"
-              onClick={paused ? () => resumeReplay(home, away) : (pausesRemaining > 0 ? () => { consumePause(); } : undefined)}
-              disabled={pausesRemaining <= 0 && !paused}
-              title={paused ? 'Retomar' : pausesRemaining > 0 ? `Pausar (${pausesRemaining} restante${pausesRemaining > 1 ? 's' : ''})` : 'Pausas esgotadas'}
-              aria-label={paused ? 'Retomar replay' : 'Pausar replay'}
-            >{paused ? '▶' : `⏸ ${pausesRemaining}`}</button>
-          )}
-          {phase === 'simulating' && started && online && (
-            <button
-              className="speed-btn"
-              onClick={paused ? undefined : handleOnlinePause}
-              disabled={pausesRemaining <= 0 && !paused}
-              title={pausesRemaining > 0 ? `Pausar (${pausesRemaining} restante${pausesRemaining > 1 ? 's' : ''})` : 'Pausas esgotadas'}
-              aria-label={pausesRemaining > 0 ? 'Pausar jogo' : 'Pausas esgotadas'}
-            >⏸ {pausesRemaining}</button>
-          )}
-          {[1, 2, 3, 4].map(s => (
-            <button
-              key={s}
-              className={`speed-btn ${speed === s ? 'active' : ''}`}
-              onClick={() => setSpeed(s)}
-              title={`Velocidade ${s}x`}
-              aria-label={`Velocidade ${s}x`}
-              aria-pressed={speed === s}
-            >{s}x</button>
-          ))}
-        </div>
-      </header>
+      <TopBar
+        home={home}
+        away={away}
+        onBack={handleBack}
+        simulating={simulating}
+        paused={paused}
+        phase={phase}
+        started={started}
+        online={!!online}
+        speed={speed}
+        setSpeed={setSpeed}
+        pausesRemaining={pausesRemaining}
+        onConsumePause={handleTopBarConsumePause}
+        onResumeReplay={handleTopBarResumeReplay}
+        onOnlinePause={handleOnlinePause}
+      />
 
       {/* Placar + Tempo */}
       <div className="match-scorebar">
@@ -496,6 +496,26 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           <span className="score-label" style={{ color: away.color }}>{away.abbreviation}</span>
         </div>
       </div>
+
+      {/* Momentum indicator */}
+      {started && engineStateRef.current && (
+        <div className="momentum-indicator">
+          <div className="momentum-track">
+            <div className="momentum-bar" style={{
+              width: `${Math.min(100, Math.max(0, engineStateRef.current.momentumHome))}%`,
+              background: home.color,
+              boxShadow: `0 0 ${4 + engineStateRef.current.momentumHome * 0.08}px ${home.color}`,
+            }} />
+          </div>
+          <div className="momentum-track momentum-track-away">
+            <div className="momentum-bar" style={{
+              width: `${Math.min(100, Math.max(0, engineStateRef.current.momentumAway))}%`,
+              background: away.color,
+              boxShadow: `0 0 ${4 + engineStateRef.current.momentumAway * 0.08}px ${away.color}`,
+            }} />
+          </div>
+        </div>
+      )}
 
       {/* Barra de posse ao vivo */}
       {started && (() => {
@@ -579,218 +599,41 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             halftime={phase === 'halftime' ? { homeScore, awayScore } : null}
             fatigueMap={fatigueMap}
             expelledIds={expelledIds}
+            isSecondHalf={isSecondHalf}
           />
 
           {/* Intervalo */}
           {phase === 'halftime' && (
-            <div className="halftime-overlay">
-              <div className="halftime-inner">
-                <div className="halftime-title">Intervalo</div>
-
-                {/* Mini-stats do 1º tempo */}
-                {(() => {
-                  const htEvents = replayEvents;
-                  const hShots = htEvents.filter(e => ['goal','miss','post','save'].includes(e.type) && (e.type === 'save' ? e.teamId !== initialHome.id : e.teamId === initialHome.id)).length;
-                  const aShots = htEvents.filter(e => ['goal','miss','post','save'].includes(e.type) && (e.type === 'save' ? e.teamId !== initialAway.id : e.teamId === initialAway.id)).length;
-                  const hSoT = htEvents.filter(e => (e.type === 'goal' && e.teamId === initialHome.id) || (e.type === 'save' && e.teamId !== initialHome.id)).length;
-                  const aSoT = htEvents.filter(e => (e.type === 'goal' && e.teamId === initialAway.id) || (e.type === 'save' && e.teamId !== initialAway.id)).length;
-                  const totalPoss = htEvents.filter(e => e.type === 'possession').length;
-                  const homePoss = htEvents.filter(e => e.type === 'possession' && e.teamId === initialHome.id).length;
-                  const homePct = totalPoss > 0 ? Math.round((homePoss / totalPoss) * 100) : 50;
-                  return (
-                    <div className="ht-mini-stats">
-                      <div className="ht-stat-row"><span style={{ color: home.color }}>{hShots}</span><span className="ht-stat-label">Finalizações</span><span style={{ color: away.color }}>{aShots}</span></div>
-                      <div className="ht-stat-row"><span style={{ color: home.color }}>{hSoT}</span><span className="ht-stat-label">No Alvo</span><span style={{ color: away.color }}>{aSoT}</span></div>
-                      <div className="ht-stat-row"><span style={{ color: home.color }}>{homePct}%</span><span className="ht-stat-label">Posse de Bola</span><span style={{ color: away.color }}>{100 - homePct}%</span></div>
-                    </div>
-                  );
-                })()}
-
-                {online ? (
-                  // Online: only own team's tactics
-                  <div className="halftime-teams" style={{ justifyContent: 'center' }}>
-                    <div className="halftime-team">
-                      <strong style={{ color: online.isHost ? home.color : away.color }}>
-                        {online.isHost ? home.abbreviation : away.abbreviation} (Você)
-                      </strong>
-                      {online.isHost ? <>
-                        {renderPresetButtons(home, updateHome)}
-                        <TacticLabel tacticKey="formation" />
-                        <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
-                        <TacticLabel tacticKey="mentality" />
-                        <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
-                        <TacticLabel tacticKey="intensity" />
-                        <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
-                        <TacticLabel tacticKey="defensiveLine" />
-                        <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
-                        <TacticLabel tacticKey="width" />
-                        <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
-                      </> : <>
-                        {renderPresetButtons(away, updateAway)}
-                        <TacticLabel tacticKey="formation" />
-                        <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
-                        <TacticLabel tacticKey="mentality" />
-                        <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
-                        <TacticLabel tacticKey="intensity" />
-                        <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
-                        <TacticLabel tacticKey="defensiveLine" />
-                        <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
-                        <TacticLabel tacticKey="width" />
-                        <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
-                      </>}
-                    </div>
-                  </div>
-                ) : (
-                  // Offline: both teams
-                  <div className="halftime-teams">
-                    <div className="halftime-team">
-                      <strong style={{ color: home.color }}>{home.abbreviation}</strong>
-                      {renderPresetButtons(home, updateHome)}
-                      <TacticLabel tacticKey="formation" />
-                      <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
-                      <TacticLabel tacticKey="mentality" />
-                      <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
-                      <TacticLabel tacticKey="intensity" />
-                      <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
-                      <TacticLabel tacticKey="defensiveLine" />
-                      <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
-                      <TacticLabel tacticKey="width" />
-                      <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
-                    </div>
-                    <span className="halftime-vs">vs</span>
-                    <div className="halftime-team">
-                      <strong style={{ color: away.secondaryColor }}>{away.abbreviation}</strong>
-                      {renderPresetButtons(away, updateAway)}
-                      <TacticLabel tacticKey="formation" />
-                      <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>{FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}</select>
-                      <TacticLabel tacticKey="mentality" />
-                      <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>{MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}</select>
-                      <TacticLabel tacticKey="intensity" />
-                      <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>{INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}</select>
-                      <TacticLabel tacticKey="defensiveLine" />
-                      <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>{DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}</select>
-                      <TacticLabel tacticKey="width" />
-                      <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>{WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}</select>
-                    </div>
-                  </div>
-                )}
-
-                {/* Substituições */}
-                <details className="ht-squad-details">
-                  <summary>
-                    {online
-                      ? <>Substituições · <span style={{ color: online.isHost ? home.color : away.color }}>{online.isHost ? home.abbreviation : away.abbreviation} {online.isHost ? subsHome : subsAway}/{MAX_SUBS}</span>
-                          <span className="sub-window-breakdown"> ({formatSubWindows(online.isHost ? subWindowsHome : subWindowsAway)})</span></>
-                      : <>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
-                          <span className="sub-window-breakdown"> ({formatSubWindows(subWindowsHome)} / {formatSubWindows(subWindowsAway)})</span></>
-                    }
-                  </summary>
-                  <div className="ht-squad-grid">
-                    {(online
-                      ? [online.isHost
-                          ? ['home', home, setHome, htHomePick, setHtHomePick, true] as const
-                          : ['away', away, setAway, htAwayPick, setHtAwayPick, true] as const]
-                      : [
-                          ['home', home, setHome, htHomePick, setHtHomePick, true],
-                          ['away', away, setAway, htAwayPick, setHtAwayPick, true],
-                        ] as const
-                    ).map(([side, team, setTeam, pick, setPick, canEdit]) => {
-                      const benchPlayers = team.squad.slice(11);
-                      const starters = team.squad.slice(0, 11);
-                      const pickIdx = team.squad.findIndex(sp => sp.id === pick);
-                      const pickIsBench = pickIdx >= 11;
-                      const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
-                      return (
-                        <div key={side} className="ht-squad-col">
-                          <strong style={{ color: side === 'home' ? home.color : away.color, fontSize: 11 }}>
-                            {side === 'home' ? home.abbreviation : away.abbreviation} {!canEdit ? '(adversário)' : ''}
-                          </strong>
-                          <div className="ht-sub-group-label">Titulares</div>
-                          {starters.map((p, i) => {
-                            const isPicked = p.id === pick;
-                            const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
-                            const fatigue = fatigueMap?.[p.id] ?? p.currentFatigue;
-                            const effOvr = Math.round(playerOvr(p) * (1 - fatigue / 200));
-                            const fatigueColor = fatigue > 70 ? '#ef4444' : fatigue > 45 ? '#f59e0b' : '#22c55e';
-                            return (
-                              <div key={p.id}
-                                className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap && canEdit ? 'clickable' : ''}`}
-                                onClick={() => {
-                                  if (!canEdit) return;
-                                  if (pick && pickIsBench && team.squad[pickIdx].position === p.position) {
-                                    swapSquad(team, setTeam, pickIdx, i, side);
-                                    setPick(null);
-                                  } else {
-                                    setPick(isPicked ? null : p.id);
-                                  }
-                                }}>
-                                <span className="sq-num">#{p.number}</span>
-                                <span className="sq-name">{p.name}</span>
-                                <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                <span className="sq-ovr">
-                                  {playerOvr(p)}
-                                  {fatigue > 20 && <span style={{ color: fatigueColor, fontSize: 9, marginLeft: 3 }}>▶{effOvr}</span>}
-                                </span>
-                              </div>
-                            );
-                          })}
-                          <div className="ht-sub-group-label">Reservas</div>
-                          {benchPlayers.map((p) => {
-                            const isPicked = p.id === pick;
-                            const bi = team.squad.findIndex(sp => sp.id === p.id);
-                            const benchFatigue = p.currentFatigue;
-                            const benchEffOvr = Math.round(playerOvr(p) * (1 - benchFatigue / 200));
-                            return (
-                              <div key={p.id}
-                                className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
-                                onClick={() => {
-                                  if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
-                                    swapSquad(team, setTeam, pickIdx, bi, side);
-                                    setPick(null);
-                                  } else {
-                                    setPick(isPicked ? null : p.id);
-                                  }
-                                }}>
-                                <span className="sq-num">#{p.number}</span>
-                                <span className="sq-name">{p.name}</span>
-                                <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                <span className="sq-ovr">
-                                  {playerOvr(p)}
-                                  {benchFatigue > 20 && <span style={{ color: '#22c55e', fontSize: 9, marginLeft: 3 }}>▶{benchEffOvr}</span>}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </details>
-
-                {subToast && (
-                  <div className="sub-toast">{subToast}</div>
-                )}
-
-                {online ? (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center' }}>
-                    <button className="simulate-btn" onClick={sendReadyHalftime} disabled={online.isHost ? hostReady : guestReady}>
-                      {online.isHost
-                        ? (hostReady ? (guestReady ? 'Iniciar 2º Tempo...' : 'Aguardando oponente...') : 'Pronto')
-                        : (guestReady ? (hostReady ? 'Iniciar 2º Tempo...' : 'Aguardando oponente...') : 'Pronto')}
-                    </button>
-                    <span style={{ fontSize: 11, opacity: 0.6 }}>
-                      {online.isHost
-                        ? (hostReady ? (guestReady ? '✓ Ambos prontos' : '✓ Você · Aguardando visitante') : 'Clique em Pronto')
-                        : (guestReady ? (hostReady ? '✓ Ambos prontos' : '✓ Você · Aguardando host') : 'Clique em Pronto')}
-                    </span>
-                  </div>
-                ) : (
-                  <button className="simulate-btn" onClick={() => runSecondHalf(home, away)}>
-                    Iniciar 2º Tempo
-                  </button>
-                )}
-              </div>
-            </div>
+            <HalftimePanel
+              home={home}
+              away={away}
+              setHome={setHome}
+              setAway={setAway}
+              updateHome={updateHome}
+              updateAway={updateAway}
+              replayEvents={replayEvents}
+              initialHome={initialHome}
+              initialAway={initialAway}
+              online={online ? { isHost: online.isHost } : undefined}
+              hostReady={hostReady}
+              guestReady={guestReady}
+              sendReadyHalftime={sendReadyHalftime}
+              subsHome={subsHome}
+              subsAway={subsAway}
+              subWindowsHome={subWindowsHome}
+              subWindowsAway={subWindowsAway}
+              htHomePick={htHomePick}
+              htAwayPick={htAwayPick}
+              setHtHomePick={setHtHomePick}
+              setHtAwayPick={setHtAwayPick}
+              swapSquad={swapSquad}
+              fatigueMap={fatigueMap}
+              MAX_SUBS={MAX_SUBS}
+              runSecondHalf={runSecondHalf}
+              subToast={subToast}
+              matchContext={matchContext}
+              userSide={userSide}
+            />
           )}
 
           {/* Goal celebration overlay */}
@@ -845,6 +688,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                 <div key={p.id}
                                   className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
                                   style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
+                                  role="button"
+                                  tabIndex={0}
                                   onClick={() => {
                                     if (isInjured && pick && pickIsBench && team.squad[pickIdx].position === p.position) {
                                       swapSquad(team, setTeam, pickIdx, i, side);
@@ -856,7 +701,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                     } else {
                                       setPick(isPicked ? null : p.id);
                                     }
-                                  }}>
+                                  }}
+                                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
                                   <span className="sq-num">#{p.number}</span>
                                   <span className="sq-name">{p.name}</span>
                                   <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -871,6 +717,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                               return (
                                 <div key={p.id}
                                   className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+                                  role="button"
+                                  tabIndex={0}
                                   onClick={() => {
                                     if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
                                       swapSquad(team, setTeam, pickIdx, bi, side);
@@ -878,7 +726,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                     } else {
                                       setPick(isPicked ? null : p.id);
                                     }
-                                  }}>
+                                  }}
+                                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
                                   <span className="sq-num">#{p.number}</span>
                                   <span className="sq-name">{p.name}</span>
                                   <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -930,7 +779,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     <div className="halftime-team" style={{ marginBottom: 8 }}>
                       {!showOpponent ? (
                         <>
-                          {renderPresetButtons(home, updateHome)}
+                          <TacticPresets onApply={updateHome} currentStrategy={home.strategy} />
                           <TacticLabel tacticKey="formation" />
                           <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>
                             {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
@@ -954,7 +803,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                         </>
                       ) : (
                         <>
-                          {renderPresetButtons(away, updateAway)}
+                          <TacticPresets onApply={updateAway} currentStrategy={away.strategy} />
                           <TacticLabel tacticKey="formation" />
                           <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>
                             {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
@@ -1012,6 +861,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                   <div key={p.id}
                                     className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
                                     style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={() => {
                                       if (isInjured && pick && pickIsBench && team.squad[pickIdx].position === p.position) {
                                         swapSquad(team, setTeam, pickIdx, i, side);
@@ -1023,7 +874,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                       } else {
                                         setPick(isPicked ? null : p.id);
                                       }
-                                    }}>
+                                    }}
+                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
                                     <span className="sq-num">#{p.number}</span>
                                     <span className="sq-name">{p.name}</span>
                                     <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -1043,6 +895,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                 return (
                                   <div key={p.id}
                                     className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={() => {
                                       if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
                                         swapSquad(team, setTeam, pickIdx, bi, side);
@@ -1050,7 +904,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                       } else {
                                         setPick(isPicked ? null : p.id);
                                       }
-                                    }}>
+                                    }}
+                                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
                                     <span className="sq-num">#{p.number}</span>
                                     <span className="sq-name">{p.name}</span>
                                     <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -1106,6 +961,66 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       </div>
 
       <CommentaryFeed events={replayEvents} homeTeamId={initialHome.id} />
+
+      {online && !online.peerConnected && started && phase !== 'done' && (
+        <div className="penalty-overlay">
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔌</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-h)', marginBottom: 8 }}>
+              Adversário desconectou
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24 }}>
+              Vitória por W.O. — o resultado atual será mantido
+            </div>
+            <button
+              className="simulate-btn"
+              onClick={() => {
+                if (engineStateRef.current) {
+                  const result = buildMatchResult(home, away, engineStateRef.current);
+                  addMatch(result);
+                  onViewStats(result);
+                }
+              }}
+            >
+              Continuar →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {online && !online.peerConnected && !started && (
+        <div className="penalty-overlay">
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>🔌</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--text-h)', marginBottom: 8 }}>
+              Adversário desconectou
+            </div>
+            <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24 }}>
+              A partida ainda não havia começado
+            </div>
+            <button className="start-btn" onClick={handleBack}>
+              Voltar ao Lobby
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showPenaltyShootout && penaltyStateRef.current.state && (() => {
+        const { home: pHome, away: pAway, state: pState } = penaltyStateRef.current;
+        if (!pState) return null;
+        const homeShooters = getShooters(pHome, pState.cards, pState.injured);
+        const awayShooters = getShooters(pAway, pState.cards, pState.injured);
+        return (
+          <PenaltyShootoutOverlay
+            homeTeam={pHome}
+            awayTeam={pAway}
+            userIsHome
+            homeShooters={homeShooters}
+            awayShooters={awayShooters}
+            onComplete={handlePenaltyComplete}
+          />
+        );
+      })()}
     </div>
   );
 }

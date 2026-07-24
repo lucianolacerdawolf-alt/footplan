@@ -127,7 +127,7 @@ describe('achievements', () => {
     const events: MatchEvent[] = [
       { minute: 45, type: 'halftime', description: '⏸️ Fim do primeiro tempo! Times com vantagem do visitante por 1x0.', teamId: null },
     ];
-    const result = makeResult(home, away, 2, 1, events);
+    const result = { ...makeResult(home, away, 2, 1, events), halftimeHomeScore: 0, halftimeAwayScore: 1 };
     const ctx = makeCtx({ result, userTeamId: home.id });
     const unlocked = checkAchievements(ctx);
     expect(unlocked.find(a => a.id === 'comeback')).toBeDefined();
@@ -137,7 +137,7 @@ describe('achievements', () => {
     const events: MatchEvent[] = [
       { minute: 45, type: 'halftime', description: '⏸️ Fim do primeiro tempo! Times com vantagem do mandante por 1x0.', teamId: null },
     ];
-    const result = makeResult(home, away, 2, 0, events);
+    const result = { ...makeResult(home, away, 2, 0, events), halftimeHomeScore: 1, halftimeAwayScore: 0 };
     const ctx = makeCtx({ result, userTeamId: home.id });
     const unlocked = checkAchievements(ctx);
     expect(unlocked.find(a => a.id === 'comeback')).toBeUndefined();

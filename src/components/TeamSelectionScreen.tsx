@@ -1,6 +1,5 @@
 import type { Team } from '../engine/types';
-import { cloneTeam } from '../utils/teamUtils';
-import { playerOvr } from '../utils/playerOvr';
+import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 
 export type GameMode = 'cpu' | 'player';
@@ -61,11 +60,6 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
     onConfirm(h, a, mode);
   };
 
-  const getAvgOvr = (team: Team) => {
-    const starters = team.squad.slice(0, 11);
-    return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
-  };
-
   const renderSlot = (
     team: Team | null,
     uniform: Uniform,
@@ -77,10 +71,13 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
     const bg = team ? color + '12' : undefined;
     return (
       <div className={`select-slot ${side}-slot ${team ? 'filled' : ''}`}
+           role={team ? 'button' : undefined}
+           tabIndex={team ? 0 : undefined}
            onClick={team ? () => {
              if (side === 'home') setHomeId(null);
              else setAwayId(null);
            } : undefined}
+           onKeyDown={team ? e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } } : undefined}
            style={team ? { borderColor: color, background: bg } : undefined}>
         {team ? (
           <>

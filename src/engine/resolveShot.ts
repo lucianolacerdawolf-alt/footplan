@@ -15,6 +15,7 @@ export function resolveShot(
   const rng = makeRng(random);
   const modAtk = MENTALITY_MODIFIERS[attackingStrategy];
   const gk = getGoalkeeper(getStarters(defendingTeam, cards));
+  if (!gk) return { result: 'goal', scorer: attacker, goalkeeper: attacker };
   const gkFatigue = fatigueDef.get(gk.id) ?? 0;
   const atkFatigue = fatigueAtk.get(attacker.id) ?? 0;
 

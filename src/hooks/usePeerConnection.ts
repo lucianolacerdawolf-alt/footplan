@@ -26,6 +26,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
   const onDataRef = useRef<((data: unknown) => void) | null>(null);
+  const timeoutRef = useRef<number>(0);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -34,6 +35,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
   }, []);
 
   const cleanup = useCallback(() => {
+    if (timeoutRef.current) { window.clearTimeout(timeoutRef.current); timeoutRef.current = 0; }
     if (connRef.current) {
       try { connRef.current.close(); } catch { /* noop */ }
       connRef.current = null;
@@ -52,6 +54,12 @@ export function usePeerConnection(): UsePeerConnectionReturn {
     setError(null);
     setState('connecting');
     setIsHost(true);
+    timeoutRef.current = window.setTimeout(() => {
+      if (!mountedRef.current) return;
+      setState('error');
+      setError('Tempo limite de conexão — tente novamente');
+      cleanup();
+    }, 15000);
 
     const code = Array.from({ length: 4 }, () =>
       String.fromCharCode(65 + Math.floor(Math.random() * 26))
@@ -63,6 +71,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
     peer.on('open', () => {
       if (!mountedRef.current) { peer.destroy(); return; }
+      if (timeoutRef.current) { window.clearTimeout(timeoutRef.current); timeoutRef.current = 0; }
       setRoomId(code);
       setState('connected');
     });
@@ -119,6 +128,12 @@ export function usePeerConnection(): UsePeerConnectionReturn {
     setError(null);
     setState('connecting');
     setIsHost(false);
+    timeoutRef.current = window.setTimeout(() => {
+      if (!mountedRef.current) return;
+      setState('error');
+      setError('Tempo limite de conexão — tente novamente');
+      cleanup();
+    }, 15000);
 
     const peerId = hostId.includes('-') ? hostId : `fp-${hostId.toUpperCase()}`;
 
@@ -127,6 +142,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
     peer.on('open', () => {
       if (!mountedRef.current) { peer.destroy(); return; }
+      if (timeoutRef.current) { window.clearTimeout(timeoutRef.current); timeoutRef.current = 0; }
       const conn = peer.connect(peerId, { reliable: true });
       connRef.current = conn;
 

@@ -1,6 +1,5 @@
 .screen {
-  max-width: 760px; margin: 0 auto; padding: 12px 24px 40px;
-  display: flex; flex-direction: column; gap: 18px;
+  max-width: 760px; padding: 12px 24px 40px; gap: 18px;
 }
 
 .header {

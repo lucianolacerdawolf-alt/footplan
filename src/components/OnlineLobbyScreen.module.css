@@ -1,6 +1,5 @@
 .screen {
-  max-width: 720px; margin: 0 auto; padding: 12px 16px 32px;
-  display: flex; flex-direction: column; gap: 16px;
+  max-width: 720px; gap: 16px;
 }
 
 .header {
@@ -34,6 +33,10 @@
 }
 
 /* Connection phase */
+.connectContainer {
+  max-width: 400px; margin: 0 auto;
+  display: flex; flex-direction: column; gap: 12px;
+}
 .connectSection {
   display: flex; flex-direction: column; gap: 16px;
 }
@@ -67,14 +70,27 @@
 .primaryBtn:hover:not(:disabled) { opacity: 0.85; }
 .primaryBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.connectBtn {
+  width: 100%; padding: 14px 20px; font-size: 15px;
+}
+
 .divider {
   display: flex; align-items: center; gap: 14px;
+  opacity: 0.3;
 }
 .divider::before, .divider::after {
   content: ''; flex: 1; height: 1px; background: var(--border);
 }
 .dividerText {
-  font-size: 11px; font-weight: 700; opacity: 0.35; text-transform: uppercase; font-family: var(--mono);
+  font-size: 11px; font-weight: 700; font-family: var(--mono);
+}
+
+.joinCodeInput {
+  flex: 1;
+  background: var(--code-bg); border: 1.5px solid var(--border);
+  border-radius: 8px; padding: 10px 14px; font-size: 18px;
+  font-family: var(--mono); color: var(--text-h); outline: none;
+  text-align: center; letter-spacing: 8px; text-transform: uppercase;
 }
 
 /* Lobby phase */
@@ -90,6 +106,11 @@
 .roomCode {
   font-size: 32px; font-weight: 900; font-family: var(--mono); color: var(--accent);
   letter-spacing: 6px; user-select: all;
+}
+.roomCodeBadge {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 20px; margin: 0 auto 4px; max-width: 340px;
 }
 .copyBtn {
   background: var(--accent-bg); border: 1px solid var(--accent-border); border-radius: 6px;
@@ -121,6 +142,11 @@
 .hint { font-size: 11px; opacity: 0.35; font-weight: 500; text-align: center; }
 .vsText { font-size: 18px; font-weight: 900; opacity: 0.2; font-family: var(--mono); }
 
+.statusBadge {
+  font-size: 12px; font-weight: 700; color: #22c55e; font-family: var(--mono);
+  text-align: center; padding: 4px 16px 2px; height: 22px;
+}
+
 .teamGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -140,6 +166,22 @@
 .teamBtnName { font-size: 13px; font-weight: 800; color: var(--text-h); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .teamBtnAbbr { font-size: 10px; font-weight: 700; opacity: 0.4; font-family: var(--mono); }
 
+.teamRow {
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  padding: 0 16px; max-width: 540px; margin: 0 auto 8px;
+}
+.teamCard {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700;
+  font-family: var(--heading); cursor: pointer;
+  border: 1.5px solid var(--border);
+  background: transparent; color: var(--text-secondary);
+  transition: all 0.15s;
+}
+.teamCardActive {
+  color: var(--text-primary);
+}
+
 .startBtn {
   background: linear-gradient(135deg, #22c55e, #16a34a);
   border: none; border-radius: 12px; padding: 16px 32px;
@@ -152,6 +194,28 @@
 .waitingBox {
   text-align: center; padding: 20px;
   font-size: 14px; font-weight: 700; opacity: 0.45; font-family: var(--mono);
+}
+.waitingDots {
+  font-size: 28px; text-align: center; margin-top: 16px;
+  opacity: 0.3; letter-spacing: 4px;
+}
+
+.tacticsPanel {
+  max-width: 380px; margin: 0 auto; width: 100%;
+}
+.tacticsTitle {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+}
+.tacticsTitleImg { width: 36px; height: 36px; object-fit: contain; }
+.tacticsTitleStrong {
+  font-size: 15px; font-family: var(--heading);
+}
+.confirmBtn {
+  width: 100%; margin-top: 12px; padding: 12px 20px;
+}
+.confirmedMsg {
+  text-align: center; margin-top: 12px;
+  font-size: 13px; font-weight: 700;
 }
 
 @media (max-width: 640px) {

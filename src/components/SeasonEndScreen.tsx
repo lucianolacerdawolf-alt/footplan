@@ -23,7 +23,7 @@ export default function SeasonEndScreen({ entry, league, newReputation, onContin
   const reputationSign = entry.reputationDelta >= 0 ? '+' : '';
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <h1 className={styles.headerTitle}>Temporada {entry.year} encerrada</h1>
 
       <div className={styles.champion}>

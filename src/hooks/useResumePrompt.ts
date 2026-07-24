@@ -1,11 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
-type Screen =
-  | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
-  | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
-  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end'
-  | 'league-table' | 'career-league-table';
-type TournamentMode = 'league' | 'bracket';
+import type { Screen, TournamentMode } from '../types/navigation';
 
 interface UseResumePromptParams {
   setScreen: (s: Screen) => void;

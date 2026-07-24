@@ -116,13 +116,14 @@ export function getTacticalHardCounter(
       return { defBonus: 1.28, atkBonus: 1.0 };
     }
   }
+  // Counter-attack explora espaço atrás de linha alta (checado antes de high-press
+  // para evitar shadowing quando o defensor tem ambos)
+  if (atkMentality === 'counter-attack' && defLine === 'high') {
+    return { defBonus: 1.0, atkBonus: 1.22 };
+  }
   // Counter-attack explora espaço que pressão alta deixa atrás da linha defensiva
   if (atkMentality === 'counter-attack' && defMentality === 'high-press') {
     return { defBonus: 1.0, atkBonus: 1.18 };
-  }
-  // Counter-attack explora espaço atrás de linha alta
-  if (atkMentality === 'counter-attack' && defLine === 'high') {
-    return { defBonus: 1.0, atkBonus: 1.22 };
   }
   return { defBonus: 1.0, atkBonus: 1.0 };
 }

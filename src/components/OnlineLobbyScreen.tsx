@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { Team, Strategy, Formation, Mentality, Intensity, DefensiveLine, Width } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
-import { cloneTeam } from '../utils/teamUtils';
-import { playerOvr } from '../utils/playerOvr';
+import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
 import { allLeagues } from '../data/leagues';
 import TacticLabel from './TacticLabel';
+import styles from './OnlineLobbyScreen.module.css';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
@@ -24,11 +24,6 @@ type PeerMessage =
 const allTeamsMap = new Map<string, Team>(
   allLeagues.flatMap(l => l.teams.map(t => [t.id, t]))
 );
-
-const getAvgOvr = (team: Team) => {
-  const starters = team.squad.slice(0, 11);
-  return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
-};
 
 export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer }: Props) {
   const [joinCode, setJoinCode] = useState('');
@@ -149,16 +144,12 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
   );
 
   const roomCodeBadge = peer.isHost && peer.roomId ? (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
-      background: 'var(--code-bg)', border: '1px solid var(--border)', borderRadius: 10,
-      padding: '10px 20px', margin: '0 auto 4px', maxWidth: 340,
-    }}>
-      <span style={{ fontSize: 12, fontWeight: 700, opacity: 0.5, fontFamily: 'var(--mono)' }}>Sala:</span>
-      <code style={{ fontSize: 28, fontWeight: 900, fontFamily: 'var(--mono)', color: 'var(--accent)', letterSpacing: 6, userSelect: 'all' }}>
+    <div className={styles.roomCodeBadge}>
+      <span className={styles.roomLabel}>Sala:</span>
+      <code className={styles.roomCode}>
         {peer.roomId}
       </code>
-      <button className="slot-nav-btn" onClick={handleCopyRoom} style={{ padding: '4px 12px', fontSize: 11 }}>{copyLabel}</button>
+      <button className={styles.copyBtn} onClick={handleCopyRoom}>{copyLabel}</button>
     </div>
   ) : null;
 
@@ -176,32 +167,24 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
         <div className="select-instruction">
           {peer.state === 'connecting' ? 'Conectando...' : 'Crie uma sala ou entre em uma existente'}
         </div>
-        <div style={{ maxWidth: 400, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className={styles.connectContainer}>
           <button
-            className="slot-nav-btn slot-nav-btn-primary"
+            className={`slot-nav-btn slot-nav-btn-primary ${styles.connectBtn}`}
             onClick={() => peer.createRoom()}
             disabled={peer.state === 'connecting'}
-            style={{ width: '100%', padding: '14px 20px', fontSize: 15 }}
           >
             {peer.state === 'connecting' ? 'Conectando...' : '🌐 Criar Sala'}
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14, opacity: 0.3 }}>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
-            <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'var(--mono)' }}>OU</span>
-            <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+          <div className={styles.divider}>
+            <span className={styles.dividerText}>OU</span>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className={styles.joinRow}>
             <input
               type="text" placeholder="Código (4 letras)" maxLength={4}
               value={joinCode}
               onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 4))}
               onKeyDown={e => e.key === 'Enter' && joinCode.trim().length === 4 && peer.joinRoom(joinCode.trim())}
-              style={{
-                flex: 1, background: 'var(--code-bg)', border: '1.5px solid var(--border)',
-                borderRadius: 8, padding: '10px 14px', fontSize: 18, fontFamily: 'var(--mono)',
-                color: 'var(--text-h)', outline: 'none', textAlign: 'center',
-                letterSpacing: 8, textTransform: 'uppercase',
-              }}
+              className={styles.joinCodeInput}
             />
             <button
               className="slot-nav-btn slot-nav-btn-primary"
@@ -220,10 +203,10 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
       <div className="team-select-screen">
         {topNav(true)}
         {roomCodeBadge}
-        <div className="select-instruction" style={{ marginTop: 32 }}>
+        <div className={styles.waitingBox}>
           Aguardando adversário entrar com o código...
         </div>
-        <div style={{ fontSize: 28, textAlign: 'center', marginTop: 16, opacity: 0.3, letterSpacing: 4 }}>· · ·</div>
+        <div className={styles.waitingDots}>· · ·</div>
       </div>
     );
   }
@@ -235,7 +218,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
       <div className="team-select-screen">
         {topNav(true)}
         {roomCodeBadge}
-        {!peer.isHost && <div className="select-instruction">● Conectado</div>}
+        {!peer.isHost && <div className={styles.statusBadge}>● Conectado</div>}
 
         <div className="select-summary">
           {renderSlot(hostTeam, 'CASA', 'home-slot')}
@@ -248,21 +231,25 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
         </div>
 
         {/* League filter tabs */}
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', padding: '0 16px', maxWidth: 540, margin: '0 auto 8px' }}>
-          {allLeagues.map(l => (
-            <button key={l.id} onClick={() => setFilterLeagueId(l.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-              fontFamily: 'var(--heading)', cursor: 'pointer',
-              border: `1.5px solid ${filterLeagueId === l.id ? l.color : 'var(--border)'}`,
-              background: filterLeagueId === l.id ? l.color + '18' : 'transparent',
-              color: filterLeagueId === l.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-              transition: 'all 0.15s',
-            }}>
-              <img src={l.logo} alt={l.name} style={{ width: 16, height: 16, objectFit: 'contain' }} />
-              {l.name}
-            </button>
-          ))}
+        <div className={styles.teamRow}>
+          {allLeagues.map(l => {
+            const isActive = filterLeagueId === l.id;
+            return (
+              <button
+                key={l.id}
+                onClick={() => setFilterLeagueId(l.id)}
+                className={`${styles.teamCard} ${isActive ? styles.teamCardActive : ''}`}
+                style={isActive ? {
+                  borderColor: l.color,
+                  background: l.color + '18',
+                  color: 'var(--text-primary)',
+                } : undefined}
+              >
+                <img src={l.logo} alt={l.name} style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                {l.name}
+              </button>
+            );
+          })}
         </div>
 
         <div className="team-grid">
@@ -320,10 +307,10 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
 
       {/* Own team tactics editor */}
       {myTeam && myStrategy && (
-        <div className="halftime-inner" style={{ maxWidth: 380, margin: '0 auto', width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <img src={myTeam.logoUrl} alt={myTeam.name} style={{ width: 36, height: 36, objectFit: 'contain' }} />
-            <strong style={{ color: myColor, fontSize: 15, fontFamily: 'var(--heading)' }}>
+        <div className={`${'halftime-inner'} ${styles.tacticsPanel}`}>
+          <div className={styles.tacticsTitle}>
+            <img src={myTeam.logoUrl} alt={myTeam.name} className={styles.tacticsTitleImg} />
+            <strong className={styles.tacticsTitleStrong} style={{ color: myColor }}>
               {myTeam.name} — Seu Time
             </strong>
           </div>
@@ -383,15 +370,14 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
 
           {!myConfirmed && (
             <button
-              className="slot-nav-btn slot-nav-btn-primary"
+              className={`slot-nav-btn slot-nav-btn-primary ${styles.confirmBtn}`}
               onClick={handleConfirmTactics}
-              style={{ width: '100%', marginTop: 12, padding: '12px 20px' }}
             >
               ✓ Confirmar Táticas
             </button>
           )}
           {myConfirmed && (
-            <div style={{ textAlign: 'center', marginTop: 12, color: 'var(--accent)', fontSize: 13, fontWeight: 700 }}>
+            <div className={styles.confirmedMsg} style={{ color: 'var(--accent)' }}>
               ✓ Táticas confirmadas
             </div>
           )}

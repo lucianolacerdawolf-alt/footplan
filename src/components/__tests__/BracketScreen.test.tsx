@@ -3,7 +3,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import BracketScreen from '../BracketScreen';
-import { createBracket, type BracketState } from '../../engine/tournament';
+import { createBracket, type BracketState } from '@/engine/tournament';
 import { makeTeam } from './testFixtures';
 
 const userTeam = makeTeam('user', 'Time Usuário', 'USR');

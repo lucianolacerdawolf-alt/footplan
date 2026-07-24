@@ -6,6 +6,10 @@
     "module": "esnext",
     "types": ["vite/client", "vitest/globals"],
     "skipLibCheck": true,
+    "paths": { "@/*": ["./src/*"] },
+
+    /* Strict */
+    "strict": true,
 
     /* Bundler mode */
     "moduleResolution": "bundler",

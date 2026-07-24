@@ -28,7 +28,7 @@ export default function AchievementsScreen({ achievements, onBack }: Props) {
   const total = achievements.length;
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
         <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">
           ← Voltar

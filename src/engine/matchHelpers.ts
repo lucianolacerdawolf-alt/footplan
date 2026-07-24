@@ -22,8 +22,8 @@ export function getPlayersByPosition(players: Player[], pos: Position): Player[]
   return players.filter(p => p.position === pos);
 }
 
-export function getGoalkeeper(players: Player[]): Player {
-  return players.find(p => p.position === 'GK')!;
+export function getGoalkeeper(players: Player[]): Player | null {
+  return players.find(p => p.position === 'GK') ?? null;
 }
 
 export function pickRandom<T>(arr: T[], count: number, random: RandomFn): T[] {

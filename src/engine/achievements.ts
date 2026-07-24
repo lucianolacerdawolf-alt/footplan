@@ -67,15 +67,9 @@ function countUserCards(events: MatchEvent[], userTeamId: string): { yellow: num
   return { yellow, red };
 }
 
-function parseHalftimeScores(htEvent: MatchEvent): { home: number; away: number } | null {
-  const match = htEvent.description.match(/(\d+)x(\d+)/);
-  if (!match) return null;
-  const a = parseInt(match[1]);
-  const b = parseInt(match[2]);
-  if (htEvent.description.includes('visitante')) {
-    return { home: b, away: a };
-  }
-  return { home: a, away: b };
+function getHalftimeScores(result: MatchResult): { home: number; away: number } | null {
+  if (result.halftimeHomeScore === undefined || result.halftimeAwayScore === undefined) return null;
+  return { home: result.halftimeHomeScore, away: result.halftimeAwayScore };
 }
 
 /** Compute longest consecutive league streak for the user from fixtures (most-recent-first). */
@@ -258,9 +252,7 @@ const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementCheckContext) => b
     return (isHome && pr.winner === 'home') || (!isHome && pr.winner === 'away');
   },
   comeback(ctx) {
-    const htEvent = ctx.result.events.find(e => e.type === 'halftime');
-    if (!htEvent) return false;
-    const ht = parseHalftimeScores(htEvent);
+    const ht = getHalftimeScores(ctx.result);
     if (!ht) return false;
     const isHome = userIsHome(ctx);
     const { homeScore, awayScore } = ctx.result;

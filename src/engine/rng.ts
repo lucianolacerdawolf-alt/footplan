@@ -13,7 +13,7 @@ export class SeededRng {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
-  /** Returns a number in [min, max] */
+  /** Returns a number in [min, max) — upper bound exclusive */
   range(min: number, max: number): number {
     return min + this.next() * (max - min);
   }

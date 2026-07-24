@@ -9,7 +9,7 @@ interface Props {
 
 export default function CupSelectScreen({ onSelect, onBack }: Props) {
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
         <div className={styles.titleRow}>
           <button className={styles.backBtn} onClick={onBack}>←</button>

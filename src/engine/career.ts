@@ -90,16 +90,33 @@ export function assignInitialAges(teams: Team[], rng: () => number = Math.random
 
 /**
  * Evolui um jogador uma temporada: recalcula OVR alvo com base na curva de idade
- * + variação de "desempenho recente" (-2..+2), reaplica generatePlayer() pra
- * regenerar atributos, preservando id/name/number (identidade do jogador).
+ * + variação de "desempenho recente" (-2..+2), escala os atributos existentes
+ * proporcionalmente ao novo OVR em vez de regenerá-los do zero.
+ * Preserva id, name, number (identidade do jogador).
  */
 export function progressPlayer(player: Player, rng: () => number = Math.random): Player {
   const age = player.age ?? 26;
   const currentOvr = playerOvr(player);
   const delta = ageOvrDelta(age) + (Math.floor(rng() * 5) - 2);
   const newTargetOvr = Math.max(40, Math.min(95, currentOvr + delta));
+  const scale = newTargetOvr / currentOvr;
+  const scaleAttr = (v: number) => Math.max(1, Math.min(99, Math.round(v * scale)));
   return {
-    ...generatePlayer(player.id, player.name, player.number, player.position, newTargetOvr),
+    id: player.id,
+    name: player.name,
+    number: player.number,
+    position: player.position,
+    currentFatigue: 0,
+    attributes: {
+      speed: scaleAttr(player.attributes.speed),
+      stamina: scaleAttr(player.attributes.stamina),
+      passing: scaleAttr(player.attributes.passing),
+      finishing: scaleAttr(player.attributes.finishing),
+      tackling: scaleAttr(player.attributes.tackling),
+      dribbling: scaleAttr(player.attributes.dribbling),
+      vision: scaleAttr(player.attributes.vision),
+      positioning: scaleAttr(player.attributes.positioning),
+    },
     age: age + 1,
   };
 }

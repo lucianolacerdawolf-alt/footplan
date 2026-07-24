@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -46,7 +46,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
     const userStanding = standings.find(s => s.teamId === userTeamId)!;
     const userPos = standings.findIndex(s => s.teamId === userTeamId) + 1;
     return (
-      <div className={styles.screen}>
+      <div className={`${styles.screen} app-screen`}>
         <header className={styles.header}>
           <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
         </header>
@@ -71,13 +71,40 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
   const roundComplete = round.every(f => f.played);
   const othersComplete = otherFixtures.every(f => f.played);
 
+  const seasonStats = useMemo(() => {
+    let totalGoals = 0, playedCount = 0, homeWins = 0, draws = 0;
+    let userGF = 0, userGA = 0, userClean = 0;
+    for (const round of fixtures) {
+      for (const f of round) {
+        if (!f.played || f.homeScore == null || f.awayScore == null) continue;
+        totalGoals += f.homeScore + f.awayScore;
+        playedCount++;
+        if (f.homeScore > f.awayScore) homeWins++;
+        else if (f.homeScore === f.awayScore) draws++;
+        if (f.homeTeamId === userTeamId) { userGF += f.homeScore; userGA += f.awayScore; if (f.awayScore === 0) userClean++; }
+        else if (f.awayTeamId === userTeamId) { userGF += f.awayScore; userGA += f.homeScore; if (f.homeScore === 0) userClean++; }
+      }
+    }
+    if (playedCount === 0) return null;
+    return (
+      <div className={styles.statsStrip}>
+        <span className={styles.statItem}>⚽ Gols: <b>{totalGoals}</b></span>
+        <span className={styles.statItem}>📊 Média: <b>{(totalGoals / playedCount).toFixed(2)}</b></span>
+        <span className={styles.statItem}>🏟️ Casa: <b>{(homeWins / playedCount * 100).toFixed(0)}%</b></span>
+        <span className={styles.statItem}>🤝 Empate: <b>{(draws / playedCount * 100).toFixed(0)}%</b></span>
+        <span className={styles.statItem}>🔢 Seu time: <b>{userGF} GP · {userGA} GC {userGF - userGA >= 0 ? '+' : ''}{userGF - userGA}</b></span>
+        <span className={styles.statItem}>🧤 Clean sheets: <b>{userClean}</b></span>
+      </div>
+    );
+  }, [fixtures, userTeamId]);
+
   const renderScore = (f: LeagueFixture) => {
     if (!f.played) return <span className={styles.fixtureVs}>vs</span>;
     return <span className={styles.fixtureScore}>{f.homeScore} – {f.awayScore}</span>;
   };
 
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
         <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
         <div className={styles.headerCenter}>
@@ -99,34 +126,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
         <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
       </header>
 
-      {/* Season stats strip */}
-      {(() => {
-        let totalGoals = 0, playedCount = 0, homeWins = 0, draws = 0;
-        let userGF = 0, userGA = 0, userClean = 0;
-        for (const round of fixtures) {
-          for (const f of round) {
-            if (!f.played || f.homeScore == null || f.awayScore == null) continue;
-            totalGoals += f.homeScore + f.awayScore;
-            playedCount++;
-            if (f.homeScore > f.awayScore) homeWins++;
-            else if (f.homeScore === f.awayScore) draws++;
-            // User team
-            if (f.homeTeamId === userTeamId) { userGF += f.homeScore; userGA += f.awayScore; if (f.awayScore === 0) userClean++; }
-            else if (f.awayTeamId === userTeamId) { userGF += f.awayScore; userGA += f.homeScore; if (f.homeScore === 0) userClean++; }
-          }
-        }
-        if (playedCount === 0) return null;
-        return (
-          <div className={styles.statsStrip}>
-            <span className={styles.statItem}>⚽ Gols: <b>{totalGoals}</b></span>
-            <span className={styles.statItem}>📊 Média: <b>{(totalGoals / playedCount).toFixed(2)}</b></span>
-            <span className={styles.statItem}>🏟️ Casa: <b>{(homeWins / playedCount * 100).toFixed(0)}%</b></span>
-            <span className={styles.statItem}>🤝 Empate: <b>{(draws / playedCount * 100).toFixed(0)}%</b></span>
-            <span className={styles.statItem}>🔢 Seu time: <b>{userGF} GP · {userGA} GC {userGF - userGA >= 0 ? '+' : ''}{userGF - userGA}</b></span>
-            <span className={styles.statItem}>🧤 Clean sheets: <b>{userClean}</b></span>
-          </div>
-        );
-      })()}
+      {seasonStats}
 
       <div className={styles.viewTableRow}>
         <button className={styles.viewTableLink} onClick={onViewTable}>📊 Ver Classificação →</button>

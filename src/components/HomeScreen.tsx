@@ -11,7 +11,7 @@ interface Props {
 
 export default function HomeScreen({ onSingleMatch, onLeague, onCareer, onCup, onAchievements, onOnline }: Props) {
   return (
-    <div className={styles.screen}>
+    <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
         <h1 className={styles.title}>FootPlan</h1>
         <span className={styles.titleLine} />
