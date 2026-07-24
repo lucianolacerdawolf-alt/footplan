@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import type { Team, MatchResult, RandomFn } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
-import type { PlayableStage } from './engine/tournament';
+import type { PlayableStage, LeagueState, BracketState } from './engine/tournament';
 import HomeScreen from './components/HomeScreen';
 import TeamSelectionScreen from './components/TeamSelectionScreen';
 import SetupScreen from './components/SetupScreen';
@@ -11,6 +11,9 @@ import BracketScreen from './components/BracketScreen';
 import OnlineLobbyScreen from './components/OnlineLobbyScreen';
 import LeagueSelectScreen, { type ResumableSave } from './components/LeagueSelectScreen';
 import CupSelectScreen from './components/CupSelectScreen';
+import CareerHubScreen from './components/CareerHubScreen';
+import TradeProposalScreen from './components/TradeProposalScreen';
+import SeasonEndScreen from './components/SeasonEndScreen';
 import { getLeague } from './data/leagues';
 import { loadLiveMatch, type LiveMatchSnapshot } from './utils/liveMatchPersistence';
 import { useMatchHistory } from './hooks/useMatchHistory';
@@ -21,6 +24,7 @@ import type { AchievementEvalInput } from './hooks/useAchievements';
 import { useAppShell } from './hooks/useAppShell';
 import { useLeagueManager } from './hooks/useLeagueManager';
 import { useBracketManager } from './hooks/useBracketManager';
+import { useCareerManager } from './hooks/useCareerManager';
 import { useGameFlow } from './hooks/useGameFlow';
 import { useOnlineMatch } from './hooks/useOnlineMatch';
 import { useResumePrompt } from './hooks/useResumePrompt';
@@ -83,6 +87,7 @@ function App() {
     isKnockout, setIsKnockout,
     tournamentMode, setTournamentMode,
     isTournamentEntry, setIsTournamentEntry,
+    isCareerMode, setIsCareerMode,
     selectedLeague, setSelectedLeague,
     returnScreen, setReturnScreen,
     goHome, handleContinueTournament,
@@ -121,14 +126,55 @@ function App() {
     evaluateAchievements, recordH2H, notifySave, setToastMsg,
   });
 
+  const {
+    careerState, setCareerState,
+    handleStartCareer,
+    handleEditCareerLeagueTactics,
+    handlePlayCareerLeagueMatch,
+    handleSimulateUserCareerLeagueMatch,
+    handleSimulateCareerLeagueRound,
+    handleNextCareerLeagueRound,
+    handleCareerLeagueMatchResult,
+    handleEditCareerBracketTactics,
+    handlePlayCareerBracketMatch,
+    handleSimulateOtherCareerBracketMatches,
+    handleSimulateCareerBracketMatch,
+    handleCareerBracketMatchResult,
+    handleProposeTrade,
+    handleAdvanceSeason,
+  } = useCareerManager({
+    setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
+    recordH2H, notifySave, setToastMsg,
+  });
+
+  // Pattern 2 (RESEARCH.md/PATTERNS.md): deixa useGameFlow's handleStartMatch operar
+  // sobre careerState.season.league/cup através dos MESMOS setLeagueState/setBracketState
+  // Dispatch<SetStateAction<...>> shapes que já usa pra Campeonatos — sem isso, teríamos
+  // que duplicar handleStartMatch inteiro só pra trocar onde o resultado é gravado.
+  const careerLeagueSetter: React.Dispatch<React.SetStateAction<LeagueState | null>> = useCallback(updater => setCareerState(prev => {
+    if (!prev) return prev;
+    const nextLeague = typeof updater === 'function' ? (updater as (p: LeagueState | null) => LeagueState | null)(prev.season.league) : updater;
+    return nextLeague ? { ...prev, season: { ...prev.season, league: nextLeague } } : prev;
+  }), [setCareerState]);
+
+  const careerBracketSetter: React.Dispatch<React.SetStateAction<BracketState | null>> = useCallback(updater => setCareerState(prev => {
+    if (!prev) return prev;
+    const nextBracket = typeof updater === 'function' ? (updater as (p: BracketState | null) => BracketState | null)(prev.season.cup) : updater;
+    return nextBracket ? { ...prev, season: { ...prev.season, cup: nextBracket } } : prev;
+  }), [setCareerState]);
+
   const peer = usePeerConnection();
 
   const {
     handleTeamsSelected, handleStartMatch, handleViewStats,
   } = useGameFlow({
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout,
-    setGameMode, setIsTournamentEntry, setLeagueState, setBracketState,
-    setLastResult, matchContext, isTournamentEntry, leagueState, bracketState,
+    setGameMode, setIsTournamentEntry,
+    setLeagueState: isCareerMode ? careerLeagueSetter : setLeagueState,
+    setBracketState: isCareerMode ? careerBracketSetter : setBracketState,
+    setLastResult, matchContext, isTournamentEntry, isCareerMode,
+    leagueState: isCareerMode ? (careerState?.season.league ?? null) : leagueState,
+    bracketState: isCareerMode ? (careerState?.season.cup ?? null) : bracketState,
     homeTeam, recordH2H, evaluateAchievements,
   });
 
