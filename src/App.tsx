@@ -205,11 +205,16 @@ function App() {
   }, [tournamentMode, handleStartLeague, handleStartBracket]);
 
   // ── Roteamento pós-stats ──────────────────────────────────────────────────
+  // matchContext sozinho não distingue Campeonatos de Modo Carreira (Anti-Pattern 3
+  // do RESEARCH.md) — isCareerMode resolve a ambiguidade, checado ANTES dos branches
+  // regulares de liga/copa.
   const handleViewStatsFromMatch = useCallback((result: MatchResult) => {
+    if (isCareerMode && matchContext === 'league') { handleCareerLeagueMatchResult(result); return; }
+    if (isCareerMode && matchContext === 'bracket') { handleCareerBracketMatchResult(result); return; }
     if (matchContext === 'league') { handleLeagueMatchResult(result); return; }
     if (matchContext === 'bracket') { handleBracketMatchResult(result); return; }
     handleViewStats(result);
-  }, [matchContext, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats]);
+  }, [matchContext, isCareerMode, handleCareerLeagueMatchResult, handleCareerBracketMatchResult, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats]);
 
   // ── Resume prompt ─────────────────────────────────────────────────────────
   const { resumePrompt, setResumePrompt, handleResumeContinue, handleResumeNew } = useResumePrompt({
@@ -347,6 +352,8 @@ function App() {
         onStartMatch={handleStartMatch}
         onBack={() => {
           setIsTournamentEntry(false);
+          if (isCareerMode && matchContext === 'league') { setScreen('career-league'); return; }
+          if (isCareerMode && matchContext === 'bracket') { setScreen('career-bracket'); return; }
           if (matchContext === 'league') setScreen('league');
           else if (matchContext === 'bracket') setScreen('bracket');
           else setScreen('select');
@@ -398,6 +405,68 @@ function App() {
       <AchievementsScreen
         achievements={achievements.getAll()}
         onBack={goHome}
+      />
+    );
+  } else if (screen === 'career-hub' && careerState) {
+    content = (
+      <CareerHubScreen
+        state={careerState}
+        league={getLeague(careerState.leagueId)!}
+        onViewLeague={() => setScreen('career-league')}
+        onViewCup={() => setScreen('career-bracket')}
+        onProposeTrade={() => setScreen('trade-propose')}
+        onAdvanceSeason={handleAdvanceSeason}
+        onBack={() => { setIsCareerMode(false); goHome(); }}
+      />
+    );
+  } else if (screen === 'career-league' && careerState) {
+    content = (
+      <LeagueScreen
+        state={careerState.season.league}
+        league={getLeague(careerState.leagueId)!}
+        onPlayMatch={handlePlayCareerLeagueMatch}
+        onSimulateUserMatch={handleSimulateUserCareerLeagueMatch}
+        onSimulateRound={handleSimulateCareerLeagueRound}
+        onNextRound={handleNextCareerLeagueRound}
+        onEditTactics={handleEditCareerLeagueTactics}
+        onBack={() => setScreen('career-hub')}
+      />
+    );
+  } else if (screen === 'career-bracket' && careerState) {
+    content = (
+      <BracketScreen
+        state={careerState.season.cup}
+        onPlayMatch={(match, home, away) => {
+          const stage = careerState.season.cup.stage as PlayableStage;
+          const matches = stage === 'roundOf16' ? careerState.season.cup.roundOf16
+            : stage === 'quarterfinals' ? careerState.season.cup.quarterFinals
+            : stage === 'semifinals' ? careerState.season.cup.semiFinals
+            : [careerState.season.cup.final];
+          handlePlayCareerBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
+        }}
+        onSimulateMatch={handleSimulateCareerBracketMatch}
+        onSimulateOthers={handleSimulateOtherCareerBracketMatches}
+        onEditTactics={handleEditCareerBracketTactics}
+        onBack={() => setScreen('career-hub')}
+      />
+    );
+  } else if (screen === 'trade-propose' && careerState) {
+    content = (
+      <TradeProposalScreen
+        userTeam={careerState.season.league.teams.find(t => t.id === careerState.season.league.userTeamId)!}
+        opponentTeams={careerState.rosters[careerState.leagueId].filter(t => t.id !== careerState.season.league.userTeamId)}
+        tradesRemaining={Math.max(0, 3 - careerState.season.tradesUsedThisSeason)}
+        onBack={() => setScreen('career-hub')}
+        onPropose={handleProposeTrade}
+      />
+    );
+  } else if (screen === 'season-end' && careerState && careerState.history.length > 0) {
+    content = (
+      <SeasonEndScreen
+        entry={careerState.history[careerState.history.length - 1]}
+        league={getLeague(careerState.leagueId)!}
+        newReputation={careerState.manager.reputation}
+        onContinue={() => setScreen('career-hub')}
       />
     );
   } else {
