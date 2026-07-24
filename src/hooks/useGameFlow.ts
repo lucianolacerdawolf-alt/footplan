@@ -4,7 +4,10 @@ import type { GameMode } from '../components/TeamSelectionScreen';
 import type { LeagueState, BracketState } from '../engine/tournament';
 import type { AchievementEvalInput } from './useAchievements';
 
-type Screen = 'league-select' | 'home' | 'select' | 'setup' | 'match' | 'stats' | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby';
+type Screen =
+  | 'league-select' | 'cup-select' | 'home' | 'select' | 'setup' | 'match' | 'stats'
+  | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
+  | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end';
 type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
 
 interface UseGameFlowParams {
@@ -20,6 +23,7 @@ interface UseGameFlowParams {
   setLastResult: (r: MatchResult | null) => void;
   matchContext: MatchContext;
   isTournamentEntry: boolean;
+  isCareerMode: boolean;
   leagueState: LeagueState | null;
   bracketState: BracketState | null;
   homeTeam: Team | null;
@@ -30,7 +34,7 @@ interface UseGameFlowParams {
 export function useGameFlow({
   setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout,
   setGameMode, setIsTournamentEntry, setLeagueState, setBracketState,
-  setLastResult, matchContext, isTournamentEntry, leagueState, bracketState,
+  setLastResult, matchContext, isTournamentEntry, isCareerMode, leagueState, bracketState,
   homeTeam, recordH2H, evaluateAchievements,
 }: UseGameFlowParams) {
   const handleTeamsSelected = useCallback((home: Team, away: Team, mode: GameMode) => {
@@ -62,12 +66,12 @@ export function useGameFlow({
     }
     if (isTournamentEntry) {
       setIsTournamentEntry(false);
-      setScreen(matchContext === 'league' ? 'league' : 'bracket');
+      setScreen(isCareerMode ? (matchContext === 'league' ? 'career-league' : 'career-bracket') : (matchContext === 'league' ? 'league' : 'bracket'));
       return;
     }
     setHomeTeam(home); setAwayTeam(away);
     setScreen('match');
-  }, [isTournamentEntry, matchContext, leagueState, bracketState, setLeagueState, setBracketState, setIsTournamentEntry, setScreen, setHomeTeam, setAwayTeam]);
+  }, [isTournamentEntry, isCareerMode, matchContext, leagueState, bracketState, setLeagueState, setBracketState, setIsTournamentEntry, setScreen, setHomeTeam, setAwayTeam]);
 
   const handleViewStats = useCallback((result: MatchResult) => {
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
