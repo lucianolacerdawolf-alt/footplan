@@ -101,3 +101,136 @@ describe('T-04.4-02: malformed fp:career recovery', () => {
     expect(result.current.careerState).toBeNull();
   });
 });
+
+function startPlCareer(result: { current: ReturnType<typeof useCareerManager> }) {
+  const leagueDef = getLeague('pl')!;
+  const chosenStaticTeam = leagueDef.teams[0];
+  const userTeam = makeTeam(chosenStaticTeam.id, 'Meu Time', 'MYT');
+  act(() => {
+    result.current.handleStartCareer(userTeam, leagueDef, 'Alex');
+  });
+  const leagueId = result.current.careerState!.leagueId;
+  const userTeamId = result.current.careerState!.season.league.userTeamId;
+  const opponentTeamId = result.current.careerState!.rosters[leagueId].find(t => t.id !== userTeamId)!.id;
+  return { leagueId, userTeamId, opponentTeamId };
+}
+
+describe('D-06: trade cap', () => {
+  it('rejects the 4th trade proposal once the 3-trade cap is hit, even with a guaranteed-favorable offer', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId, opponentTeamId } = startPlCareer(result);
+
+    // Math.random defaults evaluateTradeOffer's rng — mocking it to 0.01 guarantees
+    // rng() < acceptChance on every call, since 0.01 is below even the clamp's floor
+    // of 0.02, independent of the offer's actual favorability. This makes the first
+    // 3 proposals deterministically accepted, no retry loop or flake risk.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
+
+    let lastResult: { accepted: boolean; reason: string } | undefined;
+    for (let i = 0; i < 4; i++) {
+      const state = result.current.careerState!;
+      const userSquad = state.rosters[leagueId].find(t => t.id === userTeamId)!.squad;
+      const oppSquad = state.rosters[leagueId].find(t => t.id === opponentTeamId)!.squad;
+      const offeredPlayerId = userSquad[0].id;
+      const requestedPlayerId = oppSquad[0].id;
+      act(() => {
+        lastResult = result.current.handleProposeTrade(offeredPlayerId, opponentTeamId, requestedPlayerId);
+      });
+    }
+
+    expect(lastResult).toEqual({ accepted: false, reason: 'trade-limit-reached' });
+    expect(result.current.careerState!.season.tradesUsedThisSeason).toBe(3);
+
+    randomSpy.mockRestore();
+  });
+});
+
+describe('D-07: trade persistence', () => {
+  it('permanently moves the traded players in both rosters and season.league.teams', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId, opponentTeamId } = startPlCareer(result);
+
+    const before = result.current.careerState!;
+    const userSquad = before.rosters[leagueId].find(t => t.id === userTeamId)!.squad;
+    const oppSquad = before.rosters[leagueId].find(t => t.id === opponentTeamId)!.squad;
+    const offeredPlayerId = userSquad[0].id;
+    const requestedPlayerId = oppSquad[0].id;
+
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
+    act(() => {
+      result.current.handleProposeTrade(offeredPlayerId, opponentTeamId, requestedPlayerId);
+    });
+    randomSpy.mockRestore();
+
+    const after = result.current.careerState!;
+    const afterUserRoster = after.rosters[leagueId].find(t => t.id === userTeamId)!.squad;
+    const afterOppRoster = after.rosters[leagueId].find(t => t.id === opponentTeamId)!.squad;
+    expect(afterUserRoster.some(p => p.id === requestedPlayerId)).toBe(true);
+    expect(afterUserRoster.some(p => p.id === offeredPlayerId)).toBe(false);
+    expect(afterOppRoster.some(p => p.id === offeredPlayerId)).toBe(true);
+    expect(afterOppRoster.some(p => p.id === requestedPlayerId)).toBe(false);
+
+    const afterUserLeagueTeam = after.season.league.teams.find(t => t.id === userTeamId)!.squad;
+    const afterOppLeagueTeam = after.season.league.teams.find(t => t.id === opponentTeamId)!.squad;
+    expect(afterUserLeagueTeam.some(p => p.id === requestedPlayerId)).toBe(true);
+    expect(afterUserLeagueTeam.some(p => p.id === offeredPlayerId)).toBe(false);
+    expect(afterOppLeagueTeam.some(p => p.id === offeredPlayerId)).toBe(true);
+    expect(afterOppLeagueTeam.some(p => p.id === requestedPlayerId)).toBe(false);
+  });
+});
+
+function forceTerminalSeason(result: { current: ReturnType<typeof useCareerManager> }) {
+  act(() => {
+    result.current.setCareerState(prev => prev && ({
+      ...prev,
+      season: {
+        ...prev.season,
+        league: { ...prev.season.league, phase: 'done' as const },
+        cup: { ...prev.season.cup, stage: 'champion' as const, championId: prev.season.league.userTeamId },
+      },
+    }));
+  });
+}
+
+describe('D-13: season-advance gate', () => {
+  it('is a no-op unless both league and cup are terminal, then advances once both are', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+
+    act(() => {
+      result.current.handleAdvanceSeason();
+    });
+    expect(result.current.careerState!.currentSeasonYear).toBe(1);
+
+    forceTerminalSeason(result);
+
+    act(() => {
+      result.current.handleAdvanceSeason();
+    });
+
+    expect(result.current.careerState!.currentSeasonYear).toBe(2);
+    expect(result.current.careerState!.history.length).toBe(1);
+    expect(result.current.careerState!.season.tradesUsedThisSeason).toBe(0);
+  });
+});
+
+describe('D-08, D-09: reputation', () => {
+  it('increases manager reputation by the computed delta on a league+cup double', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+
+    const reputationBefore = result.current.careerState!.manager.reputation;
+
+    forceTerminalSeason(result);
+
+    act(() => {
+      result.current.handleAdvanceSeason();
+    });
+
+    const entry = result.current.careerState!.history[0];
+    expect(entry.reputationDelta).toBeGreaterThan(0);
+    expect(result.current.careerState!.manager.reputation).toBe(
+      Math.max(0, Math.min(100, reputationBefore + entry.reputationDelta))
+    );
+  });
+});
