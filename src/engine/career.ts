@@ -1,7 +1,11 @@
 import type { Player, Team } from './types';
 import type { LeagueState, BracketState } from './tournament';
+import type { LeagueDefinition } from '../data/leagues/types';
+import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
+import { cloneTeam } from '../utils/teamUtils';
+import { shuffle } from './rng';
 
 // =============================================================================
 // TIPOS — Modo Carreira
@@ -138,4 +142,100 @@ export function progressAllLeagues(rosters: Record<string, Team[]>, rng: () => n
     result[leagueId] = teams.map(t => progressTeamRoster(t, rng));
   }
   return result;
+}
+
+// =============================================================================
+// TEMPORADA — construção conjunta de liga + copa (D-13)
+// =============================================================================
+
+/**
+ * Cria a liga e a copa de uma nova temporada da carreira, no mesmo formato usado
+ * por handleStartLeague/handleStartBracket — garante estruturalmente que liga e
+ * copa nascem juntas toda temporada (D-13), nunca uma sem a outra.
+ */
+export function createCareerSeason(
+  userTeam: Team,
+  leagueTeams: Team[],
+  leagueDef: LeagueDefinition,
+  rng: () => number = Math.random
+): { league: LeagueState; cup: BracketState } {
+  const rest = leagueTeams.filter(t => t.id !== userTeam.id).map(t => cloneTeam(t));
+  const teams = [cloneTeam(userTeam), ...rest];
+  const fixtures = generateLeagueSchedule(teams);
+  const league: LeagueState = { teams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' };
+
+  const others = shuffle(leagueTeams.filter(t => t.id !== userTeam.id), rng)
+    .slice(0, 15)
+    .map(t => cloneTeam(t));
+  const cup = createBracket(cloneTeam(userTeam), others, leagueDef.cupName, leagueDef.id, rng);
+
+  return { league, cup };
+}
+
+// =============================================================================
+// TRANSFERÊNCIAS (D-05, D-06)
+// =============================================================================
+
+/** Avalia se um clube CPU aceita uma proposta de troca — considera valor da oferta, superávit na posição e reputação do manager. */
+export function evaluateTradeOffer(
+  offeredPlayer: Player,
+  requestedPlayer: Player,
+  cpuSquad: Player[],
+  managerReputation: number,
+  rng: () => number = Math.random
+): { accepted: boolean; reason: string } {
+  const offeredOvr = playerOvr(offeredPlayer);
+  const requestedOvr = playerOvr(requestedPlayer);
+  const ovrDelta = offeredOvr - requestedOvr;
+  const samePositionCount = cpuSquad.filter(p => p.position === requestedPlayer.position).length;
+  const surplus = samePositionCount > 3;
+  let acceptChance = 0.5 + ovrDelta * 0.04;
+  if (surplus) acceptChance += 0.15;
+  acceptChance += Math.min(0.2, managerReputation * 0.002);
+  acceptChance = Math.max(0.02, Math.min(0.95, acceptChance));
+  return {
+    accepted: rng() < acceptChance,
+    reason: ovrDelta >= 0 ? 'value-favorable' : 'value-unfavorable',
+  };
+}
+
+/** Limite de propostas de troca por temporada (D-06) — fonte única de verdade, nunca hardcoded em outro lugar. */
+export function canProposeTrade(tradesUsedThisSeason: number): boolean {
+  return tradesUsedThisSeason < 3;
+}
+
+// =============================================================================
+// REPUTAÇÃO (D-08, D-09)
+// =============================================================================
+
+/** Delta de reputação ao fim de temporada — títulos dominam, posição na tabela ajusta a margem. */
+export function computeReputationDelta(input: {
+  leagueChampion: boolean;
+  cupChampion: boolean;
+  leaguePosition: number;
+  totalTeams: number;
+}): number {
+  let delta = 0;
+  if (input.leagueChampion) delta += 15;
+  if (input.cupChampion) delta += 10;
+  const third = Math.ceil(input.totalTeams / 3);
+  const topThird = input.leaguePosition <= third;
+  const bottomThird = input.leaguePosition > input.totalTeams - third;
+  if (!input.leagueChampion && topThird) delta += 3;
+  if (bottomThird) delta -= 3;
+  return delta;
+}
+
+// =============================================================================
+// COPA — derivação do resultado do usuário a partir do bracket final
+// =============================================================================
+
+/** Deriva o resultado do usuário na copa a partir do bracket resolvido — só chamado quando cup.stage === 'champion'. */
+export function deriveCupResult(cup: BracketState, userTeamId: string): CareerSeasonHistoryEntry['cupResult'] {
+  if (cup.stage !== 'champion') return 'not-played';
+  if (cup.championId === userTeamId) return 'champion';
+  if (cup.final.homeTeamId === userTeamId || cup.final.awayTeamId === userTeamId) return 'runner-up';
+  if (cup.semiFinals.some(m => m.homeTeamId === userTeamId || m.awayTeamId === userTeamId)) return 'semifinal';
+  if (cup.quarterFinals.some(m => m.homeTeamId === userTeamId || m.awayTeamId === userTeamId)) return 'quarterfinal';
+  return 'roundOf16';
 }
