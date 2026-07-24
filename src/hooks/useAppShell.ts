@@ -16,6 +16,7 @@ export function useAppShell() {
   const [isKnockout, setIsKnockout] = useState(false);
   const [tournamentMode, setTournamentMode] = useState<TournamentMode>('league');
   const [isTournamentEntry, setIsTournamentEntry] = useState(false);
+  const [isCareerMode, setIsCareerMode] = useState(false);
 
   // Carrega a liga salva na inicialização para destacar no LeagueSelectScreen
   const [selectedLeague, setSelectedLeague] = useState<LeagueDefinition | null>(() => {
@@ -34,8 +35,10 @@ export function useAppShell() {
   const goHome = useCallback(() => setScreen('home'), []);
 
   const handleContinueTournament = useCallback(() => {
-    setScreen(matchContext === 'league' ? 'league' : 'bracket');
-  }, [matchContext]);
+    setScreen(isCareerMode
+      ? (matchContext === 'league' ? 'career-league' : 'career-bracket')
+      : (matchContext === 'league' ? 'league' : 'bracket'));
+  }, [matchContext, isCareerMode]);
 
   return {
     screen, setScreen,
@@ -43,6 +46,7 @@ export function useAppShell() {
     isKnockout, setIsKnockout,
     tournamentMode, setTournamentMode,
     isTournamentEntry, setIsTournamentEntry,
+    isCareerMode, setIsCareerMode,
     selectedLeague, setSelectedLeague,
     returnScreen, setReturnScreen,
     goHome, handleContinueTournament,
