@@ -53,14 +53,19 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
             <span className={styles.ovrLabel}>{player.position}</span>
           </div>
           <div className={styles.headerInfo}>
-            <div className={styles.name} id="player-modal-name">{player.name}</div>
+            <div className={styles.name} id="player-modal-name">
+              {player.nationality && (
+                <span className={styles.nameFlag} title={player.nationality}>
+                  {countryFlagEmoji(player.nationality) ?? '🌍'}
+                </span>
+              )}
+              {player.name}
+            </div>
             <div className={styles.subtitle}>
               <span>#{player.number}</span>
               <span>{POSITION_LABELS[player.position]}</span>
               {player.age !== undefined && <span>{player.age} anos</span>}
-              {player.nationality && (
-                <span>{countryFlagEmoji(player.nationality) ?? '🌍'} {player.nationality}</span>
-              )}
+              {player.nationality && <span>{player.nationality}</span>}
             </div>
             {teamName && <div className={styles.teamName}>{leagueFlag ? `${leagueFlag} ` : ''}{teamName}</div>}
           </div>

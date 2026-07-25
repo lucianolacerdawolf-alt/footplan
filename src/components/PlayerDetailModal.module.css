@@ -74,6 +74,11 @@
   white-space: nowrap;
 }
 
+.nameFlag {
+  margin-right: 6px;
+  font-size: 16px;
+}
+
 .subtitle {
   display: flex;
   flex-wrap: wrap;
