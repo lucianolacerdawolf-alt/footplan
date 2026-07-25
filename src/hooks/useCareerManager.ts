@@ -100,8 +100,12 @@ export function useCareerManager({
     for (const l of allLeagues) {
       if (l.id === leagueDef.id) {
         // D-04: valuation só é calculada pro elenco da própria liga do usuário —
-        // as outras 5 ligas nunca exibem valor de mercado nesta versão.
-        rosters[l.id] = assignInitialAges(l.teams.map(t => t.id === userTeam.id ? cloneTeam(userTeam) : cloneTeam(t)))
+        // as outras 11 ligas nunca exibem valor de mercado nesta versão.
+        // Usa leagueDef.teams (o parâmetro), NÃO l.teams (allLeagues estático) — leagueDef
+        // é o que TournamentSetupScreen passa depois de sincronizar com football-data.org;
+        // usar l.teams aqui jogava fora a sincronização pros outros 19 times da liga do
+        // usuário (só o time escolhido pelo próprio usuário vinha atualizado).
+        rosters[l.id] = assignInitialAges(leagueDef.teams.map(t => t.id === userTeam.id ? cloneTeam(userTeam) : cloneTeam(t)))
           .map(assignMarketValues);
       } else {
         rosters[l.id] = assignInitialAges(l.teams.map(t => cloneTeam(t)));

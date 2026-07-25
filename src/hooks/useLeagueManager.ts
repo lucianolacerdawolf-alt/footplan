@@ -8,14 +8,18 @@ import {
 import { moraleDelta, applyMoraleToTeam } from '../engine/morale';
 import { cloneTeam } from '../utils/teamUtils';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries } from './shared/matchHandlers';
-import { getLeague } from '../data/leagues';
+import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
 
 import type { Screen } from '../types/navigation';
 
 interface UseLeagueManagerParams {
-  leagueId: string;
+  /** Liga já resolvida pelo chamador (App.tsx passa `selectedLeague`) — pode vir com
+   *  elenco sincronizado ao vivo (TournamentSetupScreen sincroniza automaticamente e
+   *  propaga via onRosterSynced). Nunca re-resolve por id aqui: fazer isso descartaria
+   *  a sincronização e voltaria pros dados estáticos, igual o bug que isso substituiu. */
+  league: LeagueDefinition | null;
   setScreen: (s: Screen) => void;
   setHomeTeam: (t: Team) => void;
   setAwayTeam: (t: Team) => void;
@@ -29,10 +33,12 @@ interface UseLeagueManagerParams {
 }
 
 export function useLeagueManager({
-  leagueId,
+  league,
   setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
   evaluateAchievements, recordH2H, notifySave, setToastMsg,
 }: UseLeagueManagerParams) {
+  const leagueId = league?.id ?? 'pl';
+
   // Legacy save migration
   useEffect(() => {
     if (localStorage.getItem('fp:leagueStateMigrated') === '1') return;
@@ -47,8 +53,6 @@ export function useLeagueManager({
 
   const [leagueState, setLeagueState] = usePersistedState<LeagueState | null>(`fp:leagueState:${leagueId}`, null, { onPersist: notifySave });
   const [pendingLeagueFixture, setPendingLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
-
-  const league = getLeague(leagueId);
 
   const handleStartLeague = useCallback((userTeam: Team) => {
     if (!league) return;

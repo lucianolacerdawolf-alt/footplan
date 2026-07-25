@@ -59,7 +59,7 @@ function App() {
     handleSimulateLeagueRound, handleNextLeagueRound, handleLeagueMatchResult,
     handleEditLeagueTactics,
   } = useLeagueManager({
-    leagueId: selectedLeague?.id ?? 'pl',
+    league: selectedLeague,
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     evaluateAchievements, recordH2H, notifySave, setToastMsg,
   });

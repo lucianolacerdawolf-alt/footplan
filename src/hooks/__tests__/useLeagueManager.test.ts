@@ -22,7 +22,7 @@ Object.defineProperty(globalThis, 'localStorage', { value: new MemoryStorage(), 
 
 function mockParams(overrides: Partial<Parameters<typeof useLeagueManager>[0]> = {}) {
   return {
-    leagueId: 'pl',
+    league: getLeague('pl')!,
     setScreen: vi.fn(),
     setHomeTeam: vi.fn(),
     setAwayTeam: vi.fn(),
@@ -120,7 +120,7 @@ describe('handleStartLeague', () => {
   });
 
   it('is a no-op when league is not found', () => {
-    const params = mockParams({ leagueId: 'nonexistent' });
+    const params = mockParams({ league: null });
     const { result } = renderHook(() => useLeagueManager(params));
     const userTeam = createUserTeamForPl('Meu Time', 'MYT');
 
