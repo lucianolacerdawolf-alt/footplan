@@ -34,7 +34,16 @@ function pick<T>(arr: readonly T[]): T {
  *  gera atributos calibrados pra jogadores novos que a API traz mas que a gente ainda
  *  não tem dados reais (ex: uma transferência recente). */
 export function generatePlayer(id: string, name: string, number: number, pos: Player['position'], ovr: number, age?: number): Player {
-  const base = ovr - 7;
+  // playerOvr() aplica um multiplicador de 1.15 + offset de +3 em cima de uma média já
+  // inflada pelos boosts abaixo (ver utils/playerOvr.ts) — sem essa correção, um alvo de
+  // OVR 70 saía calculado como ~83-87, e qualquer alvo de 85+ clampava em 99, apagando a
+  // diferença entre um time OVR 85 e um OVR 95. Medido empiricamente (200 amostras por
+  // combinação posição/alvo): a relação real é ~1.15×alvo + 4, então essa correção inverte
+  // isso ANTES de gerar os atributos, pra playerOvr(gerado) ≈ ovr de novo. Achado analisando
+  // por que times de 2ª divisão (alvo 72-77 nos dados) saíam com OVR médio 86-93 na prática —
+  // mais forte que a 1ª divisão do mesmo país.
+  const calibratedOvr = (ovr - 4) / 1.15;
+  const base = calibratedOvr - 7;
   const spread = Math.min(10, Math.floor(ovr / 8));
   const attr = () => Math.max(1, Math.min(99, base + rand(-spread, spread)));
   const boost = (n: number) => Math.max(1, Math.min(99, attr() + n));

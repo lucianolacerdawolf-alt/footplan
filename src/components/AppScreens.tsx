@@ -323,6 +323,17 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       : p.matchContext === 'bracket' ? 'cup'
       : p.matchContext === 'online' ? 'online'
       : 'single';
+    // Torneios/carreira não garantem que o time do usuário seja sempre "home" na partida
+    // (o calendário decide quem manda em cada rodada) — sem isso, a tela solo sempre
+    // mostrava/editava "home", deixando o usuário mexer no time adversário quando o dele
+    // era o visitante daquela partida.
+    const tournamentUserTeamId =
+      p.isCareerMode && p.matchContext === 'league' ? p.careerState?.season.league.userTeamId
+      : p.isCareerMode && p.matchContext === 'bracket' ? p.careerState?.season.cup.userTeamId
+      : p.matchContext === 'league' ? p.leagueState?.userTeamId
+      : p.matchContext === 'bracket' ? p.bracketState?.userTeamId
+      : undefined;
+    const userIsHome = tournamentUserTeamId === undefined || p.homeTeam.id === tournamentUserTeamId;
     return (
       <SetupScreen
         homeTeam={p.homeTeam}
@@ -339,6 +350,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         }}
         isTacticsOnly={p.isTournamentEntry}
         lockAway={p.matchContext !== 'regular' || p.gameMode === 'cpu'}
+        userIsHome={userIsHome}
       />
     );
   },

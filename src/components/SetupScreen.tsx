@@ -44,6 +44,11 @@ interface Props {
   onStartMatch: (home: Team, away: Team) => void;
   onBack: () => void;
   lockAway?: boolean;
+  /** Em modo solo (lockAway), qual lado é o time do usuário — decide qual card aparece
+   *  editável na tela. Sem isso, a tela sempre mostrava/editava o time "home" mesmo
+   *  quando o usuário era o visitante da partida (bug real, reportado em Modo Carreira).
+   *  Default true preserva o comportamento antigo pros modos sem esse conceito. */
+  userIsHome?: boolean;
   isTacticsOnly?: boolean;
   mode?: 'single' | 'league' | 'cup' | 'career' | 'online';
 }
@@ -65,7 +70,7 @@ function autoBenchUnavailable(team: Team): Team {
 
 import { playerOvr } from '../utils/playerOvr';
 
-export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, isTacticsOnly, mode }: Props) {
+export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
@@ -84,6 +89,13 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [tutorialSeen] = useLocalStorage<string>('fp:tutorialSeen', '');
   const [showTutorial, setShowTutorial] = useState(!tutorialSeen);
   const [setupTab, setSetupTab] = useState<'tactics' | 'squad'>('tactics');
+
+  // Em modo solo (lockAway), o time do usuário pode ser home OU away — o calendário do
+  // torneio/carreira decide quem manda em cada rodada, não é sempre "home". Centraliza
+  // aqui pra não duplicar essa checagem em cada lugar que precisa saber "qual é o meu".
+  const mySide: 'home' | 'away' = lockAway && !userIsHome ? 'away' : 'home';
+  const myTeam = mySide === 'away' ? awayTeam : homeTeam;
+  const theirTeam = mySide === 'away' ? homeTeam : awayTeam;
 
   const updateHome = useCallback((s: Strategy) => {
     if (s.formation !== homeTeam.strategy.formation) {
@@ -290,7 +302,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       </div>
 
       {(() => {
-        const moraleTeam = lockAway ? homeTeam : null; // só mostra em torneios
+        const moraleTeam = lockAway ? myTeam : null; // só mostra em torneios, do lado do usuário
         const m = moraleTeam?.morale ?? 0;
         if (!moraleTeam || m === 0) return null;
         const icon = m >= 6 ? '😄' : m >= 2 ? '😊' : m <= -6 ? '😟' : m <= -2 ? '😕' : '😐';
@@ -340,7 +352,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       <div className="morale-strip" style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)' }}>
         <span className="morale-label" style={{ color: 'var(--accent)' }}>📋 Análise Tática</span>
         <span className="morale-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-h)', flex: 1, textAlign: 'center' }}>
-          {getTacticalInsight(homeTeam, awayTeam)}
+          {getTacticalInsight(lockAway ? myTeam : homeTeam, lockAway ? theirTeam : awayTeam)}
         </span>
       </div>
 
@@ -361,10 +373,15 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
       <div className={lockAway ? 'setup-layout setup-layout-solo' : 'setup-layout'}>
         <div className="setup-left">
-          {setupTab === 'tactics'
-            ? renderCard(homeTeam, updateHome, 'home')
-            : renderSquad(homeTeam, homeSelected, setHomeSelected, handleSwapHome, false)
-          }
+          {(() => {
+            const updateFn = mySide === 'away' ? updateAway : updateHome;
+            const selected = mySide === 'away' ? awaySelected : homeSelected;
+            const setSelected = mySide === 'away' ? setAwaySelected : setHomeSelected;
+            const swapFn = mySide === 'away' ? handleSwapAway : handleSwapHome;
+            return setupTab === 'tactics'
+              ? renderCard(myTeam, updateFn, mySide)
+              : renderSquad(myTeam, selected, setSelected, swapFn, false);
+          })()}
         </div>
 
         {!lockAway && (

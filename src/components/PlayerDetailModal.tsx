@@ -2,6 +2,7 @@ import type { Player } from '../engine/types';
 import { playerOvr } from '../utils/playerOvr';
 import { calculateMarketValue, calculateWeeklyWage } from '../engine/transferMarket';
 import { formatMoney } from '../utils/formatMoney';
+import { countryFlagEmoji } from '../utils/countryFlags';
 import styles from './PlayerDetailModal.module.css';
 
 interface Props {
@@ -57,9 +58,11 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
               <span>#{player.number}</span>
               <span>{POSITION_LABELS[player.position]}</span>
               {player.age !== undefined && <span>{player.age} anos</span>}
-              {player.nationality && <span>{leagueFlag ? `${leagueFlag} ` : '🌍 '}{player.nationality}</span>}
+              {player.nationality && (
+                <span>{countryFlagEmoji(player.nationality) ?? '🌍'} {player.nationality}</span>
+              )}
             </div>
-            {teamName && <div className={styles.teamName}>{teamName}</div>}
+            {teamName && <div className={styles.teamName}>{leagueFlag ? `${leagueFlag} ` : ''}{teamName}</div>}
           </div>
         </div>
 
