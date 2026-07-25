@@ -3,7 +3,6 @@ import type { Team, MatchResult, MatchEvent, RandomFn } from '../engine/types';
 import { beginMatchState, simularProximoBloco, buildMatchResult, type MatchState } from '../engine/matchEngine';
 import { FIRST_HALF_CYCLES, TOTAL_CYCLES } from '../engine/matchConfig';
 import { cloneTeam } from '../utils/teamUtils';
-import { sfx } from '../utils/audio';
 import type { SubWindow } from '../utils/liveMatchPersistence';
 
 const BASE_HALF_DURATION_MS = 120000;
@@ -20,12 +19,11 @@ export function getSubWindow(phase: MatchPhase, clockSeconds: number): SubWindow
   if (phase === 'halftime') return 'halftime';
   return clockSeconds < HALF_SECONDS ? 'firstHalfPause' : 'secondHalfPause';
 }
-const SPEED_DURATIONS: Record<number, number> = {
-  1: 120000,   // 2 min
-  2: 90000,    // 1 min 30s
-  3: 60000,    // 1 min
-  4: 45000,    // 45s
-};
+// Multiplicador real aplicado ao tick do relógio por nível de velocidade (botões 1x-4x
+// na UI). Progressão geométrica (1, 2, 4, 8) em vez de linear (1, 2, 3, 4) — cada nível
+// dobra o anterior, então o 4x fica bem mais rápido do que "4 vezes mais rápido que o 1x"
+// seria sob a progressão linear antiga (~15s de jogo real por tempo, contra ~30s antes).
+const SPEED_MULTIPLIERS: Record<number, number> = { 1: 1, 2: 2, 3: 4, 4: 8 };
 // Ciclos simulados por vez (2 ciclos = 4min de jogo). Simular em blocos pequenos, em vez do
 // tempo inteiro de uma vez, é o que permite uma substituição feita numa pausa afetar os
 // ciclos seguintes de verdade — antes, o tempo inteiro já estava calculado antes da pausa
@@ -145,7 +143,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     const queue = [...events];
     const maxSec = halfOffsetSec + HALF_SECONDS;
-    const baseDuration = SPEED_DURATIONS[1] ?? BASE_HALF_DURATION_MS;
+    const baseDuration = BASE_HALF_DURATION_MS;
     const clampedElapsed = Math.min(HALF_SECONDS, Math.max(0, initialElapsedInHalfSec));
     let pauseAccumMs = (clampedElapsed / HALF_SECONDS) * baseDuration;
 
@@ -169,7 +167,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
       }
 
       const speed = speedRef?.current ?? 1;
-      pauseAccumMs += CLOCK_TICK_MS * speed;
+      pauseAccumMs += CLOCK_TICK_MS * (SPEED_MULTIPLIERS[speed] ?? speed);
       const inGameSec = Math.min(HALF_SECONDS, Math.floor((pauseAccumMs / baseDuration) * HALF_SECONDS));
       const effectiveSec = halfOffsetSec + inGameSec;
 
@@ -199,7 +197,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
           setReplayEvents(prev => [...prev, evt]);
           if (replayRef.current) { clearInterval(replayRef.current); replayRef.current = null; }
           setClockSeconds(maxSec);
-          sfx.whistleEnd();
           onDone();
           return;
         }
@@ -207,7 +204,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
         if (evt.type === 'goal') {
           if (evt.teamId === initialHomeId) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
           else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
-          sfx.goal();
           pausedRef.current = true;
           setPaused(true);
           setIsGoalPause(true);
@@ -220,27 +216,10 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
           }, 2500);
         }
 
-        if (evt.type === 'foul') {
-          sfx.foulWhistle();
-        }
-
-        if (evt.type === 'post') {
-          sfx.postHit();
-        }
-
-        if (evt.type === 'miss' || evt.type === 'save') {
-          sfx.nearMiss();
-        }
-
-        if (evt.type === 'yellowCard' || evt.type === 'redCard') {
-          sfx.cardReaction();
-        }
-
         if (evt.type === 'penalty' && evt.scorer) {
           if (evt.description.includes('⚽')) {
             if (evt.teamId === initialHomeId) { hScoreRef.current++; setHomeScore(hScoreRef.current); }
             else { aScoreRef.current++; setAwayScore(aScoreRef.current); }
-            sfx.goal();
             pausedRef.current = true;
             setPaused(true);
             setIsGoalPause(true);
@@ -391,7 +370,6 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setFatigueMap({});
     setExpelledIds([]);
     setPausesRemaining(1);
-    sfx.whistleStart();
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;

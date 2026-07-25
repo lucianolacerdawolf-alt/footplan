@@ -130,7 +130,7 @@ export interface MatchEvent {
   teamId: string | null; // time que gerou o evento (null para eventos neutros)
   playerId?: string;     // jogador envolvido (preenchido em redCard/yellowCard)
   scorer?: string;       // nome do marcador (preenchido em goal)
-  passerId?: string;     // quem deu o passe (preenchido em pass, pro Pitch seguir o passe real)
+  passerId?: string;     // quem deu o passe (preenchido em pass)
   receiverId?: string;   // quem recebeu o passe (preenchido em pass)
 }
 

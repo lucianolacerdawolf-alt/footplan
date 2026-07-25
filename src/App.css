@@ -375,45 +375,20 @@
 .clock-num { font-size: 18px; font-weight: 800; font-family: var(--mono); color: var(--accent); line-height: 1; }
 .clock-label { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.35; line-height: 1; margin-top: 1px; }
 
-/* Pitch area */
+/* Status da partida (texto — sem campo visual) */
 .match-pitch-area { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 3px 16px 4px; }
 
-.pitch-container { position: relative; width: 100%; max-width: 720px; }
+.match-status-area { position: relative; width: 100%; max-width: 500px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 
-.formation-preview {
-  position: absolute; inset: 0; z-index: 10;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.85);
-  border-radius: 8px; gap: 10px; padding: 12px;
-  animation: fadeIn 0.3s ease;
+.formation-text-preview {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px 14px; border-radius: 8px;
+  background: var(--code-bg); border: 1px solid var(--border);
+  font-family: var(--mono); font-size: 13px;
 }
-.formation-preview-title {
-  font-size: 14px; font-weight: 800; font-family: var(--mono);
-  opacity: 0.5; text-transform: uppercase; letter-spacing: 1px;
-}
-.formation-preview-row {
-  display: flex; align-items: center; gap: 16px;
-}
-.formation-preview-team {
-  display: flex; flex-direction: column; align-items: center; gap: 6px;
-}
-.formation-preview-vs {
-  font-size: 18px; font-weight: 900; opacity: 0.25; font-family: var(--mono);
-}
-.formation-mini-pitch {
-  width: 120px; height: 80px; background: rgba(26,92,40,0.6);
-  border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-  position: relative; overflow: hidden;
-}
-.formation-mini-pitch svg {
-  position: absolute; inset: 0;
-}
-.formation-mini-home::before {
-  content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
-  background: rgba(255,255,255,0.3);
-}
-
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.formation-text-team { font-weight: 800; }
+.formation-text-value { font-weight: 700; color: var(--text-h); }
+.formation-text-vs { opacity: 0.4; font-weight: 600; }
 
 .simulate-btn {
   padding: 7px 26px; font-size: 13px; font-weight: 700; font-family: var(--sans); border: none;
@@ -497,16 +472,16 @@
 }
 
 /* =============================================================================
-   INTERVALO (HALFTIME) — overlay sobre o campo
+   INTERVALO (HALFTIME) — overlay de tela cheia (independente de qualquer campo visual)
    ============================================================================= */
 .halftime-overlay {
-  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.55); border-radius: 6px; z-index: 10;
+  position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.65); z-index: 1000; padding: 16px;
 }
 .halftime-inner {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
   padding: 16px 20px; background: var(--code-bg); border: 1px solid var(--border);
-  border-radius: 8px; max-width: 90%;
+  border-radius: 8px; max-width: 90%; max-height: 90dvh; overflow-y: auto;
 }
 .halftime-title {
   font-size: 14px; font-weight: 800; color: var(--accent);
@@ -544,64 +519,6 @@
 .ht-squad-row.clickable { opacity: 0.8; }
 .ht-squad-row.clickable:hover { opacity: 1; }
 .ht-sub-group-label { font-size: 9px; text-transform: uppercase; opacity: 0.35; padding: 3px 5px 0; letter-spacing: 0.5px; }
-
-/* =============================================================================
-   PITCH
-   ============================================================================= */
-.pitch-wrapper {
-  width: 720px; max-width: 100%; aspect-ratio: 12 / 7; position: relative;
-  border-radius: 6px; overflow: hidden; box-shadow: 0 2px 14px rgba(0,0,0,0.1);
-  border: 1.5px solid rgba(255,255,255,0.08);
-}
-.pitch-svg { width: 100%; height: 100%; display: block; }
-.pitch-labels {
-  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-  display: flex; flex-direction: row; justify-content: space-between; align-items: flex-start;
-  pointer-events: none; padding: 3px 4px;
-}
-.pitch-label-home, .pitch-label-away {
-  font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.8);
-  text-shadow: 0 1px 2px rgba(0,0,0,0.5); letter-spacing: 0.3px;
-  padding: 1px 4px; border-radius: 2px; background: rgba(0,0,0,0.3);
-}
-
-/* Transições suaves */
-.ball-dot {
-  transition: cx 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
-              cy 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.goal-flash { animation: goalPulse 1.5s ease-out; }
-@keyframes goalPulse {
-  0%   { r: 2;  opacity: 1;   fill: #ffd700; }
-  20%  { r: 12; opacity: 0.9; fill: #ffd700; }
-  50%  { r: 24; opacity: 0.6; fill: #f59e0b; }
-  80%  { r: 36; opacity: 0.25; fill: #ef4444; }
-  100% { r: 48; opacity: 0;   fill: #ef4444; }
-}
-
-.goal-text {
-  animation: goalBoom 1.5s ease-out;
-  transform-origin: center;
-}
-@keyframes goalBoom {
-  0%   { opacity: 0; transform: scale(0.1); filter: drop-shadow(0 0 0px #ffd700); }
-  15%  { opacity: 1; transform: scale(1.6); filter: drop-shadow(0 0 12px #ffd700); }
-  40%  { opacity: 1; transform: scale(1.1); filter: drop-shadow(0 0 8px #ffd700); }
-  70%  { opacity: 0.9; transform: scale(1.2); filter: drop-shadow(0 0 6px #f59e0b); }
-  100% { opacity: 0; transform: scale(1.4); filter: drop-shadow(0 0 0px #f59e0b); }
-}
-
-/* Sway idle (jogadores "respiram" quando parados) */
-.idle-sway {
-  animation: sway 3s ease-in-out infinite;
-}
-@keyframes sway {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(0.3px, -0.3px) rotate(0.5deg); }
-  50% { transform: translate(0, 0.4px) rotate(0deg); }
-  75% { transform: translate(-0.3px, -0.3px) rotate(-0.5deg); }
-}
 
 /* =============================================================================
    COMMENTARY
