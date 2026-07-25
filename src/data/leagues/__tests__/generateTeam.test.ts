@@ -10,7 +10,10 @@ describe('generatePlayer — calibração de OVR (regressão)', () => {
   // verdade, e qualquer alvo de 85+ clampava em 99 — apagando toda diferença entre um
   // time OVR 85 e um OVR 95. Achado investigando por que times de 2ª divisão (alvo
   // 72-77 nos dados) saíam com OVR médio 86-93 na prática, mais forte que a 1ª divisão
-  // do mesmo país. Ver o comentário em generateTeam.ts pra derivação da correção.
+  // do mesmo país. Recalibrado de novo depois que playerOvr() passou a limitar o OVR ao
+  // maior atributo do jogador (ver utils/playerOvr.ts) — esse cap reduz o boost com mais
+  // força nos alvos altos, então a constante de correção mudou. Ver o comentário em
+  // generateTeam.ts pra derivação atual.
   const positions: Position[] = ['GK', 'DEF', 'MID', 'FWD'];
 
   it('a média de playerOvr() de jogadores gerados fica perto do OVR alvo, em qualquer posição', () => {

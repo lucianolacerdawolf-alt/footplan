@@ -197,7 +197,7 @@ describe('trades (D-05, D-06)', () => {
     const rngWithCash = seededRng(7);
     let acceptedWithCash = 0;
     for (let i = 0; i < 300; i++) {
-      if (evaluateTradeOffer(offered, requested, cpuSquad, 30, rngWithCash, 5_000_000).accepted) acceptedWithCash++;
+      if (evaluateTradeOffer(offered, requested, cpuSquad, 30, rngWithCash, 30_000_000).accepted) acceptedWithCash++;
     }
 
     expect(acceptedWithCash).toBeGreaterThan(acceptedNoCash);

@@ -25,5 +25,15 @@ export function playerOvr(p: Player): number {
     a.dribbling * (w.dribbling ?? 0) +
     a.vision * (w.vision ?? 0) +
     a.positioning * (w.positioning ?? 0);
-  return Math.min(99, Math.round(sum / total * 1.15 + 3));
+  const boosted = Math.round((sum / total) * 1.15 + 3);
+  // A média ponderada só considera os atributos relevantes pra posição (ex: um zagueiro
+  // não usa finalização/drible/visão no cálculo), então o boost acima podia gerar um OVR
+  // maior que QUALQUER atributo mostrado no card (ex: Van Dijk com Desarme/Posicionamento
+  // 94 saindo com OVR 99 — mas também maior que os 94, o que não fazia sentido visual).
+  // O cap no maior atributo do jogador garante que o OVR nunca pareça incoerente com os
+  // 8 números exibidos, mesmo mantendo o boost pra quem já é parelho em tudo.
+  const maxAttr = Math.max(
+    a.speed, a.stamina, a.passing, a.finishing, a.tackling, a.dribbling, a.vision, a.positioning,
+  );
+  return Math.min(99, maxAttr, boosted);
 }

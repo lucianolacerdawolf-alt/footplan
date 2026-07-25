@@ -3,17 +3,23 @@ import { playerOvr } from '../utils/playerOvr';
 
 /** Valuation de mercado — jovens e atacantes valem mais, goleiros e veteranos valem menos.
  *  Escala exponencial ancorada na distribuição real de `playerOvr()` nos dados do jogo
- *  (mediana ~83, p90 ~91, p99 ~98 — a escala interna já roda "quente", nada a ver com a
- *  escala 40-99 de um FIFA real): OVR 70 ≈ €1.1M, 83 ≈ €6M, 91 ≈ €17M, 98 ≈ €43M.
- *  Ancorar em 50 com crescimento 1.24×/OVR (como se a escala fosse a de um FIFA real)
- *  fazia até jogadores medianos (OVR 83) custarem 20-30M+, estourando os orçamentos de
- *  5-45M das ligas — nenhuma compra premium (1.5×) cabia no orçamento de time nenhum. */
+ *  (mediana ~74, p90 ~82, p99 ~90, máximo ~98 — a escala interna já roda "quente", nada
+ *  a ver com a escala 40-99 de um FIFA real): OVR 74 ≈ €6M, 82 ≈ €17M, 90 ≈ €43M.
+ *  Ancorado/recalibrado depois que playerOvr() passou a limitar o OVR ao maior atributo
+ *  do jogador (ver utils/playerOvr.ts) — isso baixou a mediana de ~83 pra ~74 (o boost
+ *  artificial que empurrava a maioria dos jogadores pra perto do teto de 99 foi removido),
+ *  então a âncora e a taxa de crescimento foram ajustadas pra manter o mesmo valor em
+ *  dinheiro real pro jogador mediano (~€6M) e pro top 1% (~€43M), só que mapeados pros
+ *  novos números de OVR. Ancorar em 50 com crescimento 1.24×/OVR (como se a escala fosse
+ *  a de um FIFA real) fazia até jogadores medianos custarem 20-30M+, estourando os
+ *  orçamentos de 5-45M das ligas — nenhuma compra premium (1.5×) cabia no orçamento de
+ *  time nenhum. */
 export function calculateMarketValue(player: Player): number {
   const age = player.age ?? 26;
   const baseOvr = playerOvr(player);
   const ageMultiplier = age <= 21 ? 1.5 : age <= 25 ? 1.3 : age <= 28 ? 1.1 : age <= 31 ? 0.9 : 0.6;
   const positionMultiplier = player.position === 'FWD' ? 1.2 : player.position === 'GK' ? 0.6 : 1.0;
-  const baseValue = 6_000_000 * Math.pow(1.14, baseOvr - 83);
+  const baseValue = 6_000_000 * Math.pow(1.13, baseOvr - 74);
   return Math.round(baseValue * ageMultiplier * positionMultiplier);
 }
 
