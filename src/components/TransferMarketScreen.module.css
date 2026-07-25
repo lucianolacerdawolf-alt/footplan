@@ -55,6 +55,82 @@
   opacity: 0.7;
 }
 
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--sans);
+}
+.searchInput:focus { outline: none; border-color: var(--accent); }
+
+.searchHitSource {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.searchHint {
+  text-align: center;
+  padding: 8px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.backLink {
+  align-self: flex-start;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+.backLink:hover { text-decoration: underline; }
+
+.leagueGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.leagueCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--sans);
+  transition: border-color 0.15s, background 0.15s;
+}
+.leagueCard:hover { border-color: var(--accent-border); background: var(--social-bg); }
+
+.leagueFlag { font-size: 18px; }
+.leagueName { font-size: 12px; font-weight: 700; color: var(--text-h); }
+.leagueMeta { font-size: 10px; color: var(--text-secondary); }
+
+@media (max-width: 420px) {
+  .leagueGrid { grid-template-columns: 1fr; }
+}
+
 .filterBar {
   display: flex;
   align-items: center;

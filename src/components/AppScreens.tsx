@@ -434,7 +434,8 @@ const screenMap: Record<Screen, ScreenRenderer> = {
     return (
       <TransferMarketScreen
         userTeam={p.careerState.rosters[p.careerState.leagueId].find(t => t.id === userTeamId)!}
-        cpuTeams={p.careerState.rosters[p.careerState.leagueId].filter(t => t.id !== userTeamId)}
+        userLeagueId={p.careerState.leagueId}
+        rosters={p.careerState.rosters}
         freeAgents={getFreeAgentPool(p.careerState)}
         budget={finances.budget}
         isWindowOpen={isTransferWindowOpen(p.careerState.season.league.currentRound)}

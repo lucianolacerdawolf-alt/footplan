@@ -468,18 +468,26 @@ export function useCareerManager({
     const finances = getFinances(careerState);
     if (amount > finances.budget) return { success: false, reason: 'insufficient-budget' };
 
-    // D-04: mercado só opera dentro da própria liga do usuário (mesmo escopo de handleProposeTrade) —
-    // as outras 5 ligas nunca têm marketValue atribuído, então comprar de fora não faria sentido.
-    const leagueRoster = careerState.rosters[careerState.leagueId];
-    const userTeam = leagueRoster.find(t => t.id === careerState.season.league.userTeamId);
-    const sellerTeam = leagueRoster.find(t => t.id === fromTeamId);
-    if (!userTeam || !sellerTeam) return { success: false, reason: 'invalid-team' };
+    const userTeam = careerState.rosters[careerState.leagueId].find(t => t.id === careerState.season.league.userTeamId);
+    if (!userTeam) return { success: false, reason: 'invalid-team' };
+
+    // O mercado cobre todas as ligas do jogo (não só a do usuário) — procura o vendedor
+    // em qualquer roster. calculateMarketValue() é recalculado on-the-fly pra times de
+    // fora da liga do usuário (nunca têm `marketValue` pré-atribuído, ver handleStartCareer).
+    let sellerLeagueId: string | null = null;
+    let sellerTeam: Team | undefined;
+    for (const [lid, teams] of Object.entries(careerState.rosters)) {
+      const found = teams.find(t => t.id === fromTeamId);
+      if (found) { sellerLeagueId = lid; sellerTeam = found; break; }
+    }
+    if (!sellerTeam || !sellerLeagueId) return { success: false, reason: 'invalid-team' };
 
     const player = sellerTeam.squad.find(p => p.id === playerId);
     if (!player) return { success: false, reason: 'invalid-player' };
 
     // Nunca deixa o vendedor sem nenhum jogador na posição (ex: 0 goleiros quebraria a
-    // simulação de partida). Com ≤2 (mas >1), evaluateCashTransfer já aplica um markup.
+    // simulação de partida) — vale pra qualquer time do jogo, não só da liga do usuário.
+    // Com ≤2 (mas >1), evaluateCashTransfer já aplica um markup.
     const samePositionCount = sellerTeam.squad.filter(p => p.position === player.position).length;
     if (samePositionCount <= 1) return { success: false, reason: 'seller-last-at-position' };
     const sellerNeedsPlayer = samePositionCount <= 2;
@@ -487,8 +495,12 @@ export function useCareerManager({
     const evalResult = evaluateCashTransfer(player, amount, sellerNeedsPlayer);
     if (!evalResult.accepted) return { success: false, reason: evalResult.reason };
 
-    const moveSquad = (teams: Team[]): Team[] => teams.map(t => {
-      if (t.id === sellerTeam.id) return { ...t, squad: t.squad.filter(p => p.id !== playerId) };
+    const isSameLeague = sellerLeagueId === careerState.leagueId;
+    const addToUser = (teams: Team[]): Team[] => teams.map(t => t.id === userTeam.id ? { ...t, squad: [...t.squad, player] } : t);
+    // Time e liga vendedores só aparecem em season.league/cup.teams quando fazem parte
+    // da própria liga do usuário (esses dois arrays são um espelho de rosters[leagueId]).
+    const moveSquadSameLeague = (teams: Team[]): Team[] => teams.map(t => {
+      if (t.id === sellerTeam!.id) return { ...t, squad: t.squad.filter(p => p.id !== playerId) };
       if (t.id === userTeam.id) return { ...t, squad: [...t.squad, player] };
       return t;
     });
@@ -502,13 +514,22 @@ export function useCareerManager({
 
     setCareerState(prev => {
       if (!prev) return prev;
+      const newRosters = isSameLeague
+        ? { ...prev.rosters, [prev.leagueId]: moveSquadSameLeague(prev.rosters[prev.leagueId]) }
+        : {
+            ...prev.rosters,
+            [sellerLeagueId!]: prev.rosters[sellerLeagueId!].map(t =>
+              t.id === sellerTeam!.id ? { ...t, squad: t.squad.filter(p => p.id !== playerId) } : t
+            ),
+            [prev.leagueId]: addToUser(prev.rosters[prev.leagueId]),
+          };
       return {
         ...prev,
-        rosters: { ...prev.rosters, [prev.leagueId]: moveSquad(prev.rosters[prev.leagueId]) },
+        rosters: newRosters,
         season: {
           ...prev.season,
-          league: { ...prev.season.league, teams: moveSquad(prev.season.league.teams) },
-          cup: { ...prev.season.cup, teams: moveSquad(prev.season.cup.teams) },
+          league: { ...prev.season.league, teams: isSameLeague ? moveSquadSameLeague(prev.season.league.teams) : addToUser(prev.season.league.teams) },
+          cup: { ...prev.season.cup, teams: isSameLeague ? moveSquadSameLeague(prev.season.cup.teams) : addToUser(prev.season.cup.teams) },
         },
         finances: { ...finances, budget: finances.budget - amount, wageBill: newWageBill },
         transferHistory: [...getTransferHistory(prev), record],
