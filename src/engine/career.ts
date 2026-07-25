@@ -313,11 +313,6 @@ export function evaluateTradeOffer(
   };
 }
 
-/** Limite de propostas de troca por temporada (D-06) — fonte única de verdade, nunca hardcoded em outro lugar. */
-export function canProposeTrade(tradesUsedThisSeason: number): boolean {
-  return tradesUsedThisSeason < 3;
-}
-
 // =============================================================================
 // REPUTAÇÃO (D-08, D-09)
 // =============================================================================

@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 //
-// Cobre o comportamento de `mode="league"` (regressão — roster-sync visível, sem
-// input de nome) e `mode="career"` (novo — roster-sync escondido, input de nome do
-// técnico com sanitização de caracteres de controle e cap de 24 chars aplicado antes
-// de chegar no state, conforme T-04.4-01).
+// Cobre o comportamento de `mode="league"` (regressão — roster-sync automático ao
+// montar, sem input de nome) e `mode="career"` (novo — roster-sync também visível,
+// input de nome do técnico com sanitização de caracteres de controle e cap de 24
+// chars aplicado antes de chegar no state, conforme T-04.4-01).
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
@@ -11,20 +11,20 @@ import TournamentSetupScreen from '../TournamentSetupScreen';
 import { makeLeague } from './testFixtures';
 
 describe('TournamentSetupScreen — mode="league" (regressão)', () => {
-  it('mostra o botão de sincronizar elenco', () => {
+  it('mostra o status de sincronização de elenco (auto-sync ao montar)', () => {
     render(
       <TournamentSetupScreen mode="league" league={makeLeague()} onBack={vi.fn()} onGoHome={vi.fn()} onStart={vi.fn()} />
     );
-    expect(screen.getByText(/Atualizar elencos/)).toBeInTheDocument();
+    expect(screen.getByText(/elencos/i)).toBeInTheDocument();
   });
 });
 
 describe('TournamentSetupScreen — mode="career"', () => {
-  it('esconde o botão de sincronizar elenco e mostra o input de nome do técnico', () => {
+  it('mostra o status de sincronização de elenco e o input de nome do técnico', () => {
     render(
       <TournamentSetupScreen mode="career" league={makeLeague()} onBack={vi.fn()} onGoHome={vi.fn()} onStart={vi.fn()} />
     );
-    expect(screen.queryByText(/Atualizar elencos/)).toBeNull();
+    expect(screen.getByText(/elencos/i)).toBeInTheDocument();
     expect(screen.getByText('Nome do Técnico')).toBeInTheDocument();
   });
 

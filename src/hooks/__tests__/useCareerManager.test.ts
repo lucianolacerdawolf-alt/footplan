@@ -45,7 +45,7 @@ beforeEach(() => {
 });
 
 describe('handleStartCareer (D-01, D-13)', () => {
-  it('seeds all 6 real leagues and creates season 1 league+cup together', () => {
+  it('seeds all 12 real leagues (6 top-flight + 6 second divisions) and creates season 1 league+cup together', () => {
     const { result } = renderHook(() => useCareerManager(mockParams()));
     // leagueDef must be one of the real allLeagues entries — handleStartCareer
     // indexes rosters by leagueDef.id against the real allLeagues import (D-01),
@@ -61,7 +61,7 @@ describe('handleStartCareer (D-01, D-13)', () => {
     });
 
     expect(result.current.careerState).not.toBeNull();
-    expect(Object.keys(result.current.careerState!.rosters).length).toBe(6);
+    expect(Object.keys(result.current.careerState!.rosters).length).toBe(12);
     expect(result.current.careerState!.season.cup.roundOf16.length).toBe(8);
     expect(result.current.careerState!.season.league.phase).toBe('playing');
     // .age is only populated by assignInitialAges on the seeded/aged clone path —
@@ -119,15 +119,15 @@ function startPlCareer(result: { current: ReturnType<typeof useCareerManager> })
   return { leagueId, userTeamId, opponentTeamId };
 }
 
-describe('D-06: trade cap', () => {
-  it('rejects the 4th trade proposal once the 3-trade cap is hit, even with a guaranteed-favorable offer', () => {
+describe('D-06: trade cap removido', () => {
+  it('aceita a 4ª proposta de troca da temporada normalmente — não há mais teto de 3', () => {
     const { result } = renderHook(() => useCareerManager(mockParams()));
     const { leagueId, userTeamId, opponentTeamId } = startPlCareer(result);
 
     // Math.random defaults evaluateTradeOffer's rng — mocking it to 0.01 guarantees
     // rng() < acceptChance on every call, since 0.01 is below even the clamp's floor
-    // of 0.02, independent of the offer's actual favorability. This makes the first
-    // 3 proposals deterministically accepted, no retry loop or flake risk.
+    // of 0.02, independent of the offer's actual favorability. This makes all 4
+    // proposals deterministically accepted, no retry loop or flake risk.
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
 
     let lastResult: { accepted: boolean; reason: string } | undefined;
@@ -142,8 +142,7 @@ describe('D-06: trade cap', () => {
       });
     }
 
-    expect(lastResult).toEqual({ accepted: false, reason: 'trade-limit-reached' });
-    expect(result.current.careerState!.season.tradesUsedThisSeason).toBe(3);
+    expect(lastResult).toEqual({ accepted: true, reason: 'value-favorable' });
 
     randomSpy.mockRestore();
   });

@@ -2,13 +2,18 @@ import type { Player, Team } from './types';
 import { playerOvr } from '../utils/playerOvr';
 
 /** Valuation de mercado — jovens e atacantes valem mais, goleiros e veteranos valem menos.
- *  Escala exponencial pra refletir valores reais (~Transfermarkt): OVR 60 ≈ €170K, 70 ≈ €1.5M, 80 ≈ €16M, 90 ≈ €170M. */
+ *  Escala exponencial ancorada na distribuição real de `playerOvr()` nos dados do jogo
+ *  (mediana ~83, p90 ~91, p99 ~98 — a escala interna já roda "quente", nada a ver com a
+ *  escala 40-99 de um FIFA real): OVR 70 ≈ €1.1M, 83 ≈ €6M, 91 ≈ €17M, 98 ≈ €43M.
+ *  Ancorar em 50 com crescimento 1.24×/OVR (como se a escala fosse a de um FIFA real)
+ *  fazia até jogadores medianos (OVR 83) custarem 20-30M+, estourando os orçamentos de
+ *  5-45M das ligas — nenhuma compra premium (1.5×) cabia no orçamento de time nenhum. */
 export function calculateMarketValue(player: Player): number {
   const age = player.age ?? 26;
   const baseOvr = playerOvr(player);
   const ageMultiplier = age <= 21 ? 1.5 : age <= 25 ? 1.3 : age <= 28 ? 1.1 : age <= 31 ? 0.9 : 0.6;
   const positionMultiplier = player.position === 'FWD' ? 1.2 : player.position === 'GK' ? 0.6 : 1.0;
-  const baseValue = 20000 * Math.pow(1.24, baseOvr - 50);
+  const baseValue = 6_000_000 * Math.pow(1.14, baseOvr - 83);
   return Math.round(baseValue * ageMultiplier * positionMultiplier);
 }
 

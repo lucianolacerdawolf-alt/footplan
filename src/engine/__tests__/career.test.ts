@@ -4,7 +4,6 @@ import {
   progressPlayer,
   progressAllLeagues,
   evaluateTradeOffer,
-  canProposeTrade,
   computeReputationDelta,
   isValidCareerState,
   deriveCupResult,
@@ -169,14 +168,6 @@ describe('trades (D-05, D-06)', () => {
     }
 
     expect(acceptedGood).toBeGreaterThan(acceptedBad);
-  });
-
-  it('canProposeTrade caps at 3 trades per season', () => {
-    expect(canProposeTrade(0)).toBe(true);
-    expect(canProposeTrade(1)).toBe(true);
-    expect(canProposeTrade(2)).toBe(true);
-    expect(canProposeTrade(3)).toBe(false);
-    expect(canProposeTrade(4)).toBe(false);
   });
 
   it('regressão: chamar sem cashOffered (assinatura antiga de 5 args) é idêntico a passar cashOffered=0 explicitamente', () => {
