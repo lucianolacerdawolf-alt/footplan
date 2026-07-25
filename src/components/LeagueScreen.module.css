@@ -103,3 +103,11 @@
 .championName { font-size: 30px; font-weight: 400; font-family: var(--display); letter-spacing: 0.05em; color: var(--text-primary); }
 .championSub { font-size: 11px; font-weight: 700; opacity: 0.5; text-transform: uppercase; letter-spacing: 1.2px; }
 .userResult { text-align: center; font-size: 14px; opacity: 0.7; }
+
+.blockNotice {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #f59e0b;
+  margin-top: 4px;
+}

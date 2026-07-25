@@ -9,6 +9,8 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { CareerState } from '../engine/career';
+import { getInbox } from '../engine/career';
+import { hasMandatoryUnread } from '../engine/inbox';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
 
@@ -25,6 +27,7 @@ import CupSelectScreen from './CupSelectScreen';
 import CareerHubScreen from './CareerHubScreen';
 import TradeProposalScreen from './TradeProposalScreen';
 import SeasonEndScreen from './SeasonEndScreen';
+import TrophyRoomScreen from './TrophyRoomScreen';
 import { getLeague } from '../data/leagues';
 
 function getResumableSaves(): ResumableSave[] {
@@ -147,6 +150,7 @@ export interface AppScreensProps {
   handleCareerBracketMatchResult: (result: MatchResult) => void;
   handleProposeTrade: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string) => { accepted: boolean; reason: string };
   handleAdvanceSeason: () => void;
+  handleMarkInboxRead: (id: string) => void;
 
   // ── Misc ──
   clearHistory: () => void;
@@ -407,12 +411,27 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onAdvanceSeason={p.handleAdvanceSeason}
         onNewCareer={p.handleNewCareerFromHub}
         onBack={() => { p.setIsCareerMode(false); p.goHome(); }}
+        onMarkInboxRead={p.handleMarkInboxRead}
+        onViewTrophyRoom={() => p.setScreen('career-trophy-room')}
+      />
+    );
+  },
+
+  'career-trophy-room': (p) => {
+    if (!p.careerState) return null;
+    return (
+      <TrophyRoomScreen
+        history={p.careerState.history}
+        onBack={() => p.setScreen('career-hub')}
       />
     );
   },
 
   'career-league': (p) => {
     if (!p.careerState) return null;
+    const blockAdvanceReason = hasMandatoryUnread(getInbox(p.careerState))
+      ? 'Leia as mensagens obrigatórias na Central de Carreira antes de avançar'
+      : undefined;
     return (
       <LeagueScreen
         state={p.careerState.season.league}
@@ -424,6 +443,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onEditTactics={p.handleEditCareerLeagueTactics}
         onViewTable={() => p.setScreen('career-league-table')}
         onBack={() => p.setScreen('career-hub')}
+        blockAdvanceReason={blockAdvanceReason}
       />
     );
   },

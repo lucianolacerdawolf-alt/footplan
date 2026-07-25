@@ -26,13 +26,15 @@ interface Props {
   onEditTactics: () => void;
   onViewTable: () => void;
   onBack: () => void;
+  /** Só usado no Modo Carreira: motivo pra bloquear "Avançar Rodada" (ex: mensagem obrigatória não lida) */
+  blockAdvanceReason?: string;
 }
 
 function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
 }
 
-export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack }: Props) {
+export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
   const [simulating, setSimulating] = useState(false);
   const runSim = (fn: () => void) => {
@@ -200,9 +202,17 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
         </div>
 
         {roundComplete && (
-          <button className="start-btn" onClick={onNextRound}>
-            {currentRound + 1 < fixtures.length ? `Rodada ${currentRound + 2} →` : 'Ver Classificação Final →'}
-          </button>
+          <>
+            <button
+              className="start-btn"
+              onClick={onNextRound}
+              disabled={!!blockAdvanceReason}
+              title={blockAdvanceReason}
+            >
+              {currentRound + 1 < fixtures.length ? `Rodada ${currentRound + 2} →` : 'Ver Classificação Final →'}
+            </button>
+            {blockAdvanceReason && <div className={styles.blockNotice}>🔔 {blockAdvanceReason}</div>}
+          </>
         )}
       </div>
     </div>

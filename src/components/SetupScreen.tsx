@@ -3,12 +3,14 @@ import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Wi
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
+import { isPlayerUnavailable, rebalanceForFormation } from '../engine/squadUtils';
 import { FORMATION_BONUS } from '../engine/matchConfig';
 import TacticLabel from './TacticLabel';
 import TacticPresets from './shared/TacticPresets';
 import { useH2H } from '../hooks/useH2H';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import TutorialOverlay from './TutorialOverlay';
+import SquadManagementScreen from './SquadManagementScreen';
 
 function getTacticalInsight(home: Team, away: Team): string {
   const hf = home.strategy.formation;
@@ -47,44 +49,19 @@ interface Props {
   mode?: 'single' | 'league' | 'cup' | 'career' | 'online';
 }
 
-/** Move lesionados pro banco e promove substitutos saudaveis da mesma posicao */
-function autoBenchInjured(team: Team): Team {
+/** Move lesionados/suspensos pro banco e promove substitutos disponíveis da mesma posicao */
+function autoBenchUnavailable(team: Team): Team {
   const counts = FORMATION_COUNTS[team.strategy?.formation ?? '4-3-3'];
   const starterCount = 1 + counts.DEF + counts.MID + counts.FWD;
   const squad = [...team.squad];
   for (let i = 0; i < starterCount; i++) {
     const p = squad[i];
-    if (!p.injuredRounds) continue;
-    const replacement = squad.findIndex((q, idx) => idx >= starterCount && !q.injuredRounds && q.position === p.position);
+    if (!isPlayerUnavailable(p)) continue;
+    const replacement = squad.findIndex((q, idx) => idx >= starterCount && !isPlayerUnavailable(q) && q.position === p.position);
     if (replacement < 0) continue;
     [squad[i], squad[replacement]] = [squad[replacement], squad[i]];
   }
   return { ...team, squad };
-}
-
-/** Reorganiza titulares/reservas conforme a formação */
-function rebalanceSquad(team: Team, formation: Formation): Team {
-  const counts = FORMATION_COUNTS[formation];
-  const squad = [...team.squad];
-  // Separa por posição (todos os jogadores)
-  const gk = squad.filter(p => p.position === 'GK');
-  const defs = squad.filter(p => p.position === 'DEF');
-  const mids = squad.filter(p => p.position === 'MID');
-  const fwds = squad.filter(p => p.position === 'FWD');
-  // Monta titulares: 1 GK + N DEF + N MID + N FWD
-  const starters = [
-    ...gk.slice(0, 1),
-    ...defs.slice(0, counts.DEF),
-    ...mids.slice(0, counts.MID),
-    ...fwds.slice(0, counts.FWD),
-  ];
-  const bench = [
-    ...gk.slice(1),
-    ...defs.slice(counts.DEF),
-    ...mids.slice(counts.MID),
-    ...fwds.slice(counts.FWD),
-  ];
-  return { ...team, squad: [...starters, ...bench], strategy: { ...team.strategy, formation } };
 }
 
 import { playerOvr } from '../utils/playerOvr';
@@ -93,16 +70,17 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
-    return autoBenchInjured(t);
+    return autoBenchUnavailable(t);
   });
   const [awayTeam, setAwayTeam] = useState<Team>(() => {
     const t = cloneTeam(initialAway);
     if (!t.strategy) t.strategy = { formation: '4-4-2', mentality: 'counter-attack', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
-    return autoBenchInjured(t);
+    return autoBenchUnavailable(t);
   });
 
   const [homeSelected, setHomeSelected] = useState<string | null>(null);
   const [awaySelected, setAwaySelected] = useState<string | null>(null);
+  const [managingSide, setManagingSide] = useState<'home' | 'away' | null>(null);
   const { get: getH2H } = useH2H();
   const h2h = getH2H(initialHome.id, initialAway.id);
   const [tutorialSeen] = useLocalStorage<string>('fp:tutorialSeen', '');
@@ -110,14 +88,14 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   const updateHome = useCallback((s: Strategy) => {
     if (s.formation !== homeTeam.strategy.formation) {
-      setHomeTeam(prev => rebalanceSquad(prev, s.formation));
+      setHomeTeam(prev => rebalanceForFormation(prev, s.formation));
     } else {
       setHomeTeam(prev => ({ ...prev, strategy: s }));
     }
   }, [homeTeam.strategy.formation]);
   const updateAway = useCallback((s: Strategy) => {
     if (s.formation !== awayTeam.strategy.formation) {
-      setAwayTeam(prev => rebalanceSquad(prev, s.formation));
+      setAwayTeam(prev => rebalanceForFormation(prev, s.formation));
     } else {
       setAwayTeam(prev => ({ ...prev, strategy: s }));
     }
@@ -218,6 +196,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                 >
                   <span className="sq-num">#{p.number}</span>
                   <span className="sq-name">{p.name}</span>
+                  {p.injuredRounds ? <span className="sq-injury">🤕 {p.injuredRounds}j</span> : null}
+                  {p.isSuspended ? <span className="sq-injury">🚫 {p.suspendedRounds ?? 1}j</span> : null}
                   <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
                   <span className="sq-ovr">{playerOvr(p)}</span>
                 </div>
@@ -241,10 +221,15 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         <div className="setup-team-crest">
           <img src={team.logoUrl} alt={team.name} className="crest-img" />
         </div>
-        <div>
+        <div style={{ flex: 1 }}>
           <h2>{team.name}</h2>
           <span className="setup-team-sub">{team.strategy.formation} · {Math.round(team.squad.slice(0, 11).reduce((s, p) => s + playerOvr(p), 0) / 11)} OVR {disabled ? '🔒 CPU' : ''}</span>
         </div>
+        {!disabled && (
+          <button className="back-btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => setManagingSide(side)}>
+            🎯 Gerenciar Elenco
+          </button>
+        )}
       </div>
 
       <div className="setup-squad-badges">
@@ -386,6 +371,16 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         )}
       </div>
 
+      {managingSide && (
+        <SquadManagementScreen
+          team={managingSide === 'home' ? homeTeam : awayTeam}
+          onSave={t => {
+            if (managingSide === 'home') setHomeTeam(t); else setAwayTeam(t);
+            setManagingSide(null);
+          }}
+          onClose={() => setManagingSide(null)}
+        />
+      )}
     </div>
   );
 }

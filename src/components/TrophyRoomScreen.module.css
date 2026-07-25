@@ -1,0 +1,86 @@
+.screen {
+  max-width: 720px; gap: 16px;
+}
+
+.header {
+  display: flex; align-items: center; gap: 14px;
+}
+
+.title {
+  font-size: 22px; font-weight: 400; font-family: var(--display); letter-spacing: 0.05em;
+}
+
+.backBtn {
+  background: transparent; border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
+  cursor: pointer; font-family: var(--sans);
+  transition: background 0.15s, color 0.15s;
+}
+.backBtn:hover { background: var(--surface); color: var(--text-primary); }
+
+.empty {
+  text-align: center; font-size: 13px; opacity: 0.5; padding: 40px 0;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.card {
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start; text-align: left;
+  padding: 14px; border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--code-bg);
+  cursor: pointer; font-family: var(--sans);
+  transition: border-color 0.15s;
+}
+.card:hover { border-color: var(--accent-border); }
+.card.expanded { border-color: var(--accent); grid-column: 1 / -1; }
+
+.cardTop {
+  display: flex; align-items: center; gap: 8px;
+}
+.cardIcon { font-size: 22px; }
+.cardYear { font-size: 18px; font-weight: 800; font-family: var(--mono); color: var(--text-primary); }
+
+.cardLine { font-size: 11px; opacity: 0.7; font-weight: 500; }
+
+.motsTag {
+  font-size: 10px; font-weight: 800; color: var(--accent-2);
+  margin-top: 2px;
+}
+
+.details {
+  margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--border);
+  display: flex; flex-direction: column; gap: 4px; width: 100%;
+}
+.detailRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.detailLabel {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.5;
+}
+.detailValue {
+  font-size: 12px; font-weight: 700; color: var(--text-primary); font-family: var(--mono);
+}
+
+.repSection {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.repLabel {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.55;
+}
+.repRow {
+  display: flex; flex-wrap: wrap; gap: 6px;
+}
+.repChip {
+  padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor;
+  font-size: 11px; font-weight: 800; font-family: var(--mono);
+}
+
+@media (max-width: 640px) {
+  .screen { padding: 12px 10px 24px; gap: 12px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}

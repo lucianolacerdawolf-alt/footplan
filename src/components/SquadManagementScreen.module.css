@@ -1,0 +1,197 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+  animation: sqFade 180ms ease-out;
+}
+
+@keyframes sqFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.panel {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 92dvh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.crest {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.headerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.headerInfo h2 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headerSub {
+  font-size: 11px;
+  opacity: 0.5;
+  font-weight: 600;
+}
+
+.formationSelect {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 12px;
+  font-family: var(--sans);
+  cursor: pointer;
+}
+
+.closeBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 13px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.closeBtn:hover { opacity: 0.7; }
+
+.body {
+  padding: 12px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.benchPanel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.benchTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.55;
+  padding: 8px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+.benchList {
+  display: flex;
+  flex-direction: column;
+}
+
+.benchRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  opacity: 0.7;
+  transition: background 0.15s, opacity 0.15s;
+}
+.benchRow:last-child { border-bottom: none; }
+.benchRow:hover { background: var(--social-bg); opacity: 0.95; }
+.benchRow.selected {
+  opacity: 1;
+  background: var(--accent-bg);
+  border-color: var(--accent);
+}
+.benchRow.eligible { opacity: 1; }
+.benchRow.eligible .name { color: var(--accent); }
+.benchRow.unavailable {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+.benchRow.unavailable:hover { background: transparent; }
+
+.fatigueDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.fatigueHigh { background: #ef4444; }
+.fatigueMedium { background: #f59e0b; }
+
+.num { font-weight: 700; min-width: 26px; color: var(--accent); font-size: 13px; }
+.name { flex: 1; color: var(--text-h); font-weight: 500; font-size: 14px; }
+.injury { font-size: 11px; opacity: 0.8; }
+.pos { font-size: 12px; font-weight: 700; padding: 2px 5px; border-radius: 3px; min-width: 30px; text-align: center; }
+.posGK { background: #78350f; color: #fde68a; }
+.posDEF { background: #1e3a5f; color: #93c5fd; }
+.posMID { background: #064e3b; color: #a7f3d0; }
+.posFWD { background: #7f1d1d; color: #fecaca; }
+.ovr { font-size: 13px; font-weight: 700; color: var(--accent); }
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+
+.hint {
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.saveBtn {
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--sans);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+.saveBtn:hover { opacity: 0.9; }
+
+@media (max-width: 640px) {
+  .footer { flex-direction: column; align-items: stretch; }
+  .hint { text-align: center; }
+}

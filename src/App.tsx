@@ -92,6 +92,7 @@ function App() {
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleAdvanceSeason,
+    handleMarkInboxRead,
   } = useCareerManager({
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     recordH2H, notifySave, setToastMsg,
@@ -276,6 +277,7 @@ function App() {
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleAdvanceSeason,
+    handleMarkInboxRead,
     clearHistory,
     setIsTournamentEntry,
   };

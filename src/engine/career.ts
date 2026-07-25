@@ -24,6 +24,36 @@ export interface CareerSeasonHistoryEntry {
   cupResult: 'champion' | 'runner-up' | 'semifinal' | 'quarterfinal' | 'roundOf16' | 'not-played';
   tradesUsed: number;
   reputationDelta: number;
+  // Campos abaixo são opcionais — temporadas fechadas antes da Fase 4.5 não os têm.
+  // leagueTopScorer/cupTopScorer/userTopAssister ficaram de fora desta versão:
+  // partidas simuladas automaticamente (CPU x CPU) não geram eventos de gol
+  // individuais hoje, só placar agregado — e não existe rastreio de assistência
+  // no motor. Rastrear isso exigiria mudar o motor de simulação rápida, fora do
+  // escopo desta feature.
+  userTopScorer?: { name: string; goals: number };
+  userWins?: number;
+  userDraws?: number;
+  userLosses?: number;
+  userGoalsFor?: number;
+  userGoalsAgainst?: number;
+  managerOfSeason?: boolean;
+  budgetDelta?: number;
+}
+
+export interface ClubFinances {
+  budget: number;       // saldo pra transferências
+  wageBill: number;     // soma dos salários semanais do elenco titular+banco
+  weeklyIncome: number; // renda de bilheteria + patrocínio, creditada a cada rodada
+}
+
+export interface InboxMessage {
+  id: string;
+  date: string;
+  isRead: boolean;
+  isMandatory: boolean; // precisa ser lida pra liberar "Avançar Rodada"
+  type: 'TRANSFER_OFFER' | 'BOARD_UPDATE' | 'INJURY_REPORT' | 'MATCH_PREVIEW';
+  subject: string;
+  body: string;
 }
 
 export interface CareerState {
@@ -31,9 +61,30 @@ export interface CareerState {
   leagueId: string;
   manager: CareerManagerProfile;
   currentSeasonYear: number;
-  season: { league: LeagueState; cup: BracketState; tradesUsedThisSeason: number };
+  season: {
+    league: LeagueState; cup: BracketState; tradesUsedThisSeason: number;
+    // Opcionais pelo mesmo motivo dos campos de nível CareerState (compat com saves antigos).
+    budgetAtSeasonStart?: number;       // pra calcular o budgetDelta no fechamento da temporada
+    userGoalScorers?: Record<string, number>; // nome do jogador → gols na temporada (liga + copa)
+  };
   rosters: Record<string, Team[]>;
   history: CareerSeasonHistoryEntry[];
+  // Opcionais: carreiras salvas antes da Fase 4.5 não têm esses campos — todo
+  // ponto de leitura usa getFinances/getInbox (nunca acessa direto), e toda
+  // escrita parte do valor lido por elas, então uma carreira antiga se
+  // "autopreenche" na primeira rodada avançada/partida jogada depois do update.
+  finances?: ClubFinances;
+  inbox?: InboxMessage[];
+}
+
+export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };
+
+export function getFinances(state: CareerState): ClubFinances {
+  return state.finances ?? DEFAULT_FINANCES;
+}
+
+export function getInbox(state: CareerState): InboxMessage[] {
+  return state.inbox ?? [];
 }
 
 /**

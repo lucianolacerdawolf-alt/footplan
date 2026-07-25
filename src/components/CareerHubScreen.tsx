@@ -1,8 +1,12 @@
-import type { CareerState, CareerSeasonHistoryEntry } from '../engine/career';
+import type { CareerState } from '../engine/career';
+import { getFinances, getInbox } from '../engine/career';
+import { CUP_RESULT_LABELS } from '../engine/careerLabels';
 import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
+import FinancePanel from './FinancePanel';
+import InboxPanel from './InboxPanel';
 import styles from './CareerHubScreen.module.css';
 
 interface Props {
@@ -15,6 +19,8 @@ interface Props {
   onAdvanceSeason: () => void;
   onNewCareer: () => void;
   onBack: () => void;
+  onMarkInboxRead: (id: string) => void;
+  onViewTrophyRoom: () => void;
 }
 
 const CUP_STAGE_LABELS: Record<string, string> = {
@@ -23,15 +29,6 @@ const CUP_STAGE_LABELS: Record<string, string> = {
   semifinals: 'Semis',
   final: 'Final',
   champion: 'Campeão',
-};
-
-const CUP_RESULT_LABELS: Record<CareerSeasonHistoryEntry['cupResult'], string> = {
-  champion: 'Campeão',
-  'runner-up': 'Vice-campeão',
-  semifinal: 'Semifinal',
-  quarterfinal: 'Quartas de final',
-  roundOf16: 'Oitavas de final',
-  'not-played': 'Não disputada',
 };
 
 type NextMatch =
@@ -88,7 +85,9 @@ function reputationSign(delta: number): string {
   return delta > 0 ? '+' : '';
 }
 
-export default function CareerHubScreen({ state, league, onViewLeague, onViewCup, onPlayNext, onProposeTrade, onAdvanceSeason, onNewCareer, onBack }: Props) {
+export default function CareerHubScreen({ state, league, onViewLeague, onViewCup, onPlayNext, onProposeTrade, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onViewTrophyRoom }: Props) {
+  const finances = getFinances(state);
+  const inbox = getInbox(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
   const userPosition = standings.findIndex(s => s.teamId === state.season.league.userTeamId) + 1;
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
@@ -113,6 +112,10 @@ export default function CareerHubScreen({ state, league, onViewLeague, onViewCup
           <span className={styles.progress}>Reputação: {state.manager.reputation}</span>
         </div>
       </div>
+
+      <FinancePanel finances={finances} />
+
+      <InboxPanel messages={inbox} onMarkRead={onMarkInboxRead} />
 
       <div className={styles.summaryCard}>
         <div className={styles.summaryRow}>
@@ -184,7 +187,12 @@ export default function CareerHubScreen({ state, league, onViewLeague, onViewCup
       )}
 
       <div className={styles.historySection}>
-        <div className={styles.summaryLabel}>Histórico</div>
+        <div className={styles.historySectionHeader}>
+          <span className={styles.summaryLabel}>Histórico</span>
+          {history.length > 0 && (
+            <button className={styles.trophyBtn} onClick={onViewTrophyRoom}>🏆 Sala de Troféus →</button>
+          )}
+        </div>
         <div className={styles.grid}>
           {history.map(entry => (
             <div key={entry.year} className={styles.card}>

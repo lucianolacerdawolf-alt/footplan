@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCareerManager } from '../useCareerManager';
 import { makeTeam } from '@/components/__tests__/testFixtures';
 import { getLeague } from '@/data/leagues';
+import type { MatchResult, MatchEvent } from '@/engine/types';
 
 // Node 22+'s built-in global `localStorage` shadows jsdom's window.localStorage
 // in vitest's jsdom environment (it's excluded from vitest's window-key copy
@@ -232,5 +233,234 @@ describe('D-08, D-09: reputation', () => {
     expect(result.current.careerState!.manager.reputation).toBe(
       Math.max(0, Math.min(100, reputationBefore + entry.reputationDelta))
     );
+  });
+});
+
+function playUserFixtureWithEvents(
+  result: { current: ReturnType<typeof useCareerManager> },
+  userTeamId: string,
+  events: MatchEvent[]
+) {
+  const league = result.current.careerState!.season.league;
+  const fixture = league.fixtures[league.currentRound].find(
+    f => f.homeTeamId === userTeamId || f.awayTeamId === userTeamId
+  )!;
+  const home = league.teams.find(t => t.id === fixture.homeTeamId)!;
+  const away = league.teams.find(t => t.id === fixture.awayTeamId)!;
+
+  act(() => {
+    result.current.handlePlayCareerLeagueMatch(fixture, home, away);
+  });
+
+  const matchResult: MatchResult = {
+    homeTeam: home, awayTeam: away, homeScore: 1, awayScore: 0,
+    events,
+    homePossession: 55, awayPossession: 45,
+    homeStats: { shots: 5, shotsOnTarget: 2, fouls: 3, yellowCards: 0, redCards: 0 },
+    awayStats: { shots: 3, shotsOnTarget: 1, fouls: 2, yellowCards: 0, redCards: 0 },
+  };
+
+  act(() => {
+    result.current.handleCareerLeagueMatchResult(matchResult);
+  });
+}
+
+describe('Fadiga e cartões pós-partida (Modo Carreira)', () => {
+  it('aplica fadiga aos titulares e acumula 1 amarelo sem suspender', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+
+    const userTeamBefore = result.current.careerState!.season.league.teams.find(t => t.id === userTeamId)!;
+    const starter = userTeamBefore.squad.find(p => p.position !== 'GK')!;
+
+    playUserFixtureWithEvents(result, userTeamId, [
+      { minute: 10, type: 'yellowCard', description: 'Cartão', teamId: userTeamId, playerId: starter.id },
+    ]);
+
+    const userTeamAfter = result.current.careerState!.season.league.teams.find(t => t.id === userTeamId)!;
+    const starterAfter = userTeamAfter.squad.find(p => p.id === starter.id)!;
+    expect(starterAfter.yellowCardsThisSeason).toBe(1);
+    expect(starterAfter.isSuspended).toBeFalsy();
+    expect(starterAfter.currentFatigue).toBeGreaterThan(starter.currentFatigue);
+
+    // goleiro titular não cansa
+    const gkAfter = userTeamAfter.squad.find(p => p.position === 'GK')!;
+    expect(gkAfter.currentFatigue).toBe(0);
+  });
+
+  it('suspende ao acumular 3 amarelos e libera ao avançar a rodada', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+
+    const starterId = result.current.careerState!.season.league.teams
+      .find(t => t.id === userTeamId)!.squad.find(p => p.position !== 'GK')!.id;
+
+    for (let i = 0; i < 3; i++) {
+      playUserFixtureWithEvents(result, userTeamId, [
+        { minute: 20, type: 'yellowCard', description: 'Cartão', teamId: userTeamId, playerId: starterId },
+      ]);
+    }
+
+    const suspendedTeam = result.current.careerState!.season.league.teams.find(t => t.id === userTeamId)!;
+    const suspendedPlayer = suspendedTeam.squad.find(p => p.id === starterId)!;
+    expect(suspendedPlayer.yellowCardsThisSeason).toBe(0); // reseta ao suspender
+    expect(suspendedPlayer.isSuspended).toBe(true);
+    expect(suspendedPlayer.suspendedRounds).toBe(1);
+
+    // applyPostMatchInjuries tem chance aleatória de gerar mensagem obrigatória
+    // (relatório de lesão) nas 3 partidas acima — marca tudo como lido antes de
+    // avançar pra não depender de sorte pra este teste passar.
+    act(() => {
+      result.current.handleMarkAllInboxRead();
+    });
+    act(() => {
+      result.current.handleNextCareerLeagueRound();
+    });
+
+    const releasedTeam = result.current.careerState!.season.league.teams.find(t => t.id === userTeamId)!;
+    const releasedPlayer = releasedTeam.squad.find(p => p.id === starterId)!;
+    expect(releasedPlayer.isSuspended).toBe(false);
+    expect(releasedPlayer.suspendedRounds).toBeUndefined();
+  });
+
+  it('vermelho direto suspende por 1 jogo mesmo sem 3 amarelos', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+
+    const starterId = result.current.careerState!.season.league.teams
+      .find(t => t.id === userTeamId)!.squad.find(p => p.position !== 'GK')!.id;
+
+    playUserFixtureWithEvents(result, userTeamId, [
+      { minute: 60, type: 'redCard', description: 'Vermelho', teamId: userTeamId, playerId: starterId },
+    ]);
+
+    const team = result.current.careerState!.season.league.teams.find(t => t.id === userTeamId)!;
+    const player = team.squad.find(p => p.id === starterId)!;
+    expect(player.isSuspended).toBe(true);
+    expect(player.suspendedRounds).toBe(1);
+  });
+});
+
+describe('Finanças e Inbox (Modo Carreira)', () => {
+  it('handleStartCareer define orçamento inicial, folha salarial e mensagem de boas-vindas', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+
+    const state = result.current.careerState!;
+    expect(state.finances).toBeDefined();
+    expect(state.finances!.budget).toBeGreaterThan(0);
+    expect(state.finances!.wageBill).toBeGreaterThan(0); // elenco já tem weeklyWage atribuído
+    expect(state.finances!.weeklyIncome).toBeGreaterThan(0);
+
+    expect(state.inbox).toHaveLength(1);
+    expect(state.inbox![0].type).toBe('BOARD_UPDATE');
+    expect(state.inbox![0].isRead).toBe(false);
+    expect(state.inbox![0].isMandatory).toBe(false);
+
+    // valuation aplicada ao elenco do usuário
+    const userTeam = state.season.league.teams.find(t => t.id === state.season.league.userTeamId)!;
+    expect(userTeam.squad.every(p => typeof p.marketValue === 'number')).toBe(true);
+    expect(userTeam.squad.every(p => typeof p.weeklyWage === 'number')).toBe(true);
+  });
+
+  it('handleNextCareerLeagueRound credita a renda semanal e debita a folha salarial do orçamento', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+
+    const before = result.current.careerState!.finances!;
+    act(() => {
+      result.current.handleNextCareerLeagueRound();
+    });
+    const after = result.current.careerState!.finances!;
+
+    expect(after.budget).toBe(before.budget + before.weeklyIncome - after.wageBill);
+  });
+
+  it('bloqueia handleNextCareerLeagueRound enquanto houver mensagem obrigatória não lida', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { userTeamId } = startPlCareer(result);
+
+    // Força uma lesão determinística (rng mockado): applyPostMatchInjuries usa
+    // Math.random() < 0.15 pra decidir se ocorre, então 0 sempre lesiona.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    playUserFixtureWithEvents(result, userTeamId, []);
+    randomSpy.mockRestore();
+
+    const inboxAfterMatch = result.current.careerState!.inbox!;
+    expect(inboxAfterMatch.some(m => m.type === 'INJURY_REPORT' && m.isMandatory && !m.isRead)).toBe(true);
+
+    const roundBefore = result.current.careerState!.season.league.currentRound;
+    act(() => {
+      result.current.handleNextCareerLeagueRound();
+    });
+    // bloqueado: a rodada não avançou
+    expect(result.current.careerState!.season.league.currentRound).toBe(roundBefore);
+    expect(params.setToastMsg).toHaveBeenCalledWith(expect.stringContaining('mensagens obrigatórias'));
+
+    act(() => {
+      result.current.handleMarkAllInboxRead();
+    });
+    act(() => {
+      result.current.handleNextCareerLeagueRound();
+    });
+    expect(result.current.careerState!.season.league.currentRound).toBe(roundBefore + 1);
+  });
+
+  it('handleMarkInboxRead marca só a mensagem indicada', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    const messageId = result.current.careerState!.inbox![0].id;
+
+    act(() => {
+      result.current.handleMarkInboxRead(messageId);
+    });
+
+    expect(result.current.careerState!.inbox![0].isRead).toBe(true);
+  });
+});
+
+describe('Hall of Fame — fechamento de temporada (handleAdvanceSeason)', () => {
+  it('registra artilheiro do usuário, aproveitamento e variação de orçamento no histórico', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+
+    const starterId = result.current.careerState!.season.league.teams
+      .find(t => t.id === userTeamId)!.squad.find(p => p.position !== 'GK')!.id;
+    const starterName = result.current.careerState!.season.league.teams
+      .find(t => t.id === userTeamId)!.squad.find(p => p.id === starterId)!.name;
+
+    playUserFixtureWithEvents(result, userTeamId, [
+      { minute: 15, type: 'goal', description: 'Gol!', teamId: userTeamId, scorer: starterName },
+    ]);
+
+    forceTerminalSeason(result);
+    act(() => {
+      result.current.handleAdvanceSeason();
+    });
+
+    const entry = result.current.careerState!.history[0];
+    expect(entry.userTopScorer).toEqual({ name: starterName, goals: 1 });
+    expect(entry.userWins).toBeTypeOf('number');
+    expect(entry.userDraws).toBeTypeOf('number');
+    expect(entry.userLosses).toBeTypeOf('number');
+    expect((entry.userWins ?? 0) + (entry.userDraws ?? 0) + (entry.userLosses ?? 0)).toBeGreaterThanOrEqual(1);
+    expect(entry.budgetDelta).toBeTypeOf('number');
+    expect(entry.managerOfSeason).toBeTypeOf('boolean');
+
+    // artilheiro reseta pra próxima temporada — não deve "vazar" gol da temporada anterior
+    expect(result.current.careerState!.season.userGoalScorers).toEqual({});
+  });
+
+  it('sem gols do usuário na temporada, userTopScorer fica undefined', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+
+    forceTerminalSeason(result);
+    act(() => {
+      result.current.handleAdvanceSeason();
+    });
+
+    expect(result.current.careerState!.history[0].userTopScorer).toBeUndefined();
   });
 });

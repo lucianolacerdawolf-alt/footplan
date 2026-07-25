@@ -8,16 +8,22 @@ import {
   computeStandings,
 } from '../engine/tournament';
 import { moraleDelta, applyMoraleToTeam } from '../engine/morale';
+import { applyMatchFatigue } from '../engine/fitness';
+import { applyMatchCards, clearSuspensions } from '../engine/discipline';
+import { assignMarketValues, computeWageBill, initialBudget, computeWeeklyIncome } from '../engine/transferMarket';
+import { createInjuryMessage, createMatchPreviewMessage, createTransferWindowMessage, createWelcomeMessage, hasMandatoryUnread } from '../engine/inbox';
+import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason, tallyUserGoals, mergeGoalTally } from '../engine/seasonClosure';
 import { cloneTeam } from '../utils/teamUtils';
 import { getStageMatches, updateStageMatch } from '../engine/bracketHelpers';
 import { allLeagues, getLeague } from '../data/leagues';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult } from './shared/matchHandlers';
-import type { CareerState, CareerSeasonHistoryEntry } from '../engine/career';
+import type { CareerState, CareerSeasonHistoryEntry, InboxMessage } from '../engine/career';
 import {
   isValidCareerState, assignInitialAges, createCareerSeason,
   evaluateTradeOffer, canProposeTrade, computeReputationDelta, progressAllLeagues, deriveCupResult,
+  getFinances, getInbox,
 } from '../engine/career';
 
 import type { Screen } from '../types/navigation';
@@ -59,20 +65,31 @@ export function useCareerManager({
     const rosters: Record<string, Team[]> = {};
     for (const l of allLeagues) {
       if (l.id === leagueDef.id) {
-        rosters[l.id] = assignInitialAges(l.teams.map(t => t.id === userTeam.id ? cloneTeam(userTeam) : cloneTeam(t)));
+        // D-04: valuation só é calculada pro elenco da própria liga do usuário —
+        // as outras 5 ligas nunca exibem valor de mercado nesta versão.
+        rosters[l.id] = assignInitialAges(l.teams.map(t => t.id === userTeam.id ? cloneTeam(userTeam) : cloneTeam(t)))
+          .map(assignMarketValues);
       } else {
         rosters[l.id] = assignInitialAges(l.teams.map(t => cloneTeam(t)));
       }
     }
-    const { league, cup } = createCareerSeason(userTeam, rosters[leagueDef.id], leagueDef);
+    // Tolerante ao mesmo jeito que o resto desta função é: se o time do usuário não
+    // bater com nenhum id estático da liga (ex: fixture de teste), ainda assim
+    // segue — só não fica "achatado" com os valores de mercado dos outros times.
+    const userTeamWithValues = rosters[leagueDef.id].find(t => t.id === userTeam.id) ?? assignMarketValues(cloneTeam(userTeam));
+    const { league, cup } = createCareerSeason(userTeamWithValues, rosters[leagueDef.id], leagueDef);
+    const budget = initialBudget(leagueDef.id);
+    const trimmedName = managerName.trim().slice(0, 24) || 'Técnico';
     const newState: CareerState = {
       version: 1,
       leagueId: leagueDef.id,
-      manager: { name: managerName.trim().slice(0, 24) || 'Técnico', reputation: 0 },
+      manager: { name: trimmedName, reputation: 0 },
       currentSeasonYear: 1,
-      season: { league, cup, tradesUsedThisSeason: 0 },
+      season: { league, cup, tradesUsedThisSeason: 0, budgetAtSeasonStart: budget, userGoalScorers: {} },
       rosters,
       history: [],
+      finances: { budget, wageBill: computeWageBill(userTeamWithValues), weeklyIncome: computeWeeklyIncome(leagueDef.id) },
+      inbox: [createWelcomeMessage(trimmedName, budget, 'Temporada 1')],
     };
     setCareerState(newState);
     setScreen('career-hub');
@@ -139,14 +156,49 @@ export function useCareerManager({
 
   const handleNextCareerLeagueRound = useCallback(() => {
     if (!careerState) return;
+    // Mensagens obrigatórias (ex: relatório de lesão) precisam ser lidas antes de
+    // avançar — o botão na UI já fica desabilitado, isto é a barreira de verdade.
+    if (hasMandatoryUnread(getInbox(careerState))) {
+      setToastMsg('📬 Leia as mensagens obrigatórias na Central antes de avançar a rodada');
+      return;
+    }
     const leg = careerState.season.league;
     const next = leg.currentRound + 1;
-    const recoveredTeams = recoverFatigue(leg.teams);
+    const recoveredTeams = recoverFatigue(leg.teams).map(clearSuspensions);
     const variedTeams = randomizeCPUTactics(recoveredTeams, leg.userTeamId, Math.random, undefined);
     const phase: typeof leg.phase = next >= leg.fixtures.length ? 'done' : 'playing';
     const updatedState = { ...leg, teams: variedTeams, currentRound: next, phase };
-    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, league: updatedState } } : prev);
-  }, [careerState, setCareerState]);
+
+    const finances = getFinances(careerState);
+    const userTeamAfter = variedTeams.find(t => t.id === leg.userTeamId)!;
+    const wageBill = computeWageBill(userTeamAfter);
+    const budget = finances.budget + finances.weeklyIncome - wageBill;
+
+    const newMessages: InboxMessage[] = [];
+    const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${next + 1}`;
+    const wasWindowOpen = leg.currentRound <= 4 || (leg.currentRound >= 18 && leg.currentRound <= 23);
+    const isWindowOpenNow = next <= 4 || (next >= 18 && next <= 23);
+    if (!wasWindowOpen && isWindowOpenNow) newMessages.push(createTransferWindowMessage(dateLabel));
+    if (phase !== 'done') {
+      const nextFixture = leg.fixtures[next].find(f => f.homeTeamId === leg.userTeamId || f.awayTeamId === leg.userTeamId);
+      if (nextFixture) {
+        const isHome = nextFixture.homeTeamId === leg.userTeamId;
+        const oppId = isHome ? nextFixture.awayTeamId : nextFixture.homeTeamId;
+        const oppName = variedTeams.find(t => t.id === oppId)?.name ?? '???';
+        newMessages.push(createMatchPreviewMessage(oppName, isHome, `Rodada ${next + 1}`, dateLabel));
+      }
+    }
+
+    setCareerState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        season: { ...prev.season, league: updatedState },
+        finances: { ...finances, budget, wageBill },
+        inbox: newMessages.length > 0 ? [...getInbox(prev), ...newMessages] : prev.inbox,
+      };
+    });
+  }, [careerState, setCareerState, setToastMsg]);
 
   const handleCareerLeagueMatchResult = useCallback((result: MatchResult) => {
     if (!careerState || !pendingCareerLeagueFixture) return;
@@ -158,6 +210,8 @@ export function useCareerManager({
     const oppScore = userIsHome ? result.awayScore : result.homeScore;
     const delta = moraleDelta(userScore, oppScore);
     const newFixtures = recordLeagueFixtureResult(leg.fixtures, roundIdx, fixtureIdx, result.homeScore, result.awayScore);
+    const newInjuryMessages: InboxMessage[] = [];
+    const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${leg.currentRound + 1}`;
     const newTeams = leg.teams.map(t => {
       if (t.id !== leg.userTeamId) return t;
       const current = t.morale ?? 0;
@@ -166,11 +220,24 @@ export function useCareerManager({
       if (injuries.length > 0) {
         const inj = injuries[0];
         setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} rodada${inj.rounds > 1 ? 's' : ''}`);
+        newInjuryMessages.push(createInjuryMessage(inj.player.name, inj.rounds, dateLabel));
       }
-      return injured;
+      const tired = applyMatchFatigue(injured);
+      return applyMatchCards(tired, result.events);
     });
     const updatedState = { ...leg, fixtures: newFixtures, teams: newTeams };
-    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, league: updatedState } } : prev);
+    const goalScorers = tallyUserGoals(result.events, leg.userTeamId);
+    setCareerState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        season: {
+          ...prev.season, league: updatedState,
+          userGoalScorers: mergeGoalTally(prev.season.userGoalScorers, goalScorers),
+        },
+        inbox: newInjuryMessages.length > 0 ? [...getInbox(prev), ...newInjuryMessages] : prev.inbox,
+      };
+    });
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
   }, [careerState, pendingCareerLeagueFixture, recordH2H, setToastMsg, setCareerState]);
 
@@ -225,16 +292,37 @@ export function useCareerManager({
     let s = { ...cupState };
     s = updateStageMatch(s, pendingCareerBracketIdx, updated);
     const advanced = advanceBracket(s);
-    const finalState = { ...advanced, teams: randomizeCPUTactics(advanced.teams.map(t => {
+    const newInjuryMessages: InboxMessage[] = [];
+    const dateLabel = `Temporada ${careerState.currentSeasonYear} · ${advanced.stage}`;
+    const teamsAfterMatch = advanced.teams.map(t => {
       if (t.id !== advanced.userTeamId) return t;
       const { team: injured, injuries } = applyPostMatchInjuries(t);
       if (injuries.length > 0) {
         const inj = injuries[0];
         setToastMsg(`🤕 ${inj.player.name} lesionado · ${inj.rounds} jogo${inj.rounds > 1 ? 's' : ''}`);
+        newInjuryMessages.push(createInjuryMessage(inj.player.name, inj.rounds, dateLabel));
       }
-      return injured;
-    }), advanced.userTeamId, Math.random, undefined) };
-    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: finalState } } : prev);
+      const tired = applyMatchFatigue(injured);
+      return applyMatchCards(tired, result.events);
+    });
+    // Estágio da copa avançou (ex: oitavas → quartas) — mesmo ponto de "avançar rodada"
+    // da liga, então recupera fadiga e libera suspensões de todos os times aqui também,
+    // já com o desgaste desta partida aplicado (senão a recuperação apagaria o efeito antes de existir).
+    const stageAdvanced = advanced.stage !== cupState.stage;
+    const finalTeams = stageAdvanced ? recoverFatigue(teamsAfterMatch).map(clearSuspensions) : teamsAfterMatch;
+    const finalState = { ...advanced, teams: randomizeCPUTactics(finalTeams, advanced.userTeamId, Math.random, undefined) };
+    const goalScorers = tallyUserGoals(result.events, advanced.userTeamId);
+    setCareerState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        season: {
+          ...prev.season, cup: finalState,
+          userGoalScorers: mergeGoalTally(prev.season.userGoalScorers, goalScorers),
+        },
+        inbox: newInjuryMessages.length > 0 ? [...getInbox(prev), ...newInjuryMessages] : prev.inbox,
+      };
+    });
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
   }, [careerState, pendingCareerBracketStage, pendingCareerBracketIdx, recordH2H, setToastMsg, setCareerState]);
 
@@ -314,6 +402,10 @@ export function useCareerManager({
     const reputationDelta = computeReputationDelta({ leagueChampion, cupChampion, leaguePosition, totalTeams });
     const newReputation = Math.max(0, Math.min(100, careerState.manager.reputation + reputationDelta));
 
+    const record = computeUserSeasonRecord(careerState.season.league);
+    const finances = getFinances(careerState);
+    const budgetAtStart = careerState.season.budgetAtSeasonStart ?? finances.budget;
+
     const entry: CareerSeasonHistoryEntry = {
       year: careerState.currentSeasonYear,
       leagueId: careerState.leagueId,
@@ -322,12 +414,23 @@ export function useCareerManager({
       cupResult,
       tradesUsed: careerState.season.tradesUsedThisSeason,
       reputationDelta,
+      userTopScorer: deriveTopScorer(careerState.season.userGoalScorers ?? {}),
+      userWins: record.wins,
+      userDraws: record.draws,
+      userLosses: record.losses,
+      userGoalsFor: record.goalsFor,
+      userGoalsAgainst: record.goalsAgainst,
+      managerOfSeason: isManagerOfSeason(leaguePosition, cupResult),
+      budgetDelta: finances.budget - budgetAtStart,
     };
 
     // D-01, reapplied at every season transition: ALL 6 leagues progress, not just
     // this career's league.
     const evolvedRosters = progressAllLeagues(careerState.rosters);
     const leagueDef = getLeague(careerState.leagueId)!;
+    // Atributos mudaram na evolução da temporada — revaloriza o elenco da liga do
+    // usuário (mesmo escopo D-04 do início de carreira) antes de montar a próxima.
+    evolvedRosters[careerState.leagueId] = evolvedRosters[careerState.leagueId].map(assignMarketValues);
     const evolvedUserTeam = evolvedRosters[careerState.leagueId].find(t => t.id === careerState.season.league.userTeamId)!;
     const { league: nextLeague, cup: nextCup } = createCareerSeason(evolvedUserTeam, evolvedRosters[careerState.leagueId], leagueDef);
 
@@ -335,12 +438,30 @@ export function useCareerManager({
       ...careerState,
       manager: { ...careerState.manager, reputation: newReputation },
       currentSeasonYear: careerState.currentSeasonYear + 1,
-      season: { league: nextLeague, cup: nextCup, tradesUsedThisSeason: 0 },
+      season: {
+        league: nextLeague, cup: nextCup, tradesUsedThisSeason: 0,
+        budgetAtSeasonStart: finances.budget, userGoalScorers: {},
+      },
       rosters: evolvedRosters,
       history: [...careerState.history, entry],
+      finances: { ...finances, wageBill: computeWageBill(evolvedUserTeam) }, // orçamento não reseta — só a folha salarial recalcula
     });
     setScreen('season-end');
   }, [careerState, setCareerState, setScreen]);
+
+  const handleMarkInboxRead = useCallback((messageId: string) => {
+    setCareerState(prev => {
+      if (!prev) return prev;
+      return { ...prev, inbox: getInbox(prev).map(m => m.id === messageId ? { ...m, isRead: true } : m) };
+    });
+  }, [setCareerState]);
+
+  const handleMarkAllInboxRead = useCallback(() => {
+    setCareerState(prev => {
+      if (!prev) return prev;
+      return { ...prev, inbox: getInbox(prev).map(m => ({ ...m, isRead: true })) };
+    });
+  }, [setCareerState]);
 
   return {
     careerState, setCareerState,
@@ -361,5 +482,7 @@ export function useCareerManager({
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleAdvanceSeason,
+    handleMarkInboxRead,
+    handleMarkAllInboxRead,
   };
 }
