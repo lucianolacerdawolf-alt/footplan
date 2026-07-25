@@ -19,7 +19,12 @@
 ## 1. Tela de Táticas e Elenco
 
 ### Situação Atual
-O `SetupScreen` atual troca jogadores clicando em linhas de texto genéricas (número + nome + posição + OVR). A formação é escolhida via `<select>`. O tipo `Player` não tem status de partida — o motor simplesmente pega os 11 primeiros do array `team.squad`. Não há validação visual de formação.
+O `SetupScreen` atual troca jogadores clicando em linhas de texto genéricas (número + nome + posição + OVR). A formação é escolhida via `<select>`. O tipo `Player` não tem status de partida — o motor simplesmente pega os 11 primeiros do array `team.squad` (`squad.slice(0, N)`). Não há validação visual de formação.
+
+> **Correção**: o `SetupScreen.tsx` já tem lógica de seleção não-trivial — `rebalanceSquad()` reordena o squad quando a formação muda, `autoBenchInjured()` banca lesionados automaticamente, e há troca clique-a-clique (`swapPlayers`/`handleSwapHome`/`handleSwapAway`) restrita à mesma posição. O que falta não é a lógica de seleção, é a **UI visual** (campo + drag-and-drop).
+
+### Risco: Dependência de Ordem de Array
+Pelo menos 7 arquivos hoje tratam "titular" como `squad.slice(0, N)` por **ordem do array**, não por um campo explícito: `src/utils/teamUtils.ts`, `src/engine/playerRating.ts`, `src/components/LeagueScreen.tsx`, `src/components/MatchScreen.tsx` (2 pontos), `src/engine/tournament.ts`, `src/components/MatchScreen/HalftimePanel.tsx`, além do próprio `SetupScreen.tsx`. Introduzir `matchStatus`/`gridSlot` como fonte de verdade exige ou (a) manter os dois sincronizados — risco de bug se o campo disser `STARTING` mas a ordem do array disser outra coisa —, ou (b) migrar todos esses call-sites para ler o campo em vez da posição no array. Esse é o maior risco oculto desta funcionalidade e deve ser resolvido antes de escrever a UI.
 
 ### Solução Proposta
 Criar uma tela dedicada de gerenciamento de elenco com campo tático visual e drag-and-drop.
@@ -37,12 +42,10 @@ interface Player {
   // ... campos existentes mantidos (id, name, number, position, attributes, etc.)
   matchStatus?: 'STARTING' | 'BENCH' | 'RESERVE';  // status de escalação
   gridSlot?: number;        // índice do slot no campo (0-10)
-  yellowCardsThisSeason?: number;  // acúmulo pra suspensão
-  isSuspended?: boolean;    // suspenso por acúmulo de cartão
-  marketValue?: number;     // valor de mercado (calculado)
-  weeklyWage?: number;      // salário semanal
 }
 ```
+
+> **Nota de escopo**: os campos `yellowCardsThisSeason`/`isSuspended`/`suspendedRounds` (usados por #4) e `marketValue`/`weeklyWage` (usados por #3) foram movidos para as seções das features que realmente os consomem — eles não têm relação com a tela de escalação em si. Isso quebra a dependência artificial de #3/#4 em relação a #1: só a "Integração Visual" de #4 (mostrar suspensão/fadiga no campo) genuinamente precisa da UI de #1 pronta; o resto pode avançar em paralelo. Ver seção 6 para a ordem revisada.
 
 ### Fluxo da Tela
 1. **Campo visual**: SVG reaproveitando lógica do `Pitch.tsx`, mostrando os 11 slots da formação
@@ -74,8 +77,10 @@ interface Player {
   - `@dnd-kit/core` + `@dnd-kit/sortable` + `@dnd-kit/utilities`
 - Alternativa sem dependência: clicar no jogador → seleciona → clicar no slot → move. Mais simples mas menos intuitivo.
 
+> **Correção sobre reaproveitamento do `Pitch.tsx`**: só o SVG chrome (grama, linhas, `viewBox="0 0 120 70"`) e o espaço de coordenadas são realmente reaproveitáveis — cerca de 20-30% do arquivo (561 linhas). O restante é loop de animação via `requestAnimationFrame`, física de steering e eventos de bola, específicos da simulação ao vivo. O `FormationPitch.tsx` será majoritariamente um componente novo, não um refactor do `Pitch.tsx`.
+
 ### Estimativa
-~4 horas
+~~4 horas~~ **6-8 horas** (revisado — inclui a migração de dependência de ordem de array descrita acima)
 
 ---
 
@@ -159,25 +164,34 @@ CREATE POLICY "Users can only access own career"
 ### Checkpoints de Save
 | Gatilho | Momento |
 |---------|---------|
-| Fim de partida | Ao fechar MatchStatsScreen |
-| Avançar rodada | Após handleNextLeagueRound |
+| Fim de partida | Após `handleCareerLeagueMatchResult`/`handleCareerBracketMatchResult` (`useCareerManager.ts`) |
+| Avançar rodada | Após `handleNextCareerLeagueRound` (`useCareerManager.ts:140`) |
 | Avançar temporada | Após handleAdvanceSeason |
 | Propor troca | Após trade confirmado |
 | Sair da carreira | Ao voltar pra HomeScreen |
+
+> **Correções**:
+> - `handleNextLeagueRound` é a função do modo Campeonatos (não-carreira), em `useLeagueManager.ts`. O equivalente correto no Modo Carreira é **`handleNextCareerLeagueRound`**.
+> - O gatilho de "fim de partida" não deve ser `MatchStatsScreen` — esse componente é puramente apresentacional (só recebe `onContinue`, não escreve estado). O `setCareerState` já acontece antes, em `handleCareerLeagueMatchResult`/`handleCareerBracketMatchResult`, chamado a partir de `App.tsx` antes de exibir a tela de stats. É lá que o checkpoint deve entrar.
+> - `handleAdvanceSeason` usa uma exceção documentada no código: chama `setCareerState` com um objeto literal em vez do padrão `prev => ...`. Vale revisar se isso interage bem com o debounce (2s) do `useCloudSave` proposto.
 
 ### Configuração
 - URL e anon_key do Supabase em variáveis de ambiente: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`
 - Adicionar ao `.env.example`
 
 ### Estimativa
-~3 horas
+~3 horas (razoável para a integração básica; o fluxo de "perder vínculo se limpar cache" e a vinculação de e-mail opcional tendem a consumir mais tempo que o previsto se forem feitos com cuidado)
 
 ---
 
 ## 3. Hub com Inbox, Finanças e Mercado
 
 ### Situação Atual
-`CareerHubScreen` é um menu de navegação simples: resumo da temporada + 5 botões (Jogar, Ver Liga, Ver Copa, Propor Troca, Avançar Temporada). O mercado de transferências é o `TradeProposalScreen` com troca 1-por-1 sem dinheiro.
+`CareerHubScreen` é um menu de navegação simples: resumo da temporada + 5 ações (Jogar, Ver Liga, Ver Copa, Propor Troca, Avançar Temporada) organizadas em 3 blocos de UI (card de resumo, card de próxima partida, linha de navegação — não uma única linha de 5 botões). O mercado de transferências é o `TradeProposalScreen` com troca 1-por-1 sem dinheiro.
+
+> **Notas adicionais**:
+> - O Hub já mostra um indicador "Janela de transferências: Aberta/Fechada" (`isWindowOpen`) — pode ser reaproveitado diretamente no `FinancePanel` proposto.
+> - O Hub já renderiza um **grid de histórico de temporadas** (ano, posição, resultado de copa, reputação). Isso é, na prática, uma versão primitiva do que a funcionalidade #5 (Hall of Fame) propõe como tela dedicada — decidir explicitamente se esse grid migra para o `TrophyRoomScreen` ou se os dois convivem.
 
 ### Solução Proposta
 Transformar o Hub em um painel de controle de clube: caixa de entrada de mensagens no centro, painel financeiro no topo, e mercado reformulado com dinheiro.
@@ -218,6 +232,16 @@ interface CareerState {
   inbox?: InboxMessage[];
 }
 ```
+
+### Novos Campos no Tipo `Player` (src/engine/types.ts)
+```typescript
+interface Player {
+  // ... campos existentes mantidos
+  marketValue?: number;     // valor de mercado (calculado)
+  weeklyWage?: number;      // salário semanal
+}
+```
+*(movido da seção 1 — não depende da tela de escalação, só do motor de valuation abaixo)*
 
 ### Valuation de Jogadores
 ```typescript
@@ -263,8 +287,12 @@ function calculateMarketValue(player: Player, age: number): number {
 └──────────────────────────────────────┘
 ```
 
+> **Correção importante**: não existe *nenhum* conceito de dinheiro no motor hoje. Trocas são resolvidas por `evaluateTradeOffer` com base em delta de OVR, excedente de posição e reputação — sem valor monetário. Introduzir `budget`/`marketValue` exige **reescrever essa lógica de aceite da CPU do zero**, não apenas adicionar UI de mercado.
+
+> **Sugestão de de-risking**: por ser agora o maior item do plano e reescrever uma lógica que já funciona, vale (a) prototipar `calculateMarketValue` + o novo limiar de aceite da CPU isoladamente (fora da UI) antes de construir as 3 telas novas, e (b) manter o `TradeProposalScreen` atual como fallback em vez de substituição total imediata — reduz o risco de regressão na única forma de negociar jogadores que existe hoje.
+
 ### Estimativa
-~6 horas
+~~6 horas~~ **10-12 horas** (revisado — a reescrita do motor de aceite de trocas com dinheiro + o bloqueio de "avançar rodada" por mensagens obrigatórias somam mais que o previsto)
 
 ---
 
@@ -275,6 +303,8 @@ function calculateMarketValue(player: Player, age: number): number {
 - `Player.injuredRounds` existe pra lesões durante a partida
 - `effective()` no motor reduz atributos por fadiga: `attr * (1 - fatigue / 200)` → 50% de redução a 100 de fadiga
 - Não há acúmulo de cartões amarelos entre jogos, nem suspensão automática
+
+> **Achado importante**: `handleNextCareerLeagueRound` (`src/hooks/useCareerManager.ts:140`) **já chama `recoverFatigue(leg.teams)`** (definida em `src/engine/tournament.ts:275`) a cada avanço de rodada. Antes de implementar `recoverSquadFatigue`/`applyMatchFatigue` do zero, é preciso ler `recoverFatigue` e decidir se esta feature deve **estender** essa função existente ou genuinamente **substituí-la** — construir uma paralela sem reconciliar pode resultar em dois sistemas de recuperação de fadiga conflitantes.
 
 ### Solução Proposta
 Implementar fadiga persistente entre partidas + sistema disciplinar.
@@ -319,6 +349,17 @@ function recoverSquadFatigue(team: Team, daysSinceLastMatch: number): Team {
 |-----------------|-------------|--------------------------|
 | 3 (meio de semana) | 42 pts | 80 → 38 |
 | 7 (semana cheia) | 98 pts | 80 → 0 |
+
+### Novos Campos no Tipo `Player` (src/engine/types.ts)
+```typescript
+interface Player {
+  // ... campos existentes mantidos
+  yellowCardsThisSeason?: number;  // acúmulo pra suspensão
+  isSuspended?: boolean;           // suspenso por acúmulo de cartão
+  suspendedRounds?: number;        // jogos restantes de suspensão
+}
+```
+*(movido da seção 1 — não depende da tela de escalação; só a exibição do overlay de suspensão em "Integração Visual" abaixo precisa da UI de #1 pronta)*
 
 ### Lógica de Cartões
 
@@ -377,7 +418,7 @@ function clearSuspensions(team: Team): Team {
 - Jogador com `injuredRounds > 0` → ícone de lesão, tooltip "Lesionado (X jogos)"
 
 ### Estimativa
-~2 horas
+~~2 horas~~ **4 horas** (revisado — inclui investigar/reconciliar com `recoverFatigue` existente e atualizar os mesmos arquivos dependentes de ordem de array para filtrar suspensos na escalação)
 
 ---
 
@@ -427,6 +468,10 @@ interface CareerSeasonHistoryEntry {
 }
 ```
 
+> **Dependência oculta**: calcular `userTopScorer`/`userTopAssister` exige rastrear gols/assistências ao longo da temporada — isso toca o fluxo de registro de resultado de partida (`handleCareerLeagueMatchResult`), não só o fechamento de temporada. A coleta precisa acontecer partida a partida, não só dentro de `closeSeason`.
+
+> **Sugestão**: o hook de coleta em `handleCareerLeagueMatchResult` é barato e independente da `TrophyRoomScreen` — vale adiantá-lo (mesmo em paralelo com #1/#2) para acumular dados reais ao longo de várias rodadas/temporadas de teste durante o desenvolvimento, em vez de só validar tudo no fim quando a tela for construída.
+
 ### Rotina de Fechamento (`closeSeason` em `seasonClosure.ts`)
 ```typescript
 function closeSeason(
@@ -466,38 +511,41 @@ function closeSeason(
 ```
 
 ### Estimativa
-~3 horas
+~~3 horas~~ **4 horas** (revisado — só é válida ~3h se a coleta incremental de estatísticas por partida já estiver disponível, o que hoje não está)
 
 ---
 
 ## 6. Ordem de Execução
 
-| # | Funcionalidade | Tempo | Dependências | Arquivos Novos |
-|---|---------------|-------|-------------|----------------|
-| **1** | Squad Management | ~4h | Nenhuma | 3 (screen + pitch + utils) |
-| **4** | Stamina + Cartões | ~2h | Player fields (#1) | 2 (fitness + discipline) |
-| **2** | Cloud Save | ~3h | Nenhuma | 4 (client + save + hook + status) |
-| **3** | Hub + Inbox + Finanças | ~6h | Valuation (#1) + Finances | 5 (hub refactor + 3 panels + market) |
-| **5** | Hall of Fame | ~3h | Season closure | 2 (trophy screen + closure) |
+> **Ordem revisada**: a versão original tratava "Squad Management primeiro" como bloqueio de #3/#4 por causa de campos do `Player` — mas esses campos foram desacoplados (ver notas nas seções 1, 3 e 4) e não exigem a tela de escalação pronta. A ordem abaixo prioriza (a) o menor risco/maior valor de segurança primeiro (Cloud Save protege contra perda de dados desde já) e (b) o maior risco técnico logo em seguida, pra descobrir problemas cedo em vez de no fim do cronograma.
 
-**Total estimado: ~18 horas**
+| Ordem | # | Funcionalidade | Tempo (original) | Tempo (revisado) | Dependência real | Arquivos Novos |
+|---|---|---------------|-------|-------|-------------|----------------|
+| **1º** | 2 | Cloud Save | ~3h | 3h | Nenhuma | 4 (client + save + hook + status) |
+| **2º** | 1 | Squad Management | ~4h | **6-8h** | Nenhuma | 3 (screen + pitch + utils) |
+| **3º** | 4 | Stamina + Cartões | ~2h | **4h** | UI de #1 só p/ a "Integração Visual" | 2 (fitness + discipline) |
+| **4º** | 3 | Hub + Inbox + Finanças | ~6h | **10-12h** | Nenhuma (prototipar valuation isolado) | 5 (hub refactor + 3 panels + market) |
+| **5º** | 5 | Hall of Fame | ~3h | **4h** | Hook de stats pode começar cedo; tela fica por último | 2 (trophy screen + closure) |
+
+**Total estimado original: ~18 horas**
+**Total estimado revisado: ~27-31 horas** (após validação contra o código atual — ver notas de risco em cada seção)
 
 ### Por que esta ordem?
 
-1. **Squad Management primeiro** porque cria os novos campos no `Player` que as funcionalidades 3 e 4 dependem
-2. **Stamina + Cartões em seguida** porque usa imediatamente os campos novos e fecha o ciclo de gameplay
-3. **Cloud Save paralelizável** — não depende de nada, executa em paralelo com #1/#4
-4. **Hub + Mercado depois** porque precisa do valuation dos jogadores (campos do #1) e do sistema financeiro
-5. **Hall of Fame por último** porque depende do fechamento de temporada que só faz sentido com todas as outras features prontas
+1. **Cloud Save primeiro** — como é trabalho solo (não há equipe pra rodar tarefas de fato em paralelo), "paralelizável" só significa "sem dependência"; vale bancar essa vitória rápida e de baixo risco (protege contra perda de save agora) antes de entrar nos itens mais incertos.
+2. **Squad Management em seguida** — é o item de maior risco técnico (migração da dependência de ordem de array descrita na seção 1), então resolver essa incerteza cedo evita que ela contamine o resto do cronograma.
+3. **Stamina + Cartões depois** — a lógica de motor (`fitness.ts`/`discipline.ts`) é independente e poderia até vir antes de #1; só a exibição visual de suspensão/fadiga no campo depende da UI de #1 já existir.
+4. **Hub + Mercado** — agora o maior item do plano; não tem dependência real de dados de #1, mas reescreve uma lógica que já funciona (`evaluateTradeOffer`), então vale prototipar a valuation isoladamente antes de emendar nas 3 telas novas.
+5. **Hall of Fame por último** — só a `TrophyRoomScreen` e o fechamento de temporada precisam esperar; o hook de coleta de estatísticas por partida pode ser adiantado em paralelo com qualquer uma das etapas acima.
 
 ---
 
 ## Perguntas em Aberto
 
-| # | Pergunta | Opções |
-|---|----------|--------|
-| 1 | Squad Management: **drag-and-drop** (dnd-kit) ou **clique para selecionar** + botão "Mover"? | Drag-and-drop é mais intuitivo mas adiciona ~15KB de dependência |
-| 2 | Supabase: **crio o projeto agora** e deixo URL/anon_key no .env pra você preencher, ou **deixo o código pronto** placeholder? | Recomendo criar o projeto e eu configuro as migrations |
-| 3 | Mercado: **substituir completamente** o TradeProposalScreen atual ou **manter coexistente**? | Recomendo substituir — o sistema com dinheiro é superior |
-| 4 | Cartões: acúmulo de 3 amarelos conta **só a liga** ou **liga + copa**? | FIFA conta separado; Football Manager conta junto |
-| 5 | Ordem: **começar pelo Squad Management** ou prefere começar pelo **Hall of Fame** (mais visual)? | Squad Management é o alicerce técnico |
+| # | Pergunta | Opções | Recomendação (após análise do código atual) |
+|---|----------|--------|-----------------------------------------------|
+| 1 | Squad Management: **drag-and-drop** (dnd-kit) ou **clique para selecionar** + botão "Mover"? | Drag-and-drop é mais intuitivo mas adiciona ~15KB de dependência | Começar pelo padrão clique-a-clique — já existe e funciona no `SetupScreen.tsx`, zero dependência nova. Migrar para `dnd-kit` depois se a UX pedir. |
+| 2 | Supabase: **crio o projeto agora** e deixo URL/anon_key no .env pra você preencher, ou **deixo o código pronto** placeholder? | Recomendo criar o projeto e eu configuro as migrations | Criar o projeto e validar save/load isoladamente (teste manual) antes de integrar nos checkpoints reais — seria a primeira dependência de backend do projeto. |
+| 3 | Mercado: **substituir completamente** o TradeProposalScreen atual ou **manter coexistente**? | Recomendo substituir — o sistema com dinheiro é superior | Concordo em substituir, mas registrar que isso é uma reescrita de `evaluateTradeOffer` (lógica de aceite da CPU), não apenas uma troca de tela. |
+| 4 | Cartões: acúmulo de 3 amarelos conta **só a liga** ou **liga + copa**? | FIFA conta separado; Football Manager conta junto | Sem precedente no código atual (não há acumulação cross-match hoje) — decisão de design pura, sem restrição técnica de nenhum dos dois lados. |
+| 5 | Ordem: **começar pelo Squad Management** ou prefere começar pelo **Hall of Fame** (mais visual)? | Squad Management é o alicerce técnico | Revisado — ver seção 6: os campos de `Player` não são mais um bloqueio real (foram desacoplados por feature), então a ordem passou a ser Cloud Save → Squad Management → Stamina/Cartões → Hub/Mercado → Hall of Fame, priorizando segurança (save) e risco técnico (array) primeiro. |
