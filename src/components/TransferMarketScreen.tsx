@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Team, Player, Position } from '../engine/types';
 import { allLeagues } from '../data/leagues';
 import { getAvgOvr } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import { formatMoney } from '../utils/formatMoney';
 import { calculateMarketValue } from '../engine/transferMarket';
+import { syncLeagueRoster } from '../services/rosterSync';
 import PlayerDetailModal from './PlayerDetailModal';
 import styles from './TransferMarketScreen.module.css';
 
@@ -25,6 +26,10 @@ interface Props {
   onListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
   onUnlistPlayerForSale: (playerId: string) => void;
   onSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
+  /** Só a liga da carreira sincroniza automaticamente (D-04) — ao navegar pra outra liga
+   *  aqui no Mercado, sincroniza ela sob demanda (uma vez, cache de 7 dias) pra trazer
+   *  nome/idade/nacionalidade reais também pros times de fora da liga do usuário. */
+  onRosterSynced?: (leagueId: string, teams: Team[]) => void;
 }
 
 const POSITIONS: Position[] = ['GK', 'DEF', 'MID', 'FWD'];
@@ -63,7 +68,7 @@ function sortPlayers<T extends Player>(players: T[], sortBy: SortKey): T[] {
   });
 }
 
-export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBack, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent }: Props) {
+export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBack, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced }: Props) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
@@ -76,6 +81,30 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
   const [buyLeagueId, setBuyLeagueId] = useState<string | null>(null);
   const [buyTeamId, setBuyTeamId] = useState<string | null>(null);
   const [buySearch, setBuySearch] = useState('');
+  const [syncingLeagueId, setSyncingLeagueId] = useState<string | null>(null);
+  const rostersRef = useRef(rosters);
+  rostersRef.current = rosters;
+  const syncedLeagueIdsRef = useRef<Set<string>>(new Set());
+
+  // Ao entrar numa liga que não é a da carreira (nunca sincroniza sozinha, ver D-04),
+  // busca o elenco ao vivo uma vez por sessão — nome/idade/nacionalidade reais passam a
+  // aparecer pra qualquer time que o usuário navegue no Mercado, não só o da própria liga.
+  useEffect(() => {
+    if (!buyLeagueId || buyLeagueId === userLeagueId) return;
+    if (syncedLeagueIdsRef.current.has(buyLeagueId)) return;
+    const meta = allLeagues.find(l => l.id === buyLeagueId);
+    if (!meta) return;
+    syncedLeagueIdsRef.current.add(buyLeagueId);
+    setSyncingLeagueId(buyLeagueId);
+    const leagueToSync = { ...meta, teams: rostersRef.current[buyLeagueId] ?? meta.teams };
+    syncLeagueRoster(leagueToSync)
+      .then(result => {
+        if (result.source === 'live' || result.source === 'cache') {
+          onRosterSynced?.(buyLeagueId, result.league.teams);
+        }
+      })
+      .finally(() => setSyncingLeagueId(prev => (prev === buyLeagueId ? null : prev)));
+  }, [buyLeagueId, userLeagueId, onRosterSynced]);
 
   const switchTab = (tab: 'buy' | 'sell' | 'free-agents') => {
     setActiveTab(tab); setExpandedId(null); setFeedback(null);
@@ -299,6 +328,9 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
               ) : !buyTeam ? (
                 <>
                   <button className={styles.backLink} onClick={() => setBuyLeagueId(null)}>← Ligas</button>
+                  {syncingLeagueId === buyLeagueId && (
+                    <div className={styles.syncHint}>🔄 Sincronizando elenco desta liga…</div>
+                  )}
                   <div className={styles.teamGroups}>
                     {[...(rosters[buyLeagueId] ?? [])]
                       .filter(t => t.id !== userTeam.id)

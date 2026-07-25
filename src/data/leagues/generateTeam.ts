@@ -42,7 +42,10 @@ export function generatePlayer(id: string, name: string, number: number, pos: Pl
   // isso ANTES de gerar os atributos, pra playerOvr(gerado) ≈ ovr de novo. Achado analisando
   // por que times de 2ª divisão (alvo 72-77 nos dados) saíam com OVR médio 86-93 na prática —
   // mais forte que a 1ª divisão do mesmo país.
-  const calibratedOvr = (ovr - 4) / 1.15;
+  // Arredondado — os 8 atributos do motor são sempre inteiros em qualquer outro lugar
+  // (dados estáticos, telas, cálculos); sem isso, a divisão por 1.15 vazava casas decimais
+  // pra dentro de attr()/boost() (ex: "78.26086956521739" aparecendo na tela em vez de 78).
+  const calibratedOvr = Math.round((ovr - 4) / 1.15);
   const base = calibratedOvr - 7;
   const spread = Math.min(10, Math.floor(ovr / 8));
   const attr = () => Math.max(1, Math.min(99, base + rand(-spread, spread)));

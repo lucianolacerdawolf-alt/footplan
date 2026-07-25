@@ -814,6 +814,15 @@ export function useCareerManager({
     setScreen('season-end');
   }, [careerState, setCareerState, setScreen]);
 
+  // Só a liga da carreira ativa sincroniza automaticamente (D-04, respeita o rate limit
+  // das APIs). Ao navegar pra outra liga no Mercado, TransferMarketScreen sincroniza essa
+  // liga sob demanda (uma vez, com cache de 7 dias) e persiste o resultado aqui — sem
+  // isso, nome/idade/nacionalidade reais só apareciam pros jogadores da própria liga do
+  // usuário; times de outras ligas continuavam com os dados estáticos (sem nacionalidade).
+  const handleMarketRosterSynced = useCallback((leagueId: string, teams: Team[]) => {
+    setCareerState(prev => prev ? { ...prev, rosters: { ...prev.rosters, [leagueId]: teams } } : prev);
+  }, [setCareerState]);
+
   const handleMarkInboxRead = useCallback((messageId: string) => {
     setCareerState(prev => {
       if (!prev) return prev;
@@ -855,5 +864,6 @@ export function useCareerManager({
     handleAdvanceSeason,
     handleMarkInboxRead,
     handleMarkAllInboxRead,
+    handleMarketRosterSynced,
   };
 }

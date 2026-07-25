@@ -100,6 +100,7 @@ function App() {
     handleAdvanceSeason,
     handleMarkInboxRead,
     handleMarkAllInboxRead,
+    handleMarketRosterSynced,
   } = useCareerManager({
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     recordH2H, notifySave, setToastMsg,
@@ -292,6 +293,7 @@ function App() {
     handleAdvanceSeason,
     handleMarkInboxRead,
     handleMarkAllInboxRead,
+    handleMarketRosterSynced,
     clearHistory,
     setIsTournamentEntry,
   };

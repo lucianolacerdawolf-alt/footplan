@@ -87,6 +87,14 @@
   opacity: 0.6;
 }
 
+.syncHint {
+  text-align: center;
+  padding: 6px;
+  font-size: 11px;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
 .backLink {
   align-self: flex-start;
   padding: 4px 0;

@@ -153,6 +153,7 @@ export interface AppScreensProps {
   handleBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
   handleListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
   handleUnlistPlayerForSale: (playerId: string) => void;
+  handleMarketRosterSynced: (leagueId: string, teams: Team[]) => void;
   handleSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
   handleAcceptTransferOffer: (messageId: string) => void;
   handleRejectTransferOffer: (messageId: string) => void;
@@ -458,6 +459,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onListPlayerForSale={p.handleListPlayerForSale}
         onUnlistPlayerForSale={p.handleUnlistPlayerForSale}
         onSignFreeAgent={p.handleSignFreeAgent}
+        onRosterSynced={p.handleMarketRosterSynced}
       />
     );
   },

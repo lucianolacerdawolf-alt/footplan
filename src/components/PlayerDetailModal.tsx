@@ -73,7 +73,10 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
 
         <div className={styles.attrGrid}>
           {ATTRIBUTE_GROUPS.map(({ label, key }) => {
-            const value = player.attributes[key];
+            // Math.round defensivo — os 8 atributos são sempre inteiros por convenção em
+            // todo o resto do jogo; arredonda aqui também caso algum dado antigo (de antes
+            // de um fix na geração) ainda tenha vazado casas decimais.
+            const value = Math.round(player.attributes[key]);
             return (
               <div key={key} className={styles.attrCell}>
                 <span className={`${styles.attrValue} ${tierClass(value)}`}>{value}</span>

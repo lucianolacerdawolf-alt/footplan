@@ -51,6 +51,32 @@ describe('generatePlayer — calibração de OVR (regressão)', () => {
       }
     }
   });
+
+  it('todo atributo gerado é sempre um número inteiro (regressão)', () => {
+    // A calibração acima faz (ovr-4)/1.15, que raramente dá um número redondo (ex: 1800/23
+    // = 78.26086956521739) — sem arredondar esse resultado ANTES de virar a base dos
+    // atributos, esse decimal vazava pra dentro de todos os 8 atributos do jogador, e
+    // apareceu na tela (ex: "78.26086956521739" em vez de "78" no modal de detalhes).
+    const subtypesByPos: Record<Position, string[]> = {
+      GK: ['GK'], DEF: ['CB', 'FB'], MID: ['CM', 'CDM', 'CAM'], FWD: ['ST', 'W'],
+    };
+    for (const pos of positions) {
+      for (const target of [50, 60, 65, 70, 75, 80, 85, 90, 95]) {
+        for (let i = 0; i < 20; i++) {
+          const plain = generatePlayer(`x${i}`, 'X', 1, pos, target);
+          for (const v of Object.values(plain.attributes)) {
+            expect(Number.isInteger(v)).toBe(true);
+          }
+          for (const subtype of subtypesByPos[pos]) {
+            const withSubtype = generatePlayerWithSubtype(`y${i}`, 'Y', 1, pos, target, subtype);
+            for (const v of Object.values(withSubtype.attributes)) {
+              expect(Number.isInteger(v)).toBe(true);
+            }
+          }
+        }
+      }
+    }
+  });
 });
 
 describe('2ª divisão — força relativa à 1ª divisão do mesmo país (regressão)', () => {
