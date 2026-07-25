@@ -2,6 +2,15 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
 import styles from './LeagueSelectScreen.module.css';
 
+const LEAGUE_ORDER: Record<string, number> = {
+  pl: 0, championship: 1,
+  laliga: 2, laliga2: 3,
+  bundesliga: 4, bundesliga2: 5,
+  serieA: 6, serieB: 7,
+  ligue1: 8, ligue2: 9,
+  ligaPortugal: 10, ligaPortugal2: 11,
+};
+
 export interface ResumableSave {
   type: 'league' | 'bracket';
   league: LeagueDefinition;
@@ -51,7 +60,7 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack, r
       )}
 
       <div className={styles.grid}>
-        {[...allLeagues].sort((a, b) => b.teams.length - a.teams.length).map(league => {
+        {[...allLeagues].sort((a, b) => (LEAGUE_ORDER[a.id] ?? 99) - (LEAGUE_ORDER[b.id] ?? 99)).map(league => {
           const isSelected = selectedLeague?.id === league.id;
           return (
             <button

@@ -5,21 +5,16 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
-import type { CloudStatus } from '../hooks/useCloudSave';
 import FinancePanel from './FinancePanel';
 import InboxPanel from './InboxPanel';
-import CloudSaveStatus from './CloudSaveStatus';
 import styles from './CareerHubScreen.module.css';
 
 interface Props {
   state: CareerState;
   league: LeagueDefinition;
-  cloudStatus: CloudStatus;
-  onRetryCloudSave: () => void;
   onViewLeague: () => void;
   onViewCup: () => void;
   onPlayNext: () => void;
-  onProposeTrade: () => void;
   onAdvanceSeason: () => void;
   onNewCareer: () => void;
   onBack: () => void;
@@ -92,14 +87,12 @@ function reputationSign(delta: number): string {
   return delta > 0 ? '+' : '';
 }
 
-export default function CareerHubScreen({ state, league, cloudStatus, onRetryCloudSave, onViewLeague, onViewCup, onPlayNext, onProposeTrade, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onViewTrophyRoom, onOpenMarket }: Props) {
+export default function CareerHubScreen({ state, league, onViewLeague, onViewCup, onPlayNext, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onViewTrophyRoom, onOpenMarket }: Props) {
   const finances = getFinances(state);
   const inbox = getInbox(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
   const userPosition = standings.findIndex(s => s.teamId === state.season.league.userTeamId) + 1;
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
-  const tradesUsed = state.season.tradesUsedThisSeason;
-  const tradeLimitReached = tradesUsed >= 3;
   const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
   const history = [...state.history].reverse();
 
@@ -117,7 +110,6 @@ export default function CareerHubScreen({ state, league, cloudStatus, onRetryClo
           <h1 className={styles.title}>{state.manager.name}</h1>
           <span className={styles.progress}>Reputação: {state.manager.reputation}</span>
         </div>
-        <CloudSaveStatus status={cloudStatus} onRetry={onRetryCloudSave} />
       </div>
 
       <FinancePanel finances={finances} />
@@ -145,10 +137,6 @@ export default function CareerHubScreen({ state, league, cloudStatus, onRetryClo
         <div className={styles.summaryRow}>
           <span className={styles.summaryLabel}>{league.cupName}</span>
           <span className={styles.summaryValue}>{cupStageLabel}</span>
-        </div>
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Trocas usadas</span>
-          <span className={styles.summaryValue}>{tradesUsed}/3</span>
         </div>
         <div className={styles.summaryRow}>
           <span className={styles.summaryLabel}>Janela de transferências</span>
@@ -181,14 +169,6 @@ export default function CareerHubScreen({ state, league, cloudStatus, onRetryClo
         <button className={styles.navBtn} onClick={onViewLeague}>Ver Liga →</button>
         <button className={styles.navBtn} onClick={onViewCup}>Ver Copa →</button>
         <button className={styles.navBtn} onClick={onOpenMarket}>🛒 Mercado</button>
-        <button
-          className={styles.navBtn}
-          onClick={onProposeTrade}
-          disabled={tradeLimitReached}
-          title={tradeLimitReached ? 'Limite de trocas atingido' : undefined}
-        >
-          {tradeLimitReached ? 'Limite de trocas atingido' : 'Propor Troca'}
-        </button>
       </div>
 
       {seasonReady ? (
@@ -213,7 +193,6 @@ export default function CareerHubScreen({ state, league, cloudStatus, onRetryClo
               <div className={styles.cardInfo}>
                 <span className={styles.cardLine}>{entry.userLeaguePosition}º na liga</span>
                 <span className={styles.cardLine}>{CUP_RESULT_LABELS[entry.cupResult]}</span>
-                <span className={styles.cardLine}>{entry.tradesUsed}/3 trocas</span>
               </div>
               <span className={entry.reputationDelta >= 0 ? styles.repPositive : styles.repNegative}>
                 {reputationSign(entry.reputationDelta)}{entry.reputationDelta}

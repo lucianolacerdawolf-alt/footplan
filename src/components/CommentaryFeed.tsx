@@ -32,33 +32,35 @@ export default function CommentaryFeed({ events, homeTeamId }: Props) {
 
   useEffect(() => {
     if (feedRef.current) {
-      feedRef.current.scrollTop = feedRef.current.scrollHeight;
+      feedRef.current.scrollTop = 0;
     }
   }, [events]);
 
   const hidden = Math.max(0, events.length - MAX_VISIBLE);
-  const visibleEvents = hidden > 0 ? events.slice(-MAX_VISIBLE) : events;
+  const visibleEvents = hidden > 0
+    ? events.slice(-MAX_VISIBLE).reverse()
+    : [...events].reverse();
 
   return (
     <div className="commentary-feed" ref={feedRef}>
       <h3>📻 Cronologia da Partida</h3>
       <div className="feed-list">
-        {hidden > 0 && (
-          <p className="feed-hidden">+ {hidden} eventos anteriores</p>
-        )}
         {visibleEvents.map((event, i) => {
           const isHome = event.teamId === homeTeamId;
           const side = event.teamId === null ? 'neutral' : isHome ? 'home' : 'away';
           return (
-            <div key={hidden + i} className={`feed-event event-${side} event-${event.type}`}>
+            <div key={i} className={`feed-event event-${side} event-${event.type}`}>
               <span className="event-minute">{String(event.minute).padStart(2, '0')}:00</span>
               <span className="event-icon">{EVENT_ICONS[event.type] ?? ''}</span>
               <span className="event-text">{event.description}</span>
             </div>
           );
         })}
+        {hidden > 0 && (
+          <p className="feed-hidden">+ {hidden} eventos anteriores</p>
+        )}
         {events.length === 0 && (
-          <p className="feed-empty">Pressione &quot;Simular Partida&quot; para começar...</p>
+          <p className="feed-empty">Pressione &quot;JOGAR&quot; para começar...</p>
         )}
       </div>
     </div>

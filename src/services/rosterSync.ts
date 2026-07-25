@@ -49,7 +49,20 @@ function mapPosition(remote: string | null): Position {
   if (p.includes('keeper')) return 'GK';
   if (p.includes('defen') || p.includes('back')) return 'DEF';
   if (p.includes('midfield')) return 'MID';
-  return 'FWD'; // "Offence" / "Attack" / "Forward" / "Winger" etc.
+  return 'FWD';
+}
+
+function ageFromDob(dateOfBirth: string | null): number | undefined {
+  if (!dateOfBirth) return undefined;
+  try {
+    const birth = new Date(dateOfBirth);
+    if (isNaN(birth.getTime())) return undefined;
+    const now = new Date();
+    let age = now.getFullYear() - birth.getFullYear();
+    const m = now.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+    return age;
+  } catch { return undefined; }
 }
 
 /**
@@ -140,13 +153,16 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[]): { team:
   const grouped: Record<Position, Player[]> = { GK: [], DEF: [], MID: [], FWD: [] };
   remoteSquad.forEach((rp, i) => {
     const position = mapPosition(rp.position);
+    const age = ageFromDob(rp.dateOfBirth);
     const existing = byName.get(normalizeName(rp.name));
     if (existing) {
       matched++;
-      grouped[position].push({ ...existing, name: rp.name, position, number: rp.shirtNumber ?? existing.number });
+      const updated = { ...existing, name: rp.name, position, number: rp.shirtNumber ?? existing.number };
+      if (age !== undefined) updated.age = age;
+      grouped[position].push(updated);
     } else {
       added++;
-      grouped[position].push(generatePlayer(`${staticTeam.id}-live-${rp.id}`, rp.name, rp.shirtNumber ?? (90 + i), position, targetOvr));
+      grouped[position].push(generatePlayer(`${staticTeam.id}-live-${rp.id}`, rp.name, rp.shirtNumber ?? (90 + i), position, targetOvr, age));
     }
   });
 
@@ -224,6 +240,10 @@ export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?
     if (!remote) return staticTeam;
     const { team, stats: teamStats } = mergeTeamRoster(staticTeam, remote.squad);
     stats.push(teamStats);
+    // Fill logoUrl from API if the static team has no logo
+    if (!team.logoUrl && remote.crest) {
+      team.logoUrl = remote.crest;
+    }
     return team;
   });
 

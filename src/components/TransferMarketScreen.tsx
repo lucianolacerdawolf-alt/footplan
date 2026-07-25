@@ -7,12 +7,14 @@ import { calculateMarketValue } from '../engine/transferMarket';
 import styles from './TransferMarketScreen.module.css';
 
 interface Props {
+  userTeam: Team;
   cpuTeams: Team[];
   freeAgents: Player[];
   budget: number;
   isWindowOpen: boolean;
   onBack: () => void;
   onBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
+  onSellPlayer: (playerId: string, toTeamId: string, amount: number) => { success: boolean; reason: string };
   onSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
 }
 
@@ -41,13 +43,14 @@ function sortPlayers<T extends Player>(players: T[], sortBy: SortKey): T[] {
   });
 }
 
-export default function TransferMarketScreen({ cpuTeams, freeAgents, budget, isWindowOpen, onBack, onBuyPlayer, onSignFreeAgent }: Props) {
-  const [activeTab, setActiveTab] = useState<'buy' | 'free-agents'>('buy');
+export default function TransferMarketScreen({ userTeam, cpuTeams, freeAgents, budget, isWindowOpen, onBack, onBuyPlayer, onSellPlayer, onSignFreeAgent }: Props) {
+  const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [multiplier, setMultiplier] = useState(1);
   const [feedback, setFeedback] = useState<{ playerId: string; message: string; success: boolean } | null>(null);
+  const [sellTargetId, setSellTargetId] = useState<string | null>(null);
 
   const applyFilter = (players: Player[]) =>
     sortPlayers(positionFilter === 'ALL' ? players : players.filter(p => p.position === positionFilter), sortBy);
@@ -70,6 +73,15 @@ export default function TransferMarketScreen({ cpuTeams, freeAgents, budget, isW
     const marketValue = player.marketValue ?? calculateMarketValue(player);
     const amount = Math.round(marketValue * multiplier);
     const res = onSignFreeAgent(player.id, amount);
+    setFeedback({ playerId: player.id, message: resultMessage(res.reason), success: res.success });
+    if (res.success) setExpandedId(null);
+  };
+
+  const handleSell = (player: Player) => {
+    if (!sellTargetId) return;
+    const marketValue = player.marketValue ?? calculateMarketValue(player);
+    const amount = Math.round(marketValue * multiplier);
+    const res = onSellPlayer(player.id, sellTargetId, amount);
     setFeedback({ playerId: player.id, message: resultMessage(res.reason), success: res.success });
     if (res.success) setExpandedId(null);
   };
@@ -122,6 +134,9 @@ export default function TransferMarketScreen({ cpuTeams, freeAgents, budget, isW
         <button className={`${styles.tabBtn} ${activeTab === 'buy' ? styles.active : ''}`} onClick={() => { setActiveTab('buy'); setExpandedId(null); }}>
           🛒 Comprar Jogadores
         </button>
+        <button className={`${styles.tabBtn} ${activeTab === 'sell' ? styles.active : ''}`} onClick={() => { setActiveTab('sell'); setExpandedId(null); }}>
+          💰 Vender Jogadores
+        </button>
         <button className={`${styles.tabBtn} ${activeTab === 'free-agents' ? styles.active : ''}`} onClick={() => { setActiveTab('free-agents'); setExpandedId(null); }}>
           🆓 Agentes Livres ({freeAgents.length})
         </button>
@@ -156,7 +171,7 @@ export default function TransferMarketScreen({ cpuTeams, freeAgents, budget, isW
             <div className={styles.emptyState}>Orçamento insuficiente para contratar qualquer jogador visível.</div>
           )}
 
-          {activeTab === 'buy' ? (
+          {activeTab === 'buy' && (
             <div className={styles.teamGroups}>
               {[...cpuTeams].sort((a, b) => getAvgOvr(b) - getAvgOvr(a)).map(team => {
                 const squad = applyFilter(team.squad);
@@ -187,7 +202,77 @@ export default function TransferMarketScreen({ cpuTeams, freeAgents, budget, isW
                 );
               })}
             </div>
-          ) : (
+          )}
+
+          {activeTab === 'sell' && (
+            <>
+              {!sellTargetId ? (
+                <div className={styles.teamGroups}>
+                  <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', padding: '8px 0' }}>Escolha o time comprador</div>
+                  {[...cpuTeams].sort((a, b) => a.name.localeCompare(b.name)).map(team => (
+                    <div key={team.id} className={styles.teamGroup}>
+                      <button className={styles.playerRowHeader} onClick={() => setSellTargetId(team.id)} style={{ width: '100%', justifyContent: 'flex-start' }}>
+                        <img src={team.logoUrl} alt="" className={styles.teamCrest} />
+                        <span className={styles.teamName}>{team.name}</span>
+                        <span className={styles.teamAvgOvr}>OVR {getAvgOvr(team)}</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, padding: '4px 0' }}>
+                    Vendendo para {cpuTeams.find(t => t.id === sellTargetId)!.name}{' '}
+                    <button className={styles.filterBtn} onClick={() => setSellTargetId(null)}>Trocar time</button>
+                  </div>
+                  <div className={styles.teamGroup}>
+                    <div className={styles.teamGroupHeader}>
+                      <span className={styles.teamName}>Seu Elenco</span>
+                    </div>
+                    {applyFilter(userTeam.squad).map(p => {
+                      const marketValue = p.marketValue ?? calculateMarketValue(p);
+                      return (
+                        <div key={p.id} className={styles.playerRow}>
+                          <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
+                            <span className={styles.playerNum}>#{p.number}</span>
+                            <span className={styles.playerName}>{p.name}</span>
+                            <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
+                            <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                            <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                          </button>
+                          {expandedId === p.id && (
+                            <div className={styles.offerCard}>
+                              <div className={styles.offerRow}>
+                                <input
+                                  type="range" min={0.5} max={1.5} step={0.05}
+                                  value={multiplier}
+                                  onChange={e => setMultiplier(Number(e.target.value))}
+                                  className={styles.slider}
+                                  aria-label="Preço de venda"
+                                />
+                                <span className={styles.offerAmount}>{formatMoney(Math.round(marketValue * multiplier))}</span>
+                              </div>
+                              <div className={styles.offerActions}>
+                                <button className={styles.confirmBtn} onClick={() => handleSell(p)}>
+                                  Confirmar Venda
+                                </button>
+                                <button className={styles.cancelBtn} onClick={() => setExpandedId(null)}>Cancelar</button>
+                              </div>
+                              {feedback?.playerId === p.id && (
+                                <span className={feedback.success ? styles.successText : styles.warnText}>{feedback.message}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {activeTab === 'free-agents' && (
             <div className={styles.teamGroup}>
               {applyFilter(freeAgents).map(p => {
                 const marketValue = p.marketValue ?? calculateMarketValue(p);

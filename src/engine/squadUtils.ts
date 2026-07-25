@@ -15,13 +15,6 @@ export function getBench(team: Team): Player[] {
   return team.squad.slice(getStarterCount(team.strategy.formation));
 }
 
-/** Troca dois jogadores de posição no array (fonte de verdade da escalação) */
-export function swapSquadPlayers(team: Team, idxA: number, idxB: number): Team {
-  const squad = [...team.squad];
-  [squad[idxA], squad[idxB]] = [squad[idxB], squad[idxA]];
-  return { ...team, squad };
-}
-
 /** Suspenso ou lesionado — não pode ser escalado como titular */
 export function isPlayerUnavailable(p: Player): boolean {
   return !!p.isSuspended || !!(p.injuredRounds && p.injuredRounds > 0);

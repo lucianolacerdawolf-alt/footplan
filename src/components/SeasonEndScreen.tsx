@@ -49,10 +49,6 @@ export default function SeasonEndScreen({ entry, league, newReputation, onContin
           <span className={styles.statValue}>{CUP_RESULT_LABELS[entry.cupResult]}</span>
         </div>
         <div className={styles.statRow}>
-          <span className={styles.statLabel}>Trocas usadas</span>
-          <span className={styles.statValue}>{entry.tradesUsed}/3</span>
-        </div>
-        <div className={styles.statRow}>
           <span className={styles.statLabel}>Reputação</span>
           <span className={entry.reputationDelta >= 0 ? styles.repPositive : styles.repNegative}>
             {newReputation} ({reputationSign}{entry.reputationDelta})

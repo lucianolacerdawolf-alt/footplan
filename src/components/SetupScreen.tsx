@@ -10,7 +10,6 @@ import TacticPresets from './shared/TacticPresets';
 import { useH2H } from '../hooks/useH2H';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import TutorialOverlay from './TutorialOverlay';
-import SquadManagementScreen from './SquadManagementScreen';
 
 function getTacticalInsight(home: Team, away: Team): string {
   const hf = home.strategy.formation;
@@ -80,11 +79,11 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   const [homeSelected, setHomeSelected] = useState<string | null>(null);
   const [awaySelected, setAwaySelected] = useState<string | null>(null);
-  const [managingSide, setManagingSide] = useState<'home' | 'away' | null>(null);
   const { get: getH2H } = useH2H();
   const h2h = getH2H(initialHome.id, initialAway.id);
   const [tutorialSeen] = useLocalStorage<string>('fp:tutorialSeen', '');
   const [showTutorial, setShowTutorial] = useState(!tutorialSeen);
+  const [setupTab, setSetupTab] = useState<'tactics' | 'squad'>('tactics');
 
   const updateHome = useCallback((s: Strategy) => {
     if (s.formation !== homeTeam.strategy.formation) {
@@ -225,11 +224,6 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           <h2>{team.name}</h2>
           <span className="setup-team-sub">{team.strategy.formation} · {Math.round(team.squad.slice(0, 11).reduce((s, p) => s + playerOvr(p), 0) / 11)} OVR {disabled ? '🔒 CPU' : ''}</span>
         </div>
-        {!disabled && (
-          <button className="back-btn-secondary" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => setManagingSide(side)}>
-            🎯 Gerenciar Elenco
-          </button>
-        )}
       </div>
 
       <div className="setup-squad-badges">
@@ -350,10 +344,27 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         </span>
       </div>
 
+      <div className="ht-tabs" style={{ margin: '8px 0', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>
+        <button
+          className={`ht-tab ${setupTab === 'tactics' ? 'active' : ''}`}
+          onClick={() => setSetupTab('tactics')}
+        >
+          Táticas
+        </button>
+        <button
+          className={`ht-tab ${setupTab === 'squad' ? 'active' : ''}`}
+          onClick={() => setSetupTab('squad')}
+        >
+          Gerenciar Elenco
+        </button>
+      </div>
+
       <div className={lockAway ? 'setup-layout setup-layout-solo' : 'setup-layout'}>
         <div className="setup-left">
-          {renderCard(homeTeam, updateHome, 'home')}
-          {renderSquad(homeTeam, homeSelected, setHomeSelected, handleSwapHome, false)}
+          {setupTab === 'tactics'
+            ? renderCard(homeTeam, updateHome, 'home')
+            : renderSquad(homeTeam, homeSelected, setHomeSelected, handleSwapHome, false)
+          }
         </div>
 
         {!lockAway && (
@@ -364,23 +375,14 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
               </div>
             </div>
             <div className="setup-right">
-              {renderCard(awayTeam, updateAway, 'away', false)}
-              {renderSquad(awayTeam, awaySelected, setAwaySelected, handleSwapAway, false)}
+              {setupTab === 'tactics'
+                ? renderCard(awayTeam, updateAway, 'away', false)
+                : renderSquad(awayTeam, awaySelected, setAwaySelected, handleSwapAway, false)
+              }
             </div>
           </>
         )}
       </div>
-
-      {managingSide && (
-        <SquadManagementScreen
-          team={managingSide === 'home' ? homeTeam : awayTeam}
-          onSave={t => {
-            if (managingSide === 'home') setHomeTeam(t); else setAwayTeam(t);
-            setManagingSide(null);
-          }}
-          onClose={() => setManagingSide(null)}
-        />
-      )}
     </div>
   );
 }

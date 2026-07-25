@@ -169,11 +169,20 @@
 /* ── Mobile ── */
 @media (max-width: 640px) {
   .screen { padding: 48px 16px 40px; gap: 28px; }
-  .title { font-size: 76px; }
+  .title { font-size: 64px; }
   .titleLine { margin: 10px auto 12px; }
-  .subtitle { letter-spacing: 3px; font-size: 9.5px; }
+  .subtitle { letter-spacing: 3px; font-size: 10px; }
   .modeCard { padding: 15px 16px; gap: 14px; }
   .modeIcon { font-size: 28px; }
   .modeName { font-size: 15px; }
   .modeDesc { font-size: 12px; }
+}
+
+@media (max-width: 400px) {
+  .title { font-size: 48px; }
+  .subtitle { font-size: 9px; }
+  .modeCard { padding: 12px 14px; gap: 10px; }
+  .modeIcon { font-size: 24px; }
+  .modeName { font-size: 14px; }
+  .modeDesc { font-size: 11px; }
 }

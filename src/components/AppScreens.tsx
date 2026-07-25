@@ -9,7 +9,6 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { CareerState } from '../engine/career';
-import type { CloudStatus } from '../hooks/useCloudSave';
 import { getInbox, getFinances, getFreeAgentPool, isTransferWindowOpen } from '../engine/career';
 import { hasMandatoryUnread } from '../engine/inbox';
 import type { SeededRng } from '../engine/rng';
@@ -86,8 +85,6 @@ export interface AppScreensProps {
   leagueState: LeagueState | null;
   bracketState: BracketState | null;
   careerState: CareerState | null;
-  cloudStatus: CloudStatus;
-  retryCloudSave: () => void;
 
   // ── Data ──
   history: MatchRecord[];
@@ -154,6 +151,7 @@ export interface AppScreensProps {
   handleCareerBracketMatchResult: (result: MatchResult) => void;
   handleProposeTrade: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
   handleBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
+  handleSellPlayer: (playerId: string, toTeamId: string, amount: number) => { success: boolean; reason: string };
   handleSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
   handleAcceptTransferOffer: (messageId: string) => void;
   handleRejectTransferOffer: (messageId: string) => void;
@@ -381,6 +379,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         userSide={userSide}
         resumeSnapshot={p.pendingResumeSnapshot}
         onResumeConsumed={() => p.setPendingResumeSnapshot(null)}
+        gameMode={p.gameMode}
       />
     );
   },
@@ -413,12 +412,9 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       <CareerHubScreen
         state={p.careerState}
         league={getLeague(p.careerState.leagueId)!}
-        cloudStatus={p.cloudStatus}
-        onRetryCloudSave={p.retryCloudSave}
         onViewLeague={() => p.setScreen('career-league-table')}
         onViewCup={() => p.setScreen('career-bracket')}
         onPlayNext={p.handlePlayNextCareerMatch}
-        onProposeTrade={() => p.setScreen('trade-propose')}
         onAdvanceSeason={p.handleAdvanceSeason}
         onNewCareer={p.handleNewCareerFromHub}
         onBack={() => { p.setIsCareerMode(false); p.goHome(); }}
@@ -437,12 +433,14 @@ const screenMap: Record<Screen, ScreenRenderer> = {
     const userTeamId = p.careerState.season.league.userTeamId;
     return (
       <TransferMarketScreen
+        userTeam={p.careerState.rosters[p.careerState.leagueId].find(t => t.id === userTeamId)!}
         cpuTeams={p.careerState.rosters[p.careerState.leagueId].filter(t => t.id !== userTeamId)}
         freeAgents={getFreeAgentPool(p.careerState)}
         budget={finances.budget}
         isWindowOpen={isTransferWindowOpen(p.careerState.season.league.currentRound)}
         onBack={() => p.setScreen('career-hub')}
         onBuyPlayer={p.handleBuyPlayer}
+        onSellPlayer={p.handleSellPlayer}
         onSignFreeAgent={p.handleSignFreeAgent}
       />
     );
@@ -517,7 +515,6 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       <TradeProposalScreen
         userTeam={p.careerState.season.league.teams.find(t => t.id === p.careerState!.season.league.userTeamId)!}
         opponentTeams={p.careerState.rosters[p.careerState.leagueId].filter(t => t.id !== p.careerState!.season.league.userTeamId)}
-        tradesRemaining={Math.max(0, 3 - p.careerState.season.tradesUsedThisSeason)}
         budget={getFinances(p.careerState).budget}
         onBack={() => p.setScreen('career-hub')}
         onPropose={p.handleProposeTrade}

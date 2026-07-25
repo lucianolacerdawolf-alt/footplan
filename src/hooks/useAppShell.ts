@@ -26,7 +26,20 @@ export function useAppShell() {
 
   const [returnScreen, setReturnScreen] = useState<Screen | null>(null);
 
-  const goHome = useCallback(() => setScreen('home'), []);
+  const goHome = useCallback(() => {
+    setSelectedLeague(null);
+    try { localStorage.removeItem('fp:selectedLeague'); } catch {}
+    try { localStorage.removeItem('fp:homeId'); } catch {}
+    try { localStorage.removeItem('fp:awayId'); } catch {}
+    try { localStorage.removeItem('fp:homeUniform'); } catch {}
+    try { localStorage.removeItem('fp:awayUniform'); } catch {}
+    try { localStorage.removeItem('fp:mode'); } catch {}
+    setMatchContext('regular');
+    setIsKnockout(false);
+    setIsTournamentEntry(false);
+    setIsCareerMode(false);
+    setScreen('home');
+  }, []);
 
   const handleContinueTournament = useCallback(() => {
     setScreen(isCareerMode

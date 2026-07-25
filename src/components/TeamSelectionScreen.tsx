@@ -28,10 +28,18 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
     uniform === 'home' ? team.color : team.secondaryColor;
 
   const handleTeamClick = (teamId: string) => {
-    if (homeId === teamId) { setHomeId(null); return; }
-    if (awayId === teamId) { setAwayId(null); return; }
-    if (!homeId) { setHomeId(teamId); setHomeUniform('home'); return; }
-    if (!awayId && teamId !== homeId) { setAwayId(teamId); setAwayUniform('away'); return; }
+    const homeIsValid = homeId ? teams.some(t => t.id === homeId) : false;
+    const awayIsValid = awayId ? teams.some(t => t.id === awayId) : false;
+    const effectiveHomeId = homeIsValid ? homeId : null;
+    const effectiveAwayId = awayIsValid ? awayId : null;
+
+    if (!homeIsValid && homeId) setHomeId(null);
+    if (!awayIsValid && awayId) setAwayId(null);
+
+    if (effectiveHomeId === teamId) { setHomeId(null); return; }
+    if (effectiveAwayId === teamId) { setAwayId(null); return; }
+    if (!effectiveHomeId) { setHomeId(teamId); setHomeUniform('home'); return; }
+    if (!effectiveAwayId && teamId !== effectiveHomeId) { setAwayId(teamId); setAwayUniform('away'); return; }
   };
 
   const colorsConflict = !!(homeTeam && awayTeam &&
@@ -116,9 +124,9 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
       </div>
 
       <div className="select-instruction">
-        {!homeId && !awayId && 'Escolha o time da CASA'}
-        {homeId && !awayId && 'Agora escolha o time VISITANTE'}
-        {homeId && awayId && 'Confronto definido!'}
+        {!homeTeam && !awayTeam && 'Escolha o time da CASA'}
+        {homeTeam && !awayTeam && 'Agora escolha o time VISITANTE'}
+        {homeTeam && awayTeam && 'Confronto definido!'}
       </div>
 
       <div className="select-summary">

@@ -31,12 +31,13 @@ function matchResultText(m: BracketMatch): string {
 }
 
 function MatchCard({
-  match, teams, userTeamId, onPlay,
+  match, teams, userTeamId, onPlay, onSimulate,
 }: {
   match: BracketMatch;
   teams: Team[];
   userTeamId: string;
   onPlay: () => void;
+  onSimulate?: () => void;
 }) {
   const home = teamById(teams, match.homeTeamId);
   const away = teamById(teams, match.awayTeamId);
@@ -64,6 +65,9 @@ function MatchCard({
       {canPlay && isUserMatch && (
         <div className={styles.matchActions}>
           <button className={styles.playBtn} onClick={onPlay}>Jogar</button>
+          {onSimulate && (
+            <button className={styles.simBtn} onClick={onSimulate}>Simular</button>
+          )}
         </div>
       )}
       {match.played && winner && (
@@ -75,7 +79,7 @@ function MatchCard({
   );
 }
 
-export default function BracketScreen({ state, onPlayMatch, onSimulateOthers, onEditTactics, onBack }: Props) {
+export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onEditTactics, onBack }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
   const [simulating, setSimulating] = useState(false);
   const runSimOthers = () => {
@@ -133,7 +137,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateOthers, on
             </button>
           )}
         </div>
-        {matches.map(m => (
+        {matches.map((m, idx) => (
           <MatchCard
             key={m.id}
             match={m}
@@ -144,6 +148,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateOthers, on
               const away = teamById(teams, m.awayTeamId)!;
               onPlayMatch(m, home, away);
             }}
+            onSimulate={isActive ? () => onSimulateMatch(state.stage as PlayableStage, idx) : undefined}
           />
         ))}
       </div>

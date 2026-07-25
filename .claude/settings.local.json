@@ -50,7 +50,8 @@
       "Bash(rtk wc *)",
       "Bash(rtk grep *)",
       "Bash(git -C \"C:\\\\SLOT01\\\\Footplan\" remote -v)",
-      "Bash(git -C \"C:\\\\SLOT01\\\\Footplan\" branch -a)"
+      "Bash(git -C \"C:\\\\SLOT01\\\\Footplan\" branch -a)",
+      "Bash(rtk npm *)"
     ]
   }
 }

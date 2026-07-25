@@ -78,7 +78,7 @@ Cada escolha do jogador afeta diretamente a simulação:
 
 ### Modo Carreira
 - **Progressão multi-temporada**: todas as 6 ligas evoluem em paralelo (não só a liga ativa) — jogadores envelhecem, evoluem/declinam por desempenho e idade, se aposentam e são substituídos por gerados proceduralmente
-- **Escalação visual** (`SquadManagementScreen`): campo com a formação atual, clique-a-clique pra trocar titular por reserva da mesma posição, troca de formação reorganiza automaticamente. Suspensos e lesionados aparecem bloqueados e nunca são escalados, nem por troca de formação
+- **Escalação**: no próprio `SetupScreen`, clique-a-clique pra trocar titular por reserva da mesma posição, troca de formação reorganiza automaticamente. Suspensos e lesionados aparecem bloqueados e nunca são escalados, nem por troca de formação
 - **Fadiga e cartões persistem entre partidas**: cada jogo desgasta os titulares de verdade (não só durante a partida — o cansaço acumula até a próxima rodada); 3 cartões amarelos na temporada ou 1 vermelho direto suspendem o jogador por 1 jogo
 - **Finanças do clube**: orçamento inicial por liga, folha salarial calculada pelo valor de mercado do elenco, renda semanal creditada a cada rodada
 - **Caixa de entrada**: relatórios de lesão (obrigatórios — bloqueiam "Avançar Rodada" até serem lidos), prévia do próximo jogo, aviso de janela de transferências
@@ -116,7 +116,7 @@ HomeScreen
 │                                                                              ↓
 │                                                   MatchScreen → MatchStatsScreen → BracketScreen
 ├── Modo Carreira → [tela de time, 1ª vez] → CareerHubScreen
-│                     ├── ⚽ Jogar → SetupScreen [overlay: SquadManagementScreen] → MatchScreen → MatchStatsScreen → LeagueScreen (rodada) ⇄ LeagueTableScreen
+│                     ├── ⚽ Jogar → SetupScreen → MatchScreen → MatchStatsScreen → LeagueScreen (rodada) ⇄ LeagueTableScreen
 │                     ├── Ver Liga → LeagueTableScreen (consulta pura)
 │                     ├── Ver Copa → BracketScreen → SetupScreen → MatchScreen → MatchStatsScreen → BracketScreen
 │                     ├── Propor Troca → TradeProposalScreen
@@ -177,7 +177,7 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 | **Multiplayer** | PeerJS (WebRTC P2P) |
 | **Dados de elenco ao vivo** | [football-data.org](https://www.football-data.org/) API v4, via proxy Cloudflare Worker (contorna CORS + esconde a chave) |
 | **PWA** | `vite-plugin-pwa` (service worker + manifest) |
-| **Deploy** | GitHub Pages (`gh-pages`) + Cloudflare Pages (`wrangler`) |
+| **Deploy** | GitHub Pages (`npx gh-pages -d dist`, requer Pages habilitado no repo) + Cloudflare Pages (`npm run deploy` — não tem integração Git, é sempre manual) |
 
 ---
 
@@ -209,7 +209,6 @@ src/
 │   ├── seasonClosure.ts          # Estatísticas de fechamento de temporada (artilheiro, W/D/L, etc)
 │   ├── careerLabels.ts           # Labels compartilhados de resultado de copa
 │   ├── playerRating.ts          # Notas 4-10 e Man of the Match
-│   ├── steering.ts              # Coordenadas de formação (usado pela escalação visual do Carreira)
 │   ├── rng.ts                   # RNG com seed (SeededRng para multiplayer)
 │   ├── achievements.ts          # 15 conquistas com condições
 │   ├── constants.ts             # FORMATIONS, FORMATION_COUNTS
@@ -229,9 +228,7 @@ src/
 │   ├── OnlineLobbyScreen         Criar/entrar sala, seleção de time, código 4 letras
 │   ├── TeamSelectionScreen       Seleção partida única
 │   ├── TournamentSetupScreen     Seleção time para torneio
-│   ├── SetupScreen               Táticas + escalação + H2H + análise tática + botão Gerenciar Elenco
-│   ├── SquadManagementScreen     Escalação visual (Modo Carreira): campo + banco, clique pra trocar
-│   ├── FormationPitch            Campo SVG estático usado pela escalação visual (não anima partidas)
+│   ├── SetupScreen               Táticas + escalação (clique pra trocar titular/reserva) + H2H + análise tática
 │   ├── MatchScreen               Replay em texto, pausa/subs (3 janelas), intervalo
 │   ├── InfoTooltip / TacticLabel Tooltips explicativos de tática
 │   ├── CommentaryFeed            Feed de comentários — única narrativa visual da partida
@@ -300,12 +297,12 @@ cp .env.example .env
 - `calibration.test.ts` — 1000 partidas: média de gols, dominância OVR, empates, mando de campo
 - `tournament.test.ts` — fadiga, lesões, calendário, chaveamento, classificação
 - `playerRating.test.ts` / `playerOvr.test.ts` — notas, MOTM, cálculo de overall
-- `achievements.test.ts` / `steering.test.ts` / `tacticalCommentary.test.ts` / `resolveAttack.test.ts` / `resolveShot.test.ts` / `rng.test.ts`
+- `achievements.test.ts` / `tacticalCommentary.test.ts` / `resolveAttack.test.ts` / `resolveShot.test.ts` / `rng.test.ts`
 - `rosterSync.test.ts` — sincronização de elenco: fallback sem chave, modo proxy, mesclagem, cache, erros de rede/rate-limit, e regressão específica pra colisões de nome (ex: "Barcelona" vs "RCD Espanyol de Barcelona")
 - `useMatchSimulation.test.ts` — qual janela de pausa está ativa em cada momento da partida (substituições)
 - `career.test.ts` / `useCareerManager.test.ts` — progressão de jogador, avaliação de troca (RNG determinístico), reputação, avanço de temporada, fadiga/cartões pós-jogo, finanças/inbox (incluindo o bloqueio real de "Avançar Rodada"), fechamento de temporada
 - `squadUtils.test.ts` / `fitness.test.ts` / `discipline.test.ts` / `transferMarket.test.ts` / `inbox.test.ts` / `seasonClosure.test.ts` — lógica pura do Modo Carreira
-- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, dia de jogo da liga (LeagueScreen) e classificação (LeagueTableScreen) como telas separadas, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão), escalação visual (`SquadManagementScreen`), hub e sala de troféus da carreira
+- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, dia de jogo da liga (LeagueScreen) e classificação (LeagueTableScreen) como telas separadas, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão), hub e sala de troféus da carreira
 
 ---
 

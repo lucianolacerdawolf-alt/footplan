@@ -10,7 +10,8 @@
     "test:coverage": "vitest run --coverage",
     "lint": "oxlint",
     "preview": "vite preview",
-    "generate-icons": "node scripts/generate-pwa-icons.mjs"
+    "generate-icons": "node scripts/generate-pwa-icons.mjs",
+    "deploy": "npm run build && npx wrangler pages deploy dist --project-name=footplan"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.8",

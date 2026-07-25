@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
@@ -12,8 +12,6 @@ interface Props {
   onBack: () => void;
   onGoHome: () => void;
   onStart: (userTeam: Team, managerName?: string) => void;
-  /** Chamado quando o elenco é sincronizado com sucesso — o chamador decide se propaga
-   *  (ex: App.tsx atualizando `selectedLeague`) pro resto do app usar o elenco atualizado. */
   onRosterSynced?: (league: LeagueDefinition) => void;
 }
 
@@ -23,8 +21,6 @@ const MODE_BTN: Record<TournamentMode, string> = {
   career: 'Iniciar Carreira →',
 };
 
-/** Remove caracteres de controle e limita a 24 chars — aplicado antes de setManagerName,
- *  não no boundary de render (T-04.4-01: previne bloat/quebra de layout no localStorage). */
 function sanitizeManagerName(raw: string): string {
   return raw.replace(/[\x00-\x1F\x7F]/g, '').slice(0, 24);
 }
@@ -32,12 +28,15 @@ function sanitizeManagerName(raw: string): string {
 export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, onStart, onRosterSynced }: Props) {
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
   const [managerName, setManagerName] = useState('');
-  const { syncing, lastSource, lastStats, lastError, apiKeyConfigured, sync } = useLiveRoster();
+  const { syncing, lastSource, lastError, sync } = useLiveRoster();
 
-  const handleSyncRoster = async () => {
-    const updated = await sync(league);
-    if (updated !== league) onRosterSynced?.(updated);
-  };
+  // Auto-sync roster from API on mount
+  useEffect(() => {
+    sync(league).then(updated => {
+      if (updated !== league) onRosterSynced?.(updated);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [league.id]);
 
   const handleStart = () => {
     if (!userTeamId) return;
@@ -71,28 +70,22 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
         <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
       </div>
 
-      {mode !== 'career' && (
-        <div className="roster-sync-row">
-          <button className="roster-sync-btn" onClick={handleSyncRoster} disabled={syncing}>
-            {syncing ? '🔄 Sincronizando…' : '🔄 Atualizar elencos'}
-          </button>
-          {!syncing && lastSource === 'live' && (
-            <span className="roster-sync-status ok">
-              ✓ Atualizado via API — {lastStats.length} time{lastStats.length === 1 ? '' : 's'} sincronizado{lastStats.length === 1 ? '' : 's'}
-            </span>
-          )}
-          {!syncing && lastSource === 'cache' && (
-            <span className="roster-sync-status ok">✓ Já atualizado recentemente (cache local)</span>
-          )}
-          {!syncing && (lastSource === 'static' || lastSource === 'error') && (
-            <span className="roster-sync-status warn" title={lastError ?? undefined}>
-              {!apiKeyConfigured
-                ? 'Sem chave de API configurada — usando elenco padrão'
-                : `Não foi possível atualizar: ${lastError ?? 'erro desconhecido'}`}
-            </span>
-          )}
-        </div>
-      )}
+      <div className="roster-sync-row">
+        {syncing && (
+          <span className="roster-sync-status ok">🔄 Sincronizando elencos...</span>
+        )}
+        {!syncing && lastSource === 'live' && (
+          <span className="roster-sync-status ok">✓ Elencos atualizados via API</span>
+        )}
+        {!syncing && lastSource === 'cache' && (
+          <span className="roster-sync-status ok">✓ Elencos carregados do cache</span>
+        )}
+        {!syncing && (lastSource === 'static' || lastSource === 'error') && (
+          <span className="roster-sync-status warn" title={lastError ?? undefined}>
+            ⚠ Usando elencos offline{lastError ? ` (${lastError})` : ''}
+          </span>
+        )}
+      </div>
 
       {mode === 'career' && (
         <div className="manager-name-row" style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', margin: '8px 0' }}>

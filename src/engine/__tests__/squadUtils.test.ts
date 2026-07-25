@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Team, Player, Formation } from '@/engine/types';
-import { getStarterCount, getStarters, getBench, swapSquadPlayers, rebalanceForFormation, isPlayerUnavailable } from '../squadUtils';
+import { getStarterCount, getStarters, getBench, rebalanceForFormation, isPlayerUnavailable } from '../squadUtils';
 
 function makePlayer(id: string, position: Player['position'], number: number): Player {
   return {
@@ -37,22 +37,6 @@ describe('getStarters / getBench', () => {
     expect(getStarters(team)).toHaveLength(11);
     expect(getBench(team)).toHaveLength(team.squad.length - 11);
     expect(getStarters(team).concat(getBench(team))).toEqual(team.squad);
-  });
-});
-
-describe('swapSquadPlayers', () => {
-  it('swaps the two given indexes without mutating the original team', () => {
-    const team = makeSquadTeam('4-3-3');
-    const a = team.squad[0];
-    const b = team.squad[11]; // first bench player
-    const swapped = swapSquadPlayers(team, 0, 11);
-
-    expect(swapped).not.toBe(team);
-    expect(swapped.squad[0]).toBe(b);
-    expect(swapped.squad[11]).toBe(a);
-    // original untouched
-    expect(team.squad[0]).toBe(a);
-    expect(team.squad[11]).toBe(b);
   });
 });
 

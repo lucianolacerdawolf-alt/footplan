@@ -77,7 +77,6 @@ function App() {
 
   const {
     careerState, setCareerState,
-    cloudStatus, retryCloudSave,
     handleStartCareer,
     handleEditCareerLeagueTactics,
     handlePlayCareerLeagueMatch,
@@ -93,6 +92,7 @@ function App() {
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleBuyPlayer,
+    handleSellPlayer,
     handleSignFreeAgent,
     handleAcceptTransferOffer,
     handleRejectTransferOffer,
@@ -235,8 +235,6 @@ function App() {
     leagueState,
     bracketState,
     careerState,
-    cloudStatus,
-    retryCloudSave,
     history,
     achievements,
     peer,
@@ -285,6 +283,7 @@ function App() {
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleBuyPlayer,
+    handleSellPlayer,
     handleSignFreeAgent,
     handleAcceptTransferOffer,
     handleRejectTransferOffer,

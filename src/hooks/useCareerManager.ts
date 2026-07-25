@@ -31,7 +31,7 @@ import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateA
 import type { CareerState, CareerSeasonHistoryEntry, InboxMessage, TransferRecord } from '../engine/career';
 import {
   isValidCareerState, assignInitialAges, createCareerSeason,
-  evaluateTradeOffer, canProposeTrade, computeReputationDelta, progressAllLeagues, deriveCupResult,
+  evaluateTradeOffer, computeReputationDelta, progressAllLeagues, deriveCupResult,
   getFinances, getInbox, getFreeAgentPool, getTransferHistory, isTransferWindowOpen,
 } from '../engine/career';
 
@@ -55,7 +55,7 @@ export function useCareerManager({
 }: UseCareerManagerParams) {
   const [careerState, setCareerState] = usePersistedState<CareerState | null>('fp:career', null, { onPersist: notifySave });
 
-  const { status: cloudStatus, loadFromCloud, enqueueCloudSave, retry: retryCloudSave } = useCloudSave();
+  const { loadFromCloud, enqueueCloudSave } = useCloudSave();
 
   // T-04.4-02: fp:career pode ser JSON sintaticamente válido mas com shape errado
   // (editado manualmente no DevTools, ou versão antiga). Roda só no mount — não a
@@ -398,7 +398,6 @@ export function useCareerManager({
   // other handler in this file which only fires state updates.
   function handleProposeTrade(offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered: number = 0): { accepted: boolean; reason: string } {
     if (!careerState) return { accepted: false, reason: 'no-career' };
-    if (!canProposeTrade(careerState.season.tradesUsedThisSeason)) return { accepted: false, reason: 'trade-limit-reached' };
     if (!isTransferWindowOpen(careerState.season.league.currentRound)) return { accepted: false, reason: 'window-closed' };
     if (cashOffered < 0) return { accepted: false, reason: 'invalid-players' };
 
@@ -449,7 +448,6 @@ export function useCareerManager({
         rosters: { ...prev.rosters, [prev.leagueId]: swapSquad(prev.rosters[prev.leagueId]) },
         season: {
           ...prev.season,
-          tradesUsedThisSeason: prev.season.tradesUsedThisSeason + 1,
           league: { ...prev.season.league, teams: swapSquad(prev.season.league.teams) },
           cup: { ...prev.season.cup, teams: swapSquad(prev.season.cup.teams) },
         },
@@ -565,6 +563,60 @@ export function useCareerManager({
     return { success: true, reason: 'signed' };
   }
 
+  // Vender jogador pro time CPU por dinheiro — mesma interface síncrona de buy/sign.
+  function handleSellPlayer(playerId: string, toTeamId: string, amount: number): { success: boolean; reason: string } {
+    if (!careerState) return { success: false, reason: 'no-career' };
+    if (!isTransferWindowOpen(careerState.season.league.currentRound)) return { success: false, reason: 'window-closed' };
+
+    const leagueRoster = careerState.rosters[careerState.leagueId];
+    const userTeam = leagueRoster.find(t => t.id === careerState.season.league.userTeamId);
+    const buyerTeam = leagueRoster.find(t => t.id === toTeamId);
+    if (!userTeam || !buyerTeam) return { success: false, reason: 'invalid-team' };
+
+    const player = userTeam.squad.find(p => p.id === playerId);
+    if (!player) return { success: false, reason: 'invalid-player' };
+
+    const marketValue = player.marketValue ?? calculateMarketValue(player);
+    const maxAcceptable = Math.round(marketValue * 1.2);
+    if (amount > maxAcceptable) return { success: false, reason: 'too-low' };
+
+    // Guarda: não vender último jogador da posição
+    const sellersAtPos = userTeam.squad.filter(p => p.position === player.position).length;
+    if (sellersAtPos <= 1) return { success: false, reason: 'seller-last-at-position' };
+
+    const revenue = netSellRevenue(amount);
+    const finances = getFinances(careerState);
+    const newWageBill = computeWageBill({ ...userTeam, squad: userTeam.squad.filter(p => p.id !== playerId) });
+    const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
+    const record: TransferRecord = {
+      id: crypto.randomUUID(), date: dateLabel, seasonYear: careerState.currentSeasonYear,
+      type: 'SELL', playerName: player.name, playerPosition: player.position,
+      fromTeam: userTeam.name, toTeam: buyerTeam.name, amount: revenue,
+    };
+
+    setCareerState(prev => {
+      if (!prev) return prev;
+      const movePlayer = (teams: Team[]) => teams.map(t => {
+        if (t.id === userTeam.id) return { ...t, squad: t.squad.filter(p => p.id !== playerId) };
+        if (t.id === buyerTeam.id) return { ...t, squad: [...t.squad, { ...player, currentFatigue: 0 }] };
+        return t;
+      });
+      return {
+        ...prev,
+        rosters: { ...prev.rosters, [prev.leagueId]: movePlayer(prev.rosters[prev.leagueId]) },
+        season: {
+          ...prev.season,
+          league: { ...prev.season.league, teams: movePlayer(prev.season.league.teams) },
+          cup: { ...prev.season.cup, teams: movePlayer(prev.season.cup.teams) },
+        },
+        finances: { ...finances, budget: finances.budget + revenue, wageBill: newWageBill },
+        transferHistory: [...getTransferHistory(prev), record],
+      };
+    });
+    setToastMsg(`💰 ${player.name} vendido para ${buyerTeam.name} por €${(revenue / 1_000_000).toFixed(1)}M`);
+    return { success: true, reason: 'value-met' };
+  }
+
   const handleAcceptTransferOffer = useCallback((messageId: string) => {
     if (!careerState) return;
     const message = getInbox(careerState).find(m => m.id === messageId);
@@ -675,7 +727,7 @@ export function useCareerManager({
       leagueChampionId: standings[0].teamId,
       userLeaguePosition: leaguePosition,
       cupResult,
-      tradesUsed: careerState.season.tradesUsedThisSeason,
+      tradesUsed: 0,
       reputationDelta,
       userTopScorer: deriveTopScorer(careerState.season.userGoalScorers ?? {}),
       userWins: record.wins,
@@ -729,7 +781,6 @@ export function useCareerManager({
 
   return {
     careerState, setCareerState,
-    cloudStatus, retryCloudSave,
     pendingCareerLeagueFixture,
     pendingCareerBracketStage, pendingCareerBracketIdx,
     handleStartCareer,
@@ -747,6 +798,7 @@ export function useCareerManager({
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleBuyPlayer,
+    handleSellPlayer,
     handleSignFreeAgent,
     handleAcceptTransferOffer,
     handleRejectTransferOffer,

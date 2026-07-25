@@ -4,7 +4,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
-import { calculateMarketValue } from './transferMarket';
+import { calculateMarketValue, computeWageBill } from './transferMarket';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
 
@@ -115,7 +115,10 @@ export function isTransferWindowOpen(round: number): boolean {
 }
 
 export function getFinances(state: CareerState): ClubFinances {
-  return state.finances ?? DEFAULT_FINANCES;
+  if (state.finances) return state.finances;
+  const userTeam = state.rosters[state.leagueId]?.find(t => t.id === state.season.league.userTeamId);
+  const wageBill = userTeam ? computeWageBill(userTeam) : 0;
+  return { ...DEFAULT_FINANCES, wageBill };
 }
 
 export function getInbox(state: CareerState): InboxMessage[] {

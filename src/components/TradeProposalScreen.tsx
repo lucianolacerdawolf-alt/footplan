@@ -8,14 +8,12 @@ import { calculateMarketValue } from '../engine/transferMarket';
 interface Props {
   userTeam: Team;
   opponentTeams: Team[];
-  tradesRemaining: number;
   budget: number;
   onBack: () => void;
   onPropose: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
 }
 
 function getResultMessage(result: { accepted: boolean; reason: string }): string {
-  if (result.reason === 'trade-limit-reached') return 'Limite de trocas da temporada atingido.';
   if (result.reason === 'window-closed') return 'A janela de transferências está fechada.';
   if (result.reason === 'insufficient-budget') return 'Orçamento insuficiente pra cobrir o valor em dinheiro oferecido.';
   const favorable = result.reason === 'value-favorable';
@@ -43,7 +41,7 @@ function PlayerRow({ player, selected, onClick }: { player: Player; selected: bo
   );
 }
 
-export default function TradeProposalScreen({ userTeam, opponentTeams, tradesRemaining, budget, onBack, onPropose }: Props) {
+export default function TradeProposalScreen({ userTeam, opponentTeams, budget, onBack, onPropose }: Props) {
   const [opponentId, setOpponentId] = useState<string | null>(null);
   const [offeredPlayerId, setOfferedPlayerId] = useState<string | null>(null);
   const [requestedPlayerId, setRequestedPlayerId] = useState<string | null>(null);
@@ -78,20 +76,6 @@ export default function TradeProposalScreen({ userTeam, opponentTeams, tradesRem
         </header>
       </div>
 
-      {tradesRemaining === 0 && (
-        <div className="trade-limit" style={{ textAlign: 'center', padding: 24 }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🔄</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-h)', marginBottom: 8 }}>Limite de trocas atingido</div>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Você já usou suas 3 trocas desta temporada.</div>
-        </div>
-      )}
-      {tradesRemaining > 0 && (
-        <>
-          {tradesRemaining === 1 && (
-            <div className="trade-warning" style={{ padding: '8px 12px', background: 'rgba(245,158,11,0.15)', border: '1px solid #f59e0b', borderRadius: 8, marginBottom: 12, fontSize: 13, color: '#f59e0b' }}>
-              ⚠️ Atenção: esta é sua última troca da temporada.
-            </div>
-          )}
           {!opponentTeam ? (
             <>
               <div className="select-instruction">Escolha o time adversário</div>
@@ -193,8 +177,6 @@ export default function TradeProposalScreen({ userTeam, opponentTeams, tradesRem
               )}
             </>
           )}
-        </>
-      )}
     </div>
   );
 }

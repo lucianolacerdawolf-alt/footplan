@@ -33,12 +33,13 @@ function pick<T>(arr: readonly T[]): T {
 /** Exportado pra ser reaproveitado pela sincronização de elenco via API (src/services) —
  *  gera atributos calibrados pra jogadores novos que a API traz mas que a gente ainda
  *  não tem dados reais (ex: uma transferência recente). */
-export function generatePlayer(id: string, name: string, number: number, pos: Player['position'], ovr: number): Player {
+export function generatePlayer(id: string, name: string, number: number, pos: Player['position'], ovr: number, age?: number): Player {
   const base = ovr - 7;
   const spread = Math.min(10, Math.floor(ovr / 8));
   const attr = () => Math.max(1, Math.min(99, base + rand(-spread, spread)));
   const boost = (n: number) => Math.max(1, Math.min(99, attr() + n));
-  return {
+
+  const result: Player = {
     id, name, number, position: pos, currentFatigue: 0,
     attributes: {
       speed: pos === 'FWD' || pos === 'DEF' ? boost(8) : attr(),
@@ -48,12 +49,65 @@ export function generatePlayer(id: string, name: string, number: number, pos: Pl
       tackling: pos === 'DEF' ? boost(12) : pos === 'MID' ? boost(4) : attr(),
       dribbling: pos === 'FWD' || pos === 'MID' ? boost(6) : attr(),
       vision: pos === 'MID' ? boost(8) : pos === 'FWD' ? boost(4) : attr(),
-      // Goleiro carrega 47% do peso de playerOvr em "positioning" (o resto das posições
-      // usa boost(4) genérico aqui) — sem um boost equivalente ao boost(12) que as outras
-      // posições recebem no atributo-chave, o GK gerado saía ~5 pontos de OVR abaixo do alvo.
       positioning: pos === 'GK' ? boost(14) : boost(4),
     },
   };
+
+  if (age !== undefined) {
+    result.age = age;
+  }
+
+  return result;
+}
+
+export function generatePlayerWithSubtype(id: string, name: string, number: number, pos: Player['position'], ovr: number, subtype: string, age?: number): Player {
+  const p = generatePlayer(id, name, number, pos, ovr, age);
+  const { attributes } = p;
+
+  // Refine attributes based on position subtype for more realism
+  switch (subtype) {
+    case 'CB': // Center-back: more tackling, positioning; less speed, dribbling
+      attributes.tackling = Math.min(99, attributes.tackling + 4);
+      attributes.positioning = Math.min(99, attributes.positioning + 4);
+      attributes.speed = Math.max(1, attributes.speed - 4);
+      attributes.dribbling = Math.max(1, attributes.dribbling - 4);
+      break;
+    case 'FB': // Fullback: more speed, dribbling, passing; less tackling
+      attributes.speed = Math.min(99, attributes.speed + 6);
+      attributes.dribbling = Math.min(99, attributes.dribbling + 4);
+      attributes.passing = Math.min(99, attributes.passing + 2);
+      attributes.tackling = Math.max(1, attributes.tackling - 4);
+      attributes.positioning = Math.max(1, attributes.positioning - 2);
+      break;
+    case 'CDM': // Defensive mid: more tackling, positioning; less finishing, dribbling
+      attributes.tackling = Math.min(99, attributes.tackling + 6);
+      attributes.positioning = Math.min(99, attributes.positioning + 4);
+      attributes.finishing = Math.max(1, attributes.finishing - 6);
+      attributes.dribbling = Math.max(1, attributes.dribbling - 2);
+      break;
+    case 'CAM': // Attacking mid: more finishing, dribbling, vision; less tackling
+      attributes.finishing = Math.min(99, attributes.finishing + 4);
+      attributes.dribbling = Math.min(99, attributes.dribbling + 4);
+      attributes.vision = Math.min(99, attributes.vision + 4);
+      attributes.tackling = Math.max(1, attributes.tackling - 6);
+      break;
+    case 'W': // Winger: more speed, dribbling; less tackling, positioning
+      attributes.speed = Math.min(99, attributes.speed + 6);
+      attributes.dribbling = Math.min(99, attributes.dribbling + 6);
+      attributes.tackling = Math.max(1, attributes.tackling - 4);
+      attributes.positioning = Math.max(1, attributes.positioning - 4);
+      break;
+    case 'ST': // Striker: more finishing, positioning; less passing, tackling
+      attributes.finishing = Math.min(99, attributes.finishing + 6);
+      attributes.positioning = Math.min(99, attributes.positioning + 4);
+      attributes.passing = Math.max(1, attributes.passing - 2);
+      attributes.tackling = Math.max(1, attributes.tackling - 4);
+      break;
+    default: // 'CM', 'GK', or unknown — keep defaults
+      break;
+  }
+
+  return p;
 }
 
 // No uniqueness tracking: over many seasons of retirements across 6 leagues, duplicate names can occur — cosmetic only, since player.id (not name) is the unique identifier everywhere else in the codebase.

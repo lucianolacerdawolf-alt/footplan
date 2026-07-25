@@ -10,8 +10,8 @@ const LABELS: Record<CloudStatus, string> = {
   idle: '',
   loading: 'Carregando...',
   saving: 'Salvando...',
-  saved: 'Salvo',
-  offline: 'Offline',
+  saved: 'Salvo na nuvem',
+  offline: 'Offline — toque para reconectar',
 };
 
 export default function CloudSaveStatus({ status, onRetry }: Props) {
@@ -23,7 +23,7 @@ export default function CloudSaveStatus({ status, onRetry }: Props) {
     <button
       className={`${styles.badge} ${styles[status]}`}
       onClick={isOffline && onRetry ? onRetry : undefined}
-      title={isOffline ? 'Clique para tentar sincronizar novamente' : `Cloud save: ${LABELS[status]}`}
+      title={isOffline ? 'Clique para tentar sincronizar com a nuvem' : `Cloud save: ${LABELS[status]}`}
       aria-label={LABELS[status]}
       role={isOffline ? 'button' : 'status'}
       tabIndex={isOffline ? 0 : -1}

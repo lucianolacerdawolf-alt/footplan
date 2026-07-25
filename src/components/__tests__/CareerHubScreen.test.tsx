@@ -30,8 +30,6 @@ function renderHub(state: CareerState, onMarkInboxRead = vi.fn()) {
     <CareerHubScreen
       state={state}
       league={getLeague('pl')!}
-      cloudStatus="idle"
-      onRetryCloudSave={vi.fn()}
       onViewLeague={vi.fn()}
       onViewCup={vi.fn()}
       onPlayNext={vi.fn()}

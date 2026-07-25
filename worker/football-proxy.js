@@ -16,7 +16,7 @@
 //   4. Copia a URL que o wrangler imprime (tipo https://footplan-football-proxy.SEU-USUARIO.workers.dev)
 //      pra VITE_FOOTBALL_PROXY_URL no .env (local) e nas variáveis de build do deploy do site.
 
-const ALLOWED_CODES = new Set(['PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL']);
+const ALLOWED_CODES = new Set(['PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'ELC', 'BL2', 'FL2', 'SB', 'SPL', 'PPL2']);
 
 // Ajuste pra incluir o domínio real onde o FootPlan fica publicado.
 const ALLOWED_ORIGINS = [

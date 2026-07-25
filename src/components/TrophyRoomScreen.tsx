@@ -72,10 +72,6 @@ export default function TrophyRoomScreen({ history, onBack }: Props) {
                           <span className={styles.detailValue}>{entry.userGoalsFor} pró · {entry.userGoalsAgainst} contra</span>
                         </div>
                       )}
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Trocas</span>
-                        <span className={styles.detailValue}>{entry.tradesUsed}/3</span>
-                      </div>
                       {entry.budgetDelta != null && (
                         <div className={styles.detailRow}>
                           <span className={styles.detailLabel}>Finanças</span>
