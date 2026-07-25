@@ -86,7 +86,7 @@ Cada escolha do jogador afeta diretamente a simulação:
 - **Trocas diretas entre clubes**: 1-por-1 sem dinheiro, limitadas a 3 por temporada — CPU avalia a proposta por diferença de OVR, superávit de posição e sua reputação. Compra/venda com dinheiro ainda não existe (ver [`BACKLOG.md`](./BACKLOG.md))
 - **Liga + copa disputadas juntas** a cada temporada, com histórico (posição, artilheiro, campanha, gols, delta de orçamento, resultado da copa, trocas usadas, delta de reputação) por ano
 - **Sala de Troféus** (`TrophyRoomScreen`): cards por temporada com resumo expansível e linha do tempo de reputação
-- **Hub da carreira** (`CareerHubScreen`) como tela central: painel de finanças, caixa de entrada, botão de destaque "⚽ Jogar" pula direto pra tática do próximo jogo da liga (some quando a temporada tá pronta pra avançar), "Ver Liga" abre só a classificação (consulta pura, sem controles de jogo — ver "Hub de Torneio" abaixo), "Ver Copa", "Propor Troca", histórico de temporadas + link pra Sala de Troféus
+- **Hub da carreira** (`CareerHubScreen`) como tela central: painel de finanças, caixa de entrada, botão de destaque "⚽ Jogar" pula direto pra tática do próximo jogo da liga (some quando não há partida do usuário pendente — ex: copa terminada e o jogo da rodada atual já disputado), "Ver Liga" abre a tela de rodada (Simular Todos/Avançar Rodada, com link pra classificação — ver "Hub de Torneio" abaixo), "Ver Copa", "Propor Troca", histórico de temporadas + link pra Sala de Troféus
 - **Save único** em `fp:career`, separado dos saves de Campeonatos/Copas avulsos — começar uma carreira nova pede confirmação se já existir uma em andamento
 
 ### Hub de Torneio
@@ -117,7 +117,7 @@ HomeScreen
 │                                                   MatchScreen → MatchStatsScreen → BracketScreen
 ├── Modo Carreira → [tela de time, 1ª vez] → CareerHubScreen
 │                     ├── ⚽ Jogar → SetupScreen → MatchScreen → MatchStatsScreen → LeagueScreen (rodada) ⇄ LeagueTableScreen
-│                     ├── Ver Liga → LeagueTableScreen (consulta pura)
+│                     ├── Ver Liga → LeagueScreen (rodada) ⇄ LeagueTableScreen
 │                     ├── Ver Copa → BracketScreen → SetupScreen → MatchScreen → MatchStatsScreen → BracketScreen
 │                     ├── Propor Troca → TradeProposalScreen
 │                     ├── 🏆 Sala de Troféus → TrophyRoomScreen

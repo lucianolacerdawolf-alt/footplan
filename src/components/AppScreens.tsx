@@ -412,7 +412,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       <CareerHubScreen
         state={p.careerState}
         league={getLeague(p.careerState.leagueId)!}
-        onViewLeague={() => p.setScreen('career-league-table')}
+        onViewLeague={() => p.setScreen('career-league')}
         onViewCup={() => p.setScreen('career-bracket')}
         onPlayNext={p.handlePlayNextCareerMatch}
         onAdvanceSeason={p.handleAdvanceSeason}
