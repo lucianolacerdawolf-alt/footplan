@@ -214,6 +214,46 @@ describe('syncLeagueRoster', () => {
     expect(mergedTeam.squad.slice(11).some(p => p.name === 'Weak Keeper')).toBe(true);
   });
 
+  it('football-data.org falha (rede) mas a SportAPI7 responde — cai pra ela em vez de desistir (fallback entre fontes)', async () => {
+    vi.stubEnv('VITE_FOOTBALL_PROXY_URL', 'https://footplan-proxy.example.workers.dev');
+
+    // championship está mapeada nas duas fontes (COMPETITION_CODES e LEAGUE_MAP da
+    // SportAPI7) — cenário certo pra testar a corrente de fallback de verdade.
+    const league: LeagueDefinition = { ...makeLeague(), id: 'championship', teams: [makeTeam('t1', 'Test United', 'TST')] };
+
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (url.includes('/api/football/competitions/')) {
+        return Promise.reject(new Error('network down'));
+      }
+      if (url.includes('/standings/total')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ standings: [{ rows: [
+            { team: { id: 1, name: 'Test United', shortName: 'Test Utd', nameCode: 'TST', teamColors: {}, country: { name: 'England' } } },
+          ] }] }),
+        });
+      }
+      if (url.includes('/team/1/players')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            players: [
+              { player: { id: 1, name: 'Old Keeper', shortName: 'O. Keeper', position: 'G', positionsDetailed: [], jerseyNumber: '1', shirtNumber: 1, dateOfBirthTimestamp: 0, preferredFoot: 'Right', proposedMarketValue: 0, country: { name: 'England' } } },
+            ],
+          }),
+        });
+      }
+      return Promise.reject(new Error(`URL inesperada no mock: ${url}`));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await syncLeagueRoster(league);
+
+    expect(result.source).toBe('live');
+    const mergedTeam = result.league.teams[0];
+    expect(mergedTeam.squad.some(p => p.name === 'Old Keeper')).toBe(true);
+  });
+
   it('usa o cache numa segunda chamada em vez de bater na API de novo', async () => {
     vi.stubEnv('VITE_FOOTBALL_API_KEY', 'test-key-123');
     const fetchMock = vi.fn().mockResolvedValue({

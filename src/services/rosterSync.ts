@@ -17,8 +17,9 @@
 
 import type { Team, Player, Position } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
-import { fetchCompetitionTeams, hasApiKey, type RemoteTeam, type RemotePlayer } from './footballApi';
-import { fetchSportApiLeague, hasSportApiKey } from './sportApi';
+import { fetchCompetitionTeams, hasApiKey, COMPETITION_CODES, type RemoteTeam, type RemotePlayer } from './footballApi';
+import { fetchSportApiLeague, hasSportApiAccess, isSportApiLeagueMapped } from './sportApi';
+import { fetchApiFootballLeague, hasApiFootballAccess, isApiFootballLeagueMapped } from './apiFootball';
 import { generatePlayer } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { rebalanceForFormation } from '../engine/squadUtils';
@@ -235,6 +236,15 @@ export interface RosterSyncResult {
  * utilizável — na pior das hipóteses (sem chave, API fora, sem rede), retorna a `league`
  * estática recebida sem modificação nenhuma.
  */
+/** Uma fonte de dados ao vivo candidata — `mapped` decide se essa liga tem cobertura
+ *  nessa fonte antes mesmo de tentar (evita substituir o erro real de uma fonte pelo
+ *  "liga não mapeada" de outra que nunca iria funcionar pra essa liga de qualquer jeito). */
+interface RemoteSource {
+  name: string;
+  mapped: boolean;
+  fetch: () => Promise<RemoteTeam[]>;
+}
+
 export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?: boolean }): Promise<RosterSyncResult> {
   if (!opts?.force) {
     const cached = readCache(league.id);
@@ -243,47 +253,50 @@ export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?
     }
   }
 
-  const hasFdApi = hasApiKey();
-  const hasSpApi = hasSportApiKey();
+  const force = opts?.force ?? false;
+  const sources: RemoteSource[] = [
+    { name: 'football-data.org', mapped: league.id in COMPETITION_CODES && hasApiKey(), fetch: () => fetchCompetitionTeams(league.id) },
+    { name: 'SportAPI7', mapped: isSportApiLeagueMapped(league.id) && hasSportApiAccess(), fetch: () => fetchSportApiLeague(league.id, force) },
+    { name: 'API-Football', mapped: isApiFootballLeagueMapped(league.id) && hasApiFootballAccess(), fetch: () => fetchApiFootballLeague(league.id, force) },
+  ];
+  const usableSources = sources.filter(s => s.mapped);
 
-  if (!hasFdApi && !hasSpApi) {
-    return { league, source: 'static', stats: [], error: 'Nenhuma chave de API configurada.' };
+  if (usableSources.length === 0) {
+    return { league, source: 'static', stats: [], error: 'Nenhuma fonte de dados ao vivo configurada/mapeada pra essa liga.' };
   }
 
-  let remoteTeams: RemoteTeam[] | undefined;
-
-  if (hasFdApi) {
-    try { remoteTeams = await fetchCompetitionTeams(league.id); } catch {}
-  }
-
-  if (!remoteTeams && hasSpApi) {
+  // Tenta cada fonte mapeada em ordem — a primeira que responder (mesmo com elenco vazio)
+  // vence e as outras nem são chamadas. Só cai pra próxima fonte em erro real (exceção),
+  // guardando a mensagem da PRIMEIRA falha real — geralmente a mais relevante/acionável,
+  // já que football-data.org costuma vir primeiro na lista.
+  let firstError: string | null = null;
+  for (const source of usableSources) {
+    let remoteTeams: RemoteTeam[];
     try {
-      remoteTeams = await fetchSportApiLeague(league.id);
+      remoteTeams = await source.fetch();
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return { league, source: 'error', stats: [], error: message };
+      firstError ??= err instanceof Error ? err.message : String(err);
+      continue;
     }
+
+    const assignments = assignRemoteTeams(league.teams, remoteTeams);
+    const stats: MergeStats[] = [];
+    const mergedTeams = league.teams.map(staticTeam => {
+      const remote = assignments.get(staticTeam.id);
+      if (!remote) return staticTeam;
+      const { team, stats: teamStats } = mergeTeamRoster(staticTeam, remote.squad);
+      stats.push(teamStats);
+      if (!team.logoUrl && remote.crest) {
+        team.logoUrl = remote.crest;
+      }
+      return team;
+    });
+
+    writeCache(league.id, mergedTeams);
+    return { league: { ...league, teams: mergedTeams }, source: 'live', stats };
   }
 
-  if (!remoteTeams || remoteTeams.length === 0) {
-    return { league, source: 'error', stats: [], error: 'Nenhum dado de elenco disponível para esta liga.' };
-  }
-
-  const assignments = assignRemoteTeams(league.teams, remoteTeams);
-  const stats: MergeStats[] = [];
-  const mergedTeams = league.teams.map(staticTeam => {
-    const remote = assignments.get(staticTeam.id);
-    if (!remote) return staticTeam;
-    const { team, stats: teamStats } = mergeTeamRoster(staticTeam, remote.squad);
-    stats.push(teamStats);
-    if (!team.logoUrl && remote.crest) {
-      team.logoUrl = remote.crest;
-    }
-    return team;
-  });
-
-  writeCache(league.id, mergedTeams);
-  return { league: { ...league, teams: mergedTeams }, source: 'live', stats };
+  return { league, source: 'error', stats: [], error: firstError ?? 'Nenhum dado de elenco disponível para esta liga.' };
 }
 
 export function clearRosterCache(leagueId?: string): void {

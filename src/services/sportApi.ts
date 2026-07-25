@@ -1,15 +1,24 @@
 // =============================================================================
-// CLIENTE — SportAPI7 (Sofascore via RapidAPI)
+// CLIENTE — SportAPI7 (Sofascore, via proxy Cloudflare Worker)
 // =============================================================================
 // Dados muito mais ricos que football-data.org: valor de mercado real (EUR),
 // data de nascimento, posições detalhadas, pé preferido, cores do time.
 // Cache de 24h em localStorage. Usa standings → team IDs → players.
+//
+// Sempre passa pelo mesmo Worker proxy do football-data.org (worker/football-proxy.js,
+// rota /api/rapidapi/sportapi7/...) — nunca chama a RapidAPI direto do navegador. A chave
+// (RAPIDAPI_KEY) fica só no ambiente do Worker; sem proxy configurado, essa fonte simplesmente
+// não fica disponível (não existe modo "direto com chave" aqui, ao contrário do
+// football-data.org — RapidAPI não tem motivo legítimo pra ser chamada do cliente).
 
 import type { RemoteTeam, RemotePlayer } from './footballApi';
 
-const API_BASE = 'https://sportapi7.p.rapidapi.com/api/v1';
 const CACHE_PREFIX = 'fp:sportapi:';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Pausa entre requisições por time — evita rajada contra o rate limit da RapidAPI ao
+ *  buscar o elenco de 18-24 times em sequência. */
+const PER_TEAM_DELAY_MS = 150;
 
 /** Liga interna → { uniqueTournamentId, seasonId }
  *  Para descobrir novos IDs quando a cota resetar:
@@ -26,13 +35,20 @@ const LEAGUE_MAP: Record<string, { ut: number; season: number }> = {
   // ligaPortugal2: { ut: ?, season: ? },     // provavelmente cat ?: Portugal
 };
 
-function getApiKey(): string | null {
-  const key = import.meta.env.VITE_RAPIDAPI_KEY as string | undefined;
-  return key && key.trim().length > 0 ? key.trim() : null;
+function getProxyBase(): string | null {
+  const url = import.meta.env.VITE_FOOTBALL_PROXY_URL as string | undefined;
+  if (!url || url.trim().length === 0) return null;
+  return url.trim().replace(/\/$/, '');
 }
 
-export function hasSportApiKey(): boolean {
-  return getApiKey() !== null;
+/** Essa fonte só funciona através do proxy (ver cabeçalho do arquivo) — "disponível" aqui
+ *  significa "o proxy está configurado", não "existe uma chave client-side". */
+export function hasSportApiAccess(): boolean {
+  return getProxyBase() !== null;
+}
+
+export function isSportApiLeagueMapped(leagueId: string): boolean {
+  return leagueId in LEAGUE_MAP;
 }
 
 interface StandingsRow {
@@ -66,13 +82,15 @@ function readCache(key: string): CachedTeams | null {
 }
 
 function writeCache(key: string, data: RemoteTeam[]): void {
-  try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ fetchedAt: Date.now(), data })); } catch {}
+  try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ fetchedAt: Date.now(), data })); } catch { /* noop */ }
 }
 
-async function spFetch(path: string, apiKey: string): Promise<unknown> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': 'sportapi7.p.rapidapi.com' },
-  });
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function spFetch(path: string, proxyBase: string): Promise<unknown> {
+  const res = await fetch(`${proxyBase}/api/rapidapi/sportapi7/${path}`);
   if (res.status === 429) throw new Error('Limite de requisições da SportAPI7 atingido.');
   if (!res.ok) throw new Error(`SportAPI7 respondeu ${res.status}.`);
   return res.json();
@@ -93,19 +111,23 @@ function mapPosition(pos: string, detailed: string[]): string {
   return 'Midfield';
 }
 
-export async function fetchSportApiLeague(leagueId: string): Promise<RemoteTeam[]> {
-  const apiKey = getApiKey();
-  if (!apiKey) throw new Error('VITE_RAPIDAPI_KEY não configurada.');
+/** `force`: ignora o cache de 24h desta fonte (mas ainda grava um novo no final) — usado
+ *  quando o chamador (rosterSync) pediu um refresh explícito, não só o automático de rotina. */
+export async function fetchSportApiLeague(leagueId: string, force = false): Promise<RemoteTeam[]> {
+  const proxyBase = getProxyBase();
+  if (!proxyBase) throw new Error('Proxy não configurado (VITE_FOOTBALL_PROXY_URL) — SportAPI7 não funciona sem ele.');
 
   const mapping = LEAGUE_MAP[leagueId];
   if (!mapping) throw new Error(`Liga "${leagueId}" não mapeada na SportAPI7.`);
 
   const cacheKey = `${leagueId}-${mapping.season}`;
-  const cached = readCache(cacheKey);
-  if (cached) return cached.data;
+  if (!force) {
+    const cached = readCache(cacheKey);
+    if (cached) return cached.data;
+  }
 
   // Step 1: Get standings → team list
-  const standingsData = await spFetch(`/unique-tournament/${mapping.ut}/season/${mapping.season}/standings/total`, apiKey) as { standings: Array<{ rows: StandingsRow[] }> };
+  const standingsData = await spFetch(`unique-tournament/${mapping.ut}/season/${mapping.season}/standings/total`, proxyBase) as { standings: Array<{ rows: StandingsRow[] }> };
   const rows = standingsData.standings?.[0]?.rows ?? [];
   if (rows.length === 0) throw new Error('Nenhum time encontrado nas classificações.');
 
@@ -119,11 +141,16 @@ export async function fetchSportApiLeague(leagueId: string): Promise<RemoteTeam[
     });
   }
 
-  // Step 2: Get players for each team
+  // Step 2: Get players for each team (com pausa entre chamadas — ver PER_TEAM_DELAY_MS)
   const teams: RemoteTeam[] = [];
+  let firstTeamFetchError: string | null = null;
+  let skipped = 0;
+  let first = true;
   for (const [teamId, info] of teamMap) {
+    if (!first) await sleep(PER_TEAM_DELAY_MS);
+    first = false;
     try {
-      const playersData = await spFetch(`/team/${teamId}/players`, apiKey) as { players: ApiPlayer[] };
+      const playersData = await spFetch(`team/${teamId}/players`, proxyBase) as { players: ApiPlayer[] };
       const squad: RemotePlayer[] = (playersData.players ?? []).map(ap => ({
         id: ap.player.id,
         name: ap.player.name,
@@ -144,9 +171,17 @@ export async function fetchSportApiLeague(leagueId: string): Promise<RemoteTeam[
           squad,
         });
       }
-    } catch {
-      // Skip teams we can't fetch players for
+    } catch (err) {
+      skipped++;
+      firstTeamFetchError ??= err instanceof Error ? err.message : String(err);
     }
+  }
+
+  // Times demais sem elenco (ex: toda a liga rate-limitada no meio do loop) — mais confiável
+  // reportar erro e deixar o chamador cair pra próxima fonte/estático do que devolver um
+  // elenco pela metade sem avisar por quê.
+  if (teams.length === 0 || skipped > teamMap.size / 2) {
+    throw new Error(firstTeamFetchError ?? 'Não foi possível buscar os elencos dos times.');
   }
 
   writeCache(cacheKey, teams);

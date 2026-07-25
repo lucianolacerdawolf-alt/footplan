@@ -1,3 +1,7 @@
 # Pra testar o worker localmente com `npx wrangler dev`.
-# Copie pra ".dev.vars" (não commitado) e preencha com sua chave real.
+# Copie pra ".dev.vars" (não commitado) e preencha com suas chaves reais.
 FOOTBALL_API_KEY=
+
+# RapidAPI (mesma chave/conta serve SportAPI7 e API-Football — os dois passam pela
+# rota /api/rapidapi/{sportapi7|apifootball}/... desse worker).
+RAPIDAPI_KEY=

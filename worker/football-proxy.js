@@ -1,22 +1,34 @@
 // =============================================================================
-// PROXY — Cloudflare Worker pra football-data.org
+// PROXY — Cloudflare Worker pra football-data.org + RapidAPI (SportAPI7/API-Football)
 // =============================================================================
 // Por quê: a API da football-data.org devolve `Access-Control-Allow-Origin: http://localhost`
 // (sem porta), então o navegador bloqueia chamadas diretas do Vite (localhost:5173) e do
 // GitHub Pages por CORS — confirmado testando com curl direto, o problema não é código.
-// Esse worker resolve dois problemas de uma vez:
+// A RapidAPI (SportAPI7, API-Football) nem tem esse problema de CORS, mas chamar ela direto
+// do navegador expõe a chave no bundle JS público (qualquer um abre o devtools e extrai) —
+// mesmo risco, resolvido do mesmo jeito. Esse worker resolve os dois problemas de uma vez:
 //   1. Faz a chamada servidor-a-servidor (sem CORS envolvido) e devolve pro FootPlan com
 //      os cabeçalhos CORS corretos pros nossos próprios domínios.
-//   2. A chave da API fica só no ambiente do Worker (nunca no bundle JS público do site).
+//   2. As chaves de API ficam só no ambiente do Worker (nunca no bundle JS público do site).
 //
 // Deploy (precisa de conta Cloudflare grátis):
 //   1. npx wrangler login
-//   2. npx wrangler secret put FOOTBALL_API_KEY   (cola a chave quando pedir)
-//   3. npx wrangler deploy
-//   4. Copia a URL que o wrangler imprime (tipo https://footplan-football-proxy.SEU-USUARIO.workers.dev)
-//      pra VITE_FOOTBALL_PROXY_URL no .env (local) e nas variáveis de build do deploy do site.
+//   2. npx wrangler secret put FOOTBALL_API_KEY   (cola a chave da football-data.org)
+//   3. npx wrangler secret put RAPIDAPI_KEY        (cola a chave da RapidAPI — SportAPI7 e
+//      API-Football usam a MESMA chave, é a mesma conta RapidAPI pros dois)
+//   4. npx wrangler deploy
+//   5. Copia a URL que o wrangler imprime (tipo https://footplan-football-proxy.SEU-USUARIO.workers.dev)
+//      pra VITE_FOOTBALL_PROXY_URL no .env (local) e nas variáveis de build do deploy do site —
+//      o mesmo proxy/URL serve as 3 fontes de dados.
 
 const ALLOWED_CODES = new Set(['PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'ELC', 'BL2', 'FL2', 'SB', 'SPL', 'PPL2']);
+
+// Rotas RapidAPI liberadas por esse proxy — pares [host, prefixo de path permitido].
+// Mantém a superfície pequena de propósito: só os endpoints que o FootPlan realmente usa.
+const RAPIDAPI_ROUTES = {
+  sportapi7: { host: 'sportapi7.p.rapidapi.com', base: 'https://sportapi7.p.rapidapi.com/api/v1' },
+  apifootball: { host: 'api-football-v1.p.rapidapi.com', base: 'https://api-football-v1.p.rapidapi.com/v3' },
+};
 
 // Ajuste pra incluir o domínio real onde o FootPlan fica publicado.
 const ALLOWED_ORIGINS = [
@@ -55,29 +67,49 @@ export default {
     }
 
     const url = new URL(request.url);
-    const match = url.pathname.match(/^\/api\/football\/competitions\/([A-Z0-9]+)\/teams$/);
-    if (!match) {
-      return json({ error: 'Rota não encontrada. Use /api/football/competitions/{CODE}/teams' }, 404, headers);
+
+    const fdMatch = url.pathname.match(/^\/api\/football\/competitions\/([A-Z0-9]+)\/teams$/);
+    if (fdMatch) {
+      const code = fdMatch[1];
+      if (!ALLOWED_CODES.has(code)) {
+        return json({ error: `Competição "${code}" não permitida por esse proxy.` }, 400, headers);
+      }
+      if (!env.FOOTBALL_API_KEY) {
+        return json({ error: 'FOOTBALL_API_KEY não configurada no Worker (rode: npx wrangler secret put FOOTBALL_API_KEY).' }, 500, headers);
+      }
+      let upstream;
+      try {
+        upstream = await fetch(`https://api.football-data.org/v4/competitions/${code}/teams`, {
+          headers: { 'X-Auth-Token': env.FOOTBALL_API_KEY },
+        });
+      } catch (err) {
+        return json({ error: `Falha ao contatar football-data.org: ${err.message}` }, 502, headers);
+      }
+      const body = await upstream.text();
+      return new Response(body, { status: upstream.status, headers: { ...headers, 'Content-Type': 'application/json' } });
     }
 
-    const code = match[1];
-    if (!ALLOWED_CODES.has(code)) {
-      return json({ error: `Competição "${code}" não permitida por esse proxy.` }, 400, headers);
-    }
-    if (!env.FOOTBALL_API_KEY) {
-      return json({ error: 'FOOTBALL_API_KEY não configurada no Worker (rode: npx wrangler secret put FOOTBALL_API_KEY).' }, 500, headers);
+    // /api/rapidapi/{sportapi7|apifootball}/{resto do path}?query — repassa o path e a
+    // query string tal qual, só troca o host e injeta a chave (nunca chega no cliente).
+    const rapidMatch = url.pathname.match(/^\/api\/rapidapi\/(sportapi7|apifootball)\/(.*)$/);
+    if (rapidMatch) {
+      const [, provider, restPath] = rapidMatch;
+      const route = RAPIDAPI_ROUTES[provider];
+      if (!env.RAPIDAPI_KEY) {
+        return json({ error: 'RAPIDAPI_KEY não configurada no Worker (rode: npx wrangler secret put RAPIDAPI_KEY).' }, 500, headers);
+      }
+      let upstream;
+      try {
+        upstream = await fetch(`${route.base}/${restPath}${url.search}`, {
+          headers: { 'x-rapidapi-key': env.RAPIDAPI_KEY, 'x-rapidapi-host': route.host },
+        });
+      } catch (err) {
+        return json({ error: `Falha ao contatar ${route.host}: ${err.message}` }, 502, headers);
+      }
+      const body = await upstream.text();
+      return new Response(body, { status: upstream.status, headers: { ...headers, 'Content-Type': 'application/json' } });
     }
 
-    let upstream;
-    try {
-      upstream = await fetch(`https://api.football-data.org/v4/competitions/${code}/teams`, {
-        headers: { 'X-Auth-Token': env.FOOTBALL_API_KEY },
-      });
-    } catch (err) {
-      return json({ error: `Falha ao contatar football-data.org: ${err.message}` }, 502, headers);
-    }
-
-    const body = await upstream.text();
-    return new Response(body, { status: upstream.status, headers: { ...headers, 'Content-Type': 'application/json' } });
+    return json({ error: 'Rota não encontrada. Use /api/football/competitions/{CODE}/teams ou /api/rapidapi/{sportapi7|apifootball}/{path}' }, 404, headers);
   },
 };
