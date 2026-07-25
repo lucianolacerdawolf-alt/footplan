@@ -159,10 +159,13 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[]): { team:
       matched++;
       const updated = { ...existing, name: rp.name, position, number: rp.shirtNumber ?? existing.number };
       if (age !== undefined) updated.age = age;
+      if (rp.nationality) updated.nationality = rp.nationality;
       grouped[position].push(updated);
     } else {
       added++;
-      grouped[position].push(generatePlayer(`${staticTeam.id}-live-${rp.id}`, rp.name, rp.shirtNumber ?? (90 + i), position, targetOvr, age));
+      const generated = generatePlayer(`${staticTeam.id}-live-${rp.id}`, rp.name, rp.shirtNumber ?? (90 + i), position, targetOvr, age);
+      if (rp.nationality) generated.nationality = rp.nationality;
+      grouped[position].push(generated);
     }
   });
 

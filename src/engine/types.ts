@@ -59,6 +59,7 @@ export interface Player {
   currentFatigue: number; // Cansaço Atual (0-100, 0 = descansado)
   injuredRounds?: number; // > 0: jogador lesionado e indisponível
   age?: number; // Só populado em elencos do Modo Carreira
+  nationality?: string; // Só populado em elencos sincronizados ao vivo (football-data.org)
   yellowCardsThisSeason?: number; // acúmulo de amarelos na temporada (Modo Carreira)
   isSuspended?: boolean;          // suspenso por vermelho ou acúmulo de amarelos
   suspendedRounds?: number;       // jogos restantes de suspensão

@@ -5,6 +5,7 @@ import { getAvgOvr } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import { formatMoney } from '../utils/formatMoney';
 import { calculateMarketValue } from '../engine/transferMarket';
+import PlayerDetailModal from './PlayerDetailModal';
 import styles from './TransferMarketScreen.module.css';
 
 interface Props {
@@ -69,6 +70,7 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [multiplier, setMultiplier] = useState(1);
   const [feedback, setFeedback] = useState<{ playerId: string; message: string; success: boolean } | null>(null);
+  const [detailPlayer, setDetailPlayer] = useState<{ player: Player; teamName?: string; leagueFlag?: string } | null>(null);
 
   // Comprar: navegação Liga → Time → Jogador, ou busca direta pelo nome (bypassa a navegação).
   const [buyLeagueId, setBuyLeagueId] = useState<string | null>(null);
@@ -119,6 +121,18 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
     setFeedback({ playerId: player.id, message: resultMessage(res.reason), success: res.success });
     if (res.success) setExpandedId(null);
   };
+
+  const renderInfoBtn = (p: Player, ctx?: { teamName?: string; leagueFlag?: string }) => (
+    <button
+      type="button"
+      className={styles.infoBtn}
+      onClick={e => { e.stopPropagation(); setDetailPlayer({ player: p, ...ctx }); }}
+      aria-label={`Ver detalhes de ${p.name}`}
+      title="Ver detalhes"
+    >
+      ⓘ
+    </button>
+  );
 
   const searchQuery = buySearch.trim();
   const allHits: SearchHit[] = searchQuery.length < 2 ? [] : Object.entries(rosters).flatMap(([leagueId, teams]) =>
@@ -252,13 +266,16 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
                     const league = leagueMeta(leagueId);
                     return (
                       <div key={p.id} className={styles.playerRow}>
-                        <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
-                          <span className={styles.playerName}>{p.name}</span>
-                          <span className={styles.searchHitSource}>{league?.flag} {team.abbreviation}</span>
-                          <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                          <span className={styles.playerOvr}>{playerOvr(p)}</span>
-                          <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
-                        </button>
+                        <div className={styles.playerRowFlex}>
+                          <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
+                            <span className={styles.playerName}>{p.name}</span>
+                            <span className={styles.searchHitSource}>{league?.flag} {team.abbreviation}</span>
+                            <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
+                            <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                            <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                          </button>
+                          {renderInfoBtn(p, { teamName: team.name, leagueFlag: league?.flag })}
+                        </div>
                         {expandedId === p.id && renderOfferCard(p, marketValue, 'buy', () => handleBuy(p, team.id))}
                       </div>
                     );
@@ -305,13 +322,16 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
                       const marketValue = p.marketValue ?? calculateMarketValue(p);
                       return (
                         <div key={p.id} className={styles.playerRow}>
-                          <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
-                            <span className={styles.playerNum}>#{p.number}</span>
-                            <span className={styles.playerName}>{p.name}</span>
-                            <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                            <span className={styles.playerOvr}>{playerOvr(p)}</span>
-                            <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
-                          </button>
+                          <div className={styles.playerRowFlex}>
+                            <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
+                              <span className={styles.playerNum}>#{p.number}</span>
+                              <span className={styles.playerName}>{p.name}</span>
+                              <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
+                              <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                              <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                            </button>
+                            {renderInfoBtn(p, { teamName: buyTeam.name, leagueFlag: leagueMeta(buyLeagueId)?.flag })}
+                          </div>
                           {expandedId === p.id && renderOfferCard(p, marketValue, 'buy', () => handleBuy(p, buyTeam.id))}
                         </div>
                       );
@@ -333,12 +353,15 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
                     const marketValue = p.marketValue ?? calculateMarketValue(p);
                     return (
                       <div key={p.id} className={styles.playerRow}>
-                        <div className={styles.playerRowHeader}>
-                          <span className={styles.playerNum}>#{p.number}</span>
-                          <span className={styles.playerName}>{p.name}</span>
-                          <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                          <span className={styles.playerOvr}>{playerOvr(p)}</span>
-                          <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                        <div className={styles.playerRowFlex}>
+                          <div className={styles.playerRowHeader}>
+                            <span className={styles.playerNum}>#{p.number}</span>
+                            <span className={styles.playerName}>{p.name}</span>
+                            <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
+                            <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                            <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                          </div>
+                          {renderInfoBtn(p, { teamName: userTeam.name })}
                         </div>
                         <div className={styles.listedRow}>
                           <span className={styles.listedHint}>⏳ Aguardando propostas de qualquer time…</span>
@@ -358,13 +381,16 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
                   const marketValue = p.marketValue ?? calculateMarketValue(p);
                   return (
                     <div key={p.id} className={styles.playerRow}>
-                      <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
-                        <span className={styles.playerNum}>#{p.number}</span>
-                        <span className={styles.playerName}>{p.name}</span>
-                        <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                        <span className={styles.playerOvr}>{playerOvr(p)}</span>
-                        <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
-                      </button>
+                      <div className={styles.playerRowFlex}>
+                        <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
+                          <span className={styles.playerNum}>#{p.number}</span>
+                          <span className={styles.playerName}>{p.name}</span>
+                          <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
+                          <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                          <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                        </button>
+                        {renderInfoBtn(p, { teamName: userTeam.name })}
+                      </div>
                       {expandedId === p.id && (
                         <div className={styles.offerCard}>
                           <p className={styles.listHint}>Ao colocar à venda, qualquer time do jogo pode fazer uma oferta — você decide aceitar ou recusar quando ela chegar na caixa de entrada.</p>
@@ -390,13 +416,16 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
                 const marketValue = p.marketValue ?? calculateMarketValue(p);
                 return (
                   <div key={p.id} className={styles.playerRow}>
-                    <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 0)}>
-                      <span className={styles.playerNum}>{p.age}a</span>
-                      <span className={styles.playerName}>{p.name}</span>
-                      <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                      <span className={styles.playerOvr}>{playerOvr(p)}</span>
-                      <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
-                    </button>
+                    <div className={styles.playerRowFlex}>
+                      <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 0)}>
+                        <span className={styles.playerNum}>{p.age}a</span>
+                        <span className={styles.playerName}>{p.name}</span>
+                        <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
+                        <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                        <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                      </button>
+                      {renderInfoBtn(p)}
+                    </div>
                     {expandedId === p.id && renderOfferCard(p, marketValue, 'sign', () => handleSign(p))}
                   </div>
                 );
@@ -404,6 +433,15 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
             </div>
           )}
         </>
+      )}
+
+      {detailPlayer && (
+        <PlayerDetailModal
+          player={detailPlayer.player}
+          teamName={detailPlayer.teamName}
+          leagueFlag={detailPlayer.leagueFlag}
+          onClose={() => setDetailPlayer(null)}
+        />
       )}
     </div>
   );
