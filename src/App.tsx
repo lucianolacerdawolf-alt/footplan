@@ -77,6 +77,7 @@ function App() {
 
   const {
     careerState, setCareerState,
+    cloudStatus, retryCloudSave,
     handleStartCareer,
     handleEditCareerLeagueTactics,
     handlePlayCareerLeagueMatch,
@@ -229,6 +230,8 @@ function App() {
     leagueState,
     bracketState,
     careerState,
+    cloudStatus,
+    retryCloudSave,
     history,
     achievements,
     peer,

@@ -13,6 +13,7 @@
     "generate-icons": "node scripts/generate-pwa-icons.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
     "peerjs": "^1.5.5",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"

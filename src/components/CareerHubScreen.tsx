@@ -5,13 +5,17 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
+import type { CloudStatus } from '../hooks/useCloudSave';
 import FinancePanel from './FinancePanel';
 import InboxPanel from './InboxPanel';
+import CloudSaveStatus from './CloudSaveStatus';
 import styles from './CareerHubScreen.module.css';
 
 interface Props {
   state: CareerState;
   league: LeagueDefinition;
+  cloudStatus: CloudStatus;
+  onRetryCloudSave: () => void;
   onViewLeague: () => void;
   onViewCup: () => void;
   onPlayNext: () => void;
@@ -85,7 +89,7 @@ function reputationSign(delta: number): string {
   return delta > 0 ? '+' : '';
 }
 
-export default function CareerHubScreen({ state, league, onViewLeague, onViewCup, onPlayNext, onProposeTrade, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onViewTrophyRoom }: Props) {
+export default function CareerHubScreen({ state, league, cloudStatus, onRetryCloudSave, onViewLeague, onViewCup, onPlayNext, onProposeTrade, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onViewTrophyRoom }: Props) {
   const finances = getFinances(state);
   const inbox = getInbox(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
@@ -111,6 +115,7 @@ export default function CareerHubScreen({ state, league, onViewLeague, onViewCup
           <h1 className={styles.title}>{state.manager.name}</h1>
           <span className={styles.progress}>Reputação: {state.manager.reputation}</span>
         </div>
+        <CloudSaveStatus status={cloudStatus} onRetry={onRetryCloudSave} />
       </div>
 
       <FinancePanel finances={finances} />

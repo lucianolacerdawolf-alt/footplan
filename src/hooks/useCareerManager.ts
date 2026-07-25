@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Team, MatchResult } from '../engine/types';
 import type { LeagueFixture, BracketMatch, PlayableStage } from '../engine/tournament';
 import {
@@ -18,6 +18,7 @@ import { getStageMatches, updateStageMatch } from '../engine/bracketHelpers';
 import { allLeagues, getLeague } from '../data/leagues';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
+import { useCloudSave } from './useCloudSave';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult } from './shared/matchHandlers';
 import type { CareerState, CareerSeasonHistoryEntry, InboxMessage } from '../engine/career';
 import {
@@ -46,6 +47,8 @@ export function useCareerManager({
 }: UseCareerManagerParams) {
   const [careerState, setCareerState] = usePersistedState<CareerState | null>('fp:career', null, { onPersist: notifySave });
 
+  const { status: cloudStatus, loadFromCloud, enqueueCloudSave, retry: retryCloudSave } = useCloudSave();
+
   // T-04.4-02: fp:career pode ser JSON sintaticamente válido mas com shape errado
   // (editado manualmente no DevTools, ou versão antiga). Roda só no mount — não a
   // cada mudança de careerState, senão brigaria com uma atualização legítima em
@@ -56,6 +59,29 @@ export function useCareerManager({
       setCareerState(null);
     }
   }, []);
+
+  // Cloud save: tenta carregar do Supabase no mount se não houver save local.
+  // Se o cloud tiver dados, sobrescreve o localStorage.
+  useEffect(() => {
+    loadFromCloud().then(cloudState => {
+      if (cloudState && isValidCareerState(cloudState)) {
+        setCareerState(cloudState);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Cloud save: debounce-save a cada mudança de careerState (pula o mount inicial).
+  const cloudMountedRef = useRef(false);
+  useEffect(() => {
+    if (!cloudMountedRef.current) {
+      cloudMountedRef.current = true;
+      return;
+    }
+    if (careerState) {
+      enqueueCloudSave(careerState);
+    }
+  }, [careerState, enqueueCloudSave]);
 
   const [pendingCareerLeagueFixture, setPendingCareerLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
   const [pendingCareerBracketStage, setPendingCareerBracketStage] = useState<PlayableStage | null>(null);
@@ -465,6 +491,7 @@ export function useCareerManager({
 
   return {
     careerState, setCareerState,
+    cloudStatus, retryCloudSave,
     pendingCareerLeagueFixture,
     pendingCareerBracketStage, pendingCareerBracketIdx,
     handleStartCareer,

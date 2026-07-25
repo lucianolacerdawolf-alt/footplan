@@ -9,6 +9,7 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { CareerState } from '../engine/career';
+import type { CloudStatus } from '../hooks/useCloudSave';
 import { getInbox } from '../engine/career';
 import { hasMandatoryUnread } from '../engine/inbox';
 import type { SeededRng } from '../engine/rng';
@@ -84,6 +85,8 @@ export interface AppScreensProps {
   leagueState: LeagueState | null;
   bracketState: BracketState | null;
   careerState: CareerState | null;
+  cloudStatus: CloudStatus;
+  retryCloudSave: () => void;
 
   // ── Data ──
   history: MatchRecord[];
@@ -404,6 +407,8 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       <CareerHubScreen
         state={p.careerState}
         league={getLeague(p.careerState.leagueId)!}
+        cloudStatus={p.cloudStatus}
+        onRetryCloudSave={p.retryCloudSave}
         onViewLeague={() => p.setScreen('career-league-table')}
         onViewCup={() => p.setScreen('career-bracket')}
         onPlayNext={p.handlePlayNextCareerMatch}
