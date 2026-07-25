@@ -20,6 +20,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { fetchCompetitionTeams, hasApiKey, FootballApiError, type RemoteTeam, type RemotePlayer } from './footballApi';
 import { generatePlayer } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
+import { rebalanceForFormation } from '../engine/squadUtils';
 
 const CACHE_PREFIX = 'fp:rosterCache:';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
@@ -172,7 +173,24 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[]): { team:
   const remoteNames = new Set(remoteSquad.map(rp => normalizeName(rp.name)));
   const removed = staticTeam.squad.filter(p => !remoteNames.has(normalizeName(p.name))).length;
 
-  const squad = [...grouped.GK, ...grouped.DEF, ...grouped.MID, ...grouped.FWD];
+  // Squad.slice(0, N) é como o resto do jogo decide quem é titular (SetupScreen na
+  // primeira montagem, getAvgOvr, etc.) — assume 1 goleiro + a contagem exata de
+  // DEF/MID/FWD da formação bem no início do array, com os melhores de cada posição
+  // primeiro. A API não lista o elenco nem em ordem de qualidade nem separado por
+  // titular/reserva (e times reais têm vários goleiros no elenco — ex: 5 no caso do
+  // Chelsea), então sem isso o corte por índice pegava goleiro reserva/jogador de base
+  // como "titular" e estourava a posição de goleiro além de 1. Ordena por OVR (melhor
+  // primeiro dentro de cada posição) e reaproveita rebalanceForFormation — a mesma
+  // função usada quando o usuário troca de formação no jogo — pra fatiar a contagem
+  // certa por posição respeitando a formação atual do time.
+  (Object.keys(grouped) as Position[]).forEach(pos => {
+    grouped[pos].sort((a, b) => playerOvr(b) - playerOvr(a));
+  });
+
+  const squad = rebalanceForFormation(
+    { ...staticTeam, squad: [...grouped.GK, ...grouped.DEF, ...grouped.MID, ...grouped.FWD] },
+    staticTeam.strategy.formation,
+  ).squad;
 
   return {
     // Só substitui o elenco se a API realmente devolveu jogadores pra esse time — um

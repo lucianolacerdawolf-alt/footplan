@@ -147,6 +147,73 @@ describe('syncLeagueRoster', () => {
     expect(stats.removed).toBe(1);
   });
 
+  it('goleiro reserva não vira titular quando a API lista o elenco fora de ordem de qualidade (regressão)', async () => {
+    vi.stubEnv('VITE_FOOTBALL_API_KEY', 'test-key-123');
+
+    const staticTeam: Team = {
+      id: 't1', name: 'Test United', abbreviation: 'TST', color: '#111', secondaryColor: '#222', logoUrl: '',
+      squad: [
+        makePlayer('t1-gk-weak', 'Weak Keeper', 'GK', 12, 40),
+        makePlayer('t1-gk-strong', 'Strong Keeper', 'GK', 1, 90),
+        makePlayer('t1-def1', 'Def One', 'DEF', 2, 80),
+        makePlayer('t1-def2', 'Def Two', 'DEF', 3, 80),
+        makePlayer('t1-def3', 'Def Three', 'DEF', 4, 80),
+        makePlayer('t1-def4', 'Def Four', 'DEF', 5, 80),
+        makePlayer('t1-mid1', 'Mid One', 'MID', 6, 80),
+        makePlayer('t1-mid2', 'Mid Two', 'MID', 7, 80),
+        makePlayer('t1-mid3', 'Mid Three', 'MID', 8, 80),
+        makePlayer('t1-fwd1', 'Fwd One', 'FWD', 9, 80),
+        makePlayer('t1-fwd2', 'Fwd Two', 'FWD', 10, 80),
+        makePlayer('t1-fwd3', 'Fwd Three', 'FWD', 11, 80),
+      ],
+      strategy: { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
+    };
+    const league: LeagueDefinition = { ...makeLeague(), teams: [staticTeam] };
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        count: 1,
+        teams: [{
+          id: 999, name: 'Test United', shortName: 'Test Utd', tla: 'TST', crest: '',
+          squad: [
+            // Ordem da API: goleiro fraco antes do forte, de propósito — a API não lista
+            // o elenco em ordem de qualidade nem separa titular de reserva.
+            { id: 1, name: 'Weak Keeper', position: 'Goalkeeper', dateOfBirth: null, nationality: null, shirtNumber: 12 },
+            { id: 2, name: 'Strong Keeper', position: 'Goalkeeper', dateOfBirth: null, nationality: null, shirtNumber: 1 },
+            { id: 3, name: 'Def One', position: 'Defence', dateOfBirth: null, nationality: null, shirtNumber: 2 },
+            { id: 4, name: 'Def Two', position: 'Defence', dateOfBirth: null, nationality: null, shirtNumber: 3 },
+            { id: 5, name: 'Def Three', position: 'Defence', dateOfBirth: null, nationality: null, shirtNumber: 4 },
+            { id: 6, name: 'Def Four', position: 'Defence', dateOfBirth: null, nationality: null, shirtNumber: 5 },
+            { id: 7, name: 'Mid One', position: 'Midfield', dateOfBirth: null, nationality: null, shirtNumber: 6 },
+            { id: 8, name: 'Mid Two', position: 'Midfield', dateOfBirth: null, nationality: null, shirtNumber: 7 },
+            { id: 9, name: 'Mid Three', position: 'Midfield', dateOfBirth: null, nationality: null, shirtNumber: 8 },
+            { id: 10, name: 'Fwd One', position: 'Offence', dateOfBirth: null, nationality: null, shirtNumber: 9 },
+            { id: 11, name: 'Fwd Two', position: 'Offence', dateOfBirth: null, nationality: null, shirtNumber: 10 },
+            { id: 12, name: 'Fwd Three', position: 'Offence', dateOfBirth: null, nationality: null, shirtNumber: 11 },
+          ],
+        }],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await syncLeagueRoster(league);
+    const mergedTeam = result.league.teams[0];
+
+    // 4-3-3 = 1 GK + 4 DEF + 3 MID + 3 FWD = 11 titulares — squad.slice(0, 11) é como
+    // SetupScreen/getAvgOvr decidem quem é titular no resto do jogo.
+    const starters = mergedTeam.squad.slice(0, 11);
+    const starterGKs = starters.filter(p => p.position === 'GK');
+    expect(starterGKs).toHaveLength(1);
+    expect(starterGKs[0].name).toBe('Strong Keeper'); // o melhor, não o que veio primeiro na API
+    expect(starters.filter(p => p.position === 'DEF')).toHaveLength(4);
+    expect(starters.filter(p => p.position === 'MID')).toHaveLength(3);
+    expect(starters.filter(p => p.position === 'FWD')).toHaveLength(3);
+
+    // O goleiro reserva continua no elenco, só que no banco (índice >= 11)
+    expect(mergedTeam.squad.slice(11).some(p => p.name === 'Weak Keeper')).toBe(true);
+  });
+
   it('usa o cache numa segunda chamada em vez de bater na API de novo', async () => {
     vi.stubEnv('VITE_FOOTBALL_API_KEY', 'test-key-123');
     const fetchMock = vi.fn().mockResolvedValue({
