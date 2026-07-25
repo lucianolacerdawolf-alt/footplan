@@ -10,7 +10,7 @@ import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { CareerState } from '../engine/career';
 import type { CloudStatus } from '../hooks/useCloudSave';
-import { getInbox } from '../engine/career';
+import { getInbox, getFinances, getFreeAgentPool, isTransferWindowOpen } from '../engine/career';
 import { hasMandatoryUnread } from '../engine/inbox';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
@@ -29,6 +29,7 @@ import CareerHubScreen from './CareerHubScreen';
 import TradeProposalScreen from './TradeProposalScreen';
 import SeasonEndScreen from './SeasonEndScreen';
 import TrophyRoomScreen from './TrophyRoomScreen';
+import TransferMarketScreen from './TransferMarketScreen';
 import { getLeague } from '../data/leagues';
 
 function getResumableSaves(): ResumableSave[] {
@@ -151,9 +152,14 @@ export interface AppScreensProps {
   handleSimulateOtherCareerBracketMatches: () => void;
   handleSimulateCareerBracketMatch: (stage: PlayableStage, matchIdx: number) => void;
   handleCareerBracketMatchResult: (result: MatchResult) => void;
-  handleProposeTrade: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string) => { accepted: boolean; reason: string };
+  handleProposeTrade: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
+  handleBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
+  handleSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
+  handleAcceptTransferOffer: (messageId: string) => void;
+  handleRejectTransferOffer: (messageId: string) => void;
   handleAdvanceSeason: () => void;
   handleMarkInboxRead: (id: string) => void;
+  handleMarkAllInboxRead: () => void;
 
   // ── Misc ──
   clearHistory: () => void;
@@ -417,7 +423,27 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onNewCareer={p.handleNewCareerFromHub}
         onBack={() => { p.setIsCareerMode(false); p.goHome(); }}
         onMarkInboxRead={p.handleMarkInboxRead}
+        onAcceptTransferOffer={p.handleAcceptTransferOffer}
+        onRejectTransferOffer={p.handleRejectTransferOffer}
         onViewTrophyRoom={() => p.setScreen('career-trophy-room')}
+        onOpenMarket={() => p.setScreen('transfer-market')}
+      />
+    );
+  },
+
+  'transfer-market': (p) => {
+    if (!p.careerState) return null;
+    const finances = getFinances(p.careerState);
+    const userTeamId = p.careerState.season.league.userTeamId;
+    return (
+      <TransferMarketScreen
+        cpuTeams={p.careerState.rosters[p.careerState.leagueId].filter(t => t.id !== userTeamId)}
+        freeAgents={getFreeAgentPool(p.careerState)}
+        budget={finances.budget}
+        isWindowOpen={isTransferWindowOpen(p.careerState.season.league.currentRound)}
+        onBack={() => p.setScreen('career-hub')}
+        onBuyPlayer={p.handleBuyPlayer}
+        onSignFreeAgent={p.handleSignFreeAgent}
       />
     );
   },
@@ -492,6 +518,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         userTeam={p.careerState.season.league.teams.find(t => t.id === p.careerState!.season.league.userTeamId)!}
         opponentTeams={p.careerState.rosters[p.careerState.leagueId].filter(t => t.id !== p.careerState!.season.league.userTeamId)}
         tradesRemaining={Math.max(0, 3 - p.careerState.season.tradesUsedThisSeason)}
+        budget={getFinances(p.careerState).budget}
         onBack={() => p.setScreen('career-hub')}
         onPropose={p.handleProposeTrade}
       />

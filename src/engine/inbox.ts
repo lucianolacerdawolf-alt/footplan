@@ -1,4 +1,5 @@
 import type { InboxMessage } from './career';
+import type { Position } from './types';
 
 function makeMessage(partial: Omit<InboxMessage, 'id' | 'isRead'>): InboxMessage {
   return { ...partial, id: crypto.randomUUID(), isRead: false };
@@ -33,6 +34,49 @@ export function createWelcomeMessage(managerName: string, budget: number, date: 
     date, isMandatory: false, type: 'BOARD_UPDATE',
     subject: 'Bem-vindo à diretoria',
     body: `Boa sorte na temporada, ${managerName}. Orçamento inicial de transferências: €${(budget / 1_000_000).toFixed(1)}M.`,
+  });
+}
+
+export function createTransferOfferMessage(
+  offeringClub: string,
+  playerId: string,
+  playerName: string,
+  position: Position,
+  ovr: number,
+  marketValue: number,
+  offeredAmount: number,
+  offeringTeamId: string,
+  date: string,
+): InboxMessage {
+  return makeMessage({
+    date, isMandatory: true, type: 'TRANSFER_OFFER',
+    subject: `Proposta do ${offeringClub}`,
+    body: `O ${offeringClub} oferece €${(offeredAmount / 1_000_000).toFixed(1)}M por ${playerName} (${position}, OVR ${ovr}). Valor de mercado: €${(marketValue / 1_000_000).toFixed(1)}M.`,
+    meta: { playerId, offeringTeamId, amount: offeredAmount },
+  });
+}
+
+export function createTransferAcceptedMessage(playerName: string, fromClub: string, toClub: string, amount: number, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `Transferência concluída: ${playerName}`,
+    body: `${playerName} foi transferido do ${fromClub} para o ${toClub} por €${(amount / 1_000_000).toFixed(1)}M.`,
+  });
+}
+
+export function createTransferRejectedMessage(playerName: string, otherClub: string, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `Proposta recusada: ${playerName}`,
+    body: `A proposta envolvendo ${playerName} e o ${otherClub} foi recusada.`,
+  });
+}
+
+export function createTransferOutCompletedMessage(playerName: string, toClub: string, amount: number, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `${playerName} vendido`,
+    body: `${playerName} foi vendido para o ${toClub} por €${(amount / 1_000_000).toFixed(1)}M. O valor foi creditado ao orçamento.`,
   });
 }
 

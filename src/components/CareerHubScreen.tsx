@@ -1,5 +1,5 @@
 import type { CareerState } from '../engine/career';
-import { getFinances, getInbox } from '../engine/career';
+import { getFinances, getInbox, isTransferWindowOpen } from '../engine/career';
 import { CUP_RESULT_LABELS } from '../engine/careerLabels';
 import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
@@ -24,7 +24,10 @@ interface Props {
   onNewCareer: () => void;
   onBack: () => void;
   onMarkInboxRead: (id: string) => void;
+  onAcceptTransferOffer: (id: string) => void;
+  onRejectTransferOffer: (id: string) => void;
   onViewTrophyRoom: () => void;
+  onOpenMarket: () => void;
 }
 
 const CUP_STAGE_LABELS: Record<string, string> = {
@@ -89,7 +92,7 @@ function reputationSign(delta: number): string {
   return delta > 0 ? '+' : '';
 }
 
-export default function CareerHubScreen({ state, league, cloudStatus, onRetryCloudSave, onViewLeague, onViewCup, onPlayNext, onProposeTrade, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onViewTrophyRoom }: Props) {
+export default function CareerHubScreen({ state, league, cloudStatus, onRetryCloudSave, onViewLeague, onViewCup, onPlayNext, onProposeTrade, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onViewTrophyRoom, onOpenMarket }: Props) {
   const finances = getFinances(state);
   const inbox = getInbox(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
@@ -102,8 +105,7 @@ export default function CareerHubScreen({ state, league, cloudStatus, onRetryClo
 
   const nextMatch = determineNextMatch(state);
 
-  const currentRound = state.season.league.currentRound;
-  const isWindowOpen = currentRound <= 4 || (currentRound >= 18 && currentRound <= 23);
+  const isWindowOpen = isTransferWindowOpen(state.season.league.currentRound);
 
   return (
     <div className={`${styles.screen} app-screen`}>
@@ -120,7 +122,12 @@ export default function CareerHubScreen({ state, league, cloudStatus, onRetryClo
 
       <FinancePanel finances={finances} />
 
-      <InboxPanel messages={inbox} onMarkRead={onMarkInboxRead} />
+      <InboxPanel
+        messages={inbox}
+        onMarkRead={onMarkInboxRead}
+        onAcceptTransferOffer={onAcceptTransferOffer}
+        onRejectTransferOffer={onRejectTransferOffer}
+      />
 
       <div className={styles.summaryCard}>
         <div className={styles.summaryRow}>
@@ -173,6 +180,7 @@ export default function CareerHubScreen({ state, league, cloudStatus, onRetryClo
       <div className={styles.navRow}>
         <button className={styles.navBtn} onClick={onViewLeague}>Ver Liga →</button>
         <button className={styles.navBtn} onClick={onViewCup}>Ver Copa →</button>
+        <button className={styles.navBtn} onClick={onOpenMarket}>🛒 Mercado</button>
         <button
           className={styles.navBtn}
           onClick={onProposeTrade}

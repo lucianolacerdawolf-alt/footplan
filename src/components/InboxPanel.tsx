@@ -5,6 +5,8 @@ import styles from './InboxPanel.module.css';
 interface Props {
   messages: InboxMessage[];
   onMarkRead: (id: string) => void;
+  onAcceptTransferOffer?: (id: string) => void;
+  onRejectTransferOffer?: (id: string) => void;
 }
 
 const TYPE_ICON: Record<InboxMessage['type'], string> = {
@@ -14,7 +16,7 @@ const TYPE_ICON: Record<InboxMessage['type'], string> = {
   MATCH_PREVIEW: '⚽',
 };
 
-export default function InboxPanel({ messages, onMarkRead }: Props) {
+export default function InboxPanel({ messages, onMarkRead, onAcceptTransferOffer, onRejectTransferOffer }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const unreadCount = messages.filter(m => !m.isRead).length;
   const sorted = [...messages].reverse(); // mais recentes primeiro
@@ -49,6 +51,12 @@ export default function InboxPanel({ messages, onMarkRead }: Props) {
                 <div className={styles.body}>
                   <p className={styles.bodyText}>{m.body}</p>
                   <span className={styles.date}>{m.date}</span>
+                  {m.type === 'TRANSFER_OFFER' && m.meta && onAcceptTransferOffer && onRejectTransferOffer && (
+                    <div className={styles.actionRow}>
+                      <button className={styles.acceptBtn} onClick={() => onAcceptTransferOffer(m.id)}>✓ Aceitar Oferta</button>
+                      <button className={styles.rejectBtn} onClick={() => onRejectTransferOffer(m.id)}>✗ Recusar</button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

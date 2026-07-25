@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   createInjuryMessage, createMatchPreviewMessage, createTransferWindowMessage, createWelcomeMessage,
+  createTransferOfferMessage, createTransferAcceptedMessage, createTransferRejectedMessage, createTransferOutCompletedMessage,
   hasMandatoryUnread, countUnread,
 } from '../inbox';
 
@@ -24,6 +25,32 @@ describe('fábricas de mensagem', () => {
     const a = createInjuryMessage('X', 1, 'T1');
     const b = createInjuryMessage('X', 1, 'T1');
     expect(a.id).not.toBe(b.id);
+  });
+});
+
+describe('mensagens do mercado de transferências', () => {
+  it('oferta de transferência é obrigatória e carrega meta estruturado', () => {
+    const m = createTransferOfferMessage('Arsenal', 'p1', 'Fulano', 'FWD', 88, 20_000_000, 22_000_000, 'arsenal-id', 'T1 · R5');
+    expect(m.type).toBe('TRANSFER_OFFER');
+    expect(m.isMandatory).toBe(true);
+    expect(m.isRead).toBe(false);
+    expect(m.meta).toEqual({ playerId: 'p1', offeringTeamId: 'arsenal-id', amount: 22_000_000 });
+    expect(m.body).toContain('Arsenal');
+    expect(m.body).toContain('Fulano');
+    expect(m.subject).toContain('Arsenal');
+  });
+
+  it('aceite/recusa/venda concluída são informativas (BOARD_UPDATE) e não carregam meta', () => {
+    const accepted = createTransferAcceptedMessage('Fulano', 'Chelsea', 'Você', 5_000_000, 'T1');
+    const rejected = createTransferRejectedMessage('Fulano', 'Arsenal', 'T1');
+    const sold = createTransferOutCompletedMessage('Fulano', 'Chelsea', 5_000_000, 'T1');
+
+    for (const m of [accepted, rejected, sold]) {
+      expect(m.type).toBe('BOARD_UPDATE');
+      expect(m.isMandatory).toBe(false);
+      expect(m.meta).toBeUndefined();
+      expect(m.body).toContain('Fulano');
+    }
   });
 });
 

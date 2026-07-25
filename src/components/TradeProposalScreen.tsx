@@ -2,18 +2,22 @@ import { useState } from 'react';
 import type { Team, Player } from '../engine/types';
 import { getAvgOvr } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
+import { formatMoney } from '../utils/formatMoney';
+import { calculateMarketValue } from '../engine/transferMarket';
 
 interface Props {
   userTeam: Team;
   opponentTeams: Team[];
   tradesRemaining: number;
+  budget: number;
   onBack: () => void;
-  onPropose: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string) => { accepted: boolean; reason: string };
+  onPropose: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
 }
 
 function getResultMessage(result: { accepted: boolean; reason: string }): string {
   if (result.reason === 'trade-limit-reached') return 'Limite de trocas da temporada atingido.';
   if (result.reason === 'window-closed') return 'A janela de transferências está fechada.';
+  if (result.reason === 'insufficient-budget') return 'Orçamento insuficiente pra cobrir o valor em dinheiro oferecido.';
   const favorable = result.reason === 'value-favorable';
   if (result.accepted) {
     return favorable
@@ -34,28 +38,32 @@ function PlayerRow({ player, selected, onClick }: { player: Player; selected: bo
       <span className="tile-name">{player.name}</span>
       <span className="p-pos">{player.position}</span>
       <span className="tile-ovr">{playerOvr(player)}</span>
+      <span className="tile-value">{formatMoney(player.marketValue ?? calculateMarketValue(player))}</span>
     </button>
   );
 }
 
-export default function TradeProposalScreen({ userTeam, opponentTeams, tradesRemaining, onBack, onPropose }: Props) {
+export default function TradeProposalScreen({ userTeam, opponentTeams, tradesRemaining, budget, onBack, onPropose }: Props) {
   const [opponentId, setOpponentId] = useState<string | null>(null);
   const [offeredPlayerId, setOfferedPlayerId] = useState<string | null>(null);
   const [requestedPlayerId, setRequestedPlayerId] = useState<string | null>(null);
+  const [cashOffered, setCashOffered] = useState(0);
   const [result, setResult] = useState<{ accepted: boolean; reason: string } | null>(null);
 
   const resetToStep1 = () => {
     setOpponentId(null);
     setOfferedPlayerId(null);
     setRequestedPlayerId(null);
+    setCashOffered(0);
   };
 
   const handleConfirm = () => {
     if (!offeredPlayerId || !opponentId || !requestedPlayerId) return;
-    const res = onPropose(offeredPlayerId, opponentId, requestedPlayerId);
+    const res = onPropose(offeredPlayerId, opponentId, requestedPlayerId, cashOffered);
     setResult(res);
     setOfferedPlayerId(null);
     setRequestedPlayerId(null);
+    setCashOffered(0);
   };
 
   const opponentTeam = opponentId ? opponentTeams.find(t => t.id === opponentId) ?? null : null;
@@ -142,10 +150,35 @@ export default function TradeProposalScreen({ userTeam, opponentTeams, tradesRem
                 ))}
               </div>
 
+              {offeredPlayerId && requestedPlayerId && (() => {
+                const offered = userTeam.squad.find(p => p.id === offeredPlayerId)!;
+                const requested = opponentTeam.squad.find(p => p.id === requestedPlayerId)!;
+                const offeredValue = offered.marketValue ?? calculateMarketValue(offered);
+                const requestedValue = requested.marketValue ?? calculateMarketValue(requested);
+                const diff = requestedValue - offeredValue;
+                return (
+                  <div className="select-instruction" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <span>💰 Diferença de valor: {diff >= 0 ? '+' : ''}{formatMoney(diff)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <input
+                        type="range" min={0} max={budget} step={100_000}
+                        value={Math.min(cashOffered, budget)}
+                        onChange={e => setCashOffered(Number(e.target.value))}
+                        style={{ flex: 1 }}
+                        aria-label="Compensar com dinheiro"
+                      />
+                      <span style={{ fontFamily: 'var(--mono)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        Compensar: {formatMoney(cashOffered)}
+                      </span>
+                    </span>
+                  </div>
+                );
+              })()}
+
               <div className="select-action">
                 <button
                   className="slot-nav-btn slot-nav-btn-primary"
-                  disabled={!offeredPlayerId || !requestedPlayerId}
+                  disabled={!offeredPlayerId || !requestedPlayerId || cashOffered > budget}
                   onClick={handleConfirm}
                 >
                   Propor Troca

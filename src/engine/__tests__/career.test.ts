@@ -9,6 +9,7 @@ import {
   isValidCareerState,
   deriveCupResult,
   createCareerSeason,
+  isTransferWindowOpen,
   type CareerState,
 } from '../career';
 import type { Player, Team } from '../types';
@@ -176,6 +177,51 @@ describe('trades (D-05, D-06)', () => {
     expect(canProposeTrade(2)).toBe(true);
     expect(canProposeTrade(3)).toBe(false);
     expect(canProposeTrade(4)).toBe(false);
+  });
+
+  it('regressão: chamar sem cashOffered (assinatura antiga de 5 args) é idêntico a passar cashOffered=0 explicitamente', () => {
+    const offered = makePlayer('o', 'MID', 6, 25);
+    const requested = makePlayer('r', 'MID', 6, 25);
+    const cpuSquad = [requested];
+
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const withoutCash = evaluateTradeOffer(offered, requested, cpuSquad, 50, seededRng(seed));
+      const withZeroCash = evaluateTradeOffer(offered, requested, cpuSquad, 50, seededRng(seed), 0);
+      expect(withZeroCash).toEqual(withoutCash);
+    }
+  });
+
+  it('cashOffered aumenta a chance de aceite mantendo OVR e reputação fixos', () => {
+    const offered = makePlayer('o', 'MID', 6, 25);
+    const requested = makePlayer('r', 'MID', 6, 25);
+    requested.attributes = { ...requested.attributes, passing: 90, vision: 90 }; // dá um marketValue não-trivial pro requested
+    const cpuSquad = [requested];
+
+    const rngNoCash = seededRng(7);
+    let acceptedNoCash = 0;
+    for (let i = 0; i < 300; i++) {
+      if (evaluateTradeOffer(offered, requested, cpuSquad, 30, rngNoCash, 0).accepted) acceptedNoCash++;
+    }
+
+    const rngWithCash = seededRng(7);
+    let acceptedWithCash = 0;
+    for (let i = 0; i < 300; i++) {
+      if (evaluateTradeOffer(offered, requested, cpuSquad, 30, rngWithCash, 5_000_000).accepted) acceptedWithCash++;
+    }
+
+    expect(acceptedWithCash).toBeGreaterThan(acceptedNoCash);
+  });
+});
+
+describe('isTransferWindowOpen', () => {
+  it('tabela de fronteiras: rounds 0-4 e 18-23 abertos (0-indexed), o resto fechado', () => {
+    const cases: Array<[number, boolean]> = [
+      [0, true], [4, true], [5, false],
+      [17, false], [18, true], [23, true], [24, false],
+    ];
+    for (const [round, expected] of cases) {
+      expect(isTransferWindowOpen(round)).toBe(expected);
+    }
   });
 });
 

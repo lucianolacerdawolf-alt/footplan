@@ -1,9 +1,10 @@
-import type { Player, Team } from './types';
+import type { Player, Position, Team } from './types';
 import type { LeagueState, BracketState } from './tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
+import { calculateMarketValue } from './transferMarket';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
 
@@ -54,6 +55,24 @@ export interface InboxMessage {
   type: 'TRANSFER_OFFER' | 'BOARD_UPDATE' | 'INJURY_REPORT' | 'MATCH_PREVIEW';
   subject: string;
   body: string;
+  // Payload estruturado — só populado em TRANSFER_OFFER, é o que permite os botões
+  // Aceitar/Recusar saberem qual jogador/time/valor a mensagem se refere sem ter
+  // que fazer parsing do texto de `body`.
+  meta?: { playerId: string; offeringTeamId: string; amount: number };
+}
+
+export type TransferRecordType = 'BUY' | 'SELL' | 'SIGN_FREE_AGENT' | 'TRADE';
+
+export interface TransferRecord {
+  id: string;
+  date: string;
+  seasonYear: number;
+  type: TransferRecordType;
+  playerName: string;
+  playerPosition: Position;
+  fromTeam: string; // 'Free Agent' pra SIGN_FREE_AGENT
+  toTeam: string;
+  amount: number;   // parte em dinheiro; 0 numa TRADE sem compensação
 }
 
 export interface CareerState {
@@ -75,9 +94,25 @@ export interface CareerState {
   // "autopreenche" na primeira rodada avançada/partida jogada depois do update.
   finances?: ClubFinances;
   inbox?: InboxMessage[];
+  freeAgentPool?: Player[];
+  transferHistory?: TransferRecord[];
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };
+
+export function getFreeAgentPool(state: CareerState): Player[] {
+  return state.freeAgentPool ?? [];
+}
+
+export function getTransferHistory(state: CareerState): TransferRecord[] {
+  return state.transferHistory ?? [];
+}
+
+/** Janela de transferências: rounds 1-5 e 19-24 (0-indexed: <=4 e 18-23). Fonte única —
+ *  antes duplicada em 3 lugares (CareerHubScreen, 2x em useCareerManager). */
+export function isTransferWindowOpen(round: number): boolean {
+  return round <= 4 || (round >= 18 && round <= 23);
+}
 
 export function getFinances(state: CareerState): ClubFinances {
   return state.finances ?? DEFAULT_FINANCES;
@@ -244,13 +279,14 @@ export function createCareerSeason(
 // TRANSFERÊNCIAS (D-05, D-06)
 // =============================================================================
 
-/** Avalia se um clube CPU aceita uma proposta de troca — considera valor da oferta, superávit na posição e reputação do manager. */
+/** Avalia se um clube CPU aceita uma proposta de troca — considera valor da oferta, superávit na posição, reputação do manager e um eventual valor em dinheiro somado à troca. */
 export function evaluateTradeOffer(
   offeredPlayer: Player,
   requestedPlayer: Player,
   cpuSquad: Player[],
   managerReputation: number,
-  rng: () => number = Math.random
+  rng: () => number = Math.random,
+  cashOffered: number = 0,
 ): { accepted: boolean; reason: string } {
   const offeredOvr = playerOvr(offeredPlayer);
   const requestedOvr = playerOvr(requestedPlayer);
@@ -260,6 +296,13 @@ export function evaluateTradeOffer(
   let acceptChance = 0.5 + ovrDelta * 0.04;
   if (surplus) acceptChance += 0.15;
   acceptChance += Math.min(0.2, managerReputation * 0.002);
+  // Dinheiro só empurra a chance pra cima em cima da avaliação por OVR já existente —
+  // não substitui (mantém TradeProposalScreen coexistindo com o mercado, por decisão
+  // registrada em PLANO_CLOUD_MERCADO.md).
+  if (cashOffered > 0) {
+    const requestedValue = calculateMarketValue(requestedPlayer);
+    if (requestedValue > 0) acceptChance += Math.min(0.3, (cashOffered / requestedValue) * 0.6);
+  }
   acceptChance = Math.max(0.02, Math.min(0.95, acceptChance));
   return {
     accepted: rng() < acceptChance,

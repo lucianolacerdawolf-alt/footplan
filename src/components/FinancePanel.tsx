@@ -1,16 +1,9 @@
 import type { ClubFinances } from '../engine/career';
+import { formatMoney } from '../utils/formatMoney';
 import styles from './FinancePanel.module.css';
 
 interface Props {
   finances: ClubFinances;
-}
-
-function formatMoney(value: number): string {
-  const abs = Math.abs(value);
-  const sign = value < 0 ? '-' : '';
-  if (abs >= 1_000_000) return `${sign}€${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `${sign}€${(abs / 1_000).toFixed(0)}K`;
-  return `${sign}€${abs}`;
 }
 
 export default function FinancePanel({ finances }: Props) {

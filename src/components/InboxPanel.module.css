@@ -114,3 +114,34 @@
   opacity: 0.5;
   font-family: var(--mono);
 }
+
+.actionRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.acceptBtn, .rejectBtn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--sans);
+  border: 1px solid transparent;
+  transition: opacity 0.15s;
+}
+.acceptBtn:hover, .rejectBtn:hover { opacity: 0.85; }
+
+.acceptBtn {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: #22c55e;
+  color: #22c55e;
+}
+
+.rejectBtn {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: #ef4444;
+  color: #ef4444;
+}

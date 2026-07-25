@@ -265,6 +265,82 @@ Valor oferecido: marketValue * random(0.85, 1.35)
 Oferta chega como InboxMessage obrigatória com botões "Aceitar" / "Recusar"
 ```
 
+#### 2.2.6 Board Strictness (retenção da diretoria) — `transferMarket.ts`
+
+Inspirado no EA FC, a diretoria retém uma parte do valor das vendas:
+
+```typescript
+const BOARD_RETENTION = 0.80;  // 80% do valor da venda vai pro orçamento do técnico
+
+function netSellRevenue(marketValue: number): number {
+  return Math.round(marketValue * BOARD_RETENTION);
+}
+```
+
+Impacto nos handlers:
+- `handleAcceptTransferOffer`: `budget += netSellRevenue(amount)` em vez de `budget += amount`
+- `handleProposeTrade` (venda com cash): o cash recebido também passa pela retenção
+
+#### 2.2.7 Prize Money (premiações) — `transferMarket.ts`
+
+Valores fixos por posição na liga + fase da copa, creditados no fim da temporada:
+
+```typescript
+const PRIZE_MONEY: Record<string, { league: Record<number, number>; cup: Record<string, number> }> = {
+  pl:    { league: { 1: 8_000_000, 2: 5_000_000, 3: 3_500_000, 4: 2_500_000, 5: 1_500_000, 6: 1_000_000 }, cup: { champion: 2_000_000, 'runner-up': 1_200_000, semifinal: 600_000 } },
+  laliga: { league: { 1: 7_000_000, 2: 4_500_000, 3: 3_000_000, 4: 2_000_000, 5: 1_200_000, 6: 800_000 },  cup: { champion: 1_500_000, 'runner-up': 1_000_000, semifinal: 500_000 } },
+  serieA: { league: { 1: 6_000_000, 2: 4_000_000, 3: 2_800_000, 4: 1_800_000, 5: 1_000_000, 6: 700_000 },  cup: { champion: 1_200_000, 'runner-up': 800_000, semifinal: 400_000 } },
+  bundesliga: { league: { 1: 6_500_000, 2: 4_200_000, 3: 3_000_000, 4: 2_000_000, 5: 1_200_000, 6: 800_000 }, cup: { champion: 1_500_000, 'runner-up': 1_000_000, semifinal: 500_000 } },
+  ligue1: { league: { 1: 5_000_000, 2: 3_000_000, 3: 2_000_000, 4: 1_500_000, 5: 800_000, 6: 500_000 },     cup: { champion: 1_000_000, 'runner-up': 700_000, semifinal: 350_000 } },
+  ligaPortugal: { league: { 1: 2_500_000, 2: 1_500_000, 3: 1_000_000, 4: 700_000, 5: 400_000, 6: 250_000 },   cup: { champion: 500_000, 'runner-up': 300_000, semifinal: 150_000 } },
+};
+
+function getLeaguePrizeMoney(leagueId: string, position: number): number {
+  return PRIZE_MONEY[leagueId]?.league[position] ?? 0;
+}
+
+function getCupPrizeMoney(leagueId: string, result: string): number {
+  return PRIZE_MONEY[leagueId]?.cup[result] ?? 0;
+}
+```
+
+Creditado em `handleAdvanceSeason`:
+```typescript
+const leaguePrize = getLeaguePrizeMoney(state.leagueId, leaguePosition);
+const cupPrize = getCupPrizeMoney(state.leagueId, cupResult);
+finances.budget += leaguePrize + cupPrize;
+```
+
+#### 2.2.8 Ticket Sales (bilheteria) — `transferMarket.ts`
+
+Valor fixo por jogo em casa, creditado ao avançar rodada:
+
+```typescript
+const TICKET_REVENUE_PER_HOME_MATCH: Record<string, number> = {
+  pl: 800_000, laliga: 700_000, serieA: 500_000,
+  bundesliga: 600_000, ligue1: 400_000, ligaPortugal: 200_000,
+};
+
+function getTicketRevenue(leagueId: string): number {
+  return TICKET_REVENUE_PER_HOME_MATCH[leagueId] ?? 200_000;
+}
+```
+
+Creditado em `handleNextCareerLeagueRound` (se o próximo jogo é em casa) e `handleCareerBracketMatchResult` (se a partida da copa foi em casa).
+
+#### 2.2.9 Fórmula final do orçamento
+
+```
+budget =
+  initialBudget
+  + prizeMoney (liga + copa, creditado no fim da temporada)
+  + ticketSales (a cada jogo em casa na liga e copa)
+  + netSellRevenue (80% do valor de venda de jogadores)
+  + (weeklyIncome × roundsPlayed)
+  - playerBoughtCost (compras e contratações de agentes livres)
+  - (wageBill × roundsPlayed)
+```
+
 ### 2.3 Novos componentes UI
 
 #### 2.3.1 `TransferMarketScreen.tsx` (novo — ~250 linhas)
@@ -406,7 +482,7 @@ Fluxo de `handleAcceptTransferOffer`:
 8. setCareerState
 ```
 
-### 2.5 Novas regras de budget (todas já respeitam o fluxo existente)
+### 2.5 Novas regras de budget
 
 ```
 handleBuyPlayer / handleSignFreeAgent:
@@ -414,12 +490,22 @@ handleBuyPlayer / handleSignFreeAgent:
   wageBill recalculado com novo elenco (computeWageBill)
 
 handleAcceptTransferOffer:
-  budget += amount
+  budget += netSellRevenue(amount)     // 80% de retenção (Board Strictness)
   wageBill recalculado com elenco reduzido
 
 handleProposeTrade com cash:
   budget -= cashOffered (se houver)
   wageBill recalculado após swap
+
+handleNextCareerLeagueRound:
+  se jogo em casa → budget += getTicketRevenue(leagueId)
+
+handleCareerBracketMatchResult:
+  se jogo em casa → budget += getTicketRevenue(leagueId)
+
+handleAdvanceSeason:
+  budget += getLeaguePrizeMoney(leagueId, position)
+  budget += getCupPrizeMoney(leagueId, cupResult)
 ```
 
 ### 2.6 Progressão de jogadores
@@ -439,7 +525,7 @@ handleProposeTrade com cash:
 | `src/components/CloudSaveStatus.tsx` | **Novo** | Ícone de status no Hub |
 | `src/engine/freeAgentPool.ts` | **Novo** | Geração de agentes livres |
 | `src/components/TransferMarketScreen.tsx` | **Novo** | UI de mercado com abas |
-| `src/engine/transferMarket.ts` | Modificar | + `evaluateCashTransfer()` |
+| `src/engine/transferMarket.ts` | Modificar | + `evaluateCashTransfer()`, `netSellRevenue()`, `getLeaguePrizeMoney()`, `getCupPrizeMoney()`, `getTicketRevenue()`, constantes `PRIZE_MONEY` e `TICKET_REVENUE_PER_HOME_MATCH` |
 | `src/engine/career.ts` | Modificar | + `TransferRecord`, `freeAgentPool` no `CareerState` |
 | `src/engine/inbox.ts` | Modificar | + 4 factories de mensagem |
 | `src/hooks/useCareerManager.ts` | Modificar | + 4 handlers; modificar `handleProposeTrade`; ofertas CPU; wire cloud save |
@@ -454,9 +540,9 @@ handleProposeTrade com cash:
 |---|---|---|
 | **E1** | `freeAgentPool.ts` — geração e refresh de agentes livres | 45min |
 | **E2** | Tipos novos (`TransferRecord`, `freeAgentPool` no `CareerState`) | 15min |
-| **E3** | `evaluateCashTransfer` em `transferMarket.ts` | 45min |
+| **E3** | `evaluateCashTransfer` + **Board Strictness** + **Prize Money** + **Ticket Sales** em `transferMarket.ts` | 1h15 |
 | **E4** | Factories de inbox (4 novas) em `inbox.ts` | 30min |
-| **E5** | Handlers de compra/venda/oferta em `useCareerManager.ts` | 1h30 |
+| **E5** | Handlers de compra/venda/oferta + **netSellRevenue nos handlers de venda** + **ticket credit no avançar rodada** + **prize no fim da temporada** em `useCareerManager.ts` | 2h |
 | **E6** | Ofertas da CPU (geração ao avançar rodada) | 1h |
 | **E7** | `TransferMarketScreen.tsx` — UI completa com abas e slider | 2h |
 | **E8** | Modificar `TradeProposalScreen` — cash slider + valores | 45min |
@@ -464,7 +550,7 @@ handleProposeTrade com cash:
 | **E10** | Integrar no `CareerHubScreen` (botão "Mercado") | 15min |
 | **E11** | Testes (`transferMarket.test.ts`, `freeAgentPool.test.ts`, componentes) | 1h30 |
 | **E12** | Atualizar `README.md`, `BACKLOG.md` e `PLANO_FEATURES.md` | 15min |
-| **Total Mercado** | | **~10h** |
+| **Total Mercado** | | **~11h** |
 
 ### 2.9 Estimativa Cloud Save
 
@@ -485,9 +571,9 @@ handleProposeTrade com cash:
 | Ordem | Feature | Tempo | Por que |
 |---|---|---|---|
 | **1º** | Cloud Save | ~4h | Vitória rápida, baixo risco, protege dados antes de mexer no sistema de trocas |
-| **2º** | Mercado c/ Dinheiro | ~10h | Maior complexidade; faz sentido ter o save em nuvem antes de testar fluxos longos de compra/venda |
+| **2º** | Mercado c/ Dinheiro | ~11h | Board Strictness + Prize Money + Ticket Sales adicionam ~1h; resto igual |
 
-**Total combinado: ~14 horas**
+**Total combinado: ~15 horas**
 
 ---
 
