@@ -32,7 +32,7 @@ import type { CareerState, CareerSeasonHistoryEntry, InboxMessage, TransferRecor
 import {
   isValidCareerState, assignInitialAges, createCareerSeason,
   evaluateTradeOffer, computeReputationDelta, progressAllLeagues, deriveCupResult,
-  getFinances, getInbox, getFreeAgentPool, getTransferHistory, isTransferWindowOpen,
+  getFinances, getInbox, getFreeAgentPool, getTransferHistory, getTransferList, isTransferWindowOpen,
 } from '../engine/career';
 
 import type { Screen } from '../types/navigation';
@@ -219,17 +219,30 @@ export function useCareerManager({
     const isWindowOpenNow = isTransferWindowOpen(next);
     if (!wasWindowOpen && isWindowOpenNow) {
       newMessages.push(createTransferWindowMessage(dateLabel));
-      // 30% de chance de a CPU fazer 1 oferta por um titular (não-goleiro) acima da
-      // média de algum time adversário — só na abertura da janela, não em toda rodada.
-      if (Math.random() < 0.3) {
-        const candidates = variedTeams
-          .filter(t => t.id !== leg.userTeamId)
-          .flatMap(cpu => {
-            const cpuAvg = getAvgOvr(cpu);
-            return userTeamAfter.squad.slice(0, 11) // "titular" = XI convention (sem campo matchStatus no Player)
-              .filter(p => p.position !== 'GK' && playerOvr(p) > cpuAvg)
-              .map(player => ({ cpu, player }));
-          });
+    }
+    if (isWindowOpenNow) {
+      // Mercado global: candidatos a comprador vêm de qualquer uma das 12 ligas, não só
+      // da liga do usuário. Pra times da própria liga usa a versão já "variada" nesta
+      // rodada (randomizeCPUTactics); as outras 11 ligas não precisam de tática pra isso,
+      // só nome/id, então usa o roster cru.
+      const allOtherTeams = Object.entries(careerState.rosters).flatMap(([lid, teams]) =>
+        lid === careerState.leagueId ? variedTeams.filter(t => t.id !== leg.userTeamId) : teams
+      );
+      // Evita 2 ofertas pro mesmo jogador enquanto a primeira ainda não foi decidida
+      // (aceitar/recusar remove a mensagem da inbox).
+      const pendingOfferPlayerIds = new Set(
+        getInbox(careerState).filter(m => m.type === 'TRANSFER_OFFER' && m.meta).map(m => m.meta!.playerId)
+      );
+
+      // 30% de chance de a CPU fazer 1 oferta espontânea por um titular (não-goleiro)
+      // acima da média de algum adversário — só na abertura da janela, não em toda rodada.
+      if (!wasWindowOpen && Math.random() < 0.3) {
+        const candidates = allOtherTeams.flatMap(cpu => {
+          const cpuAvg = getAvgOvr(cpu);
+          return userTeamAfter.squad.slice(0, 11) // "titular" = XI convention (sem campo matchStatus no Player)
+            .filter(p => p.position !== 'GK' && playerOvr(p) > cpuAvg && !pendingOfferPlayerIds.has(p.id))
+            .map(player => ({ cpu, player }));
+        });
         if (candidates.length > 0) {
           const { cpu, player } = candidates[Math.floor(Math.random() * candidates.length)];
           const marketValue = calculateMarketValue(player);
@@ -237,7 +250,28 @@ export function useCareerManager({
           newMessages.push(createTransferOfferMessage(
             cpu.name, player.id, player.name, player.position, playerOvr(player), marketValue, offeredAmount, cpu.id, dateLabel,
           ));
+          pendingOfferPlayerIds.add(player.id);
         }
+      }
+
+      // Jogadores na lista de venda: a cada rodada com a janela aberta, 35% de chance
+      // de cada um receber uma oferta de "algum time" — prioriza times que ganhariam
+      // com o upgrade (OVR médio abaixo do jogador), mas qualquer time serve se nenhum
+      // se qualificar, pra "qualquer time compra se quiser" nunca ficar sem candidato.
+      for (const playerId of getTransferList(careerState)) {
+        if (pendingOfferPlayerIds.has(playerId)) continue;
+        const player = userTeamAfter.squad.find(p => p.id === playerId);
+        if (!player || allOtherTeams.length === 0) continue;
+        if (Math.random() >= 0.35) continue;
+        const eagerBidders = allOtherTeams.filter(t => getAvgOvr(t) < playerOvr(player) + 3);
+        const pool = eagerBidders.length > 0 ? eagerBidders : allOtherTeams;
+        const cpu = pool[Math.floor(Math.random() * pool.length)];
+        const marketValue = calculateMarketValue(player);
+        const offeredAmount = Math.round(marketValue * (0.7 + Math.random() * 0.6)); // 0.7–1.3×
+        newMessages.push(createTransferOfferMessage(
+          cpu.name, player.id, player.name, player.position, playerOvr(player), marketValue, offeredAmount, cpu.id, dateLabel,
+        ));
+        pendingOfferPlayerIds.add(playerId);
       }
     }
     // Backfill defensivo: carreiras salvas antes desta feature não têm freeAgentPool.
@@ -453,6 +487,8 @@ export function useCareerManager({
         },
         finances: { ...finances, budget: finances.budget - cashOffered, wageBill: newWageBill },
         transferHistory: [...getTransferHistory(prev), record],
+        // O jogador trocado saiu do elenco — não faz mais sentido continuar na lista de venda.
+        transferListPlayerIds: getTransferList(prev).filter(id => id !== offeredPlayerId),
       };
     });
     setToastMsg(`🔁 Troca aceita: ${offeredPlayer.name} ↔ ${requestedPlayer.name}${cashOffered > 0 ? ` + €${(cashOffered / 1_000_000).toFixed(1)}M` : ''}`);
@@ -584,59 +620,30 @@ export function useCareerManager({
     return { success: true, reason: 'signed' };
   }
 
-  // Vender jogador pro time CPU por dinheiro — mesma interface síncrona de buy/sign.
-  function handleSellPlayer(playerId: string, toTeamId: string, amount: number): { success: boolean; reason: string } {
+  // Colocar um jogador do próprio elenco na lista de venda — não escolhe comprador
+  // nem preço, só torna o jogador elegível a ofertas de qualquer time do jogo (ver
+  // o sorteio em handleNextCareerLeagueRound). Mesma interface síncrona de buy/sign.
+  function handleListPlayerForSale(playerId: string): { success: boolean; reason: string } {
     if (!careerState) return { success: false, reason: 'no-career' };
-    if (!isTransferWindowOpen(careerState.season.league.currentRound)) return { success: false, reason: 'window-closed' };
-
-    const leagueRoster = careerState.rosters[careerState.leagueId];
-    const userTeam = leagueRoster.find(t => t.id === careerState.season.league.userTeamId);
-    const buyerTeam = leagueRoster.find(t => t.id === toTeamId);
-    if (!userTeam || !buyerTeam) return { success: false, reason: 'invalid-team' };
-
+    const userTeam = careerState.rosters[careerState.leagueId].find(t => t.id === careerState.season.league.userTeamId);
+    if (!userTeam) return { success: false, reason: 'invalid-team' };
     const player = userTeam.squad.find(p => p.id === playerId);
     if (!player) return { success: false, reason: 'invalid-player' };
+    if (getTransferList(careerState).includes(playerId)) return { success: false, reason: 'already-listed' };
 
-    const marketValue = player.marketValue ?? calculateMarketValue(player);
-    const maxAcceptable = Math.round(marketValue * 1.2);
-    if (amount > maxAcceptable) return { success: false, reason: 'too-low' };
+    // Mesma guarda de handleBuyPlayer/handleAcceptTransferOffer — nunca deixa o
+    // usuário sem nenhum jogador numa posição (ex: 0 goleiros quebra a partida).
+    const samePositionCount = userTeam.squad.filter(p => p.position === player.position).length;
+    if (samePositionCount <= 1) return { success: false, reason: 'last-at-position' };
 
-    // Guarda: não vender último jogador da posição
-    const sellersAtPos = userTeam.squad.filter(p => p.position === player.position).length;
-    if (sellersAtPos <= 1) return { success: false, reason: 'seller-last-at-position' };
-
-    const revenue = netSellRevenue(amount);
-    const finances = getFinances(careerState);
-    const newWageBill = computeWageBill({ ...userTeam, squad: userTeam.squad.filter(p => p.id !== playerId) });
-    const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
-    const record: TransferRecord = {
-      id: crypto.randomUUID(), date: dateLabel, seasonYear: careerState.currentSeasonYear,
-      type: 'SELL', playerName: player.name, playerPosition: player.position,
-      fromTeam: userTeam.name, toTeam: buyerTeam.name, amount: revenue,
-    };
-
-    setCareerState(prev => {
-      if (!prev) return prev;
-      const movePlayer = (teams: Team[]) => teams.map(t => {
-        if (t.id === userTeam.id) return { ...t, squad: t.squad.filter(p => p.id !== playerId) };
-        if (t.id === buyerTeam.id) return { ...t, squad: [...t.squad, { ...player, currentFatigue: 0 }] };
-        return t;
-      });
-      return {
-        ...prev,
-        rosters: { ...prev.rosters, [prev.leagueId]: movePlayer(prev.rosters[prev.leagueId]) },
-        season: {
-          ...prev.season,
-          league: { ...prev.season.league, teams: movePlayer(prev.season.league.teams) },
-          cup: { ...prev.season.cup, teams: movePlayer(prev.season.cup.teams) },
-        },
-        finances: { ...finances, budget: finances.budget + revenue, wageBill: newWageBill },
-        transferHistory: [...getTransferHistory(prev), record],
-      };
-    });
-    setToastMsg(`💰 ${player.name} vendido para ${buyerTeam.name} por €${(revenue / 1_000_000).toFixed(1)}M`);
-    return { success: true, reason: 'value-met' };
+    setCareerState(prev => prev ? { ...prev, transferListPlayerIds: [...getTransferList(prev), playerId] } : prev);
+    setToastMsg(`📋 ${player.name} colocado na lista de venda`);
+    return { success: true, reason: 'listed' };
   }
+
+  const handleUnlistPlayerForSale = useCallback((playerId: string) => {
+    setCareerState(prev => prev ? { ...prev, transferListPlayerIds: getTransferList(prev).filter(id => id !== playerId) } : prev);
+  }, [setCareerState]);
 
   const handleAcceptTransferOffer = useCallback((messageId: string) => {
     if (!careerState) return;
@@ -644,14 +651,20 @@ export function useCareerManager({
     if (!message?.meta) return;
     const { playerId, offeringTeamId, amount } = message.meta;
 
-    const leagueRoster = careerState.rosters[careerState.leagueId];
-    const userTeam = leagueRoster.find(t => t.id === careerState.season.league.userTeamId);
-    const offeringTeam = leagueRoster.find(t => t.id === offeringTeamId);
+    const userTeam = careerState.rosters[careerState.leagueId].find(t => t.id === careerState.season.league.userTeamId);
     const player = userTeam?.squad.find(p => p.id === playerId);
+    // O time ofertante pode ser de qualquer uma das 12 ligas (mercado global) —
+    // procura em todos os rosters, igual handleBuyPlayer.
+    let offeringLeagueId: string | null = null;
+    let offeringTeam: Team | undefined;
+    for (const [lid, teams] of Object.entries(careerState.rosters)) {
+      const found = teams.find(t => t.id === offeringTeamId);
+      if (found) { offeringLeagueId = lid; offeringTeam = found; break; }
+    }
     // Defensivo: a oferta pode estar obsoleta (jogador já vendido/trocado, ou
     // aposentado e substituído por um id novo via progressPlayer/generateReplacementPlayer
     // desde que a oferta chegou). Sem crash, sem mexer em dinheiro — só descarta.
-    if (!userTeam || !offeringTeam || !player) {
+    if (!userTeam || !offeringTeam || !offeringLeagueId || !player) {
       setCareerState(prev => prev ? { ...prev, inbox: getInbox(prev).filter(m => m.id !== messageId) } : prev);
       setToastMsg('⚠️ Esta proposta não é mais válida.');
       return;
@@ -665,12 +678,14 @@ export function useCareerManager({
       return;
     }
 
-    const finances = getFinances(careerState);
-    const moveSquad = (teams: Team[]): Team[] => teams.map(t => {
+    const isSameLeague = offeringLeagueId === careerState.leagueId;
+    const removeFromUser = (teams: Team[]): Team[] => teams.map(t => t.id === userTeam.id ? { ...t, squad: t.squad.filter(p => p.id !== playerId) } : t);
+    const moveSquadSameLeague = (teams: Team[]): Team[] => teams.map(t => {
       if (t.id === userTeam.id) return { ...t, squad: t.squad.filter(p => p.id !== playerId) };
-      if (t.id === offeringTeam.id) return { ...t, squad: [...t.squad, player] };
+      if (t.id === offeringTeam!.id) return { ...t, squad: [...t.squad, player] };
       return t;
     });
+    const finances = getFinances(careerState);
     const newWageBill = computeWageBill({ ...userTeam, squad: userTeam.squad.filter(p => p.id !== playerId) });
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
     const record: TransferRecord = {
@@ -681,18 +696,28 @@ export function useCareerManager({
 
     setCareerState(prev => {
       if (!prev) return prev;
+      const newRosters = isSameLeague
+        ? { ...prev.rosters, [prev.leagueId]: moveSquadSameLeague(prev.rosters[prev.leagueId]) }
+        : {
+            ...prev.rosters,
+            [offeringLeagueId!]: prev.rosters[offeringLeagueId!].map(t =>
+              t.id === offeringTeam!.id ? { ...t, squad: [...t.squad, player] } : t
+            ),
+            [prev.leagueId]: removeFromUser(prev.rosters[prev.leagueId]),
+          };
       return {
         ...prev,
-        rosters: { ...prev.rosters, [prev.leagueId]: moveSquad(prev.rosters[prev.leagueId]) },
+        rosters: newRosters,
         season: {
           ...prev.season,
-          league: { ...prev.season.league, teams: moveSquad(prev.season.league.teams) },
-          cup: { ...prev.season.cup, teams: moveSquad(prev.season.cup.teams) },
+          league: { ...prev.season.league, teams: isSameLeague ? moveSquadSameLeague(prev.season.league.teams) : removeFromUser(prev.season.league.teams) },
+          cup: { ...prev.season.cup, teams: isSameLeague ? moveSquadSameLeague(prev.season.cup.teams) : removeFromUser(prev.season.cup.teams) },
         },
         // Board Strictness (EA FC): a diretoria retém 20% do valor de venda.
         finances: { ...finances, budget: finances.budget + netSellRevenue(amount), wageBill: newWageBill },
         transferHistory: [...getTransferHistory(prev), record],
-        inbox: [...getInbox(prev).filter(m => m.id !== messageId), createTransferOutCompletedMessage(player.name, offeringTeam.name, amount, dateLabel)],
+        transferListPlayerIds: getTransferList(prev).filter(id => id !== playerId),
+        inbox: [...getInbox(prev).filter(m => m.id !== messageId), createTransferOutCompletedMessage(player.name, offeringTeam!.name, amount, dateLabel)],
       };
     });
     setToastMsg(`💰 ${player.name} vendido por €${(amount / 1_000_000).toFixed(1)}M`);
@@ -704,11 +729,10 @@ export function useCareerManager({
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
     let rejectionMsg: InboxMessage[] = [];
     if (message?.meta) {
-      const leagueRoster = careerState.rosters[careerState.leagueId];
       const playerName = careerState.rosters[careerState.leagueId]
         .find(t => t.id === careerState.season.league.userTeamId)?.squad
         .find(p => p.id === message.meta!.playerId)?.name ?? '???';
-      const offeringClub = leagueRoster.find(t => t.id === message.meta!.offeringTeamId)?.name ?? '???';
+      const offeringClub = Object.values(careerState.rosters).flat().find(t => t.id === message.meta!.offeringTeamId)?.name ?? '???';
       rejectionMsg = [createTransferRejectedMessage(playerName, offeringClub, dateLabel)];
     }
     setCareerState(prev => prev ? { ...prev, inbox: [...getInbox(prev).filter(m => m.id !== messageId), ...rejectionMsg] } : prev);
@@ -819,7 +843,8 @@ export function useCareerManager({
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleBuyPlayer,
-    handleSellPlayer,
+    handleListPlayerForSale,
+    handleUnlistPlayerForSale,
     handleSignFreeAgent,
     handleAcceptTransferOffer,
     handleRejectTransferOffer,

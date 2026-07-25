@@ -9,7 +9,7 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { CareerState } from '../engine/career';
-import { getInbox, getFinances, getFreeAgentPool, isTransferWindowOpen } from '../engine/career';
+import { getInbox, getFinances, getFreeAgentPool, getTransferList, isTransferWindowOpen } from '../engine/career';
 import { hasMandatoryUnread } from '../engine/inbox';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
@@ -151,7 +151,8 @@ export interface AppScreensProps {
   handleCareerBracketMatchResult: (result: MatchResult) => void;
   handleProposeTrade: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
   handleBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
-  handleSellPlayer: (playerId: string, toTeamId: string, amount: number) => { success: boolean; reason: string };
+  handleListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
+  handleUnlistPlayerForSale: (playerId: string) => void;
   handleSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
   handleAcceptTransferOffer: (messageId: string) => void;
   handleRejectTransferOffer: (messageId: string) => void;
@@ -437,11 +438,13 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         userLeagueId={p.careerState.leagueId}
         rosters={p.careerState.rosters}
         freeAgents={getFreeAgentPool(p.careerState)}
+        transferListPlayerIds={getTransferList(p.careerState)}
         budget={finances.budget}
         isWindowOpen={isTransferWindowOpen(p.careerState.season.league.currentRound)}
         onBack={() => p.setScreen('career-hub')}
         onBuyPlayer={p.handleBuyPlayer}
-        onSellPlayer={p.handleSellPlayer}
+        onListPlayerForSale={p.handleListPlayerForSale}
+        onUnlistPlayerForSale={p.handleUnlistPlayerForSale}
         onSignFreeAgent={p.handleSignFreeAgent}
       />
     );

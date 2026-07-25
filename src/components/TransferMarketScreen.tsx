@@ -15,11 +15,14 @@ interface Props {
   /** Elencos de todas as 12 ligas, indexados por id de liga. */
   rosters: Record<string, Team[]>;
   freeAgents: Player[];
+  /** Ids do próprio elenco atualmente na lista de venda. */
+  transferListPlayerIds: string[];
   budget: number;
   isWindowOpen: boolean;
   onBack: () => void;
   onBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
-  onSellPlayer: (playerId: string, toTeamId: string, amount: number) => { success: boolean; reason: string };
+  onListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
+  onUnlistPlayerForSale: (playerId: string) => void;
   onSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
 }
 
@@ -43,6 +46,9 @@ function resultMessage(reason: string): string {
     case 'window-closed': return 'A janela de transferências está fechada.';
     case 'insufficient-budget': return 'Orçamento insuficiente pra essa oferta.';
     case 'seller-last-at-position': return 'Esse time não pode vender: ficaria sem nenhum jogador na posição.';
+    case 'last-at-position': return 'Não é possível colocar à venda: você ficaria sem nenhum jogador nessa posição.';
+    case 'listed': return '📋 Jogador colocado na lista de venda!';
+    case 'already-listed': return 'Esse jogador já está na lista de venda.';
     case 'invalid-player': case 'invalid-team': return 'Jogador ou time inválido.';
     default: return 'Não foi possível concluir a operação.';
   }
@@ -56,25 +62,22 @@ function sortPlayers<T extends Player>(players: T[], sortBy: SortKey): T[] {
   });
 }
 
-export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, budget, isWindowOpen, onBack, onBuyPlayer, onSellPlayer, onSignFreeAgent }: Props) {
+export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBack, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent }: Props) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [multiplier, setMultiplier] = useState(1);
   const [feedback, setFeedback] = useState<{ playerId: string; message: string; success: boolean } | null>(null);
-  const [sellTargetId, setSellTargetId] = useState<string | null>(null);
 
   // Comprar: navegação Liga → Time → Jogador, ou busca direta pelo nome (bypassa a navegação).
   const [buyLeagueId, setBuyLeagueId] = useState<string | null>(null);
   const [buyTeamId, setBuyTeamId] = useState<string | null>(null);
   const [buySearch, setBuySearch] = useState('');
 
-  const sameLeagueTeams = rosters[userLeagueId].filter(t => t.id !== userTeam.id);
-
   const switchTab = (tab: 'buy' | 'sell' | 'free-agents') => {
     setActiveTab(tab); setExpandedId(null); setFeedback(null);
-    setBuyLeagueId(null); setBuyTeamId(null); setBuySearch(''); setSellTargetId(null);
+    setBuyLeagueId(null); setBuyTeamId(null); setBuySearch('');
   };
 
   const applyFilter = (players: Player[]) =>
@@ -111,11 +114,8 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
     if (res.success) setExpandedId(null);
   };
 
-  const handleSell = (player: Player) => {
-    if (!sellTargetId) return;
-    const marketValue = player.marketValue ?? calculateMarketValue(player);
-    const amount = Math.round(marketValue * multiplier);
-    const res = onSellPlayer(player.id, sellTargetId, amount);
+  const handleList = (player: Player) => {
+    const res = onListPlayerForSale(player.id);
     setFeedback({ playerId: player.id, message: resultMessage(res.reason), success: res.success });
     if (res.success) setExpandedId(null);
   };
@@ -136,10 +136,11 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
   // Mensagens de "sem resultado"/"orçamento insuficiente" ficam escopadas à lista
   // realmente visível no momento (busca, elenco do time selecionado, ou agentes livres) —
   // nada disso se aplica enquanto o usuário só está navegando por ligas/times.
-  const showFilterBar = (activeTab === 'buy' && (searchQuery.length >= 2 || !!buyTeam)) || (activeTab === 'sell' && !!sellTargetId) || activeTab === 'free-agents';
+  const showFilterBar = (activeTab === 'buy' && (searchQuery.length >= 2 || !!buyTeam)) || activeTab === 'sell' || activeTab === 'free-agents';
   const visiblePlayerValues: number[] =
     activeTab === 'buy' && searchQuery.length >= 2 ? filterHits(allHits).map(h => h.player.marketValue ?? calculateMarketValue(h.player))
     : activeTab === 'buy' && buyTeam ? buyTeamSquad.map(p => p.marketValue ?? calculateMarketValue(p))
+    : activeTab === 'sell' ? applyFilter(userTeam.squad).map(p => p.marketValue ?? calculateMarketValue(p))
     : activeTab === 'free-agents' ? applyFilter(freeAgents).map(p => p.marketValue ?? calculateMarketValue(p))
     : [];
   const cheapestVisible = Math.min(...visiblePlayerValues, Infinity);
@@ -238,7 +239,7 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
                 : 'Nenhum jogador encontrado com esse filtro.'}
             </div>
           )}
-          {showFilterBar && cheapestVisible !== Infinity && cheapestVisible > budget && (
+          {showFilterBar && activeTab !== 'sell' && cheapestVisible !== Infinity && cheapestVisible > budget && (
             <div className={styles.emptyState}>Orçamento insuficiente para contratar qualquer jogador visível.</div>
           )}
 
@@ -323,69 +324,63 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
 
           {activeTab === 'sell' && (
             <>
-              {!sellTargetId ? (
-                <div className={styles.teamGroups}>
-                  <div style={{ textAlign: 'center', fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)', padding: '8px 0' }}>Escolha o time comprador</div>
-                  {[...sameLeagueTeams].sort((a, b) => a.name.localeCompare(b.name)).map(team => (
-                    <div key={team.id} className={styles.teamGroup}>
-                      <button className={styles.playerRowHeader} onClick={() => setSellTargetId(team.id)} style={{ width: '100%', justifyContent: 'flex-start' }}>
-                        <img src={team.logoUrl} alt="" className={styles.teamCrest} />
-                        <span className={styles.teamName}>{team.name}</span>
-                        <span className={styles.teamAvgOvr}>OVR {getAvgOvr(team)}</span>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <>
-                  <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 600, padding: '4px 0' }}>
-                    Vendendo para {sameLeagueTeams.find(t => t.id === sellTargetId)!.name}{' '}
-                    <button className={styles.filterBtn} onClick={() => setSellTargetId(null)}>Trocar time</button>
+              {transferListPlayerIds.length > 0 && (
+                <div className={styles.teamGroup}>
+                  <div className={styles.teamGroupHeader}>
+                    <span className={styles.teamName}>📋 Na Lista de Venda</span>
                   </div>
-                  <div className={styles.teamGroup}>
-                    <div className={styles.teamGroupHeader}>
-                      <span className={styles.teamName}>Seu Elenco</span>
-                    </div>
-                    {applyFilter(userTeam.squad).map(p => {
-                      const marketValue = p.marketValue ?? calculateMarketValue(p);
-                      return (
-                        <div key={p.id} className={styles.playerRow}>
-                          <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
-                            <span className={styles.playerNum}>#{p.number}</span>
-                            <span className={styles.playerName}>{p.name}</span>
-                            <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                            <span className={styles.playerOvr}>{playerOvr(p)}</span>
-                            <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
-                          </button>
-                          {expandedId === p.id && (
-                            <div className={styles.offerCard}>
-                              <div className={styles.offerRow}>
-                                <input
-                                  type="range" min={0.5} max={1.5} step={0.05}
-                                  value={multiplier}
-                                  onChange={e => setMultiplier(Number(e.target.value))}
-                                  className={styles.slider}
-                                  aria-label="Preço de venda"
-                                />
-                                <span className={styles.offerAmount}>{formatMoney(Math.round(marketValue * multiplier))}</span>
-                              </div>
-                              <div className={styles.offerActions}>
-                                <button className={styles.confirmBtn} onClick={() => handleSell(p)}>
-                                  Confirmar Venda
-                                </button>
-                                <button className={styles.cancelBtn} onClick={() => setExpandedId(null)}>Cancelar</button>
-                              </div>
-                              {feedback?.playerId === p.id && (
-                                <span className={feedback.success ? styles.successText : styles.warnText}>{feedback.message}</span>
-                              )}
-                            </div>
+                  {applyFilter(userTeam.squad.filter(p => transferListPlayerIds.includes(p.id))).map(p => {
+                    const marketValue = p.marketValue ?? calculateMarketValue(p);
+                    return (
+                      <div key={p.id} className={styles.playerRow}>
+                        <div className={styles.playerRowHeader}>
+                          <span className={styles.playerNum}>#{p.number}</span>
+                          <span className={styles.playerName}>{p.name}</span>
+                          <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
+                          <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                          <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                        </div>
+                        <div className={styles.listedRow}>
+                          <span className={styles.listedHint}>⏳ Aguardando propostas de qualquer time…</span>
+                          <button className={styles.filterBtn} onClick={() => onUnlistPlayerForSale(p.id)}>Retirar</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className={styles.teamGroup}>
+                <div className={styles.teamGroupHeader}>
+                  <span className={styles.teamName}>Seu Elenco</span>
+                </div>
+                {applyFilter(userTeam.squad.filter(p => !transferListPlayerIds.includes(p.id))).map(p => {
+                  const marketValue = p.marketValue ?? calculateMarketValue(p);
+                  return (
+                    <div key={p.id} className={styles.playerRow}>
+                      <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
+                        <span className={styles.playerNum}>#{p.number}</span>
+                        <span className={styles.playerName}>{p.name}</span>
+                        <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
+                        <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                        <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
+                      </button>
+                      {expandedId === p.id && (
+                        <div className={styles.offerCard}>
+                          <p className={styles.listHint}>Ao colocar à venda, qualquer time do jogo pode fazer uma oferta — você decide aceitar ou recusar quando ela chegar na caixa de entrada.</p>
+                          <div className={styles.offerActions}>
+                            <button className={styles.confirmBtn} onClick={() => handleList(p)}>Colocar à Venda</button>
+                            <button className={styles.cancelBtn} onClick={() => setExpandedId(null)}>Cancelar</button>
+                          </div>
+                          {feedback?.playerId === p.id && (
+                            <span className={feedback.success ? styles.successText : styles.warnText}>{feedback.message}</span>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
 

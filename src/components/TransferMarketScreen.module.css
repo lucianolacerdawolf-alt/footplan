@@ -232,6 +232,26 @@
 .playerOvr { font-size: 12px; font-weight: 700; color: var(--accent); min-width: 22px; text-align: right; }
 .playerValue { font-size: 11px; font-weight: 700; font-family: var(--mono); min-width: 60px; text-align: right; }
 
+.listedRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px 10px;
+}
+
+.listedHint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.listHint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 .offerCard {
   display: flex;
   flex-direction: column;

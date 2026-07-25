@@ -547,6 +547,37 @@ function stripToOnePlayerAtPosition(result: { current: ReturnType<typeof useCare
   });
 }
 
+// O fixture de usuário (startPlCareer/makeTeam) só tem 1 jogador por posição — qualquer
+// venda/listagem seria bloqueada pela guarda de "último na posição" sem isso. Duplica um
+// DEF e devolve o id do extra, pra testes que precisam de um jogador vendável de verdade.
+// Espelha em rosters E season.league/cup.teams — do jeito que a produção sempre mantém os
+// dois em sincronia — porque handleNextCareerLeagueRound lê o elenco de season.league.teams,
+// não de rosters.
+function addExtraDef(result: { current: ReturnType<typeof useCareerManager> }, teamId: string): string {
+  let extraId = '';
+  act(() => {
+    result.current.setCareerState(prev => {
+      if (!prev) return prev;
+      const patchTeam = (t: Team): Team => {
+        if (t.id !== teamId) return t;
+        const def = t.squad.find(p => p.position === 'DEF')!;
+        extraId = `${def.id}-extra`;
+        return { ...t, squad: [...t.squad, { ...def, id: extraId }] };
+      };
+      return {
+        ...prev,
+        rosters: { ...prev.rosters, [prev.leagueId]: prev.rosters[prev.leagueId].map(patchTeam) },
+        season: {
+          ...prev.season,
+          league: { ...prev.season.league, teams: prev.season.league.teams.map(patchTeam) },
+          cup: { ...prev.season.cup, teams: prev.season.cup.teams.map(patchTeam) },
+        },
+      };
+    });
+  });
+  return extraId;
+}
+
 function seedTransferOffer(
   result: { current: ReturnType<typeof useCareerManager> },
   meta: { playerId: string; offeringTeamId: string; amount: number },
@@ -565,7 +596,15 @@ function seedTransferOffer(
 describe('handleBuyPlayer', () => {
   it('compra bem-sucedida: orçamento cai, jogador muda de time em rosters e season.league.teams, TransferRecord adicionado', () => {
     const { result } = renderHook(() => useCareerManager(mockParams()));
+    // assignInitialAges (rodado dentro de handleStartCareer pra jogadores estáticos sem
+    // idade fixa) usa Math.random sem seed — em idade baixa (≤21) o ageMultiplier de
+    // calculateMarketValue sobe pra 1.5x, o que ocasionalmente empurrava até a oferta
+    // premium (1.5x o valor de mercado) pra acima do orçamento da PL, tornando esse teste
+    // flaky. Fixa em 0.99 (idade máxima, ageMultiplier mínimo) só durante o setup, pra
+    // garantir a margem de orçamento que o teste assume.
+    const ageSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
     const { leagueId, userTeamId, opponentTeamId } = startPlCareer(result);
+    ageSpy.mockRestore();
 
     const oppTeam = result.current.careerState!.rosters[leagueId].find(t => t.id === opponentTeamId)!;
     const player = oppTeam.squad.find(p => oppTeam.squad.filter(q => q.position === p.position).length > 2)!;
@@ -655,6 +694,66 @@ describe('handleBuyPlayer', () => {
     });
 
     expect(res).toEqual({ success: false, reason: 'seller-last-at-position' });
+  });
+});
+
+describe('handleListPlayerForSale / handleUnlistPlayerForSale', () => {
+  it('coloca um jogador do próprio elenco na lista de venda', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+    const extraId = addExtraDef(result, userTeamId);
+
+    let res: { success: boolean; reason: string } | undefined;
+    act(() => {
+      res = result.current.handleListPlayerForSale(extraId);
+    });
+
+    expect(res).toEqual({ success: true, reason: 'listed' });
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([extraId]);
+  });
+
+  it('rejeita listar o mesmo jogador 2 vezes', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+    const extraId = addExtraDef(result, userTeamId);
+    act(() => { result.current.handleListPlayerForSale(extraId); });
+
+    let res: { success: boolean; reason: string } | undefined;
+    act(() => {
+      res = result.current.handleListPlayerForSale(extraId);
+    });
+
+    expect(res).toEqual({ success: false, reason: 'already-listed' });
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([extraId]);
+  });
+
+  it('bloqueia listar o único jogador do usuário numa posição', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    stripToOnePlayerAtPosition(result, userTeamId, 'GK');
+    const gk = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad.find(p => p.position === 'GK')!;
+
+    let res: { success: boolean; reason: string } | undefined;
+    act(() => {
+      res = result.current.handleListPlayerForSale(gk.id);
+    });
+
+    expect(res).toEqual({ success: false, reason: 'last-at-position' });
+    expect(result.current.careerState!.transferListPlayerIds ?? []).toEqual([]);
+  });
+
+  it('retira um jogador da lista de venda', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+    const extraId = addExtraDef(result, userTeamId);
+    act(() => { result.current.handleListPlayerForSale(extraId); });
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([extraId]);
+
+    act(() => {
+      result.current.handleUnlistPlayerForSale(extraId);
+    });
+
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([]);
   });
 });
 
@@ -786,6 +885,51 @@ describe('handleAcceptTransferOffer / handleRejectTransferOffer', () => {
     const userTeamAfter = after.rosters[leagueId].find(t => t.id === userTeamId)!;
     expect(userTeamAfter.squad.some(p => p.id === gk.id)).toBe(true);
   });
+
+  it('aceitar oferta de um time de OUTRA liga: jogador sai só de rosters[liga do usuário]/season, e entra em rosters[outra liga] — sem tocar season.league/cup.teams', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+    const player = { id: addExtraDef(result, userTeamId) };
+    const leagueId = result.current.careerState!.leagueId;
+    const foreignTeam = result.current.careerState!.rosters['laliga'][0];
+    const amount = 5_000_000;
+    seedTransferOffer(result, { playerId: player.id, offeringTeamId: foreignTeam.id, amount });
+    const budgetBefore = result.current.careerState!.finances!.budget;
+
+    act(() => {
+      result.current.handleAcceptTransferOffer('offer-1');
+    });
+
+    const after = result.current.careerState!;
+    expect(after.finances!.budget).toBe(budgetBefore + netSellRevenue(amount));
+    expect(after.inbox!.some(m => m.id === 'offer-1')).toBe(false);
+
+    const userTeamAfter = after.rosters[leagueId].find(t => t.id === userTeamId)!;
+    expect(userTeamAfter.squad.some(p => p.id === player.id)).toBe(false);
+    expect(after.season.league.teams.find(t => t.id === userTeamId)!.squad.some(p => p.id === player.id)).toBe(false);
+    expect(after.season.cup.teams.find(t => t.id === userTeamId)!.squad.some(p => p.id === player.id)).toBe(false);
+
+    const foreignTeamAfter = after.rosters['laliga'].find(t => t.id === foreignTeam.id)!;
+    expect(foreignTeamAfter.squad.some(p => p.id === player.id)).toBe(true);
+    // A liga estrangeira nunca faz parte de season.league/cup.teams — só rosters.
+    expect(after.season.league.teams.some(t => t.id === foreignTeam.id)).toBe(false);
+    expect(after.transferHistory!.some(r => r.type === 'SELL' && r.toTeam === foreignTeam.name)).toBe(true);
+  });
+
+  it('vender um jogador que estava na lista de venda o remove da lista', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId, opponentTeamId } = startPlCareer(result);
+    const extraId = addExtraDef(result, userTeamId);
+    act(() => { result.current.handleListPlayerForSale(extraId); });
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([extraId]);
+    seedTransferOffer(result, { playerId: extraId, offeringTeamId: opponentTeamId, amount: 5_000_000 });
+
+    act(() => {
+      result.current.handleAcceptTransferOffer('offer-1');
+    });
+
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([]);
+  });
 });
 
 describe('handleProposeTrade com dinheiro', () => {
@@ -884,5 +1028,81 @@ describe('ofertas de transferência da CPU (abertura de janela)', () => {
     const inbox = result.current.careerState!.inbox!;
     expect(inbox.some(m => m.type === 'TRANSFER_OFFER')).toBe(false);
     expect(inbox.some(m => m.subject.includes('Janela'))).toBe(true);
+  });
+});
+
+describe('ofertas de transferência por jogadores na lista de venda (todo round com a janela aberta)', () => {
+  it('gera oferta pro jogador listado quando o roll de 35% é favorável — o time ofertante nunca é o do usuário', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+    const extraId = addExtraDef(result, userTeamId);
+    act(() => { result.current.handleListPlayerForSale(extraId); });
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([extraId]);
+
+    // Round 0 já está dentro da janela (rodadas 1-5) desde o início da carreira — não
+    // precisa forçar currentRound=17 como no teste de oferta espontânea, que só dispara
+    // na TRANSIÇÃO de fechada→aberta. O sorteio por jogador listado roda em toda rodada
+    // com a janela aberta, incluindo a primeira.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01); // passa o roll de 0.35, pega o 1º candidato do pool
+    act(() => {
+      result.current.handleNextCareerLeagueRound();
+    });
+    randomSpy.mockRestore();
+
+    const inbox = result.current.careerState!.inbox!;
+    const offer = inbox.find(m => m.type === 'TRANSFER_OFFER' && m.meta?.playerId === extraId);
+    expect(offer).toBeDefined();
+    expect(offer!.meta!.offeringTeamId).not.toBe(userTeamId);
+    expect(offer!.meta!.amount).toBeGreaterThan(0);
+  });
+
+  it('sem sorte no roll de 35%, nenhuma oferta aparece pro jogador listado', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+    const extraId = addExtraDef(result, userTeamId);
+    act(() => { result.current.handleListPlayerForSale(extraId); });
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([extraId]);
+
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99); // sempre falha o roll de 0.35
+    act(() => {
+      result.current.handleNextCareerLeagueRound();
+    });
+    randomSpy.mockRestore();
+
+    const inbox = result.current.careerState!.inbox!;
+    expect(inbox.some(m => m.type === 'TRANSFER_OFFER' && m.meta?.playerId === extraId)).toBe(false);
+  });
+
+  it('não gera 2ª oferta pro mesmo jogador listado enquanto a 1ª ainda não foi decidida', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId, opponentTeamId } = startPlCareer(result);
+    const extraId = addExtraDef(result, userTeamId);
+    act(() => { result.current.handleListPlayerForSale(extraId); });
+    expect(result.current.careerState!.transferListPlayerIds).toEqual([extraId]);
+    seedTransferOffer(result, { playerId: extraId, offeringTeamId: opponentTeamId, amount: 5_000_000 });
+
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01); // passaria o roll se checasse de novo
+    act(() => {
+      result.current.handleNextCareerLeagueRound();
+    });
+    randomSpy.mockRestore();
+
+    const offersForPlayer = result.current.careerState!.inbox!.filter(m => m.type === 'TRANSFER_OFFER' && m.meta?.playerId === extraId);
+    expect(offersForPlayer).toHaveLength(1);
+  });
+
+  it('não gera oferta pra um jogador que não está na lista de venda', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const unlisted = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad[0];
+
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
+    act(() => {
+      result.current.handleNextCareerLeagueRound();
+    });
+    randomSpy.mockRestore();
+
+    const inbox = result.current.careerState!.inbox!;
+    expect(inbox.some(m => m.type === 'TRANSFER_OFFER' && m.meta?.playerId === unlisted.id)).toBe(false);
   });
 });

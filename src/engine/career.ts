@@ -96,6 +96,11 @@ export interface CareerState {
   inbox?: InboxMessage[];
   freeAgentPool?: Player[];
   transferHistory?: TransferRecord[];
+  // Jogadores que o usuário colocou à venda — a cada rodada com a janela aberta,
+  // qualquer time do jogo pode fazer uma oferta (ver handleNextCareerLeagueRound).
+  // O usuário não escolhe o comprador nem o preço, só decide aceitar/recusar a
+  // oferta que chegar na caixa de entrada.
+  transferListPlayerIds?: string[];
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };
@@ -106,6 +111,10 @@ export function getFreeAgentPool(state: CareerState): Player[] {
 
 export function getTransferHistory(state: CareerState): TransferRecord[] {
   return state.transferHistory ?? [];
+}
+
+export function getTransferList(state: CareerState): string[] {
+  return state.transferListPlayerIds ?? [];
 }
 
 /** Janela de transferências: rounds 1-5 e 19-24 (0-indexed: <=4 e 18-23). Fonte única —
