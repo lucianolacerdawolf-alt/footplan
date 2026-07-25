@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: Phase 04.4 complete (7/7); Fase 4.6 (UI tests) e mobile UX (split de LeagueScreen) entregues ad-hoc; docs atualizados — ready to discuss Phase 4.5
-last_updated: 2026-07-24T13:00:00.000Z
+stopped_at: Sessão pós 04.4 — 6 ligas de acesso + SportAPI7 + refino mobile + mercado (comprar/vender/agentes livres) + remoção limite 3 trocas
+last_updated: 2026-07-25T15:00:00.000Z
 progress:
   total_phases: 6
   completed_phases: 1
@@ -19,64 +19,65 @@ progress:
 
 - **What:** Simulador tático de futebol browser-based (FootPlan)
 - **Core Value:** Escolhas estratégicas e simulação baseada em dados
-- **Live:** [lucianolacerdawolf-alt.github.io/footplan](https://lucianolacerdawolf-alt.github.io/footplan/)
+- **Live:** [footplan.pages.dev](https://footplan.pages.dev)
 
 ## Current Position
 
-Phase: 04.4 (Modo Carreira) — CONCLUÍDA (7/7 plans), verificada manualmente em browser
-Plan: N/A — fase fechada
-
 - **Milestone:** M4 — Code Health & Expansion
-- **Phase:** 4.6 (UI Component Tests) concluída; 4.5 (Transfer Market Completo) é a próxima grande, ainda não planejada
-- **Status:** Sem trabalho em andamento — pronto pra próxima sessão
+- **Status:** Pronto pra próxima sessão
 
-## Progress
+## O que foi feito na última sessão (2026-07-25)
 
-```
-M1 ████████████ Core Gameplay ✓
-M2 ████████████ Tournaments ✓
-M3 ████████████ Polish & Achievements ✓
-M4 ███████████░ Refactor & Expansion (Modo Carreira + testes UI + mobile UX entregues; falta 4.5)
-```
+### 6 Ligas de Acesso (2ª divisão)
+- Championship (24 times), La Liga 2 (22), 2. Bundesliga (18), Serie B (20), Ligue 2 (18), Liga Portugal 2 (18)
+- 120 times com elencos gerados proceduralmente (OVR por time, distribuição estrelas/reservas, subtipos de posição: CB/FB/CDM/CAM/W/ST)
+- Ordenadas lado a lado com a 1ª divisão do mesmo país no LeagueSelectScreen
+- Orçamentos, premiações e bilheteria por liga
 
-## O que foi feito em M4 (até 2026-07-24)
+### Sincronização com APIs reais
+- **football-data.org**: 1ªs divisões + Championship → nomes reais, logos, idades
+- **SportAPI7 (Sofascore via RapidAPI)**: Championship + Ligue 2 → nomes reais, valor mercado EUR, data nascimento
+- Cache 24h (SportAPI7) / 7 dias (football-data.org)
+- Auto-sync ao entrar na tela de seleção de time (substituiu botão manual)
+- Logos dos times preenchidos do `crest` da API
 
-### Fase 4.1 — App.tsx Refactor ✓
-- App.tsx reduzido de 623 → ~320 linhas; hooks extraídos (`useAppShell`, `useBracketManager`, `useLeagueManager`, `useGameFlow`, `useOnlineMatch`)
+### Mercado de Transferências
+- Removido limite de 3 trocas por temporada
+- Removido botão "Propor Troca" do Hub
+- Nova aba "💰 Vender Jogadores" no Mercado
+- Comprar / Vender / Agentes Livres funcionando com dinheiro
 
-### Fase 4.2 — Data-Driven Leagues ✓
-- 6 ligas europeias com elencos reais (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal), `cpuProfile` por liga, OVR calibrado (`base = ovr - 7`)
+### Refino Mobile
+- Slots de time empilhados verticalmente em telas estreitas
+- Alvos de toque ≥ 36px (botões voltar, uniforme, elenco, velocidade)
+- Fontes mínimas ≥ 10px (relógio "MIN", subtítulos, labels)
+- Scoreboard não aumenta no mobile (28px)
+- Breakpoint 400px para telas muito pequenas
+- Commentary feed com margem lateral reduzida
 
-### Fase 4.3 — Mid-Match Substitutions ✓
-- 5 substituições em até 3 janelas de parada; `simularSegundoTempo` roda em blocos, então trocas na pausa do 2º tempo afetam o resto do jogo de verdade
+### Outros
+- Fórmula de valor de mercado exponencial (OVR 60=€170K, 80=€16M, 90=€170M)
+- Comentários da partida: mais recente no topo
+- Time adversário CPU bloqueado na pausa/intervalo
+- Botões JOGAR e SIMULAR em todos os modos
+- Tabs "Táticas" / "Gerenciar Elenco" no setup, pausa e intervalo
+- CloudSave removido do Hub (tabela Supabase nunca foi criada)
 
-### Fase 4.4 — Modo Carreira ✓ (7/7 plans)
-- Progressão multi-temporada (todas as 6 ligas evoluem em paralelo), envelhecimento/evolução de jogadores, troca direta entre clubes (limitada a 3/temporada), reputação de técnico, liga+copa juntas por temporada, histórico, save único `fp:career`
-- Verificação manual pós-execução achou e corrigiu um gap real: fluxo de "começar nova carreira" (confirmação de sobrescrita) estava construído mas inalcançável — faltava o ponto de entrada no Hub
+## Pending / Ações
 
-### Fase 4.6 — UI Component Tests ✓
-- `@testing-library/react` + `jsdom` (ambiente isolado por arquivo). Cobertura: 3 telas de seleção de time, LeagueScreen/LeagueTableScreen, MatchStatsScreen, BracketScreen
+### ⚠ SportAPI7 — Mapeamento pendente (4 ligas)
+Quando a cota mensal resetar (1º de agosto), descobrir os `unique-tournament` IDs e `season` IDs para:
+- La Liga 2
+- 2. Bundesliga
+- Serie B
+- Liga Portugal 2
 
-### Débito técnico + performance (fora da numeração de fase) ✓
-- Removido Redux Toolkit não utilizado e `data/premierLeague.ts` legado
-- Code-splitting (`React.lazy`) de MatchScreen/MatchStatsScreen/AchievementsScreen
-- PWA instalável (manifest, service worker, ícones, safe-area insets)
+**Como descobrir:** fazer GET em `/category/{N}/scheduled-events/2026-04-26` nas categorias dos países (Espanha, Alemanha, Itália, Portugal), extrair `tournament.uniqueTournament.id` e `season.id` dos eventos. Preencher `LEAGUE_MAP` em `src/services/sportApi.ts` e dar deploy.
 
-### Mobile UX — tela de liga dividida (2026-07-24, sessão ad-hoc, sem plano GSD formal) ✓
-- `LeagueScreen` fazia 3 coisas numa tela só (classificação + jogo do usuário + outros jogos) — ~580px de scroll no celular. Dividida em `LeagueScreen` (dia de jogo) + `LeagueTableScreen` (nova, consulta pura), aplicado nos dois modos (Campeonatos e Carreira)
-- Hub da carreira ganhou botão de destaque "⚽ Jogar" — pula direto pra tática do próximo jogo da liga, sem passar pela tela de rodada
-
-## Pending / Backlog
-
-- **Fase 4.5 — Transfer Market Completo**: orçamento, negociação, agentes livres — expande além da troca direta simples do Modo Carreira. Precisa de discussão de design antes de planejar/codar.
-- Ver `BACKLOG.md` na raiz do projeto pra lista completa e priorizada (é a fonte de verdade voltada pro usuário; este arquivo é o snapshot interno do GSD).
+### Worker Cloudflare
+- Worker `footplan-football-proxy` atualizado com códigos das 2ª divisões no proxy (ELC, BL2, etc.) — deploy feito
+- Os códigos que não funcionam (403) foram removidos do `footballApi.ts`
 
 ## Blockers/Concerns
 
 Nenhum.
-
-## Session Continuity
-
-Last session: 2026-07-24 (sessão de mobile UX — split da tela de liga + investigação de warning de hook order no console, confirmado artefato de dev server, não é bug real)
-Stopped at: Docs atualizados (README/BACKLOG/STATE), nada em andamento
-Resume: próxima feature grande é Fase 4.5 (Transfer Market) — precisa de discussão de design (`/gsd:discuss-phase`) antes de planejar

@@ -51,7 +51,14 @@
       "Bash(rtk grep *)",
       "Bash(git -C \"C:\\\\SLOT01\\\\Footplan\" remote -v)",
       "Bash(git -C \"C:\\\\SLOT01\\\\Footplan\" branch -a)",
-      "Bash(rtk npm *)"
+      "Bash(rtk npm *)",
+      "Bash(node -e ' *)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(rtk npx --yes tsx -e ' *)",
+      "Bash(git commit -m ' *)",
+      "Bash(rtk npx *)",
+      "Bash(sed 's/=.*/=<set-or-empty>/')",
+      "Bash(awk -F= '/VITE_FOOTBALL_PROXY_URL/{print \"proxy_len=\"length\\($2\\)} /VITE_FOOTBALL_API_KEY/{print \"key_len=\"length\\($2\\)}' .env)"
     ]
   }
 }

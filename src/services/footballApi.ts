@@ -26,11 +26,6 @@ export const COMPETITION_CODES: Record<string, string> = {
   ligue1: 'FL1',
   ligaPortugal: 'PPL',
   championship: 'ELC',
-  laliga2: 'SPL',
-  bundesliga2: 'BL2',
-  serieB: 'SB',
-  ligue2: 'FL2',
-  ligaPortugal2: 'PPL2',
 };
 
 export interface RemotePlayer {

@@ -17,7 +17,8 @@
 
 import type { Team, Player, Position } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
-import { fetchCompetitionTeams, hasApiKey, FootballApiError, type RemoteTeam, type RemotePlayer } from './footballApi';
+import { fetchCompetitionTeams, hasApiKey, type RemoteTeam, type RemotePlayer } from './footballApi';
+import { fetchSportApiLeague, hasSportApiKey } from './sportApi';
 import { generatePlayer } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { rebalanceForFormation } from '../engine/squadUtils';
@@ -242,16 +243,30 @@ export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?
     }
   }
 
-  if (!hasApiKey()) {
-    return { league, source: 'static', stats: [], error: 'Nenhuma chave de API configurada (defina VITE_FOOTBALL_API_KEY no .env).' };
+  const hasFdApi = hasApiKey();
+  const hasSpApi = hasSportApiKey();
+
+  if (!hasFdApi && !hasSpApi) {
+    return { league, source: 'static', stats: [], error: 'Nenhuma chave de API configurada.' };
   }
 
-  let remoteTeams: RemoteTeam[];
-  try {
-    remoteTeams = await fetchCompetitionTeams(league.id);
-  } catch (err) {
-    const message = err instanceof FootballApiError ? err.message : (err as Error).message;
-    return { league, source: 'error', stats: [], error: message };
+  let remoteTeams: RemoteTeam[] | undefined;
+
+  if (hasFdApi) {
+    try { remoteTeams = await fetchCompetitionTeams(league.id); } catch {}
+  }
+
+  if (!remoteTeams && hasSpApi) {
+    try {
+      remoteTeams = await fetchSportApiLeague(league.id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { league, source: 'error', stats: [], error: message };
+    }
+  }
+
+  if (!remoteTeams || remoteTeams.length === 0) {
+    return { league, source: 'error', stats: [], error: 'Nenhum dado de elenco disponível para esta liga.' };
   }
 
   const assignments = assignRemoteTeams(league.teams, remoteTeams);
@@ -261,7 +276,6 @@ export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?
     if (!remote) return staticTeam;
     const { team, stats: teamStats } = mergeTeamRoster(staticTeam, remote.squad);
     stats.push(teamStats);
-    // Fill logoUrl from API if the static team has no logo
     if (!team.logoUrl && remote.crest) {
       team.logoUrl = remote.crest;
     }
