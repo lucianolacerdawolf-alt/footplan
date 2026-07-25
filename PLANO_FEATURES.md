@@ -3,6 +3,18 @@
 > Documento de planejamento para as 5 novas funcionalidades do FootPlan.
 > Data: Julho 2024
 
+## Status
+
+| # | Funcionalidade | Status |
+|---|---|---|
+| 1 | Squad Management | ✅ Entregue — `SquadManagementScreen` + `FormationPitch`, clique-a-clique (sem `dnd-kit`) |
+| 2 | Cloud Save (Supabase) | ⬜ Pendente — único item independente que falta |
+| 3 | Hub + Inbox + Finanças | ✅ Entregue — mercado com dinheiro/CPU-por-valor explicitamente fora de escopo (ver `BACKLOG.md`) |
+| 4 | Condição Física (Stamina) e Cartões | ✅ Entregue — `fitness.ts` + `discipline.ts` |
+| 5 | Histórico e Hall of Fame | ✅ Entregue — `seasonClosure.ts` + `TrophyRoomScreen` (artilheiro de liga/copa e assistência ficaram fora, ver nota no tipo `CareerSeasonHistoryEntry`) |
+
+Detalhes de cada item, incluindo o que foi simplificado/adiado em relação ao plano original, estão no [`BACKLOG.md`](./BACKLOG.md#-já-entregue-referência) e nas seções abaixo (mantidas como registro do planejamento original).
+
 ---
 
 ## Índice

@@ -24,22 +24,37 @@ Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
 
 ## 📦 Features grandes
 
-### 🔴 Mercado de Transferências completo
+### 🔴 Mercado de Transferências com dinheiro
 
-**Por que sobrou:** o Modo Carreira (entregue) só tem troca direta 1-por-1 sem dinheiro, limitada a 3 por temporada — decisão explícita de escopo pra manter a primeira versão simples. Orçamento, negociação e agentes livres ficaram de fora de propósito.
+**Por que sobrou:** o Modo Carreira já tem orçamento, folha salarial e valor de mercado por jogador (entregue), mas trocas continuam sendo 1-por-1 sem dinheiro, avaliadas por diferença de OVR — decisão explícita de escopo pra não reescrever a lógica de aceite da CPU (`evaluateTradeOffer`) na mesma leva das finanças.
 
 **O que envolve:**
-1. Pool de agentes livres (jogadores sem clube, disponíveis pra contratar)
-2. Orçamento por clube + negociação (proposta de valor, contraproposta)
-3. UI de mercado dedicada (hoje é só a tela de troca direta)
+1. Pool de agentes livres (jogadores sem clube, disponíveis pra contratar com `budget`)
+2. Reescrever a avaliação de proposta da CPU pra usar `marketValue` em vez de só delta de OVR
+3. UI de mercado dedicada (hoje é só a tela de troca direta 1-por-1)
 
-**Posso retomar quando:** você quiser expandir as transferências além da troca direta — precisa de discussão de design antes de codar (orçamento inicial, como valorar jogadores, janela de mercado).
+**Posso retomar quando:** você quiser expandir as transferências além da troca direta — o `marketValue`/`budget` já existem em `transferMarket.ts`, falta só a reescrita do motor de aceite e as telas novas.
+
+### 🟡 Cloud Save (Supabase)
+
+**Por que sobrou:** escopo original da Fase 4.5 do `PLANO_FEATURES.md`, ainda não implementado — todo o progresso continua só em `localStorage`, sem backup nem cross-device.
+
+**O que envolve:** cliente Supabase + auth anônimo, sync com fallback offline-first, indicador de status. Detalhes completos em [`PLANO_FEATURES.md`](./PLANO_FEATURES.md).
+
+**Posso retomar quando:** você quiser — é o único item independente que falta das 5 features do plano original.
 
 ---
 
 ## ✅ Já entregue (referência)
 
-- **Modo Carreira**: progressão multi-temporada (todas as 6 ligas evoluem junto), envelhecimento/evolução de jogadores, troca direta entre clubes (limitada a 3/temporada), reputação de técnico que afeta aceitação de trocas, liga+copa disputadas juntas por temporada, histórico de temporadas, save único (`fp:career`)
+- **Modo Carreira — Squad Management**: escalação visual (`SquadManagementScreen` + `FormationPitch`), clique-a-clique pra trocar titular/reserva da mesma posição, troca de formação preserva quem já é titular e nunca escala suspenso/lesionado
+- **Modo Carreira — Fadiga e Cartões**: desgaste real persiste entre partidas (antes `currentFatigue` era escrito mas nunca lido de volta após o jogo), 3 amarelos na temporada ou 1 vermelho direto suspendem por 1 jogo, liberado ao avançar rodada/estágio
+- **Modo Carreira — Finanças e Inbox**: orçamento inicial por liga, folha salarial pelo valor de mercado do elenco, renda semanal, caixa de entrada com mensagens obrigatórias (lesão) bloqueando "Avançar Rodada" até serem lidas
+- **Modo Carreira — Sala de Troféus**: histórico de temporada enriquecido (artilheiro, W/D/L, gols, delta de orçamento, técnico da temporada), `TrophyRoomScreen` com cards expansíveis por ano
+- **Partida em texto**: removido o campo visual animado (`Pitch.tsx`) de todas as partidas — placar, posse, momentum, timeline de gols e feed de comentário já cobriam a narração; véspera de jogo agora mostra as formações em texto em vez de diagrama SVG
+- **Velocidade de replay recalibrada**: progressão geométrica (1×/2×/4×/8×) em vez de linear — 4x roda um tempo de 45' em ~15s reais, antes eram ~30s
+- **Som removido**: `utils/audio.ts` (Web Audio API procedural) e todas as chamadas `sfx.*` tirados — feedback sonoro ainda não estava bom o suficiente
+- **Modo Carreira (base)**: progressão multi-temporada (todas as 6 ligas evoluem junto), envelhecimento/evolução de jogadores, troca direta entre clubes (limitada a 3/temporada), reputação de técnico que afeta aceitação de trocas, liga+copa disputadas juntas por temporada, histórico de temporadas, save único (`fp:career`)
 - **Mobile — tela de liga dividida**: "Ver Liga" era uma tela só misturando classificação + jogo do usuário + outros jogos da rodada (~580px de scroll no celular). Dividida em `LeagueScreen` (dia de jogo) + `LeagueTableScreen` (classificação, consulta pura) — aplicado nos dois modos (Campeonatos e Carreira). Hub da carreira ganhou botão de destaque "⚽ Jogar" que pula direto pra tática do próximo jogo, sem passar pela tela de rodada
 - **6 ligas europeias** com elencos reais (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal) + **6 copas nacionais** correspondentes
 - **Sincronização de elenco ao vivo** via football-data.org (proxy Cloudflare Worker, cache 7 dias, fallback offline, algoritmo de matching por confiança sem colisões falsas)
@@ -58,10 +73,10 @@ Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
 - **Performance**: code-splitting (`React.lazy`) de `MatchScreen`, `MatchStatsScreen` e `AchievementsScreen` — bundle inicial ~10.5% menor (gzip); auditoria de touch targets (tooltips, presets de tática, controle de velocidade) pro mínimo recomendado de toque no mobile
 - **Testes de UI**: `@testing-library/react` + `jsdom` configurados (ambiente isolado por arquivo, motor continua em `node`); cobertura pras 3 telas de seleção de time, tabela de classificação, tela de estatísticas pós-jogo (artilheiros, melhor em campo, cartões, histórico) e chaveamento de copa (partida do usuário, simular outros, fase de campeão)
 - Sistema de conquistas (15 achievements)
-- Tema escuro, fade entre telas, som procedural (zero arquivos de áudio)
+- Tema escuro, fade entre telas
 - Tela pós-jogo completa (MOTM, notas, gols, cartões, breakdown tático)
 - Tutorial interativo, H2H detalhado, CPU varia tática por rodada e por liga
-- 220 testes automatizados (motor + sincronização de elenco + componentes UI)
+- 306 testes automatizados (motor + sincronização de elenco + componentes UI + Modo Carreira)
 
 ### ✅ Melhorias de código (auditoria 2024-07-24) — parte 2
 

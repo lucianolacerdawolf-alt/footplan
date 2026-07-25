@@ -18,7 +18,7 @@ Simulador de partidas com foco em **escolhas estratégicas** e **simulação bas
 | **Partida Única** | Escolha 2 times de qualquer uma das 6 ligas, configure as táticas e jogue uma partida avulsa (vs CPU ou hot-seat). |
 | **Campeonatos** | Temporada completa em qualquer uma das 6 ligas: 18-20 times, pontos corridos. Você controla seu time e simula os demais. Estado salvo automaticamente. |
 | **Copas** | Copa eliminatória nacional correspondente à liga escolhida (FA Cup, Copa del Rey, DFB-Pokal, Coppa Italia, Coupe de France, Taça de Portugal). Oitavas → Quartas → Semis → Final. Prorrogação e pênaltis em caso de empate. |
-| **Modo Carreira** | Progressão multi-temporada: todas as 6 ligas evoluem em paralelo, jogadores envelhecem/evoluem, reputação de técnico, trocas diretas entre clubes, histórico de temporadas. Ver seção dedicada abaixo. |
+| **Modo Carreira** | Progressão multi-temporada: todas as 6 ligas evoluem em paralelo, jogadores envelhecem/evoluem, reputação de técnico, escalação visual, fadiga/cartões persistentes entre partidas, finanças do clube, caixa de entrada, trocas diretas entre clubes, histórico de temporadas com sala de troféus. Ver seção dedicada abaixo. |
 | **Conquistas** | 15 conquistas desbloqueáveis com progresso persistido. |
 
 ---
@@ -51,26 +51,25 @@ Cada escolha do jogador afeta diretamente a simulação:
 | **Jogo Aberto** | +8% ataque, defesa menos compacta |
 
 ### Simulação
+- **Texto apenas** — sem campo visual animado. Placar, cronômetro, posse, momentum, linha do tempo de gols e o feed de comentário narram a partida inteira; nenhuma renderização de campo/jogadores.
 - **Comentário tático no 1º minuto** explicando o confronto entre as formações
-- **Diagrama de formação** antes do apito inicial
-- **Bola segue o passador/receptor real** do evento de passe, com arco de trajetória proporcional à distância (não é mais um par aleatório de jogadores)
+- **Formações em texto** antes do apito inicial (ex: `PSG 4-3-3 vs Bayern 4-2-3-1`)
 - **Desarme muda a posse de fato** — o time que rouba a bola assume o ataque no ciclo, consistente com a narração
 - **Timing realista de gols**: poucos gols no início (ritmo de estudo), pico nos 80'-90' (desespero tático + fadiga)
-- **Pausa dramática de 2s no gol** com explosão da torcida
-- **Slider de velocidade** (1x / 2x / 3x / 4x)
+- **Pausa dramática de 2s no gol**
+- **Slider de velocidade** (1x / 2x / 3x / 4x) — progressão geométrica (1×, 2×, 4×, 8×), 4x roda um tempo de 45' em ~15s reais
 - **Intervalo interativo** — trocar formação e fazer substituições
 - **Prorrogação e pênaltis** nos torneios eliminatórios
 - **CPU varia tática entre rodadas**, com `cpuProfile` diferente por liga (ex: Bundesliga mais intensa/vertical, Serie A mais defensiva)
 
 ### Motor de Simulação Avançado
 - **Momentum**: gols dão +30 de impulso, decai por ciclo; time atrás nos minutos finais ganha urgência
-- **Fadiga recalibrada**: sem mais quedas irreais de OVR durante a partida; recuperação parcial no intervalo
+- **Fadiga recalibrada**: sem mais quedas irreais de OVR durante a partida; recuperação parcial no intervalo, persiste entre partidas no Modo Carreira (ver seção dedicada)
 - **Lesões durante a partida**: chance após faltas + chance aleatória; replay pausa automaticamente
 - **Escanteios → gol de cabeça**, **pênaltis durante o jogo**
 - **Piso defensivo**: todo time tem defesa mínima, evitando goleadas irreais
 - **Compressão de atributos** para evitar distorções em gaps extremos de OVR
 - **Goleiro gerado proceduralmente calibrado** — atributos-chave (posicionamento/visão) recebem o boost correto, sem mais desviar do OVR alvo
-- **Feedback sonoro**: torcida contínua, explosão no gol, reação em falta/cartão/trave — tudo gerado proceduralmente via Web Audio API (zero arquivos de áudio)
 
 ### Pós-jogo (MatchStatsScreen)
 - **Man of the Match** com nota colorida, notas dos jogadores (4.0–10.0)
@@ -79,10 +78,15 @@ Cada escolha do jogador afeta diretamente a simulação:
 
 ### Modo Carreira
 - **Progressão multi-temporada**: todas as 6 ligas evoluem em paralelo (não só a liga ativa) — jogadores envelhecem, evoluem/declinam por desempenho e idade, se aposentam e são substituídos por gerados proceduralmente
+- **Escalação visual** (`SquadManagementScreen`): campo com a formação atual, clique-a-clique pra trocar titular por reserva da mesma posição, troca de formação reorganiza automaticamente. Suspensos e lesionados aparecem bloqueados e nunca são escalados, nem por troca de formação
+- **Fadiga e cartões persistem entre partidas**: cada jogo desgasta os titulares de verdade (não só durante a partida — o cansaço acumula até a próxima rodada); 3 cartões amarelos na temporada ou 1 vermelho direto suspendem o jogador por 1 jogo
+- **Finanças do clube**: orçamento inicial por liga, folha salarial calculada pelo valor de mercado do elenco, renda semanal creditada a cada rodada
+- **Caixa de entrada**: relatórios de lesão (obrigatórios — bloqueiam "Avançar Rodada" até serem lidos), prévia do próximo jogo, aviso de janela de transferências
 - **Reputação de técnico**: sobe com títulos/boa colocação, afeta a chance de clubes CPU aceitarem propostas de troca
-- **Trocas diretas entre clubes**: 1-por-1 sem dinheiro, limitadas a 3 por temporada — CPU avalia a proposta por diferença de OVR, superávit de posição e sua reputação
-- **Liga + copa disputadas juntas** a cada temporada, com histórico (posição, resultado da copa, trocas usadas, delta de reputação) por ano
-- **Hub da carreira** (`CareerHubScreen`) como tela central: botão de destaque "⚽ Jogar" pula direto pra tática do próximo jogo da liga (some quando a temporada tá pronta pra avançar), "Ver Liga" abre só a classificação (consulta pura, sem controles de jogo — ver "Hub de Torneio" abaixo), "Ver Copa", "Propor Troca", histórico de temporadas
+- **Trocas diretas entre clubes**: 1-por-1 sem dinheiro, limitadas a 3 por temporada — CPU avalia a proposta por diferença de OVR, superávit de posição e sua reputação. Compra/venda com dinheiro ainda não existe (ver [`BACKLOG.md`](./BACKLOG.md))
+- **Liga + copa disputadas juntas** a cada temporada, com histórico (posição, artilheiro, campanha, gols, delta de orçamento, resultado da copa, trocas usadas, delta de reputação) por ano
+- **Sala de Troféus** (`TrophyRoomScreen`): cards por temporada com resumo expansível e linha do tempo de reputação
+- **Hub da carreira** (`CareerHubScreen`) como tela central: painel de finanças, caixa de entrada, botão de destaque "⚽ Jogar" pula direto pra tática do próximo jogo da liga (some quando a temporada tá pronta pra avançar), "Ver Liga" abre só a classificação (consulta pura, sem controles de jogo — ver "Hub de Torneio" abaixo), "Ver Copa", "Propor Troca", histórico de temporadas + link pra Sala de Troféus
 - **Save único** em `fp:career`, separado dos saves de Campeonatos/Copas avulsos — começar uma carreira nova pede confirmação se já existir uma em andamento
 
 ### Hub de Torneio
@@ -112,10 +116,11 @@ HomeScreen
 │                                                                              ↓
 │                                                   MatchScreen → MatchStatsScreen → BracketScreen
 ├── Modo Carreira → [tela de time, 1ª vez] → CareerHubScreen
-│                     ├── ⚽ Jogar → SetupScreen → MatchScreen → MatchStatsScreen → LeagueScreen (rodada) ⇄ LeagueTableScreen
+│                     ├── ⚽ Jogar → SetupScreen [overlay: SquadManagementScreen] → MatchScreen → MatchStatsScreen → LeagueScreen (rodada) ⇄ LeagueTableScreen
 │                     ├── Ver Liga → LeagueTableScreen (consulta pura)
 │                     ├── Ver Copa → BracketScreen → SetupScreen → MatchScreen → MatchStatsScreen → BracketScreen
 │                     ├── Propor Troca → TradeProposalScreen
+│                     ├── 🏆 Sala de Troféus → TrophyRoomScreen
 │                     └── Avançar Temporada → SeasonEndScreen → CareerHubScreen (temporada seguinte)
 └── Conquistas → AchievementsScreen
 ```
@@ -164,10 +169,9 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 |--------|-------|
 | **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Testes** | Vitest 3 (220 testes) + Testing Library (componentes) |
+| **Testes** | Vitest 3 (306 testes) + Testing Library (componentes) |
 | **Estilo** | CSS Modules + App.css/index.css globais |
-| **Renderização** | SVG (campo tático) + HTML/CSS |
-| **Áudio** | Web Audio API (sons procedurais, zero arquivos) |
+| **Renderização** | HTML/CSS (partida é 100% texto); SVG só na escalação visual do Modo Carreira |
 | **Estado** | React Hooks |
 | **Persistência** | localStorage via `useLocalStorage` / `usePersistedState` |
 | **Multiplayer** | PeerJS (WebRTC P2P) |
@@ -195,13 +199,21 @@ src/
 │   ├── tacticPresets.ts         # 3 presets de tática (Ofensivo/Equilibrado/Defensivo)
 │   ├── tacticExplanations.ts    # Textos explicativos usados nos tooltips e no tutorial
 │   ├── tournament.ts            # Liga, Copa, fadiga, lesões, CPU tática
-│   ├── career.ts                # Modo Carreira: progressão de jogador, trocas, reputação, temporada
+│   ├── career.ts                # Modo Carreira: progressão de jogador, trocas, reputação, temporada,
+│   │                             # tipos de finanças/inbox (ClubFinances, InboxMessage)
+│   ├── squadUtils.ts            # Titulares/reservas por formação, indisponibilidade (suspenso/lesionado)
+│   ├── fitness.ts                # Fadiga pós-jogo persistente (Modo Carreira)
+│   ├── discipline.ts             # Acúmulo de cartões + suspensão (Modo Carreira)
+│   ├── transferMarket.ts         # Valuation de jogador, folha salarial, orçamento/renda por liga
+│   ├── inbox.ts                  # Fábricas de mensagem (lesão, prévia de jogo, janela de transferência)
+│   ├── seasonClosure.ts          # Estatísticas de fechamento de temporada (artilheiro, W/D/L, etc)
+│   ├── careerLabels.ts           # Labels compartilhados de resultado de copa
 │   ├── playerRating.ts          # Notas 4-10 e Man of the Match
-│   ├── steering.ts              # Movimentação dos jogadores no SVG
+│   ├── steering.ts              # Coordenadas de formação (usado pela escalação visual do Carreira)
 │   ├── rng.ts                   # RNG com seed (SeededRng para multiplayer)
 │   ├── achievements.ts          # 15 conquistas com condições
 │   ├── constants.ts             # FORMATIONS, FORMATION_COUNTS
-│   └── __tests__/               # 11 suítes de teste do motor
+│   └── __tests__/               # Suítes de teste do motor
 ├── data/
 │   └── leagues/                 # Uma liga por arquivo (premierLeague, laLiga, bundesliga,
 │                                 # serieA, ligue1, ligaPortugal) + generateTeam.ts (gerador
@@ -217,16 +229,21 @@ src/
 │   ├── OnlineLobbyScreen         Criar/entrar sala, seleção de time, código 4 letras
 │   ├── TeamSelectionScreen       Seleção partida única
 │   ├── TournamentSetupScreen     Seleção time para torneio
-│   ├── SetupScreen               Táticas + escalação + H2H + análise tática
-│   ├── MatchScreen               Campo, replay, pausa/subs (3 janelas), intervalo
-│   ├── Pitch                     Campo SVG com bola animada e steering
+│   ├── SetupScreen               Táticas + escalação + H2H + análise tática + botão Gerenciar Elenco
+│   ├── SquadManagementScreen     Escalação visual (Modo Carreira): campo + banco, clique pra trocar
+│   ├── FormationPitch            Campo SVG estático usado pela escalação visual (não anima partidas)
+│   ├── MatchScreen               Replay em texto, pausa/subs (3 janelas), intervalo
 │   ├── InfoTooltip / TacticLabel Tooltips explicativos de tática
-│   ├── CommentaryFeed            Feed de comentários
+│   ├── CommentaryFeed            Feed de comentários — única narrativa visual da partida
 │   ├── MatchStatsScreen          Pós-jogo: MOTM, notas, gols, cartões, stats, tática
 │   ├── LeagueScreen               Dia de jogo: seu confronto da rodada, outros jogos, avançar rodada
 │   ├── LeagueTableScreen          Classificação (consulta pura, sem controles de jogo)
 │   ├── BracketScreen              Hub de copa
-│   ├── CareerHubScreen            Hub do Modo Carreira: reputação, resumo da temporada, histórico
+│   ├── CareerHubScreen            Hub do Modo Carreira: finanças, inbox, reputação, resumo da
+│   │                               temporada, histórico
+│   ├── FinancePanel               Orçamento / folha salarial / saldo semanal
+│   ├── InboxPanel                 Caixa de entrada com mensagens obrigatórias/informativas
+│   ├── TrophyRoomScreen           Sala de troféus: card expansível por temporada + reputação
 │   ├── TradeProposalScreen        Propor troca direta com clube adversário
 │   ├── SeasonEndScreen            Resumo de fim de temporada + avançar
 │   ├── AchievementsScreen         Grade de conquistas
@@ -240,12 +257,12 @@ src/
 │   ├── useMatchHistory / useH2H  Histórico de partidas / head-to-head
 │   ├── useAppShell / useGameFlow Navegação entre telas e orquestração de fluxo
 │   ├── useLeagueManager / useBracketManager  Estado de liga / copa (Campeonatos)
-│   ├── useCareerManager          Estado da carreira: progressão, trocas, avanço de temporada
+│   ├── useCareerManager          Estado da carreira: progressão, fadiga/cartões, finanças/inbox,
+│   │                             trocas, fechamento de temporada
 │   └── useLocalStorage / usePersistedState   Persistência genérica
 ├── utils/
 │   ├── liveMatchPersistence.ts  Serializa/restaura o estado ao vivo da partida (Maps/Sets)
 │   ├── teamUtils.ts             cloneTeam
-│   ├── audio.ts                 sfx: torcida, gol, falta, cartão, trave
 │   └── playerOvr.ts             Cálculo de OVR
 └── App.tsx / App.css / index.css / main.tsx
 
@@ -262,7 +279,7 @@ worker/
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # gera dist/
-npm run test     # 220 testes
+npm run test     # 306 testes
 ```
 
 ### Sincronização de elenco ao vivo (opcional)
@@ -278,7 +295,7 @@ cp .env.example .env
 
 ## 🧪 Testes
 
-**220 testes** cobrindo:
+**306 testes** cobrindo:
 - `matchEngine.test.ts` — invariantes, determinismo, cartões/expulsões, OVR
 - `calibration.test.ts` — 1000 partidas: média de gols, dominância OVR, empates, mando de campo
 - `tournament.test.ts` — fadiga, lesões, calendário, chaveamento, classificação
@@ -286,8 +303,9 @@ cp .env.example .env
 - `achievements.test.ts` / `steering.test.ts` / `tacticalCommentary.test.ts` / `resolveAttack.test.ts` / `resolveShot.test.ts` / `rng.test.ts`
 - `rosterSync.test.ts` — sincronização de elenco: fallback sem chave, modo proxy, mesclagem, cache, erros de rede/rate-limit, e regressão específica pra colisões de nome (ex: "Barcelona" vs "RCD Espanyol de Barcelona")
 - `useMatchSimulation.test.ts` — qual janela de pausa está ativa em cada momento da partida (substituições)
-- `career.test.ts` / `useCareerManager.test.ts` — progressão de jogador, avaliação de troca (RNG determinístico), reputação, avanço de temporada
-- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, dia de jogo da liga (LeagueScreen) e classificação (LeagueTableScreen) como telas separadas, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão)
+- `career.test.ts` / `useCareerManager.test.ts` — progressão de jogador, avaliação de troca (RNG determinístico), reputação, avanço de temporada, fadiga/cartões pós-jogo, finanças/inbox (incluindo o bloqueio real de "Avançar Rodada"), fechamento de temporada
+- `squadUtils.test.ts` / `fitness.test.ts` / `discipline.test.ts` / `transferMarket.test.ts` / `inbox.test.ts` / `seasonClosure.test.ts` — lógica pura do Modo Carreira
+- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, dia de jogo da liga (LeagueScreen) e classificação (LeagueTableScreen) como telas separadas, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão), escalação visual (`SquadManagementScreen`), hub e sala de troféus da carreira
 
 ---
 
@@ -297,7 +315,7 @@ cp .env.example .env
 |---|---|
 | `fp:leagueState:{ligaId}` | Estado da liga em andamento, por liga (Campeonatos) |
 | `fp:bracketState` | Estado completo da copa (Copas) |
-| `fp:career` | Save único da carreira: manager, temporada atual (liga+copa das 6 ligas), histórico |
+| `fp:career` | Save único da carreira: manager, temporada atual (liga+copa das 6 ligas), finanças, inbox, histórico |
 | `fp:liveMatch` | Snapshot da partida ao vivo em andamento (sobrevive a F5) |
 | `fp:selectedLeague` | Última liga selecionada, pra destacar na LeagueSelectScreen |
 | `fp:rosterCache:{ligaId}` | Cache de 7 dias do elenco sincronizado via API |
