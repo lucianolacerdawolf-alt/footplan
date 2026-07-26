@@ -3,7 +3,16 @@ import React from 'react';
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TrophyRoomScreen from '../TrophyRoomScreen';
-import type { CareerSeasonHistoryEntry } from '@/engine/career';
+import type { CareerSeasonHistoryEntry, TransferRecord } from '@/engine/career';
+
+function makeTransfer(overrides: Partial<TransferRecord> = {}): TransferRecord {
+  return {
+    id: 't1', date: 'Temporada 1 · Rodada 3', seasonYear: 1,
+    type: 'BUY', playerName: 'Jogador Teste', playerPosition: 'MID',
+    fromTeam: 'Time A', toTeam: 'Time B', amount: 5_000_000,
+    ...overrides,
+  };
+}
 
 function makeEntry(overrides: Partial<CareerSeasonHistoryEntry> = {}): CareerSeasonHistoryEntry {
   return {
@@ -72,5 +81,54 @@ describe('TrophyRoomScreen', () => {
   it('não mostra o FinancePanel quando finances não é passado', () => {
     render(<TrophyRoomScreen history={[]} />);
     expect(screen.queryByText('💰 Orçamento')).not.toBeInTheDocument();
+  });
+
+  it('não mostra a seção de transferências quando não há registros', () => {
+    render(<TrophyRoomScreen history={[]} transfers={[]} />);
+    expect(screen.queryByText(/Histórico de Transferências/)).not.toBeInTheDocument();
+  });
+
+  it('BUY mostra valor negativo (saída de caixa)', () => {
+    render(<TrophyRoomScreen history={[]} transfers={[makeTransfer({ type: 'BUY', amount: 5_000_000 })]} />);
+    expect(screen.getByText('-€5.0M')).toBeInTheDocument();
+  });
+
+  it('SELL mostra valor positivo (entrada de caixa)', () => {
+    render(<TrophyRoomScreen history={[]} transfers={[makeTransfer({ type: 'SELL', amount: 3_000_000 })]} />);
+    expect(screen.getByText('+€3.0M')).toBeInTheDocument();
+  });
+
+  it('SIGN_FREE_AGENT com luva mostra valor negativo; sem luva não mostra valor', () => {
+    const { rerender } = render(
+      <TrophyRoomScreen history={[]} transfers={[makeTransfer({ id: 'fa1', type: 'SIGN_FREE_AGENT', amount: 200_000, fromTeam: 'Free Agent' })]} />
+    );
+    expect(screen.getByText('-€200K')).toBeInTheDocument();
+
+    rerender(<TrophyRoomScreen history={[]} transfers={[makeTransfer({ id: 'fa2', type: 'SIGN_FREE_AGENT', amount: 0, fromTeam: 'Free Agent' })]} />);
+    expect(screen.queryByText(/€/)).not.toBeInTheDocument();
+  });
+
+  it('TRADE com compensação em dinheiro mostra valor negativo; TRADE seca não mostra valor', () => {
+    const { rerender } = render(
+      <TrophyRoomScreen history={[]} transfers={[makeTransfer({ id: 't2', type: 'TRADE', amount: 1_000_000, playerName: 'A ↔ B' })]} />
+    );
+    expect(screen.getByText('-€1.0M')).toBeInTheDocument();
+
+    rerender(<TrophyRoomScreen history={[]} transfers={[makeTransfer({ id: 't3', type: 'TRADE', amount: 0, playerName: 'A ↔ B' })]} />);
+    expect(screen.queryByText(/€/)).not.toBeInTheDocument();
+  });
+
+  it('lista em ordem reverse-cronológica (mais recente primeiro)', () => {
+    render(
+      <TrophyRoomScreen
+        history={[]}
+        transfers={[
+          makeTransfer({ id: 'first', playerName: 'Primeiro Jogador' }),
+          makeTransfer({ id: 'second', playerName: 'Segundo Jogador' }),
+        ]}
+      />
+    );
+    const names = screen.getAllByText(/Jogador$/).map(el => el.textContent);
+    expect(names).toEqual(['Segundo Jogador', 'Primeiro Jogador']);
   });
 });

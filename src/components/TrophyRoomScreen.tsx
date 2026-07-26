@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { CareerSeasonHistoryEntry, ClubFinances } from '../engine/career';
+import type { CareerSeasonHistoryEntry, ClubFinances, TransferRecord, TransferRecordType } from '../engine/career';
 import { CUP_RESULT_LABELS } from '../engine/careerLabels';
 import { formatMoney } from '../utils/formatMoney';
 import FinancePanel from './FinancePanel';
@@ -9,6 +9,8 @@ interface Props {
   history: CareerSeasonHistoryEntry[];
   /** Só passado no Modo Carreira (única forma de uso desta tela hoje) — vira a aba "Meu Clube". */
   finances?: ClubFinances;
+  /** Idem — extrato de compras/vendas/trocas/agentes livres da carreira inteira. */
+  transfers?: TransferRecord[];
 }
 
 function trophyIcon(entry: CareerSeasonHistoryEntry): string {
@@ -18,9 +20,26 @@ function trophyIcon(entry: CareerSeasonHistoryEntry): string {
   return '📋';
 }
 
-export default function TrophyRoomScreen({ history, finances }: Props) {
+const TRANSFER_ICON: Record<TransferRecordType, string> = {
+  BUY: '🛒', SELL: '💰', SIGN_FREE_AGENT: '🆓', TRADE: '🔁',
+};
+
+/** BUY/SIGN_FREE_AGENT: o time do usuário sempre é `toTeam` (pagou pra contratar).
+ *  SELL: o time do usuário sempre é `fromTeam` (recebeu pra vender).
+ *  TRADE: `amount` é a compensação em dinheiro que o usuário pagou por cima da troca
+ *  de jogadores (0 numa troca seca) — só mostra valor se houver compensação. */
+function transferAmountDisplay(record: TransferRecord): { text: string; color?: string } | null {
+  if (record.type === 'SELL') return { text: `+${formatMoney(record.amount)}`, color: '#22c55e' };
+  if (record.type === 'TRADE' || record.type === 'SIGN_FREE_AGENT') {
+    return record.amount > 0 ? { text: `-${formatMoney(record.amount)}`, color: '#ef4444' } : null;
+  }
+  return { text: `-${formatMoney(record.amount)}`, color: '#ef4444' };
+}
+
+export default function TrophyRoomScreen({ history, finances, transfers }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
+  const transfersRecent = transfers ? [...transfers].reverse() : [];
 
   return (
     <div className={`${styles.screen} app-screen`}>
@@ -29,6 +48,35 @@ export default function TrophyRoomScreen({ history, finances }: Props) {
       </div>
 
       {finances && <FinancePanel finances={finances} />}
+
+      {transfersRecent.length > 0 && (
+        <div className={styles.transferSection}>
+          <div className={styles.repLabel}>📜 Histórico de Transferências</div>
+          <div className={styles.transferList}>
+            {transfersRecent.map(record => {
+              const amountDisplay = transferAmountDisplay(record);
+              return (
+                <div key={record.id} className={styles.transferRow}>
+                  <span className={styles.transferIcon} aria-hidden="true">{TRANSFER_ICON[record.type]}</span>
+                  <div className={styles.transferInfo}>
+                    <span className={styles.transferPlayer}>
+                      <span>{record.playerName}</span>
+                      <span className={`sq-pos pos-${record.playerPosition.toLowerCase()}`}>{record.playerPosition}</span>
+                    </span>
+                    <span className={styles.transferRoute}>{record.fromTeam} → {record.toTeam}</span>
+                    <span className={styles.transferDate}>{record.date}</span>
+                  </div>
+                  {amountDisplay && (
+                    <span className={styles.transferAmount} style={{ color: amountDisplay.color }}>
+                      {amountDisplay.text}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {ordered.length === 0 ? (
         <div className={styles.empty}>Nenhuma temporada concluída ainda.</div>

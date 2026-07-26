@@ -9,7 +9,7 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { CareerState } from '../engine/career';
-import { getInbox, getFinances, getFreeAgentPool, getTransferList, isTransferWindowOpen } from '../engine/career';
+import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen } from '../engine/career';
 import { hasMandatoryUnread } from '../engine/inbox';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
@@ -466,6 +466,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       <TrophyRoomScreen
         history={p.careerState.history}
         finances={getFinances(p.careerState)}
+        transfers={getTransferHistory(p.careerState)}
       />
     );
   },

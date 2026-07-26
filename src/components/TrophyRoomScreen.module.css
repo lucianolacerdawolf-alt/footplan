@@ -66,6 +66,33 @@
   font-size: 12px; font-weight: 700; color: var(--text-primary); font-family: var(--mono);
 }
 
+.transferSection {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.transferList {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 320px; overflow-y: auto;
+}
+.transferRow {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+}
+.transferIcon { font-size: 18px; flex-shrink: 0; }
+.transferInfo {
+  display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;
+}
+.transferPlayer {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 700; color: var(--text-primary);
+}
+.transferRoute { font-size: 11px; opacity: 0.65; }
+.transferDate { font-size: 10px; opacity: 0.5; font-family: var(--mono); }
+.transferAmount {
+  font-size: 13px; font-weight: 800; font-family: var(--mono); flex-shrink: 0;
+}
+
 .repSection {
   display: flex; flex-direction: column; gap: 8px;
 }
