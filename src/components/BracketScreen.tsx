@@ -10,6 +10,9 @@ interface Props {
   onSimulateOthers: () => void;
   onEditTactics: () => void;
   onBack: () => void;
+  /** Só true no Modo Carreira — a barra de abas fixa já cobre "voltar pra Central" e
+   *  "editar táticas" (aba Elenco), então esses botões de topo ficam redundantes. */
+  hideTopNav?: boolean;
 }
 
 function teamById(teams: Team[], id: string | null): Team | null {
@@ -79,7 +82,7 @@ function MatchCard({
   );
 }
 
-export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onEditTactics, onBack }: Props) {
+export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onEditTactics, onBack, hideTopNav }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
   const [simulating, setSimulating] = useState(false);
   const runSimOthers = () => {
@@ -93,9 +96,11 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
     const userWon = championId === userTeamId;
     return (
       <div className={`${styles.screen} app-screen`}>
-        <header className={styles.header}>
-          <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
-        </header>
+        {!hideTopNav && (
+          <header className={styles.header}>
+            <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
+          </header>
+        )}
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
           <img src={champion.logoUrl} alt={champion.name} className={styles.championCrest} />
@@ -158,11 +163,15 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
   return (
     <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
-        <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
+        {!hideTopNav && (
+          <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
+        )}
         <div className={styles.headerCenter}>
           <span className={styles.title}>{state.cupName} · {stageLabels[stage]}</span>
         </div>
-        <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
+        {!hideTopNav && (
+          <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
+        )}
       </header>
 
       {stage === 'roundOf16'    && renderStage('Oitavas de Final', roundOf16,     true)}

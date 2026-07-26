@@ -451,7 +451,6 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         transferListPlayerIds={getTransferList(p.careerState)}
         budget={finances.budget}
         isWindowOpen={isTransferWindowOpen(p.careerState.season.league.currentRound)}
-        onBack={() => p.setScreen('career-hub')}
         onBuyPlayer={p.handleBuyPlayer}
         onListPlayerForSale={p.handleListPlayerForSale}
         onUnlistPlayerForSale={p.handleUnlistPlayerForSale}
@@ -467,7 +466,6 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       <TrophyRoomScreen
         history={p.careerState.history}
         finances={getFinances(p.careerState)}
-        onBack={() => p.setScreen('career-hub')}
       />
     );
   },
@@ -490,6 +488,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onViewCup={() => p.setScreen('career-bracket')}
         onBack={() => p.setScreen('career-hub')}
         blockAdvanceReason={blockAdvanceReason}
+        hideTopNav
       />
     );
   },
@@ -501,6 +500,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         state={p.careerState.season.league}
         league={getLeague(p.careerState.leagueId)!}
         onBack={() => p.setScreen('career-league')}
+        hideTopNav
       />
     );
   },
@@ -522,6 +522,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onSimulateOthers={p.handleSimulateOtherCareerBracketMatches}
         onEditTactics={p.handleEditCareerBracketTactics}
         onBack={() => p.setScreen('career-hub')}
+        hideTopNav
       />
     );
   },

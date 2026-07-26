@@ -7,7 +7,6 @@ import styles from './TrophyRoomScreen.module.css';
 
 interface Props {
   history: CareerSeasonHistoryEntry[];
-  onBack: () => void;
   /** Só passado no Modo Carreira (única forma de uso desta tela hoje) — vira a aba "Meu Clube". */
   finances?: ClubFinances;
 }
@@ -19,14 +18,13 @@ function trophyIcon(entry: CareerSeasonHistoryEntry): string {
   return '📋';
 }
 
-export default function TrophyRoomScreen({ history, onBack, finances }: Props) {
+export default function TrophyRoomScreen({ history, finances }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
 
   return (
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">← Voltar</button>
         <h1 className={styles.title}>🏆 Sala de Troféus</h1>
       </div>
 

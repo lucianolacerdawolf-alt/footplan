@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import TrophyRoomScreen from '../TrophyRoomScreen';
 import type { CareerSeasonHistoryEntry } from '@/engine/career';
@@ -20,12 +20,12 @@ function makeEntry(overrides: Partial<CareerSeasonHistoryEntry> = {}): CareerSea
 
 describe('TrophyRoomScreen', () => {
   it('mostra estado vazio quando não há temporadas concluídas', () => {
-    render(<TrophyRoomScreen history={[]} onBack={vi.fn()} />);
+    render(<TrophyRoomScreen history={[]} />);
     expect(screen.getByText('Nenhuma temporada concluída ainda.')).toBeInTheDocument();
   });
 
   it('renderiza um card por temporada, em ordem crescente de ano', () => {
-    render(<TrophyRoomScreen history={[makeEntry({ year: 2 }), makeEntry({ year: 1 })]} onBack={vi.fn()} />);
+    render(<TrophyRoomScreen history={[makeEntry({ year: 2 }), makeEntry({ year: 1 })]} />);
     const years = screen.getAllByText(/^[12]$/).map(el => el.textContent);
     expect(years).toEqual(['1', '2']);
   });
@@ -37,7 +37,7 @@ describe('TrophyRoomScreen', () => {
       userGoalsFor: 30, userGoalsAgainst: 20,
       budgetDelta: 2_500_000,
     });
-    render(<TrophyRoomScreen history={[entry]} onBack={vi.fn()} />);
+    render(<TrophyRoomScreen history={[entry]} />);
 
     expect(screen.queryByText('Fulano (12)')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('5º na liga').closest('button')!);
@@ -49,22 +49,19 @@ describe('TrophyRoomScreen', () => {
   });
 
   it('mostra o selo de Técnico da Temporada quando managerOfSeason é true', () => {
-    render(<TrophyRoomScreen history={[makeEntry({ managerOfSeason: true })]} onBack={vi.fn()} />);
+    render(<TrophyRoomScreen history={[makeEntry({ managerOfSeason: true })]} />);
     expect(screen.getByText('⭐ Técnico da Temporada')).toBeInTheDocument();
   });
 
-  it('chama onBack ao clicar em Voltar', () => {
-    const onBack = vi.fn();
-    render(<TrophyRoomScreen history={[makeEntry()]} onBack={onBack} />);
-    fireEvent.click(screen.getByText('← Voltar'));
-    expect(onBack).toHaveBeenCalledTimes(1);
+  it('não mostra nenhum botão de voltar — a navegação é só pela barra de abas fixa', () => {
+    render(<TrophyRoomScreen history={[makeEntry()]} />);
+    expect(screen.queryByText(/Voltar/)).not.toBeInTheDocument();
   });
 
   it('mostra o FinancePanel quando finances é passado (aba Meu Clube)', () => {
     render(
       <TrophyRoomScreen
         history={[]}
-        onBack={vi.fn()}
         finances={{ budget: 20_000_000, wageBill: 500_000, weeklyIncome: 450_000 }}
       />
     );
@@ -73,7 +70,7 @@ describe('TrophyRoomScreen', () => {
   });
 
   it('não mostra o FinancePanel quando finances não é passado', () => {
-    render(<TrophyRoomScreen history={[]} onBack={vi.fn()} />);
+    render(<TrophyRoomScreen history={[]} />);
     expect(screen.queryByText('💰 Orçamento')).not.toBeInTheDocument();
   });
 });

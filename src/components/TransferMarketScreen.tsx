@@ -21,7 +21,6 @@ interface Props {
   transferListPlayerIds: string[];
   budget: number;
   isWindowOpen: boolean;
-  onBack: () => void;
   onBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
   onListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
   onUnlistPlayerForSale: (playerId: string) => void;
@@ -68,7 +67,7 @@ function sortPlayers<T extends Player>(players: T[], sortBy: SortKey): T[] {
   });
 }
 
-export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBack, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced }: Props) {
+export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced }: Props) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
@@ -223,7 +222,6 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
   return (
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
-        <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
         <h1 className={styles.title}>🛒 Mercado</h1>
         <span className={styles.budget}>{formatMoney(budget)}</span>
       </div>

@@ -30,13 +30,16 @@ interface Props {
   blockAdvanceReason?: string;
   /** Só passado no Modo Carreira — abre a copa nacional correspondente (aba "Escritório"). */
   onViewCup?: () => void;
+  /** Só true no Modo Carreira — a barra de abas fixa já cobre "voltar pra Central" e
+   *  "editar táticas" (aba Elenco), então esses botões de topo ficam redundantes. */
+  hideTopNav?: boolean;
 }
 
 function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
 }
 
-export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason, onViewCup }: Props) {
+export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason, onViewCup, hideTopNav }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
   const [simulating, setSimulating] = useState(false);
   const runSim = (fn: () => void) => {
@@ -51,9 +54,11 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
     const userPos = standings.findIndex(s => s.teamId === userTeamId) + 1;
     return (
       <div className={`${styles.screen} app-screen`}>
-        <header className={styles.header}>
-          <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
-        </header>
+        {!hideTopNav && (
+          <header className={styles.header}>
+            <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
+          </header>
+        )}
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
           <img src={champion.logoUrl} alt={champion.name} className={styles.championCrest} />
@@ -110,7 +115,9 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
   return (
     <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
-        <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
+        {!hideTopNav && (
+          <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
+        )}
         <div className={styles.headerCenter}>
           <span className={styles.leagueTitle}>{league.name}</span>
           <span className={styles.roundLabel}>Rodada {currentRound + 1} / {fixtures.length}</span>
@@ -127,7 +134,9 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
             );
           })()}
         </div>
-        <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
+        {!hideTopNav && (
+          <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
+        )}
       </header>
 
       {seasonStats}

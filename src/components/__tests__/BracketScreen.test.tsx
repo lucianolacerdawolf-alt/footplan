@@ -84,6 +84,20 @@ describe('BracketScreen — fase de mata-mata', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
+  it('esconde "Editar Táticas" e "Menu Principal" quando hideTopNav é passado (Modo Carreira, coberto pela barra de abas)', () => {
+    const state = makeRoundOf16();
+    render(
+      <BracketScreen
+        state={state}
+        onPlayMatch={vi.fn()} onSimulateMatch={vi.fn()} onSimulateOthers={vi.fn()}
+        onEditTactics={vi.fn()} onBack={vi.fn()}
+        hideTopNav
+      />
+    );
+    expect(screen.queryByText('← Editar Táticas')).not.toBeInTheDocument();
+    expect(screen.queryByText('Menu Principal →')).not.toBeInTheDocument();
+  });
+
   it('tela de campeão mostra o time campeão e sinaliza eliminação quando o usuário não venceu', () => {
     const base = makeRoundOf16();
     const championState: BracketState = {

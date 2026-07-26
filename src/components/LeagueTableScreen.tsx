@@ -67,16 +67,20 @@ interface Props {
   state: LeagueState;
   league: LeagueDefinition;
   onBack: () => void;
+  /** Só true no Modo Carreira — a barra de abas fixa já cobre essa navegação (aba Escritório). */
+  hideTopNav?: boolean;
 }
 
-export default function LeagueTableScreen({ state, league, onBack }: Props) {
+export default function LeagueTableScreen({ state, league, onBack, hideTopNav }: Props) {
   const { teams, userTeamId, fixtures } = state;
   const standings: Standing[] = computeStandings(teams, fixtures);
 
   return (
     <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
-        <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
+        {!hideTopNav && (
+          <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
+        )}
         <div className={styles.headerCenter}>
           <span className={styles.leagueTitle}>{league.name}</span>
           <span className={styles.roundLabel}>Classificação</span>
