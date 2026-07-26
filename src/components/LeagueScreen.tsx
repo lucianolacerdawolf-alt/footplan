@@ -28,13 +28,15 @@ interface Props {
   onBack: () => void;
   /** Só usado no Modo Carreira: motivo pra bloquear "Avançar Rodada" (ex: mensagem obrigatória não lida) */
   blockAdvanceReason?: string;
+  /** Só passado no Modo Carreira — abre a copa nacional correspondente (aba "Escritório"). */
+  onViewCup?: () => void;
 }
 
 function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
 }
 
-export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason }: Props) {
+export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason, onViewCup }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
   const [simulating, setSimulating] = useState(false);
   const runSim = (fn: () => void) => {
@@ -132,6 +134,9 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
 
       <div className={styles.viewTableRow}>
         <button className={styles.viewTableLink} onClick={onViewTable}>📊 Ver Classificação →</button>
+        {onViewCup && (
+          <button className={styles.viewTableLink} onClick={onViewCup}>🏆 Ver Copa →</button>
+        )}
       </div>
 
       <div className={styles.fixturesCol}>

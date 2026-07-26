@@ -1,6 +1,6 @@
 # ⚽ FootPlan — Simulador Tático de Futebol
 
-Simulador de partidas com foco em **escolhas estratégicas** e **simulação baseada em dados**. Escolha entre **6 ligas europeias** (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal) com elencos que sincronizam com dados reais, monte suas táticas e dispute partidas avulsas, uma temporada completa de pontos corridos, uma das 6 copas nacionais, ou jogue **online contra um amigo via P2P** — instalável como app (PWA), tudo no navegador, sem backend próprio.
+Simulador de partidas com foco em **escolhas estratégicas** e **simulação baseada em dados**. Escolha entre **12 ligas europeias** (Premier League, Championship, La Liga, La Liga 2, Bundesliga, 2. Bundesliga, Serie A, Serie B, Ligue 1, Ligue 2, Liga Portugal, Liga Portugal 2) com elencos que sincronizam com dados reais, monte suas táticas e dispute partidas avulsas, uma temporada completa de pontos corridos, uma das 12 copas nacionais, ou jogue **online contra um amigo via P2P** — instalável como app (PWA), tudo no navegador, sem backend próprio.
 
 🌐 **Jogue agora:**
 - [footplan.pages.dev](https://footplan.pages.dev) (Cloudflare Pages)
@@ -15,10 +15,10 @@ Simulador de partidas com foco em **escolhas estratégicas** e **simulação bas
 | Modo | Descrição |
 |------|-----------|
 | **Jogar Online** | P2P via WebRTC (PeerJS). Crie uma sala (código de 4 letras), compartilhe com um amigo e jogem em tempo real com simulação determinística por seed. |
-| **Partida Única** | Escolha 2 times de qualquer uma das 6 ligas, configure as táticas e jogue uma partida avulsa (vs CPU ou hot-seat). |
-| **Campeonatos** | Temporada completa em qualquer uma das 6 ligas: 18-20 times, pontos corridos. Você controla seu time e simula os demais. Estado salvo automaticamente. |
+| **Partida Única** | Escolha 2 times de qualquer uma das 12 ligas, configure as táticas e jogue uma partida avulsa (vs CPU ou hot-seat). |
+| **Campeonatos** | Temporada completa em qualquer uma das 12 ligas: pontos corridos. Você controla seu time e simula os demais. Estado salvo automaticamente. |
 | **Copas** | Copa eliminatória nacional correspondente à liga escolhida (FA Cup, Copa del Rey, DFB-Pokal, Coppa Italia, Coupe de France, Taça de Portugal). Oitavas → Quartas → Semis → Final. Prorrogação e pênaltis em caso de empate. |
-| **Modo Carreira** | Progressão multi-temporada: todas as 6 ligas evoluem em paralelo, jogadores envelhecem/evoluem, reputação de técnico, escalação visual, fadiga/cartões persistentes entre partidas, finanças do clube, caixa de entrada, trocas diretas entre clubes, histórico de temporadas com sala de troféus. Ver seção dedicada abaixo. |
+| **Modo Carreira** | Progressão multi-temporada: todas as 12 ligas evoluem em paralelo, jogadores envelhecem/evoluem, reputação de técnico, fadiga/cartões persistentes, finanças do clube, mercado de transferências (comprar/vender/agentes livres), caixa de entrada, histórico de temporadas com sala de troféus. Cloud save via Supabase. |
 | **Conquistas** | 15 conquistas desbloqueáveis com progresso persistido. |
 
 ---
@@ -26,8 +26,10 @@ Simulador de partidas com foco em **escolhas estratégicas** e **simulação bas
 ## ✨ Features Principais
 
 ### Ligas e Elencos
-- **6 ligas europeias** com elencos reais calibrados (OVR, posições, atributos)
-- **Sincronização de elenco ao vivo** via [football-data.org](https://www.football-data.org/): botão "🔄 Atualizar elencos" busca o elenco atual de cada time, mesclando com os dados estáticos — jogadores que saíram (transferência, aposentadoria) somem, contratações novas entram com atributos sintéticos calibrados pro OVR do time. Cache de 7 dias, sempre com fallback offline pros dados estáticos se a API falhar ou estiver sem chave configurada.
+- **12 ligas europeias** (6 de 1ª divisão + 6 de acesso) com elencos gerados por OVR do time e atributos calibrados por posição (incluindo subtipos: CB/FB/CDM/CAM/W/ST)
+- **6 ligas de acesso** (Championship, La Liga 2, 2. Bundesliga, Serie B, Ligue 2, Liga Portugal 2) ordenadas lado a lado com a 1ª divisão do mesmo país
+- **Sincronização de elenco ao vivo** via [football-data.org](https://www.football-data.org/) + SportAPI7 (Sofascore): nomes reais, idades, logos e valores de mercado (EUR) dos jogadores. Cache de 7 dias (football-data.org) e 24h (SportAPI7), sempre com fallback offline. Ao iniciar Modo Carreira ou Campeonato, o botão de início fica desabilitado até a sincronização terminar — evita começar com idades/OVRs desatualizados por uma corrida entre o clique e o fetch
+- **Cálculo de OVR por subtipo de posição** — o sistema detecta automaticamente se um defensor é zagueiro (CB) ou lateral (FB), se um meia é volante (CDM), central (CM) ou armador (CAM), se um atacante é ponta (W) ou centroavante (ST), aplicando pesos específicos por função. Jogadores de elite (média ponderada > 78) recebem um bônus adicional que cresce com a distância acima desse patamar — separação inspirada na Reputação Internacional do FIFA, sem inflar o meio de tabela
 
 ### Tática e Plantel
 - **5 ajustes táticos** com impacto real no motor: formação (5 opções), mentalidade, intensidade, linha defensiva e amplitude
@@ -169,7 +171,7 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 |--------|-------|
 | **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Testes** | Vitest 3 (306 testes) + Testing Library (componentes) |
+| **Testes** | Vitest 3 (346 testes) + Testing Library (componentes) |
 | **Estilo** | CSS Modules + App.css/index.css globais |
 | **Renderização** | HTML/CSS (partida é 100% texto); SVG só na escalação visual do Modo Carreira |
 | **Estado** | React Hooks |
@@ -276,7 +278,7 @@ worker/
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # gera dist/
-npm run test     # 306 testes
+npm run test     # 346 testes
 ```
 
 ### Sincronização de elenco ao vivo (opcional)
@@ -292,7 +294,7 @@ cp .env.example .env
 
 ## 🧪 Testes
 
-**306 testes** cobrindo:
+**346 testes** cobrindo:
 - `matchEngine.test.ts` — invariantes, determinismo, cartões/expulsões, OVR
 - `calibration.test.ts` — 1000 partidas: média de gols, dominância OVR, empates, mando de campo
 - `tournament.test.ts` — fadiga, lesões, calendário, chaveamento, classificação

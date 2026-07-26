@@ -69,6 +69,7 @@ function autoBenchUnavailable(team: Team): Team {
 }
 
 import { playerOvr } from '../utils/playerOvr';
+import { fireClick } from '../utils/fireClick';
 
 export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
@@ -171,7 +172,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                     setSelected(p.id);
                   }
                 }}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}
+                onKeyDown={e => fireClick(e)}
               >
                 <span className="sq-num">#{p.number}</span>
                 <span className="sq-name">{p.name}</span>
@@ -203,7 +204,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                       setSelected(isSelected ? null : p.id);
                     }
                   }}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}
+                  onKeyDown={e => fireClick(e)}
                 >
                   <span className="sq-num">#{p.number}</span>
                   <span className="sq-name">{p.name}</span>

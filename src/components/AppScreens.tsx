@@ -426,7 +426,6 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       <CareerHubScreen
         state={p.careerState}
         league={getLeague(p.careerState.leagueId)!}
-        onViewLeague={() => p.setScreen('career-league')}
         onViewCup={() => p.setScreen('career-bracket')}
         onPlayNext={p.handlePlayNextCareerMatch}
         onAdvanceSeason={p.handleAdvanceSeason}
@@ -435,8 +434,6 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onMarkInboxRead={p.handleMarkInboxRead}
         onAcceptTransferOffer={p.handleAcceptTransferOffer}
         onRejectTransferOffer={p.handleRejectTransferOffer}
-        onViewTrophyRoom={() => p.setScreen('career-trophy-room')}
-        onOpenMarket={() => p.setScreen('transfer-market')}
       />
     );
   },
@@ -469,6 +466,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
     return (
       <TrophyRoomScreen
         history={p.careerState.history}
+        finances={getFinances(p.careerState)}
         onBack={() => p.setScreen('career-hub')}
       />
     );
@@ -489,6 +487,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onNextRound={p.handleNextCareerLeagueRound}
         onEditTactics={p.handleEditCareerLeagueTactics}
         onViewTable={() => p.setScreen('career-league-table')}
+        onViewCup={() => p.setScreen('career-bracket')}
         onBack={() => p.setScreen('career-hub')}
         blockAdvanceReason={blockAdvanceReason}
       />
@@ -501,7 +500,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       <LeagueTableScreen
         state={p.careerState.season.league}
         league={getLeague(p.careerState.leagueId)!}
-        onBack={() => p.setScreen('career-hub')}
+        onBack={() => p.setScreen('career-league')}
       />
     );
   },

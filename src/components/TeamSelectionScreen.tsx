@@ -1,6 +1,7 @@
 import type { Team } from '../engine/types';
 import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { fireClick } from '../utils/fireClick';
 
 export type GameMode = 'cpu' | 'player';
 
@@ -85,7 +86,7 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
              if (side === 'home') setHomeId(null);
              else setAwayId(null);
            } : undefined}
-           onKeyDown={team ? e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } } : undefined}
+           onKeyDown={e => fireClick(e)}
            style={team ? { borderColor: color, background: bg } : undefined}>
         {team ? (
           <>

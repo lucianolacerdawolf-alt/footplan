@@ -46,6 +46,31 @@ describe('LeagueScreen — dia de jogo (matchday)', () => {
     expect(onViewTable).toHaveBeenCalledTimes(1);
   });
 
+  it('não mostra o link "Ver Copa" quando onViewCup não é passado (Campeonatos normal)', () => {
+    render(
+      <LeagueScreen
+        state={makeState()} league={makeLeague()}
+        onPlayMatch={vi.fn()} onSimulateUserMatch={vi.fn()} onSimulateRound={vi.fn()}
+        onNextRound={vi.fn()} onEditTactics={vi.fn()} onViewTable={vi.fn()} onBack={vi.fn()}
+      />
+    );
+    expect(screen.queryByText(/Ver Copa/)).not.toBeInTheDocument();
+  });
+
+  it('aciona onViewCup ao clicar em "Ver Copa" quando passado (Modo Carreira)', () => {
+    const onViewCup = vi.fn();
+    render(
+      <LeagueScreen
+        state={makeState()} league={makeLeague()}
+        onPlayMatch={vi.fn()} onSimulateUserMatch={vi.fn()} onSimulateRound={vi.fn()}
+        onNextRound={vi.fn()} onEditTactics={vi.fn()} onViewTable={vi.fn()} onBack={vi.fn()}
+        onViewCup={onViewCup}
+      />
+    );
+    fireEvent.click(screen.getByText(/Ver Copa/));
+    expect(onViewCup).toHaveBeenCalledTimes(1);
+  });
+
   it('aciona onPlayMatch com a fixture do usuário ao clicar em "Jogar"', () => {
     const onPlayMatch = vi.fn();
     const state = makeState();

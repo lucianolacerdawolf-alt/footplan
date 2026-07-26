@@ -3,6 +3,7 @@ import type { Team, Strategy, MatchEvent } from '@/engine/types';
 import type { GameMode } from '../TeamSelectionScreen';
 import type { SubWindow } from '@/utils/liveMatchPersistence';
 import { playerOvr } from '@/utils/playerOvr';
+import { fireClick } from '@/utils/fireClick';
 import TacticPresets from '../shared/TacticPresets';
 import TacticEditor from '../shared/TacticEditor';
 
@@ -203,7 +204,7 @@ export default function HalftimePanel({
                               setPick(isPicked ? null : p.id);
                             }
                           }}
-                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
+                          onKeyDown={e => fireClick(e)}>
                           <span className="sq-num">#{p.number}</span>
                           <span className="sq-name">{p.name}</span>
                           <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -233,7 +234,7 @@ export default function HalftimePanel({
                               setPick(isPicked ? null : p.id);
                             }
                           }}
-                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
+                          onKeyDown={e => fireClick(e)}>
                           <span className="sq-num">#{p.number}</span>
                           <span className="sq-name">{p.name}</span>
                           <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>

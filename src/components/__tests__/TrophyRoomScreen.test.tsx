@@ -59,4 +59,21 @@ describe('TrophyRoomScreen', () => {
     fireEvent.click(screen.getByText('← Voltar'));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
+
+  it('mostra o FinancePanel quando finances é passado (aba Meu Clube)', () => {
+    render(
+      <TrophyRoomScreen
+        history={[]}
+        onBack={vi.fn()}
+        finances={{ budget: 20_000_000, wageBill: 500_000, weeklyIncome: 450_000 }}
+      />
+    );
+    expect(screen.getByText('€20.0M')).toBeInTheDocument();
+    expect(screen.getByText('€500K/sem')).toBeInTheDocument();
+  });
+
+  it('não mostra o FinancePanel quando finances não é passado', () => {
+    render(<TrophyRoomScreen history={[]} onBack={vi.fn()} />);
+    expect(screen.queryByText('💰 Orçamento')).not.toBeInTheDocument();
+  });
 });

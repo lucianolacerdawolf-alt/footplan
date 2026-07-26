@@ -126,7 +126,14 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
 
       <div className="select-action">
         {selectedTeam && (mode !== 'career' || managerName.trim().length > 0) && (
-          <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>{MODE_BTN[mode]}</button>
+          <button
+            className="slot-nav-btn slot-nav-btn-primary"
+            onClick={handleStart}
+            disabled={syncing}
+            title={syncing ? 'Aguardando sincronização do elenco (idades reais dos jogadores)...' : undefined}
+          >
+            {syncing ? 'Sincronizando elenco...' : MODE_BTN[mode]}
+          </button>
         )}
       </div>
 

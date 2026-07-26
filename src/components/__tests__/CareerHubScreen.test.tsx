@@ -30,24 +30,21 @@ function renderHub(state: CareerState, onMarkInboxRead = vi.fn()) {
     <CareerHubScreen
       state={state}
       league={getLeague('pl')!}
-      onViewLeague={vi.fn()}
       onViewCup={vi.fn()}
       onPlayNext={vi.fn()}
-      onProposeTrade={vi.fn()}
       onAdvanceSeason={vi.fn()}
       onNewCareer={vi.fn()}
       onBack={vi.fn()}
       onMarkInboxRead={onMarkInboxRead}
-      onViewTrophyRoom={vi.fn()}
+      onAcceptTransferOffer={vi.fn()}
+      onRejectTransferOffer={vi.fn()}
     />
   );
 }
 
-describe('CareerHubScreen — finanças e inbox', () => {
-  it('mostra orçamento, folha salarial e inbox vazia', () => {
+describe('CareerHubScreen — inbox', () => {
+  it('mostra inbox vazia', () => {
     renderHub(makeCareerState());
-    expect(screen.getByText('€20.0M')).toBeInTheDocument();
-    expect(screen.getByText('€500K/sem')).toBeInTheDocument();
     expect(screen.getByText('Nenhuma mensagem por enquanto.')).toBeInTheDocument();
   });
 
@@ -71,10 +68,9 @@ describe('CareerHubScreen — finanças e inbox', () => {
     expect(screen.getByText('Obrigatória')).toBeInTheDocument();
   });
 
-  it('carreira sem finances/inbox (salva antes desta feature) usa o padrão sem quebrar', () => {
-    const state = makeCareerState({ finances: undefined, inbox: undefined });
+  it('carreira sem inbox (salva antes desta feature) usa o padrão sem quebrar', () => {
+    const state = makeCareerState({ inbox: undefined });
     renderHub(state);
-    expect(screen.getByText('€20.0M')).toBeInTheDocument(); // DEFAULT_FINANCES.budget
     expect(screen.getByText('Nenhuma mensagem por enquanto.')).toBeInTheDocument();
   });
 });

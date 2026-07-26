@@ -31,7 +31,7 @@
 
 .fixturesCol { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 
-.viewTableRow { text-align: center; }
+.viewTableRow { text-align: center; display: flex; justify-content: center; gap: 16px; }
 .viewTableLink {
   background: transparent; border: none; padding: 4px;
   font-size: 12px; font-weight: 700; opacity: 0.6; text-decoration: underline;

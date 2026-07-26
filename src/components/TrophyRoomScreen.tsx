@@ -1,12 +1,15 @@
 import { useState } from 'react';
-import type { CareerSeasonHistoryEntry } from '../engine/career';
+import type { CareerSeasonHistoryEntry, ClubFinances } from '../engine/career';
 import { CUP_RESULT_LABELS } from '../engine/careerLabels';
 import { formatMoney } from '../utils/formatMoney';
+import FinancePanel from './FinancePanel';
 import styles from './TrophyRoomScreen.module.css';
 
 interface Props {
   history: CareerSeasonHistoryEntry[];
   onBack: () => void;
+  /** Só passado no Modo Carreira (única forma de uso desta tela hoje) — vira a aba "Meu Clube". */
+  finances?: ClubFinances;
 }
 
 function trophyIcon(entry: CareerSeasonHistoryEntry): string {
@@ -16,7 +19,7 @@ function trophyIcon(entry: CareerSeasonHistoryEntry): string {
   return '📋';
 }
 
-export default function TrophyRoomScreen({ history, onBack }: Props) {
+export default function TrophyRoomScreen({ history, onBack, finances }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
 
@@ -26,6 +29,8 @@ export default function TrophyRoomScreen({ history, onBack }: Props) {
         <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">← Voltar</button>
         <h1 className={styles.title}>🏆 Sala de Troféus</h1>
       </div>
+
+      {finances && <FinancePanel finances={finances} />}
 
       {ordered.length === 0 ? (
         <div className={styles.empty}>Nenhuma temporada concluída ainda.</div>

@@ -17,6 +17,7 @@ import { useOnlineMatch } from './hooks/useOnlineMatch';
 import { useResumePrompt } from './hooks/useResumePrompt';
 import { renderScreen, type AppScreensProps } from './components/AppScreens';
 import Toast from './components/Toast';
+import CareerTabBar, { CAREER_TAB_SCREENS, getCareerTabForScreen } from './components/CareerTabBar';
 import './App.css';
 
 function App() {
@@ -300,11 +301,25 @@ function App() {
 
   const content = renderScreen(screen, screenProps);
 
+  const showCareerTabs = isCareerMode && !!careerState && CAREER_TAB_SCREENS.has(screen);
+
   return (
     <>
-      <React.Suspense fallback={<div className="lazy-loading">Carregando…</div>}>
-        <div className="screen-fade" key={screen}>{content}</div>
-      </React.Suspense>
+      <div style={showCareerTabs ? { paddingBottom: 64 } : undefined}>
+        <React.Suspense fallback={<div className="lazy-loading">Carregando…</div>}>
+          <div className="screen-fade" key={screen}>{content}</div>
+        </React.Suspense>
+      </div>
+      {showCareerTabs && (
+        <CareerTabBar
+          active={getCareerTabForScreen(screen)}
+          onCentral={() => setScreen('career-hub')}
+          onElenco={handleEditCareerLeagueTactics}
+          onTransferencias={() => setScreen('transfer-market')}
+          onMeuClube={() => setScreen('career-trophy-room')}
+          onEscritorio={() => setScreen('career-league')}
+        />
+      )}
       <Toast message={toastMsg} onDismiss={dismissToast} />
       {resumePrompt && (
         <div className="resume-overlay" onClick={() => setResumePrompt(null)} role="presentation">

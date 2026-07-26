@@ -40,6 +40,7 @@ import { useMatchSimulation, getSubWindow } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
 import CommentaryFeed from './CommentaryFeed';
 import { playerOvr } from '../utils/playerOvr';
+import { fireClick } from '../utils/fireClick';
 import TopBar from './MatchScreen/TopBar';
 import HalftimePanel from './MatchScreen/HalftimePanel';
 import PenaltyShootoutOverlay from './MatchScreen/PenaltyShootoutOverlay';
@@ -661,7 +662,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                       setPick(isPicked ? null : p.id);
                                     }
                                   }}
-                                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
+                                  onKeyDown={e => fireClick(e)}>
                                   <span className="sq-num">#{p.number}</span>
                                   <span className="sq-name">{p.name}</span>
                                   <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -686,7 +687,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                       setPick(isPicked ? null : p.id);
                                     }
                                   }}
-                                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
+                                  onKeyDown={e => fireClick(e)}>
                                   <span className="sq-num">#{p.number}</span>
                                   <span className="sq-name">{p.name}</span>
                                   <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -853,7 +854,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                           setPick(isPicked ? null : p.id);
                                         }
                                       }}
-                                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
+                                      onKeyDown={e => fireClick(e)}>
                                       <span className="sq-num">#{p.number}</span>
                                       <span className="sq-name">{p.name}</span>
                                       <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -883,7 +884,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                                           setPick(isPicked ? null : p.id);
                                         }
                                       }}
-                                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { (e.currentTarget as HTMLElement).click(); } }}>
+                                      onKeyDown={e => fireClick(e)}>
                                       <span className="sq-num">#{p.number}</span>
                                       <span className="sq-name">{p.name}</span>
                                       <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>

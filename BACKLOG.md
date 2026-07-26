@@ -24,24 +24,21 @@ Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
 
 ## 📦 Features grandes
 
-### 🔴 Mercado de Transferências com dinheiro
+### ✅ Mercado de Transferências com dinheiro — CONCLUÍDO
 
-**Por que sobrou:** o Modo Carreira já tem orçamento, folha salarial e valor de mercado por jogador (entregue), mas trocas continuam sendo 1-por-1 sem dinheiro, avaliadas por diferença de OVR — decisão explícita de escopo pra não reescrever a lógica de aceite da CPU (`evaluateTradeOffer`) na mesma leva das finanças.
+TransferMarketScreen com 3 abas (Comprar Jogadores, Vender Jogadores, Agentes Livres), avaliação determinística por threshold de valor de mercado, multiplicador via slider, retenção de 20% da diretoria em vendas, histórico de transferências.
 
-**O que envolve:**
-1. Pool de agentes livres (jogadores sem clube, disponíveis pra contratar com `budget`)
-2. Reescrever a avaliação de proposta da CPU pra usar `marketValue` em vez de só delta de OVR
-3. UI de mercado dedicada (hoje é só a tela de troca direta 1-por-1)
+### ✅ Cloud Save (Supabase) — CONCLUÍDO
 
-**Posso retomar quando:** você quiser expandir as transferências além da troca direta — o `marketValue`/`budget` já existem em `transferMarket.ts`, falta só a reescrita do motor de aceite e as telas novas.
+Cliente Supabase com auth anônimo, save/load automático em segundo plano, cache offline-first com fallback pra localStorage. Tabela `careers` criada no projeto Supabase.
 
-### 🟡 Cloud Save (Supabase)
+### 🟡 SportAPI7 — Mapeamento pendente (4 ligas)
 
-**Por que sobrou:** escopo original da Fase 4.5 do `PLANO_FEATURES.md`, ainda não implementado — todo o progresso continua só em `localStorage`, sem backup nem cross-device.
+**Por que sobrou:** cota mensal gratuita da SportAPI7 (RapidAPI) estourou durante desenvolvimento. Faltam os `uniqueTournament` IDs de La Liga 2, 2. Bundesliga, Serie B e Liga Portugal 2.
 
-**O que envolve:** cliente Supabase + auth anônimo, sync com fallback offline-first, indicador de status. Detalhes completos em [`PLANO_FEATURES.md`](./PLANO_FEATURES.md).
+**O que envolve:** quando a cota resetar (1º de agosto), descobrir os IDs via `GET /category/{N}/scheduled-events/2026-04-26` e preencher `LEAGUE_MAP` em `src/services/sportApi.ts`.
 
-**Posso retomar quando:** você quiser — é o único item independente que falta das 5 features do plano original.
+**Posso retomar quando:** 1º de agosto — 10 minutos pra resolver.
 
 ---
 
@@ -54,10 +51,15 @@ Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
 - **Partida em texto**: removido o campo visual animado (`Pitch.tsx`) de todas as partidas — placar, posse, momentum, timeline de gols e feed de comentário já cobriam a narração; véspera de jogo agora mostra as formações em texto em vez de diagrama SVG
 - **Velocidade de replay recalibrada**: progressão geométrica (1×/2×/4×/8×) em vez de linear — 4x roda um tempo de 45' em ~15s reais, antes eram ~30s
 - **Som removido**: `utils/audio.ts` (Web Audio API procedural) e todas as chamadas `sfx.*` tirados — feedback sonoro ainda não estava bom o suficiente
-- **Modo Carreira (base)**: progressão multi-temporada (todas as 6 ligas evoluem junto), envelhecimento/evolução de jogadores, troca direta entre clubes (limitada a 3/temporada), reputação de técnico que afeta aceitação de trocas, liga+copa disputadas juntas por temporada, histórico de temporadas, save único (`fp:career`)
+- **Modo Carreira (base)**: progressão multi-temporada (todas as 12 ligas evoluem junto), envelhecimento/evolução de jogadores, mercado de transferências com dinheiro, reputação de técnico, liga+copa disputadas juntas por temporada, histórico de temporadas, save único (`fp:career`)
 - **Mobile — tela de liga dividida**: "Ver Liga" era uma tela só misturando classificação + jogo do usuário + outros jogos da rodada (~580px de scroll no celular). Dividida em `LeagueScreen` (dia de jogo) + `LeagueTableScreen` (classificação, consulta pura) — aplicado nos dois modos (Campeonatos e Carreira). Hub da carreira ganhou botão de destaque "⚽ Jogar" que pula direto pra tática do próximo jogo, sem passar pela tela de rodada
-- **6 ligas europeias** com elencos reais (Premier League, La Liga, Bundesliga, Serie A, Ligue 1, Liga Portugal) + **6 copas nacionais** correspondentes
-- **Sincronização de elenco ao vivo** via football-data.org (proxy Cloudflare Worker, cache 7 dias, fallback offline, algoritmo de matching por confiança sem colisões falsas)
+- **12 ligas europeias** (6 de 1ª divisão + 6 de acesso: Championship, La Liga 2, 2. Bundesliga, Serie B, Ligue 2, Liga Portugal 2) com elencos gerados por OVR do time e subtipos de posição (CB/FB/CDM/CAM/W/ST)
+- **Sincronização de elenco ao vivo** via football-data.org (proxy Cloudflare Worker) + SportAPI7 (Sofascore via RapidAPI) — nomes reais, idades, logos, valores de mercado EUR
+- **Mercado de Transferências**: 3 abas (Comprar/Vender/Agentes Livres), slider de multiplicador, retenção de 20% da diretoria, avaliação determinística por threshold
+- **OVR por subtipo de posição**: detecção automática de CB/FB/CDM/CM/CAM/W/ST com pesos específicos por função
+- **Bônus de elite no OVR**: acima de média ponderada 78, bônus adicional cresce com a distância até o teto (+6) — separa "muito bom" de "referência mundial" sem mexer no OVR de ninguém abaixo disso (zero recalibração necessária em `generatePlayer()`/`calculateMarketValue()`)
+- **Fix**: botão de "Iniciar Carreira"/"Iniciar Temporada" ficava clicável durante a sincronização de elenco ao vivo — corrida entre o clique e o fetch podia iniciar a carreira com dados estáticos (sem idade real), fazendo jogadores famosos tipo Lewandowski saírem com idade aleatória em vez da real. Botão agora desabilita até o sync terminar
+- **Cloud Save (Supabase)**: auth anônimo, save/load automático, cache offline-first
 - **PWA instalável** (manifest, service worker, ícones, safe-area insets pro notch/Dynamic Island no iOS, funciona offline)
 - **Persistência de sessão de partida ao vivo** — sobrevive a F5, restaura em pausa
 - **Motor de simulação em blocos**: substituições numa pausa do 2º tempo afetam o resto do jogo de verdade
@@ -76,7 +78,7 @@ Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
 - Tema escuro, fade entre telas
 - Tela pós-jogo completa (MOTM, notas, gols, cartões, breakdown tático)
 - Tutorial interativo, H2H detalhado, CPU varia tática por rodada e por liga
-- 306 testes automatizados (motor + sincronização de elenco + componentes UI + Modo Carreira)
+- 346 testes automatizados (motor + sincronização de elenco + componentes UI + Modo Carreira)
 
 ### ✅ Melhorias de código (auditoria 2024-07-24) — parte 2
 

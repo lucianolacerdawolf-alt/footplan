@@ -79,19 +79,6 @@
 }
 .playBtn:hover { opacity: 0.9; }
 
-.navRow {
-  display: flex; gap: 10px; flex-wrap: wrap;
-}
-.navBtn {
-  flex: 1; min-width: 140px;
-  padding: 10px 14px; border-radius: 8px; border: 1px solid var(--accent-border);
-  background: var(--code-bg); color: var(--text-primary);
-  font-size: 13px; font-weight: 700; font-family: var(--sans); cursor: pointer;
-  transition: background 0.15s, opacity 0.15s;
-}
-.navBtn:hover:not(:disabled) { background: var(--surface); }
-.navBtn:disabled { opacity: 0.45; cursor: not-allowed; }
-
 .advanceRow { text-align: center; }
 .advanceBtn {
   padding: 13px 32px; font-size: 15px; font-weight: 700; font-family: var(--sans); border: none;
@@ -106,55 +93,6 @@
   font-family: var(--sans);
 }
 
-.historySection {
-  display: flex; flex-direction: column; gap: 10px;
-}
-
-.historySectionHeader {
-  display: flex; align-items: center; justify-content: space-between; gap: 8px;
-}
-
-.trophyBtn {
-  background: transparent; border: 1px solid var(--accent-border); border-radius: 8px;
-  padding: 5px 10px; font-size: 11px; font-weight: 700; color: var(--accent);
-  cursor: pointer; font-family: var(--sans); transition: background 0.15s;
-}
-.trophyBtn:hover { background: var(--accent-bg); }
-
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 10px;
-}
-
-.card {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px; border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--code-bg);
-}
-
-.cardYear {
-  font-size: 18px; font-weight: 800; font-family: var(--mono); color: var(--text-primary);
-  flex-shrink: 0;
-}
-
-.cardInfo {
-  display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;
-}
-
-.cardLine {
-  font-size: 11px; opacity: 0.65; font-weight: 500;
-}
-
-.repPositive {
-  font-size: 14px; color: #22c55e; font-weight: 900; flex-shrink: 0; font-family: var(--mono);
-}
-
-.repNegative {
-  font-size: 14px; color: #f87171; font-weight: 900; flex-shrink: 0; font-family: var(--mono);
-}
-
 .newCareerRow { text-align: center; }
 .newCareerBtn {
   background: transparent; border: none; padding: 4px;
@@ -167,8 +105,4 @@
 @media (max-width: 640px) {
   .screen { padding: 12px 10px 24px; gap: 12px; }
   .title { font-size: 18px; }
-  .navRow { flex-direction: column; }
-  .grid { grid-template-columns: 1fr; gap: 8px; }
-  .card { padding: 12px; gap: 10px; }
-  .cardYear { font-size: 16px; }
 }
