@@ -301,7 +301,15 @@ function App() {
 
   const content = renderScreen(screen, screenProps);
 
-  const showCareerTabs = isCareerMode && !!careerState && CAREER_TAB_SCREENS.has(screen);
+  // "Elenco" não tem tela de repouso própria — é um atalho direto pro editor de
+  // táticas/escalação (mesma tela 'setup' usada pra iniciar uma partida de verdade).
+  // isTournamentEntry (true só quando entrou via handleEditCareerLeagueTactics/
+  // handleEditCareerBracketTactics, nunca quando vai realmente jogar) distingue os
+  // dois casos — assim a barra fica visível editando escalação, mas some de novo
+  // assim que uma partida real começa (setup pra jogar, match, stats).
+  const onElencoScreen = screen === 'setup' && isTournamentEntry;
+  const showCareerTabs = isCareerMode && !!careerState && (CAREER_TAB_SCREENS.has(screen) || onElencoScreen);
+  const activeCareerTab = onElencoScreen ? 'elenco' : getCareerTabForScreen(screen);
 
   return (
     <>
@@ -312,7 +320,7 @@ function App() {
       </div>
       {showCareerTabs && (
         <CareerTabBar
-          active={getCareerTabForScreen(screen)}
+          active={activeCareerTab}
           onCentral={() => setScreen('career-hub')}
           onElenco={handleEditCareerLeagueTactics}
           onTransferencias={() => setScreen('transfer-market')}
