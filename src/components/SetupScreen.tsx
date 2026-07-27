@@ -10,6 +10,7 @@ import TacticPresets from './shared/TacticPresets';
 import { useH2H } from '../hooks/useH2H';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import TutorialOverlay from './TutorialOverlay';
+import OpponentAnalysisModal from './OpponentAnalysisModal';
 
 function getTacticalInsight(home: Team, away: Team): string {
   const hf = home.strategy.formation;
@@ -98,6 +99,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [homeSelected, setHomeSelected] = useState<string | null>(null);
   const [awaySelected, setAwaySelected] = useState<string | null>(null);
   const { get: getH2H } = useH2H();
+  const [showOpponentAnalysis, setShowOpponentAnalysis] = useState(false);
   const h2h = getH2H(initialHome.id, initialAway.id);
   const [tutorialSeen] = useLocalStorage<string>('fp:tutorialSeen', '');
   const [showTutorial, setShowTutorial] = useState(!tutorialSeen);
@@ -362,11 +364,18 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       )}
 
       {/* ── Tactical Matchup Insight ── */}
-      <div className="morale-strip" style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)' }}>
+      <div className="morale-strip" style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', justifyContent: 'space-between' }}>
         <span className="morale-label" style={{ color: 'var(--accent)' }}>📋 Análise Tática</span>
         <span className="morale-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-h)', flex: 1, textAlign: 'center' }}>
           {getTacticalInsight(lockAway ? myTeam : homeTeam, lockAway ? theirTeam : awayTeam)}
         </span>
+        <button
+          className="back-btn-secondary"
+          style={{ fontSize: 11, padding: '4px 10px', whiteSpace: 'nowrap' }}
+          onClick={() => setShowOpponentAnalysis(true)}
+        >
+          🔍 Analisar Oponente
+        </button>
       </div>
 
       <div className="ht-tabs" style={{ margin: '8px 0', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>
@@ -413,6 +422,15 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           </>
         )}
       </div>
+
+      {showOpponentAnalysis && (
+        <OpponentAnalysisModal
+          opponent={lockAway ? theirTeam : awayTeam}
+          userTeam={lockAway ? myTeam : homeTeam}
+          h2h={getH2H(myTeam.id, (lockAway ? theirTeam : awayTeam).id)}
+          onClose={() => setShowOpponentAnalysis(false)}
+        />
+      )}
     </div>
   );
 }

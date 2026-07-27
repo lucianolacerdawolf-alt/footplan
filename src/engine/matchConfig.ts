@@ -121,6 +121,12 @@ export const FORMATION_BONUS: Record<Formation, { atk: number; def: number; poss
   '3-5-2':   { atk: 1.00, def: 0.95, possession: 1.10 },
   '4-2-3-1': { atk: 1.15, def: 0.95, possession: 1.05 },
   '5-3-2':   { atk: 0.90, def: 1.15, possession: 0.90 },
+  '3-4-3':   { atk: 1.15, def: 0.85, possession: 1.05 },
+  '4-1-4-1': { atk: 0.90, def: 1.10, possession: 1.10 },
+  '4-4-1-1': { atk: 1.05, def: 1.00, possession: 1.05 },
+  '3-4-2-1': { atk: 0.95, def: 0.90, possession: 1.15 },
+  '4-3-1-2': { atk: 1.10, def: 1.00, possession: 0.95 },
+  '5-4-1':   { atk: 0.80, def: 1.20, possession: 0.85 },
 };
 
 // Intensidade afeta desarme, faltas e cartões (além da fadiga já existente)
