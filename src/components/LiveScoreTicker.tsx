@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import type { Team, LeagueFixture } from '../engine/tournament';
+import type { Team } from '../engine/types';
+import type { LeagueFixture } from '../engine/tournament';
 import { simularFixtureAuto } from '../engine/tournament';
 import styles from './LiveScoreTicker.module.css';
 
