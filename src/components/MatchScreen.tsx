@@ -926,7 +926,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     )}
 
                     {() => {
-                      const side = online ? (online.isHost ? 'home' : 'away') : (userSide ?? 'home');
+                      const side: 'home' | 'away' = (userSide ?? 'home') as 'home' | 'away';
                       const team = side === 'home' ? home : away;
                       const starters = team.squad.slice(0, 11);
                       const mostTired = starters.filter(p => (p.currentFatigue ?? 0) > 70 && p.position !== 'GK').sort((a, b) => (b.currentFatigue ?? 0) - (a.currentFatigue ?? 0))[0];

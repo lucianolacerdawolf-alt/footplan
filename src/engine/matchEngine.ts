@@ -204,7 +204,6 @@ function resolveCycleAttack(
   const shot = resolveShot(atkResult.attacker, defTeam, possTeam.strategy.mentality, atkFatigue, defFatigue, state.cards, random, atkMomentum, gkForm);
 
   if (cycleEvents < MAX_EVENTS_PER_CYCLE) {
-    const scoreStr = `${state.homeScore}-${state.awayScore}`;
     if (shot.result === 'goal') {
       // Timing distribution: suppress early goals, boost late
       if (random() < goalTimingMultiplier(minute)) {

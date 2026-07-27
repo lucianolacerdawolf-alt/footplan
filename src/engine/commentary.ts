@@ -157,6 +157,19 @@ export function generateGoal(teamName: string, scorer: Player, minute: number, s
       `🔥 EMPATAAAA! ${scorer.name} não desperdiça e deixa ${teamName} vivo! ${score}`,
     ]);
   }
+  if (minute >= 85) {
+    return rng([
+      `⚽ GOOOOOOL NOS ACRÉSCIMOS! ${scorer.name} decide para ${teamName}! ${score}`,
+      `⚽ GOL AGONIZANTE! ${scorer.name} (${teamName}) nos instantes finais! ${score}`,
+      `⚽ DRAMA NOS ACRÉSCIMOS! ${scorer.name} estremece o estádio! ${score}`,
+    ]);
+  }
+  if (minute >= 75) {
+    return rng([
+      `⚽ GOOOOOOL! ${scorer.name} marca nos minutos finais para ${teamName}! ${score}`,
+      `⚽ GOL! ${scorer.name} balança as redes e muda o jogo! ${score}`,
+    ]);
+  }
   return rng([
     `⚽ GOOOOOOL! ${scorer.name} marca para ${teamName}! ${score}`,
     `⚽ GOOOOOOL de ${teamName}! ${scorer.name} balança as redes! ${score}`,
