@@ -28,7 +28,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult } from './shared/matchHandlers';
-import { saveLiveMatchMeta, clearLiveMatchMeta } from '../utils/liveMatchPersistence';
+import { saveLiveMatchMeta } from '../utils/liveMatchPersistence';
 import type { CareerState, CareerSeasonHistoryEntry, InboxMessage, TransferRecord } from '../engine/career';
 import {
   isValidCareerState, assignInitialAges, createCareerSeason,

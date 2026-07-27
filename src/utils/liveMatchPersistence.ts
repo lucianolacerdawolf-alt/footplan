@@ -139,10 +139,10 @@ export function loadLiveMatch(): LiveMatchSnapshot | null {
   try {
     const raw = localStorage.getItem(LIVE_MATCH_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as LiveMatchSnapshot;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
     if (parsed.version !== 2 && parsed.version !== 3) return null;
     if (parsed.phase === 'done') return null;
-    return parsed;
+    return parsed as unknown as LiveMatchSnapshot;
   } catch {
     return null;
   }
