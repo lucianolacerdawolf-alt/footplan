@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
-import type { Team, Player } from '../engine/types';
+import type { Team } from '../engine/types';
 import type { H2HRecord } from '../hooks/useH2H';
-import { FORMATION_COUNTS, FORMATIONS } from '../engine/constants';
+import { FORMATION_COUNTS } from '../engine/constants';
 import { FORMATION_BONUS, getTacticalHardCounter } from '../engine/matchConfig';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { playerOvr } from '../utils/playerOvr';
