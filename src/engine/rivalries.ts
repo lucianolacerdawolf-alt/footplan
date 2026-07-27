@@ -1,5 +1,3 @@
-type RivalryPair = [string, string];
-
 const RIVALRY_MAP = new Map<string, Set<string>>();
 
 function register(a: string, b: string): void {
