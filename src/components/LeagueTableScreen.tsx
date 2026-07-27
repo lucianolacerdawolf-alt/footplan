@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, Standing, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { computeStandings } from '../engine/tournament';
+import TopScorersTable from './TopScorersTable';
 import styles from './LeagueTableScreen.module.css';
 
 function getRecentForm(teamId: string, fixtures: LeagueFixture[][]): ('W' | 'D' | 'L')[] {
@@ -121,6 +123,25 @@ export default function LeagueTableScreen({ state, league, onBack, hideTopNav }:
       <div className={styles.standingsScroll}>
         <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
       </div>
+
+      <TopScorersTable scorers={useMemo(() => {
+        const map = new Map<string, { name: string; goals: number; team: string }>();
+        for (const round of fixtures) {
+          for (const f of round) {
+            if (!f.scorers) continue;
+            for (const s of f.scorers) {
+              const key = s.playerName;
+              const existing = map.get(key);
+              if (existing) { existing.goals += s.goals; }
+              else {
+                const team = teams.find(t => t.id === s.teamId);
+                map.set(key, { name: s.playerName, goals: s.goals, team: team?.abbreviation ?? '???' });
+              }
+            }
+          }
+        }
+        return [...map.values()].sort((a, b) => b.goals - a.goals).slice(0, 15);
+      }, [fixtures, teams])} />
 
       <div className={styles.zoneLegend}>
         <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions League

@@ -30,6 +30,7 @@ import {
   generateInjury, generateMatchPenalty, generateCornerGoal, generateMomentumShift,
 } from './commentary';
 import { generateTacticalComment } from './tacticalCommentary';
+import { isDerby } from './rivalries';
 import {
   CYCLE_MINUTES, FIRST_HALF_CYCLES, TOTAL_CYCLES, ET_HALF_CYCLE, ET_END_CYCLE,
   MAX_EVENTS_PER_CYCLE, ATK_CHANCE,
@@ -63,6 +64,7 @@ export interface MatchState {
   gkFormAway: number;
   halftimeHomeScore: number;
   halftimeAwayScore: number;
+  isDerby: boolean;
 }
 
 export function createMatchState(home: Team, away: Team): MatchState {
@@ -84,6 +86,7 @@ export function createMatchState(home: Team, away: Team): MatchState {
     gkFormAway: 1.0,
     halftimeHomeScore: 0,
     halftimeAwayScore: 0,
+    isDerby: isDerby(home.id, away.id),
   };
 }
 
@@ -347,13 +350,15 @@ function resolveCycleFoulsAndCards(
   }
 
   // Cards: intensity increases card risk; árbitro caseiro reduz 15% a chance do mandante
+  // Dérbis: +50% de chance de cartão (jogo mais pegado)
   const existingCard = state.cards.get(fouler.id);
   const homeBias = foulerTeam.id === home.id ? 0.85 : 1.0;
-  if (!existingCard && random() < 0.25 * foulMult * homeBias && cycleEvents < MAX_EVENTS_PER_CYCLE) {
+  const derbyMult = state.isDerby ? 1.5 : 1.0;
+  if (!existingCard && random() < 0.25 * foulMult * homeBias * derbyMult && cycleEvents < MAX_EVENTS_PER_CYCLE) {
     state.events.push({ minute, type: 'yellowCard', description: generateYellowCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
     state.cards.set(fouler.id, 'yellow');
     cycleEvents++;
-  } else if (existingCard === 'yellow' && random() < 0.3 * foulMult && cycleEvents < MAX_EVENTS_PER_CYCLE) {
+  } else if (existingCard === 'yellow' && random() < 0.3 * foulMult * derbyMult && cycleEvents < MAX_EVENTS_PER_CYCLE) {
     state.events.push({ minute, type: 'redCard', description: generateRedCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
     state.cards.set(fouler.id, 'red');
     cycleEvents++;
@@ -426,7 +431,7 @@ function simularBloco(
   random: RandomFn
 ): void {
   if (includeKickoff) {
-    state.events.push({ minute: 0, type: 'kickoff', description: generateKickoff(home.name, away.name), teamId: null });
+    state.events.push({ minute: 0, type: 'kickoff', description: generateKickoff(home.name, away.name, state.isDerby), teamId: null });
     // Tactical insight at kickoff
     state.events.push({
       minute: 1, type: 'possession',

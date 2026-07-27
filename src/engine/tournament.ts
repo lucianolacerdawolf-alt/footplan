@@ -16,6 +16,7 @@ export interface LeagueFixture {
   homeScore?: number;
   awayScore?: number;
   played: boolean;
+  scorers?: Array<{ playerName: string; playerId?: string; teamId: string; goals: number }>;
 }
 
 export interface Standing {

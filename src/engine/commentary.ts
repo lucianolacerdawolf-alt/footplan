@@ -9,7 +9,14 @@ function rng(arr: string[], random: RandomFn = Math.random): string {
 // Kickoff / Halftime / Fulltime
 // =============================================================================
 
-export function generateKickoff(homeName: string, awayName: string): string {
+export function generateKickoff(homeName: string, awayName: string, isDerby?: boolean): string {
+  if (isDerby) {
+    return rng([
+      `🔥 É O CLÁSSICO! ${homeName} e ${awayName} se enfrentam no dérbi!`,
+      `⚡ DÉRBI! ${homeName} contra ${awayName} — vale mais que 3 pontos!`,
+      `🏟️ O CLÁSSICO VAI COMEÇAR! ${homeName} vs ${awayName}!`,
+    ]);
+  }
   return rng([
     `Apito inicial! ${homeName} começa com a bola.`,
     `Começa a partida! ${homeName} troca passes no campo de defesa.`,

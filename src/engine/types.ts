@@ -119,6 +119,8 @@ export interface Team {
   squad: Player[];
   strategy: Strategy;
   morale?: number;          // moral do time (-10 a +10, padrão 0)
+  stadium?: string;         // nome do estádio
+  capacity?: number;        // capacidade do estádio
 }
 
 // =============================================================================

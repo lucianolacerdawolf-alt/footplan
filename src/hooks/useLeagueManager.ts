@@ -7,7 +7,7 @@ import {
 } from '../engine/tournament';
 import { moraleDelta, applyMoraleToTeam } from '../engine/morale';
 import { cloneTeam } from '../utils/teamUtils';
-import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries } from './shared/matchHandlers';
+import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, extractScorers } from './shared/matchHandlers';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
@@ -155,7 +155,7 @@ export function useLeagueManager({
     const userScore = userIsHome ? result.homeScore : result.awayScore;
     const oppScore = userIsHome ? result.awayScore : result.homeScore;
     const delta = moraleDelta(userScore, oppScore);
-    const newFixtures = recordLeagueFixtureResult(leagueState.fixtures, roundIdx, fixtureIdx, result.homeScore, result.awayScore);
+    const newFixtures = recordLeagueFixtureResult(leagueState.fixtures, roundIdx, fixtureIdx, result.homeScore, result.awayScore, extractScorers(result));
     const newTeams = leagueState.teams.map(t => {
       if (t.id !== leagueState.userTeamId) return t;
       const current = t.morale ?? 0;

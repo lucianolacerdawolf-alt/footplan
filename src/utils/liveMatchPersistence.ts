@@ -21,6 +21,7 @@ export interface SerializedMatchState {
   gkFormAway: number;
   halftimeHomeScore: number;
   halftimeAwayScore: number;
+  isDerby: boolean;
 }
 
 export function serializeMatchState(state: MatchState): SerializedMatchState {
@@ -41,6 +42,7 @@ export function serializeMatchState(state: MatchState): SerializedMatchState {
     gkFormAway: state.gkFormAway,
     halftimeHomeScore: state.halftimeHomeScore,
     halftimeAwayScore: state.halftimeAwayScore,
+    isDerby: state.isDerby,
   };
 }
 
@@ -62,6 +64,7 @@ export function deserializeMatchState(s: SerializedMatchState): MatchState {
     gkFormAway: s.gkFormAway,
     halftimeHomeScore: s.halftimeHomeScore,
     halftimeAwayScore: s.halftimeAwayScore,
+    isDerby: s.isDerby,
   };
 }
 

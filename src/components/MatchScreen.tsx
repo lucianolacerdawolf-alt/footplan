@@ -11,6 +11,7 @@ import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchSta
 import { playGoal, playWhistle, playFullTime, playCard } from '../utils/gameAudio';
 import LiveScoreTicker from './LiveScoreTicker';
 import type { LeagueFixture } from '../engine/tournament';
+import { generateStadium } from '../utils/stadiums';
 
 // Janelas de parada em que substituições podem ser feitas — estruturalmente só existem 3
 // (pausa no 1º tempo, intervalo, pausa no 2º tempo), então o limite de "até 3 pausas" já
@@ -575,6 +576,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         <div className="match-status-area">
           {/* Formações antes do início */}
           {!started && (
+            <>
             <div className="formation-text-preview">
               <span className="formation-text-team" style={{ color: home.color }}>{home.abbreviation}</span>
               <span className="formation-text-value">{home.strategy.formation}</span>
@@ -582,6 +584,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
               <span className="formation-text-value">{away.strategy.formation}</span>
               <span className="formation-text-team" style={{ color: away.color }}>{away.abbreviation}</span>
             </div>
+            {(() => { const s = home.stadium ?? generateStadium(home.name, home.id.split('').reduce((a,c) => a + c.charCodeAt(0), 0)); return <div className="formation-text-preview" style={{ fontSize: 12, opacity: 0.5, fontFamily: 'var(--mono)', gap: 4 }}>🏟️ {s.name} · {s.capacity.toLocaleString()} lugares</div>; })()}
+            </>
           )}
 
           {/* Intervalo */}

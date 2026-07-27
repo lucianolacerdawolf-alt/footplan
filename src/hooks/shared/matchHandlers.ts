@@ -7,16 +7,29 @@ import {
 } from '@/engine/tournament';
 import { getStageMatches, updateStageMatch } from '@/engine/bracketHelpers';
 
+export function extractScorers(result: MatchResult): Array<{ playerName: string; playerId?: string; teamId: string; goals: number }> {
+  const map = new Map<string, { playerName: string; playerId?: string; teamId: string; goals: number }>();
+  for (const e of result.events) {
+    if (e.type !== 'goal' || !e.scorer || !e.teamId) continue;
+    const key = `${e.scorer}-${e.teamId}`;
+    const existing = map.get(key);
+    if (existing) { existing.goals++; }
+    else { map.set(key, { playerName: e.scorer, playerId: e.playerId, teamId: e.teamId, goals: 1 }); }
+  }
+  return [...map.values()];
+}
+
 export function recordLeagueFixtureResult(
   fixtures: LeagueFixture[][],
   roundIdx: number,
   fixtureIdx: number,
   homeScore: number,
   awayScore: number,
+  scorers?: LeagueFixture['scorers'],
 ): LeagueFixture[][] {
   return fixtures.map((round, ri) =>
     ri === roundIdx
-      ? round.map((f, fi) => fi === fixtureIdx ? { ...f, homeScore, awayScore, played: true } : f)
+      ? round.map((f, fi) => fi === fixtureIdx ? { ...f, homeScore, awayScore, played: true, scorers } : f)
       : round,
   );
 }

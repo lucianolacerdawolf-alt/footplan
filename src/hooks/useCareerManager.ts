@@ -27,8 +27,9 @@ import { allLeagues, getLeague } from '../data/leagues';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
-import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult } from './shared/matchHandlers';
+import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult, extractScorers } from './shared/matchHandlers';
 import { saveLiveMatchMeta } from '../utils/liveMatchPersistence';
+import { maybeGetCareerEvent } from '../engine/careerEvents';
 import type { CareerState, CareerSeasonHistoryEntry, InboxMessage, TransferRecord } from '../engine/career';
 import {
   isValidCareerState, assignInitialAges, createCareerSeason,
@@ -220,6 +221,19 @@ export function useCareerManager({
     const budget = finances.budget + finances.weeklyIncome + ticketRevenue - wageBill;
 
     const newMessages: InboxMessage[] = [];
+    let eventBudgetDelta = 0;
+    const careerEvent = maybeGetCareerEvent();
+    if (careerEvent) {
+      eventBudgetDelta = careerEvent.budgetDelta;
+      newMessages.push({
+        id: `evt-${Date.now()}`,
+        date: `Temporada ${careerState.currentSeasonYear} · Rodada ${leg.currentRound + 1}`,
+        isRead: false, isMandatory: false,
+        type: 'BOARD_UPDATE' as const,
+        subject: careerEvent.subject,
+        body: careerEvent.body,
+      });
+    }
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${next + 1}`;
     const wasWindowOpen = isTransferWindowOpen(leg.currentRound);
     const isWindowOpenNow = isTransferWindowOpen(next);
@@ -298,7 +312,7 @@ export function useCareerManager({
         ...prev,
         ...freeAgentPoolPatch,
         season: { ...prev.season, league: updatedState },
-        finances: { ...finances, budget, wageBill },
+        finances: { ...finances, budget: budget + eventBudgetDelta, wageBill },
         inbox: newMessages.length > 0 ? [...getInbox(prev), ...newMessages] : prev.inbox,
       };
     });
@@ -313,7 +327,7 @@ export function useCareerManager({
     const userScore = userIsHome ? result.homeScore : result.awayScore;
     const oppScore = userIsHome ? result.awayScore : result.homeScore;
     const delta = moraleDelta(userScore, oppScore);
-    const newFixtures = recordLeagueFixtureResult(leg.fixtures, roundIdx, fixtureIdx, result.homeScore, result.awayScore);
+    const newFixtures = recordLeagueFixtureResult(leg.fixtures, roundIdx, fixtureIdx, result.homeScore, result.awayScore, extractScorers(result));
     const newInjuryMessages: InboxMessage[] = [];
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${leg.currentRound + 1}`;
     const newTeams = leg.teams.map(t => {
