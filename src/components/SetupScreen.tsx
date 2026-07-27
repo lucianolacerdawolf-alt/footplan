@@ -4,7 +4,7 @@ import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 import { isPlayerUnavailable, rebalanceForFormation } from '../engine/squadUtils';
-import { FORMATION_BONUS } from '../engine/matchConfig';
+import { FORMATION_BONUS, getTacticalHardCounter } from '../engine/matchConfig';
 import TacticLabel from './TacticLabel';
 import TacticPresets from './shared/TacticPresets';
 import { useH2H } from '../hooks/useH2H';
@@ -15,6 +15,7 @@ function getTacticalInsight(home: Team, away: Team): string {
   const hf = home.strategy.formation;
   const af = away.strategy.formation;
   const hm = home.strategy.mentality;
+  const hdl = home.strategy.defensiveLine;
   const hb = FORMATION_BONUS[hf];
   const ab = FORMATION_BONUS[af];
 
@@ -28,6 +29,17 @@ function getTacticalInsight(home: Team, away: Team): string {
   if (home.strategy.defensiveLine === 'high') insights.push(`⚠️ Linha alta — risco de bola nas costas`);
   if (home.strategy.defensiveLine === 'low') insights.push(`🧱 Linha baixa — compacto atrás`);
 
+  // Hard counter analysis — reveals the engine's actual tactical counter system
+  const counter = getTacticalHardCounter(hm, hdl, away.strategy.mentality, away.strategy.defensiveLine);
+  if (counter.atkBonus > 1) {
+    const desc = hm === 'counter-attack'
+      ? `💪 Contra-ataque explode linha alta adversária (+${Math.round((counter.atkBonus - 1) * 100)}% ataque)`
+      : `💪 Sua tática tem vantagem sobre a defesa adversária (+${Math.round((counter.atkBonus - 1) * 100)}% ataque)`;
+    insights.push(desc);
+  } else if (counter.defBonus > 1) {
+    insights.push(`🛡️ Retranca neutraliza ataque adversário (+${Math.round((counter.defBonus - 1) * 100)}% defesa)`);
+  }
+
   // Opponent matchup
   if (hb.atk > 1 && ab.def < 1) insights.push(`✅ Seu ataque enfrenta defesa frágil`);
   if (hb.def > 1 && ab.atk > 1) insights.push(`⚠️ Defesa sólida contra ataque forte`);
@@ -35,7 +47,7 @@ function getTacticalInsight(home: Team, away: Team): string {
   if (af === '4-2-3-1' && hf !== '4-2-3-1') insights.push(`ℹ️ ${away.name} tem meio-campo criativo`);
 
   if (insights.length === 0) return `Confronto equilibrado. Sua tática será testada.`;
-  return insights.slice(0, 2).join(' · ');
+  return insights.slice(0, 3).join(' · ');
 }
 
 interface Props {

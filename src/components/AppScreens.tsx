@@ -8,6 +8,7 @@ import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
 import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
+import type { Difficulty } from '../engine/matchConfig';
 import type { CareerState } from '../engine/career';
 import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen } from '../engine/career';
 import { hasMandatoryUnread } from '../engine/inbox';
@@ -115,6 +116,7 @@ export interface AppScreensProps {
   handleLeagueFromHome: () => void;
   handleCupFromHome: () => void;
   handleCareerFromHome: () => void;
+  handleQuickPlay: () => void;
   handleNewCareerFromHub: () => void;
   handleCareerTournamentStart: (userTeam: Team, managerName?: string) => void;
   handleTournamentStart: (userTeam: Team) => void;
@@ -164,6 +166,8 @@ export interface AppScreensProps {
   // ── Misc ──
   clearHistory: () => void;
   setIsTournamentEntry: (v: boolean) => void;
+  difficulty: Difficulty;
+  setDifficulty: (d: Difficulty) => void;
 }
 
 type ScreenRenderer = (props: AppScreensProps) => React.ReactNode;
@@ -231,11 +235,14 @@ const screenMap: Record<Screen, ScreenRenderer> = {
   'home': (p) => (
     <HomeScreen
       onSingleMatch={() => { p.setReturnScreen('select'); p.setScreen('league-select'); }}
+      onQuickPlay={p.handleQuickPlay}
       onLeague={p.handleLeagueFromHome}
       onCareer={p.handleCareerFromHome}
       onCup={p.handleCupFromHome}
       onAchievements={() => p.setScreen('achievements')}
       onOnline={() => p.setScreen('online-lobby')}
+      difficulty={p.difficulty}
+      onSetDifficulty={p.setDifficulty}
     />
   ),
 
@@ -543,10 +550,12 @@ const screenMap: Record<Screen, ScreenRenderer> = {
 
   'season-end': (p) => {
     if (!p.careerState || p.careerState.history.length === 0) return null;
+    const league = getLeague(p.careerState.leagueId);
+    if (!league) return null;
     return (
       <SeasonEndScreen
         entry={p.careerState.history[p.careerState.history.length - 1]}
-        league={getLeague(p.careerState.leagueId)!}
+        league={league}
         newReputation={p.careerState.manager.reputation}
         onContinue={() => p.setScreen('career-hub')}
       />
@@ -558,11 +567,14 @@ function renderHomeFallback(props: AppScreensProps): React.ReactNode {
   return (
     <HomeScreen
       onSingleMatch={() => { props.setReturnScreen('select'); props.setScreen('league-select'); }}
+      onQuickPlay={props.handleQuickPlay}
       onLeague={props.handleLeagueFromHome}
       onCareer={props.handleCareerFromHome}
       onCup={props.handleCupFromHome}
       onAchievements={() => props.setScreen('achievements')}
       onOnline={() => props.setScreen('online-lobby')}
+      difficulty={props.difficulty}
+      onSetDifficulty={props.setDifficulty}
     />
   );
 }

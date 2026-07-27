@@ -6,6 +6,45 @@
 
 import type { Mentality, Intensity, DefensiveLine, Width, Formation } from './types';
 
+export type Difficulty = 'easy' | 'normal' | 'hard';
+
+const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  easy: 'Fácil',
+  normal: 'Normal',
+  hard: 'Difícil',
+};
+
+export function getDifficultyLabel(d: Difficulty): string {
+  return DIFFICULTY_LABELS[d];
+}
+
+/** Multiplicador aplicado ao ataque do time do usuário conforme a dificuldade. */
+export function getDifficultyAttackMultiplier(difficulty: Difficulty): number {
+  switch (difficulty) {
+    case 'easy': return 1.15;
+    case 'hard': return 0.85;
+    default: return 1.0;
+  }
+}
+
+/** Multiplicador de defesa do CPU conforme a dificuldade. */
+export function getDifficultyDefenseMultiplier(difficulty: Difficulty): number {
+  switch (difficulty) {
+    case 'easy': return 0.85;
+    case 'hard': return 1.15;
+    default: return 1.0;
+  }
+}
+
+/** Estado global — definido pelo caller antes de simularPartida. */
+export let CURRENT_DIFFICULTY: Difficulty = 'normal';
+export let CURRENT_USER_TEAM_ID: string | null = null;
+
+export function setMatchDifficulty(difficulty: Difficulty, userTeamId: string | null): void {
+  CURRENT_DIFFICULTY = difficulty;
+  CURRENT_USER_TEAM_ID = userTeamId;
+}
+
 // Probabilidade Elo: garante ao menos 12% de chance para o time mais fraco em cada ataque
 export const MAX_WIN_PROBABILITY = 0.88;
 export const ELO_SCALE_FACTOR = 0.25;

@@ -12,6 +12,7 @@ import { shuffle } from '../engine/rng';
 import { getLeague } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
+import { saveLiveMatchMeta } from '../utils/liveMatchPersistence';
 import type { LeagueDefinition } from '../data/leagues/types';
 
 import type { Screen } from '../types/navigation';
@@ -67,6 +68,7 @@ export function useBracketManager({
     setPendingBracketIdx(matchIdx);
     setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
     setMatchContext('bracket'); setIsKnockout(true);
+    saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx });
     setScreen('setup');
   }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
 
@@ -115,11 +117,17 @@ export function useBracketManager({
     });
   }, [bracketState, pendingBracketStage, pendingBracketIdx, evaluateAchievements, recordH2H, setToastMsg, setBracketState, league?.cpuProfile]);
 
+  const handleRestorePendingBracketMatch = useCallback((stage: PlayableStage, matchIdx: number) => {
+    setPendingBracketStage(stage);
+    setPendingBracketIdx(matchIdx);
+  }, []);
+
   return {
     bracketState, setBracketState,
     pendingBracketStage, pendingBracketIdx,
     handleStartBracket, handlePlayBracketMatch, handleSimulateOtherBracketMatches,
     handleSimulateBracketMatch, handleBracketMatchResult,
     handleEditBracketTactics,
+    handleRestorePendingBracketMatch,
   };
 }

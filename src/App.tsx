@@ -2,12 +2,16 @@ import React, { useState, useCallback, useEffect } from 'react';
 import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { LeagueState, BracketState } from './engine/tournament';
+import type { PlayableStage } from './engine/tournament';
 import { loadLiveMatch, type LiveMatchSnapshot } from './utils/liveMatchPersistence';
 import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
 import { useAchievements } from './hooks/useAchievements';
 import { usePeerConnection } from './hooks/usePeerConnection';
+import { allLeagues } from './data/leagues';
 import type { AchievementEvalInput } from './hooks/useAchievements';
+import type { Difficulty } from './engine/matchConfig';
+import { getDifficultyLabel } from './engine/matchConfig';
 import { useAppShell } from './hooks/useAppShell';
 import { useLeagueManager } from './hooks/useLeagueManager';
 import { useBracketManager } from './hooks/useBracketManager';
@@ -18,6 +22,7 @@ import { useResumePrompt } from './hooks/useResumePrompt';
 import { renderScreen, type AppScreensProps } from './components/AppScreens';
 import Toast from './components/Toast';
 import CareerTabBar, { CAREER_TAB_SCREENS, getCareerTabForScreen } from './components/CareerTabBar';
+import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 function App() {
@@ -30,6 +35,13 @@ function App() {
   const dismissToast = useCallback(() => setToastMsg(null), []);
   const [pendingResumeSnapshot, setPendingResumeSnapshot] = useState<LiveMatchSnapshot | null>(null);
   const [pendingCareerStart, setPendingCareerStart] = useState<{ userTeam: Team; managerName: string } | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty>(() => {
+    try {
+      const stored = localStorage.getItem('fp:difficulty');
+      if (stored === 'easy' || stored === 'normal' || stored === 'hard') return stored;
+    } catch {}
+    return 'normal';
+  });
 
   const {
     screen, setScreen,
@@ -59,6 +71,7 @@ function App() {
     handleStartLeague, handlePlayLeagueMatch, handleSimulateUserLeagueMatch,
     handleSimulateLeagueRound, handleNextLeagueRound, handleLeagueMatchResult,
     handleEditLeagueTactics,
+    handleRestorePendingLeagueFixture,
   } = useLeagueManager({
     league: selectedLeague,
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
@@ -70,6 +83,7 @@ function App() {
     handleStartBracket, handlePlayBracketMatch, handleSimulateOtherBracketMatches,
     handleSimulateBracketMatch, handleBracketMatchResult,
     handleEditBracketTactics,
+    handleRestorePendingBracketMatch,
   } = useBracketManager({
     league: selectedLeague,
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
@@ -102,6 +116,8 @@ function App() {
     handleMarkInboxRead,
     handleMarkAllInboxRead,
     handleMarketRosterSynced,
+    handleRestorePendingCareerLeagueFixture,
+    handleRestorePendingCareerBracketMatch,
   } = useCareerManager({
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     recordH2H, notifySave, setToastMsg,
@@ -135,7 +151,7 @@ function App() {
     setLastResult, matchContext, isTournamentEntry, isCareerMode,
     leagueState: isCareerMode ? (careerState?.season.league ?? null) : leagueState,
     bracketState: isCareerMode ? (careerState?.season.cup ?? null) : bracketState,
-    homeTeam, recordH2H, evaluateAchievements,
+    homeTeam, recordH2H, evaluateAchievements, difficulty,
   });
 
   const { onlineRngRef, handleStartOnlineMatch, handleOnlineMatchResult } = useOnlineMatch({
@@ -144,17 +160,49 @@ function App() {
   });
 
   // ── Restaura partida ao vivo salva (F5) ──────────────────────────────────────
-  // Só existe save pra partidas 'regular' (ver MatchScreen.tsx) — roda uma vez, no
-  // mount do App inteiro.
+  // Funciona pra todos os modos (regular, league, bracket, career) desde que o
+  // MatchScreen tenha salvado o snapshot com o contexto da partida.
   useEffect(() => {
     const snap = loadLiveMatch();
-    if (!snap || snap.matchContext !== 'regular') return;
+    if (!snap) return;
+
+    // Partida online nunca é restaurada — depende de conexão WebRTC viva
+    if (snap.matchContext === 'online') { clearLiveMatch(); return; }
+
+    const isCareerSnap = snap.isCareer === true;
+    if (isCareerSnap) setIsCareerMode(true);
+    setMatchContext(snap.matchContext);
+    setIsKnockout(snap.isKnockout || snap.matchContext === 'bracket');
+
+    // Restaura o estado pendente (fixture/bracket) pra que o resultado da partida
+    // seja gravado corretamente no estado da liga/copa/carreira ao final do jogo.
+    if (snap.matchContext === 'league' && isCareerSnap && snap.matchRoundIdx != null && snap.matchFixtureIdx != null) {
+      handleRestorePendingCareerLeagueFixture(snap.matchRoundIdx, snap.matchFixtureIdx);
+    } else if (snap.matchContext === 'bracket' && isCareerSnap && snap.matchBracketStage != null && snap.matchBracketIdx != null) {
+      handleRestorePendingCareerBracketMatch(snap.matchBracketStage as PlayableStage, snap.matchBracketIdx);
+    } else if (snap.matchContext === 'league' && snap.matchRoundIdx != null && snap.matchFixtureIdx != null) {
+      handleRestorePendingLeagueFixture(snap.matchRoundIdx, snap.matchFixtureIdx);
+    } else if (snap.matchContext === 'bracket' && snap.matchBracketStage != null && snap.matchBracketIdx != null) {
+      handleRestorePendingBracketMatch(snap.matchBracketStage as PlayableStage, snap.matchBracketIdx);
+    }
+
     setHomeTeam(snap.initialHome);
     setAwayTeam(snap.initialAway);
-    setMatchContext('regular');
-    setIsKnockout(false);
     setPendingResumeSnapshot(snap);
     setScreen('match');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ── Restaura modo carreira após F5 ───────────────────────────────────────
+  // Se o usuário estava no modo carreira e não tem partida ao vivo salva,
+  // redireciona direto pro hub em vez de largar na home.
+  useEffect(() => {
+    const snap = loadLiveMatch();
+    if (snap) return; // partida ao vivo tem prioridade
+    if (!careerState) return;
+    if (localStorage.getItem('fp:isCareerMode') !== '1') return;
+    setIsCareerMode(true);
+    setScreen('career-hub');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -195,6 +243,19 @@ function App() {
     setTournamentMode('bracket');
     setScreen('cup-select');
   }, [setTournamentMode, setScreen]);
+
+  // ── Jogo Rápido ──────────────────────────────────────────────────────────
+  const handleQuickPlay = useCallback(() => {
+    const league = allLeagues[Math.floor(Math.random() * allLeagues.length)];
+    const shuffled = [...league.teams].sort(() => Math.random() - 0.5);
+    const home = shuffled[0];
+    const away = shuffled[1];
+    setMatchContext('regular');
+    setIsKnockout(false);
+    setHomeTeam(home);
+    setAwayTeam(away);
+    setScreen('match');
+  }, [setMatchContext, setIsKnockout, setHomeTeam, setAwayTeam, setScreen]);
 
   // ── Modo Carreira: entrada ────────────────────────────────────────────────
   const handleCareerFromHome = useCallback(() => {
@@ -258,6 +319,7 @@ function App() {
     handleLeagueFromHome,
     handleCupFromHome,
     handleCareerFromHome,
+    handleQuickPlay,
     handleNewCareerFromHub,
     handleCareerTournamentStart,
     handleTournamentStart,
@@ -297,6 +359,8 @@ function App() {
     handleMarketRosterSynced,
     clearHistory,
     setIsTournamentEntry,
+    difficulty,
+    setDifficulty,
   };
 
   const content = renderScreen(screen, screenProps);
@@ -315,7 +379,9 @@ function App() {
     <>
       <div style={showCareerTabs ? { paddingBottom: 64 } : undefined}>
         <React.Suspense fallback={<div className="lazy-loading">Carregando…</div>}>
-          <div className="screen-fade" key={screen}>{content}</div>
+          <ErrorBoundary>
+            <div className="screen-fade" key={screen}>{content}</div>
+          </ErrorBoundary>
         </React.Suspense>
       </div>
       {showCareerTabs && (

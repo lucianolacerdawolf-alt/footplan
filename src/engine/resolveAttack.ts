@@ -6,6 +6,8 @@ import {
   FORMATION_BONUS, DEFENSIVE_LINE_COUNTER_RISK,
   WIDTH_ATTACK_BONUS, getTacticalHardCounter,
   MAX_WIN_PROBABILITY, ELO_SCALE_FACTOR,
+  CURRENT_DIFFICULTY, CURRENT_USER_TEAM_ID,
+  getDifficultyAttackMultiplier, getDifficultyDefenseMultiplier,
 } from './matchConfig';
 import {
   effective, getPlayersByPosition, getStarters,
@@ -66,8 +68,18 @@ export function resolveAttack(
   }, 0) * defFormMult * defLineMult * defWidthMult
     * defForm.def * hardCounter.defBonus * rng(0.65, 1.35) + BASE_DEFENSE;
 
+  // Dificuldade: ajusta o balanço ataque/defesa conforme o nível escolhido
+  let difficultyMod = 1.0;
+  if (CURRENT_USER_TEAM_ID) {
+    if (attackingTeam.id === CURRENT_USER_TEAM_ID) {
+      difficultyMod = getDifficultyAttackMultiplier(CURRENT_DIFFICULTY);
+    } else if (defendingTeam.id === CURRENT_USER_TEAM_ID) {
+      difficultyMod = getDifficultyDefenseMultiplier(CURRENT_DIFFICULTY);
+    }
+  }
+
   // Probabilidade Elo: evita dominância absoluta, garante 12% de chance ao time mais fraco
-  const diff = attackPower - defensePower;
+  const diff = (attackPower * difficultyMod) - defensePower;
   const scale = Math.max(1, (attackPower + defensePower) / 2) * ELO_SCALE_FACTOR;
   const rawProb = 1 / (1 + Math.exp(-diff / scale));
   const winProb = Math.min(MAX_WIN_PROBABILITY, Math.max(1 - MAX_WIN_PROBABILITY, rawProb));

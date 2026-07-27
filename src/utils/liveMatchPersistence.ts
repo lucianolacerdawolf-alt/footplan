@@ -66,14 +66,13 @@ export function deserializeMatchState(s: SerializedMatchState): MatchState {
 }
 
 export interface LiveMatchSnapshot {
-  version: 2;
+  version: 3;
   savedAt: number;
   matchContext: 'regular' | 'league' | 'bracket' | 'online';
   isKnockout: boolean;
   initialHome: Team;
   initialAway: Team;
   continueLabel?: string;
-  // Estado de tela do MatchScreen
   home: Team;
   away: Team;
   subsHome: number;
@@ -82,7 +81,6 @@ export interface LiveMatchSnapshot {
   subWindowsAway: Record<SubWindow, number>;
   injuredIds: string[];
   speed: number;
-  // Estado do motor/replay (useMatchSimulation)
   phase: 'idle' | 'simulating' | 'halftime' | 'done';
   isFirstHalf: boolean;
   nextCycle: number;
@@ -94,9 +92,42 @@ export interface LiveMatchSnapshot {
   expelledIds: string[];
   pausesRemaining: number;
   engineState: SerializedMatchState | null;
+  /** Contexto de partida de torneio/carreira — pra restaurar no mesmo fixture após F5. */
+  leagueId?: string;
+  matchRoundIdx?: number;
+  matchFixtureIdx?: number;
+  matchBracketStage?: string;
+  matchBracketIdx?: number;
+  isCareer?: boolean;
 }
 
 export const LIVE_MATCH_KEY = 'fp:liveMatch';
+export const LIVE_MATCH_META_KEY = 'fp:liveMatchMeta';
+
+export interface LiveMatchMeta {
+  matchContext: 'regular' | 'league' | 'bracket' | 'online';
+  roundIdx?: number;
+  fixtureIdx?: number;
+  bracketStage?: string;
+  bracketIdx?: number;
+  isCareer?: boolean;
+}
+
+export function saveLiveMatchMeta(meta: LiveMatchMeta): void {
+  try { localStorage.setItem(LIVE_MATCH_META_KEY, JSON.stringify(meta)); } catch {}
+}
+
+export function loadLiveMatchMeta(): LiveMatchMeta | null {
+  try {
+    const raw = localStorage.getItem(LIVE_MATCH_META_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as LiveMatchMeta;
+  } catch { return null; }
+}
+
+export function clearLiveMatchMeta(): void {
+  try { localStorage.removeItem(LIVE_MATCH_META_KEY); } catch {}
+}
 
 export function saveLiveMatch(snapshot: LiveMatchSnapshot): void {
   try {
@@ -109,7 +140,7 @@ export function loadLiveMatch(): LiveMatchSnapshot | null {
     const raw = localStorage.getItem(LIVE_MATCH_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as LiveMatchSnapshot;
-    if (parsed.version !== 2) return null;
+    if (parsed.version !== 2 && parsed.version !== 3) return null;
     if (parsed.phase === 'done') return null;
     return parsed;
   } catch {

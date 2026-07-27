@@ -28,6 +28,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult } from './shared/matchHandlers';
+import { saveLiveMatchMeta, clearLiveMatchMeta } from '../utils/liveMatchPersistence';
 import type { CareerState, CareerSeasonHistoryEntry, InboxMessage, TransferRecord } from '../engine/career';
 import {
   isValidCareerState, assignInitialAges, createCareerSeason,
@@ -152,6 +153,7 @@ export function useCareerManager({
     setPendingCareerLeagueFixture({ roundIdx, fixtureIdx });
     setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
     setMatchContext('league'); setIsKnockout(false);
+    saveLiveMatchMeta({ matchContext: 'league', roundIdx, fixtureIdx, isCareer: true });
     setScreen('setup');
   }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
 
@@ -360,6 +362,7 @@ export function useCareerManager({
     setPendingCareerBracketIdx(matchIdx);
     setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
     setMatchContext('bracket'); setIsKnockout(true);
+    saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx, isCareer: true });
     setScreen('setup');
   }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
 
@@ -744,75 +747,75 @@ export function useCareerManager({
 
   const handleAdvanceSeason = useCallback(() => {
     if (!careerState) return;
-    // D-13: hard gate — enforced independently of the UI, never trusting the caller.
     if (careerState.season.league.phase !== 'done' || careerState.season.cup.stage !== 'champion') return;
 
-    // PERF: every computation below is a plain local const against the careerState
-    // closure value, computed BEFORE setCareerState is called — never inside a
-    // setCareerState(prev => ...) updater, since progressAllLeagues does real work
-    // (roster regen across 6 leagues) that must run in the ordinary event-handler
-    // phase, not React's synchronous render/commit phase.
-    const standings = computeStandings(careerState.season.league.teams, careerState.season.league.fixtures);
-    const leaguePosition = standings.findIndex(s => s.teamId === careerState.season.league.userTeamId) + 1;
-    const totalTeams = careerState.season.league.teams.length;
-    const leagueChampion = leaguePosition === 1;
-    const cupChampion = careerState.season.cup.championId === careerState.season.league.userTeamId;
-    const cupResult = deriveCupResult(careerState.season.cup, careerState.season.league.userTeamId);
-    const reputationDelta = computeReputationDelta({ leagueChampion, cupChampion, leaguePosition, totalTeams });
-    const newReputation = Math.max(0, Math.min(100, careerState.manager.reputation + reputationDelta));
+    try {
+      const standings = computeStandings(careerState.season.league.teams, careerState.season.league.fixtures);
+      const leaguePosition = standings.findIndex(s => s.teamId === careerState.season.league.userTeamId) + 1;
+      const totalTeams = careerState.season.league.teams.length;
+      const leagueChampion = leaguePosition === 1;
+      const cupChampion = careerState.season.cup.championId === careerState.season.league.userTeamId;
+      const cupResult = deriveCupResult(careerState.season.cup, careerState.season.league.userTeamId);
+      const reputationDelta = computeReputationDelta({ leagueChampion, cupChampion, leaguePosition, totalTeams });
+      const newReputation = Math.max(0, Math.min(100, careerState.manager.reputation + reputationDelta));
 
-    const record = computeUserSeasonRecord(careerState.season.league);
-    const finances = getFinances(careerState);
-    const budgetAtStart = careerState.season.budgetAtSeasonStart ?? finances.budget;
-    // Prize Money: premiação por colocação na liga + resultado na copa, creditada ao
-    // fechar a temporada — aparece no budgetDelta da PRÓXIMA entrada de histórico,
-    // já que budgetAtSeasonStart desta transição é o budget ANTES do prêmio.
-    const leaguePrize = getLeaguePrizeMoney(careerState.leagueId, leaguePosition);
-    const cupPrize = getCupPrizeMoney(careerState.leagueId, cupResult);
+      const record = computeUserSeasonRecord(careerState.season.league);
+      const finances = getFinances(careerState);
+      const budgetAtStart = careerState.season.budgetAtSeasonStart ?? finances.budget;
+      const leaguePrize = getLeaguePrizeMoney(careerState.leagueId, leaguePosition);
+      const cupPrize = getCupPrizeMoney(careerState.leagueId, cupResult);
 
-    const entry: CareerSeasonHistoryEntry = {
-      year: careerState.currentSeasonYear,
-      leagueId: careerState.leagueId,
-      leagueChampionId: standings[0].teamId,
-      userLeaguePosition: leaguePosition,
-      cupResult,
-      tradesUsed: 0,
-      reputationDelta,
-      userTopScorer: deriveTopScorer(careerState.season.userGoalScorers ?? {}),
-      userWins: record.wins,
-      userDraws: record.draws,
-      userLosses: record.losses,
-      userGoalsFor: record.goalsFor,
-      userGoalsAgainst: record.goalsAgainst,
-      managerOfSeason: isManagerOfSeason(leaguePosition, cupResult),
-      budgetDelta: finances.budget - budgetAtStart,
-    };
+      const entry: CareerSeasonHistoryEntry = {
+        year: careerState.currentSeasonYear,
+        leagueId: careerState.leagueId,
+        leagueChampionId: standings[0].teamId,
+        userLeaguePosition: leaguePosition,
+        cupResult,
+        tradesUsed: 0,
+        reputationDelta,
+        userTopScorer: deriveTopScorer(careerState.season.userGoalScorers ?? {}),
+        userWins: record.wins,
+        userDraws: record.draws,
+        userLosses: record.losses,
+        userGoalsFor: record.goalsFor,
+        userGoalsAgainst: record.goalsAgainst,
+        managerOfSeason: isManagerOfSeason(leaguePosition, cupResult),
+        budgetDelta: finances.budget - budgetAtStart,
+      };
 
-    // D-01, reapplied at every season transition: ALL 6 leagues progress, not just
-    // this career's league.
-    const evolvedRosters = progressAllLeagues(careerState.rosters);
-    const leagueDef = getLeague(careerState.leagueId)!;
-    // Atributos mudaram na evolução da temporada — revaloriza o elenco da liga do
-    // usuário (mesmo escopo D-04 do início de carreira) antes de montar a próxima.
-    evolvedRosters[careerState.leagueId] = evolvedRosters[careerState.leagueId].map(assignMarketValues);
-    const evolvedUserTeam = evolvedRosters[careerState.leagueId].find(t => t.id === careerState.season.league.userTeamId)!;
-    const { league: nextLeague, cup: nextCup } = createCareerSeason(evolvedUserTeam, evolvedRosters[careerState.leagueId], leagueDef);
+      const evolvedRosters = progressAllLeagues(careerState.rosters);
+      const leagueDef = getLeague(careerState.leagueId);
+      if (!leagueDef) {
+        setToastMsg('Erro ao avançar temporada: liga não encontrada. Recarregue a página.');
+        return;
+      }
+      evolvedRosters[careerState.leagueId] = evolvedRosters[careerState.leagueId].map(assignMarketValues);
+      const evolvedUserTeam = evolvedRosters[careerState.leagueId].find(t => t.id === careerState.season.league.userTeamId);
+      if (!evolvedUserTeam) {
+        setToastMsg('Erro ao avançar temporada: time do usuário não encontrado.');
+        return;
+      }
+      const { league: nextLeague, cup: nextCup } = createCareerSeason(evolvedUserTeam, evolvedRosters[careerState.leagueId], leagueDef);
 
-    setCareerState({
-      ...careerState,
-      manager: { ...careerState.manager, reputation: newReputation },
-      currentSeasonYear: careerState.currentSeasonYear + 1,
-      season: {
-        league: nextLeague, cup: nextCup, tradesUsedThisSeason: 0,
-        budgetAtSeasonStart: finances.budget, userGoalScorers: {},
-      },
-      rosters: evolvedRosters,
-      history: [...careerState.history, entry],
-      finances: { ...finances, budget: finances.budget + leaguePrize + cupPrize, wageBill: computeWageBill(evolvedUserTeam) },
-      freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(careerState), careerState.currentSeasonYear + 1),
-    });
-    setScreen('season-end');
-  }, [careerState, setCareerState, setScreen]);
+      setCareerState({
+        ...careerState,
+        manager: { ...careerState.manager, reputation: newReputation },
+        currentSeasonYear: careerState.currentSeasonYear + 1,
+        season: {
+          league: nextLeague, cup: nextCup, tradesUsedThisSeason: 0,
+          budgetAtSeasonStart: finances.budget, userGoalScorers: {},
+        },
+        rosters: evolvedRosters,
+        history: [...careerState.history, entry],
+        finances: { ...finances, budget: finances.budget + leaguePrize + cupPrize, wageBill: computeWageBill(evolvedUserTeam) },
+        freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(careerState), careerState.currentSeasonYear + 1),
+      });
+      setScreen('season-end');
+    } catch (err) {
+      console.error('handleAdvanceSeason crashed:', err);
+      setToastMsg('Erro inesperado ao avançar temporada. Tente recarregar a página.');
+    }
+  }, [careerState, setCareerState, setScreen, setToastMsg]);
 
   // Só a liga da carreira ativa sincroniza automaticamente (D-04, respeita o rate limit
   // das APIs). Ao navegar pra outra liga no Mercado, TransferMarketScreen sincroniza essa
@@ -822,6 +825,17 @@ export function useCareerManager({
   const handleMarketRosterSynced = useCallback((leagueId: string, teams: Team[]) => {
     setCareerState(prev => prev ? { ...prev, rosters: { ...prev.rosters, [leagueId]: teams } } : prev);
   }, [setCareerState]);
+
+  // Exposed for F5 restore — restores pending fixture info from a LiveMatchSnapshot so
+  // that the match result can be recorded correctly after the restored match ends.
+  const handleRestorePendingCareerLeagueFixture = useCallback((roundIdx: number, fixtureIdx: number) => {
+    setPendingCareerLeagueFixture({ roundIdx, fixtureIdx });
+  }, []);
+
+  const handleRestorePendingCareerBracketMatch = useCallback((stage: PlayableStage, matchIdx: number) => {
+    setPendingCareerBracketStage(stage);
+    setPendingCareerBracketIdx(matchIdx);
+  }, []);
 
   const handleMarkInboxRead = useCallback((messageId: string) => {
     setCareerState(prev => {
@@ -865,5 +879,7 @@ export function useCareerManager({
     handleMarkInboxRead,
     handleMarkAllInboxRead,
     handleMarketRosterSynced,
+    handleRestorePendingCareerLeagueFixture,
+    handleRestorePendingCareerBracketMatch,
   };
 }

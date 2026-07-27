@@ -7,7 +7,8 @@ import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engi
 import TacticLabel from './TacticLabel';
 import TacticPresets from './shared/TacticPresets';
 import type { SubWindow, LiveMatchSnapshot } from '../utils/liveMatchPersistence';
-import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchState } from '../utils/liveMatchPersistence';
+import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchState, loadLiveMatchMeta, clearLiveMatchMeta } from '../utils/liveMatchPersistence';
+import { playGoal, playWhistle, playFullTime, playCard } from '../utils/gameAudio';
 
 // Janelas de parada em que substituições podem ser feitas — estruturalmente só existem 3
 // (pausa no 1º tempo, intervalo, pausa no 2º tempo), então o limite de "até 3 pausas" já
@@ -55,15 +56,9 @@ interface Props {
   online?: OnlineProps;
   continueLabel?: string;
   onContinue?: () => void;
-  /** 'regular'|'league'|'bracket'|'online' — só partidas 'regular' são persistidas
-   *  (ver comentário na seção de persistência mais abaixo). */
   matchContext?: 'regular' | 'league' | 'bracket' | 'online';
-  /** Qual lado o usuário controla em modos league/bracket (home ou away da partida). */
   userSide?: 'home' | 'away';
-  /** Snapshot de uma partida salva (F5) pra restaurar em vez de começar do zero. */
   resumeSnapshot?: LiveMatchSnapshot | null;
-  /** Chamado uma vez, logo após consumir o resumeSnapshot no mount — o App usa isso
-   *  pra não tentar restaurar de novo se essa tela remontar (ex: nova partida). */
   onResumeConsumed?: () => void;
   gameMode?: GameMode;
 }
@@ -120,6 +115,20 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [injuredIds, setInjuredIds] = useState<string[]>(() => resumeSnapshot?.injuredIds ?? []);
   const [injuryToast, setInjuryToast] = useState<string | null>(null);
   const injuryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Audio feedback — trigger sounds on new replay events (goal, cards, kickoff)
+  const audioEventIdxRef = useRef(0);
+  const [goalAnimKey, setGoalAnimKey] = useState(0);
+  useEffect(() => {
+    for (let i = audioEventIdxRef.current; i < replayEvents.length; i++) {
+      const e = replayEvents[i];
+      if (e.type === 'goal') { playGoal(); setGoalAnimKey(k => k + 1); }
+      else if (e.type === 'kickoff') playWhistle();
+      else if (e.type === 'yellowCard' || e.type === 'redCard') playCard();
+    }
+    audioEventIdxRef.current = replayEvents.length;
+    if (phase === 'done') playFullTime();
+  }, [replayEvents, phase]);
 
   const handleInjury = useCallback((playerId: string) => {
     setInjuredIds(prev => prev.includes(playerId) ? prev : [...prev, playerId]);
@@ -288,9 +297,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   }, [pausesRemaining, consumePause, online, sendPauseGame]);
 
   const handleBack = useCallback(() => {
-    if (matchContext === 'regular') clearLiveMatch();
+    clearLiveMatch();
+    clearLiveMatchMeta();
     onBack();
-  }, [matchContext, onBack]);
+  }, [onBack]);
 
   const handlePenaltyComplete = useCallback((penaltyResult: PenaltyResult) => {
     setShowPenaltyShootout(false);
@@ -410,20 +420,19 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     setShowPenaltyShootout(true);
   }, [phase, result, addMatch, engineStateRef]);
 
-  // Persistência de sessão — salva a partida ao vivo pra sobreviver a um F5. Escopo
-  // deliberadamente limitado a partidas 'regular' (Partida Única, CPU ou 2 jogadores
-  // locais): liga/copa dependem de estado adicional (ex. qual rodada/confronto exato
-  // estava em jogo) que não é persistido hoje, e partidas online dependem da conexão
-  // WebRTC — tentar restaurar essas duas categorias abriria mais riscos do que valeria.
+  // Persistência de sessão — salva a partida ao vivo pra sobreviver a um F5.
+  // Funciona pra todos os modos: Partida Única, Liga, Copa, e Modo Carreira.
+  // Partidas online são salvas mas só restauram se o peer WebRTC continuar ativo.
   useEffect(() => {
-    if (matchContext !== 'regular') return;
-    if (phase === 'done') { clearLiveMatch(); return; }
+    if (matchContext === 'online') return;
+    if (phase === 'done') { clearLiveMatch(); clearLiveMatchMeta(); return; }
     if (!started || phase === 'idle' || !engineStateRef.current) return;
 
+    const meta = loadLiveMatchMeta();
     const snapshot: LiveMatchSnapshot = {
-      version: 2,
+      version: 3,
       savedAt: Date.now(),
-      matchContext: 'regular',
+      matchContext: matchContext ?? 'regular',
       isKnockout: !!isKnockout,
       initialHome, initialAway,
       continueLabel,
@@ -435,6 +444,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       clockSeconds, homeScore, awayScore, replayEvents,
       fatigueMap, expelledIds, pausesRemaining,
       engineState: serializeMatchState(engineStateRef.current),
+      matchRoundIdx: meta?.roundIdx,
+      matchFixtureIdx: meta?.fixtureIdx,
+      matchBracketStage: meta?.bracketStage,
+      matchBracketIdx: meta?.bracketIdx,
+      isCareer: meta?.isCareer,
     };
     saveLiveMatch(snapshot);
   }, [
@@ -481,14 +495,14 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       <div className="match-scorebar">
         <div className="score-side home" style={{ borderLeftColor: home.color }}>
           <span className="score-label" style={{ color: home.color }}>{home.abbreviation}</span>
-          <span className="score-num">{started ? homeScore : '–'}</span>
+          <span className="score-num" key={`h-${goalAnimKey}`}>{started ? homeScore : '–'}</span>
         </div>
         <div className="score-clock">
           <span className="clock-num">{String(Math.floor(clockSeconds / 60)).padStart(2, '0')}:{String(clockSeconds % 60).padStart(2, '0')}</span>
           <span className="clock-label">MIN</span>
         </div>
         <div className="score-side away" style={{ borderRightColor: away.color }}>
-          <span className="score-num">{started ? awayScore : '–'}</span>
+          <span className="score-num" key={`a-${goalAnimKey}`}>{started ? awayScore : '–'}</span>
           <span className="score-label" style={{ color: away.color }}>{away.abbreviation}</span>
         </div>
       </div>

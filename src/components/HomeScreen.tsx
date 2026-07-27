@@ -1,15 +1,22 @@
+import type { Difficulty } from '../engine/matchConfig';
+import { getDifficultyLabel } from '../engine/matchConfig';
 import styles from './HomeScreen.module.css';
+
+const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
 
 interface Props {
   onSingleMatch: () => void;
+  onQuickPlay: () => void;
   onLeague: () => void;
   onCareer: () => void;
   onCup: () => void;
   onAchievements: () => void;
   onOnline: () => void;
+  difficulty: Difficulty;
+  onSetDifficulty: (d: Difficulty) => void;
 }
 
-export default function HomeScreen({ onSingleMatch, onLeague, onCareer, onCup, onAchievements, onOnline }: Props) {
+export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, difficulty, onSetDifficulty }: Props) {
   return (
     <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
@@ -19,6 +26,15 @@ export default function HomeScreen({ onSingleMatch, onLeague, onCareer, onCup, o
       </header>
 
       <div className={styles.modes}>
+        <button className={`${styles.modeCard} ${styles.quickPlayCard}`} onClick={onQuickPlay}>
+          <span className={styles.modeIcon}>⚡</span>
+          <div className={styles.modeText}>
+            <span className={styles.modeName}>Jogo Rápido</span>
+            <span className={styles.modeDesc}>Times aleatórios, táticas padrão — vai direto pro jogo</span>
+          </div>
+          <span className={styles.modeArrow}>›</span>
+        </button>
+
         <button className={styles.modeCard} onClick={onOnline}>
           <span className={styles.modeIcon}>🌐</span>
           <div className={styles.modeText}>
@@ -72,6 +88,24 @@ export default function HomeScreen({ onSingleMatch, onLeague, onCareer, onCup, o
           </div>
           <span className={styles.modeArrow}>›</span>
         </button>
+      </div>
+
+      <div className={styles.difficultyBar}>
+        <span className={styles.difficultyLabel}>Dificuldade</span>
+        <div className={styles.difficultyBtns}>
+          {DIFFICULTIES.map(d => (
+            <button
+              key={d}
+              className={`${styles.diffBtn} ${d === difficulty ? styles.diffActive : ''}`}
+              onClick={() => {
+                onSetDifficulty(d);
+                try { localStorage.setItem('fp:difficulty', d); } catch {}
+              }}
+            >
+              {getDifficultyLabel(d)}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

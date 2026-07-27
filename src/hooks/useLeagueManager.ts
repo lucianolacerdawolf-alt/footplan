@@ -11,6 +11,7 @@ import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries } from './
 import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
 import type { AchievementEvalInput } from './useAchievements';
+import { saveLiveMatchMeta } from '../utils/liveMatchPersistence';
 
 import type { Screen } from '../types/navigation';
 
@@ -82,6 +83,7 @@ export function useLeagueManager({
     setPendingLeagueFixture({ roundIdx, fixtureIdx });
     setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
     setMatchContext('league'); setIsKnockout(false);
+    saveLiveMatchMeta({ matchContext: 'league', roundIdx, fixtureIdx });
     setScreen('setup');
   }, [leagueState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
 
@@ -174,11 +176,16 @@ export function useLeagueManager({
     });
   }, [leagueState, pendingLeagueFixture, evaluateAchievements, recordH2H, setToastMsg, setLeagueState]);
 
+  const handleRestorePendingLeagueFixture = useCallback((roundIdx: number, fixtureIdx: number) => {
+    setPendingLeagueFixture({ roundIdx, fixtureIdx });
+  }, []);
+
   return {
     leagueState, setLeagueState,
     pendingLeagueFixture,
     handleStartLeague, handlePlayLeagueMatch, handleSimulateUserLeagueMatch,
     handleSimulateLeagueRound, handleNextLeagueRound, handleLeagueMatchResult,
     handleEditLeagueTactics,
+    handleRestorePendingLeagueFixture,
   };
 }
