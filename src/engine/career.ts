@@ -7,6 +7,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { calculateMarketValue, computeWageBill } from './transferMarket';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
+import { computeMerchRevenue, getStartingTier, generateSponsor } from './sponsors';
 
 // =============================================================================
 // TIPOS — Modo Carreira
@@ -42,9 +43,10 @@ export interface CareerSeasonHistoryEntry {
 }
 
 export interface ClubFinances {
-  budget: number;       // saldo pra transferências
-  wageBill: number;     // soma dos salários semanais do elenco titular+banco
-  weeklyIncome: number; // renda de bilheteria + patrocínio, creditada a cada rodada
+  budget: number;
+  wageBill: number;
+  weeklyIncome: number;
+  merchRevenue?: number; // renda semanal de merchandising (camisas, etc.)
 }
 
 export interface InboxMessage {
@@ -101,6 +103,8 @@ export interface CareerState {
   // O usuário não escolhe o comprador nem o preço, só decide aceitar/recusar a
   // oferta que chegar na caixa de entrada.
   transferListPlayerIds?: string[];
+  sponsorTier?: string;   // 'local' | 'regional' | 'national' | 'global'
+  sponsorName?: string;   // nome da marca na camisa
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };
@@ -128,6 +132,14 @@ export function getFinances(state: CareerState): ClubFinances {
   const userTeam = state.rosters[state.leagueId]?.find(t => t.id === state.season.league.userTeamId);
   const wageBill = userTeam ? computeWageBill(userTeam) : 0;
   return { ...DEFAULT_FINANCES, wageBill };
+}
+
+export function getSponsorTier(state: CareerState): string {
+  return state.sponsorTier ?? getStartingTier(state.leagueId);
+}
+
+export function getSponsorName(state: CareerState): string {
+  return state.sponsorName ?? generateSponsor(state.leagueId, state.season.league.userTeamId, getStartingTier(state.leagueId)).name;
 }
 
 export function getInbox(state: CareerState): InboxMessage[] {

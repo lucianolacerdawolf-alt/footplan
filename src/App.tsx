@@ -117,6 +117,7 @@ function App() {
     handleMarketRosterSynced,
     handleRestorePendingCareerLeagueFixture,
     handleRestorePendingCareerBracketMatch,
+    handleRenegotiateSponsor,
   } = useCareerManager({
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     recordH2H, notifySave, setToastMsg,

@@ -30,11 +30,13 @@ import { useCloudSave } from './useCloudSave';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult, extractScorers } from './shared/matchHandlers';
 import { saveLiveMatchMeta } from '../utils/liveMatchPersistence';
 import { maybeGetCareerEvent } from '../engine/careerEvents';
+import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, getStartingTier, computeMerchRevenue } from '../engine/sponsors';
 import type { CareerState, CareerSeasonHistoryEntry, InboxMessage, TransferRecord } from '../engine/career';
 import {
   isValidCareerState, assignInitialAges, createCareerSeason,
   evaluateTradeOffer, computeReputationDelta, progressAllLeagues, deriveCupResult,
   getFinances, getInbox, getFreeAgentPool, getTransferHistory, getTransferList, isTransferWindowOpen,
+  getSponsorTier, getSponsorName,
 } from '../engine/career';
 
 import type { Screen } from '../types/navigation';
@@ -120,6 +122,8 @@ export function useCareerManager({
     const { league, cup } = createCareerSeason(userTeamWithValues, rosters[leagueDef.id], leagueDef);
     const budget = initialBudget(leagueDef.id);
     const trimmedName = managerName.trim().slice(0, 24) || 'Técnico';
+    const startingTier = getStartingTier(leagueDef.id);
+    const sponsor = generateSponsor(leagueDef.id, userTeam.id, startingTier);
     const newState: CareerState = {
       version: 1,
       leagueId: leagueDef.id,
@@ -131,6 +135,8 @@ export function useCareerManager({
       finances: { budget, wageBill: computeWageBill(userTeamWithValues), weeklyIncome: computeWeeklyIncome(leagueDef.id) },
       inbox: [createWelcomeMessage(trimmedName, budget, 'Temporada 1')],
       freeAgentPool: generateFreeAgentPool(),
+      sponsorTier: startingTier,
+      sponsorName: sponsor.name,
     };
     setCareerState(newState);
     setScreen('career-hub');
@@ -218,7 +224,7 @@ export function useCareerManager({
     // pra `next`) é o jogo já disputado — creditar se foi em casa.
     const justPlayedFixture = leg.fixtures[leg.currentRound].find(f => f.homeTeamId === leg.userTeamId || f.awayTeamId === leg.userTeamId);
     const ticketRevenue = justPlayedFixture?.homeTeamId === leg.userTeamId ? getTicketRevenue(careerState.leagueId) : 0;
-    const budget = finances.budget + finances.weeklyIncome + ticketRevenue - wageBill;
+    const budget = finances.budget + finances.weeklyIncome + ticketRevenue + (finances.merchRevenue ?? 0) - wageBill;
 
     const newMessages: InboxMessage[] = [];
     let eventBudgetDelta = 0;
@@ -811,6 +817,30 @@ export function useCareerManager({
       }
       const { league: nextLeague, cup: nextCup } = createCareerSeason(evolvedUserTeam, evolvedRosters[careerState.leagueId], leagueDef);
 
+      // Sponsor upgrade/downgrade baseado na reputação final da temporada
+      let nextSponsorTier: SponsorTier = (getSponsorTier(careerState) as SponsorTier);
+      let nextSponsorName = getSponsorName(careerState);
+      const currentTierMin = getSponsorMinReputation(nextSponsorTier);
+      const nextTierUp = getNextTierUp(nextSponsorTier);
+      const nextTierDown = getNextTierDown(nextSponsorTier);
+
+      if (nextTierDown && newReputation < currentTierMin) {
+        nextSponsorTier = nextTierDown;
+        const downgrade = generateSponsor(careerState.leagueId, careerState.season.league.userTeamId + '-down', nextSponsorTier);
+        nextSponsorName = downgrade.name;
+        setToastMsg(`📉 Patrocinador rebaixado para ${getSponsorLabel(nextSponsorTier)}: ${nextSponsorName}`);
+      } else if (nextTierUp && newReputation >= getSponsorMinReputation(nextTierUp)) {
+        nextSponsorTier = nextTierUp;
+        const upgrade = generateSponsor(careerState.leagueId, careerState.season.league.userTeamId + '-up', nextSponsorTier);
+        nextSponsorName = upgrade.name;
+        setToastMsg(`📈 Novo patrocinador ${getSponsorLabel(nextSponsorTier)}: ${nextSponsorName}!`);
+      }
+
+      // Recalcula weeklyIncome com o multiplicador do novo tier
+      const baseIncome = computeWeeklyIncome(careerState.leagueId);
+      const sponsoredIncome = Math.round(baseIncome * getSponsorMultiplier(nextSponsorTier));
+      const merch = computeMerchRevenue(newReputation);
+
       setCareerState({
         ...careerState,
         manager: { ...careerState.manager, reputation: newReputation },
@@ -821,8 +851,10 @@ export function useCareerManager({
         },
         rosters: evolvedRosters,
         history: [...careerState.history, entry],
-        finances: { ...finances, budget: finances.budget + leaguePrize + cupPrize, wageBill: computeWageBill(evolvedUserTeam) },
+        finances: { budget: finances.budget + leaguePrize + cupPrize, wageBill: computeWageBill(evolvedUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
         freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(careerState), careerState.currentSeasonYear + 1),
+        sponsorTier: nextSponsorTier,
+        sponsorName: nextSponsorName,
       });
       setScreen('season-end');
     } catch (err) {
@@ -830,6 +862,34 @@ export function useCareerManager({
       setToastMsg('Erro inesperado ao avançar temporada. Tente recarregar a página.');
     }
   }, [careerState, setCareerState, setScreen, setToastMsg]);
+
+  const handleRenegotiateSponsor = useCallback(() => {
+    if (!careerState) return;
+    const current = getSponsorTier(careerState) as SponsorTier;
+    const next = getNextTierUp(current);
+    if (!next) {
+      setToastMsg('Seu patrocínio já é Global — o nível máximo!');
+      return;
+    }
+    const minRep = getSponsorMinReputation(next);
+    if (careerState.manager.reputation < minRep) {
+      setToastMsg(`Precisa de reputação ${minRep} para patrocínio ${getSponsorLabel(next)}. Atual: ${careerState.manager.reputation}`);
+      return;
+    }
+    const newSponsor = generateSponsor(careerState.leagueId, careerState.season.league.userTeamId + '-neg', next);
+    setCareerState(prev => {
+      if (!prev) return prev;
+      const baseIncome = computeWeeklyIncome(prev.leagueId);
+      const sponsoredIncome = Math.round(baseIncome * getSponsorMultiplier(next));
+      return {
+        ...prev,
+        sponsorTier: next,
+        sponsorName: newSponsor.name,
+        finances: prev.finances ? { ...prev.finances, weeklyIncome: sponsoredIncome } : prev.finances,
+      };
+    });
+    setToastMsg(`📈 Patrocínio renegociado! Novo tier: ${getSponsorLabel(next)} — ${newSponsor.name}`);
+  }, [careerState, setCareerState, setToastMsg]);
 
   // Só a liga da carreira ativa sincroniza automaticamente (D-04, respeita o rate limit
   // das APIs). Ao navegar pra outra liga no Mercado, TransferMarketScreen sincroniza essa
@@ -895,5 +955,6 @@ export function useCareerManager({
     handleMarketRosterSynced,
     handleRestorePendingCareerLeagueFixture,
     handleRestorePendingCareerBracketMatch,
+    handleRenegotiateSponsor,
   };
 }

@@ -1,5 +1,6 @@
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen } from '../engine/career';
+import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances } from '../engine/career';
+import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
 import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
@@ -18,6 +19,7 @@ interface Props {
   onMarkInboxRead: (id: string) => void;
   onAcceptTransferOffer: (id: string) => void;
   onRejectTransferOffer: (id: string) => void;
+  onRenegotiateSponsor: () => void;
 }
 
 const CUP_STAGE_LABELS: Record<string, string> = {
@@ -78,16 +80,18 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor }: Props) {
   const inbox = getInbox(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
   const userPosition = standings.findIndex(s => s.teamId === state.season.league.userTeamId) + 1;
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
   const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
-
   const nextMatch = determineNextMatch(state);
-
   const isWindowOpen = isTransferWindowOpen(state.season.league.currentRound);
+  const sponsorTier = getSponsorTier(state) as SponsorTier;
+  const sponsorName = getSponsorName(state);
+  const finances = getFinances(state);
+  const nextTier = getNextTierUp(sponsorTier);
 
   return (
     <div className={`${styles.screen} app-screen`}>
@@ -98,6 +102,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
         <div className={styles.headerTitle}>
           <h1 className={styles.title}>{state.manager.name}</h1>
           <span className={styles.progress}>Reputação: {state.manager.reputation}</span>
+          <span className={styles.progress} style={{ color: 'var(--accent)', opacity: 0.65 }}>👕 {sponsorName} · {getSponsorLabel(sponsorTier)}</span>
         </div>
       </div>
 
@@ -131,7 +136,24 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
             {isWindowOpen ? 'Aberta' : 'Fechada'}
           </span>
         </div>
+        {nextTier && (
+          <div className={styles.summaryRow}>
+            <span className={styles.summaryLabel}>Próximo patrocínio</span>
+            <span className={styles.summaryValue} style={{ color: 'var(--accent)' }}>
+              {getSponsorLabel(nextTier)} · reputação {state.manager.reputation} meta
+            </span>
+          </div>
+        )}
       </div>
+
+      <button
+        className={styles.advanceBtn}
+        style={{ fontSize: 11, padding: '6px 14px', marginTop: 4 }}
+        onClick={onRenegotiateSponsor}
+        disabled={!nextTier}
+      >
+        📋 Renegociar Patrocínio{nextTier ? ` (→ ${getSponsorLabel(nextTier)})` : ' (já é Global)'}
+      </button>
 
       {nextMatch && !seasonReady && (
         <div className={styles.nextMatchCard}>

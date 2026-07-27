@@ -78,6 +78,24 @@ const EVENTS: CareerEvent[] = [
     body: 'Um dos titulares bateu na porta da diretoria pedindo revisão salarial.',
     budgetDelta: -250_000,
   },
+  {
+    id: 'sponsor-offer',
+    subject: '🤝 Marca Concorrente',
+    body: 'Uma marca maior quer estampar a camisa — oferece bônus de assinatura se você fechar agora.',
+    budgetDelta: 900_000,
+  },
+  {
+    id: 'performance-clause',
+    subject: '📊 Cláusula de Performance',
+    body: 'O patrocinador ativou a cláusula de bônus por bons resultados recentes.',
+    budgetDelta: 500_000,
+  },
+  {
+    id: 'sponsor-scandal',
+    subject: '📰 Escândalo do Patrocinador',
+    body: 'A marca foi envolvida em polêmica — a imagem do clube sofre e a receita cai temporariamente.',
+    budgetDelta: -450_000,
+  },
 ];
 
 /** Chance de evento a cada rodada da carreira: 25% */

@@ -161,6 +161,7 @@ export interface AppScreensProps {
   handleRejectTransferOffer: (messageId: string) => void;
   handleAdvanceSeason: () => void;
   handleMarkInboxRead: (id: string) => void;
+  handleRenegotiateSponsor: () => void;
   handleMarkAllInboxRead: () => void;
 
   // ── Misc ──
