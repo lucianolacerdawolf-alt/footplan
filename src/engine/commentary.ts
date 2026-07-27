@@ -145,12 +145,17 @@ export function generateGoal(teamName: string, scorer: Player, minute: number, s
     return rng([
       `⚽ GOOOOOOL NOS ACRÉSCIMOS! ${scorer.name} decide para ${teamName}! ${score}`,
       `⚽ GOL AGONIZANTE! ${scorer.name} (${teamName}) nos instantes finais! ${score}`,
+      `⚽ INACREDITÁVEL! ${scorer.name} marca no ÚLTIMO minuto! ${score}`,
+      `⚽ GOL NO FIM! ${scorer.name} explode o estádio para ${teamName}! ${score}`,
+      `⚽ DRAMA NOS ACRÉSCIMOS! ${scorer.name} vira o jogo para ${teamName}! ${score}`,
     ]);
   }
   if (minute >= 75) {
     return rng([
       `⚽ GOOOOOOL! ${scorer.name} marca nos minutos finais para ${teamName}! ${score}`,
       `⚽ GOL! ${scorer.name} balança as redes e muda o jogo! ${score}`,
+      `⚽ GOL DECISIVO! ${scorer.name} coloca ${teamName} na frente! ${score}`,
+      `⚽ NA RETA FINAL! ${scorer.name} explode pra ${teamName}! ${score}`,
     ]);
   }
   return rng([
@@ -159,6 +164,17 @@ export function generateGoal(teamName: string, scorer: Player, minute: number, s
     `⚽ É GOL! ${scorer.name} finaliza com precisão para ${teamName}! ${score}`,
     `⚽ GOLAAAAÇO! ${scorer.name} (${teamName}) não perdoa! ${score}`,
     `⚽ GOL! ${scorer.name} aproveita e manda pro fundo da rede! ${score}`,
+    `⚽ QUE GOLAÇO! ${scorer.name} acerta um chute indefensável! ${score}`,
+    `⚽ GOL DE PLACA! ${scorer.name} faz um golaço para ${teamName}! ${score}`,
+    `⚽ BOMBA! ${scorer.name} acerta o ângulo para ${teamName}! ${score}`,
+    `⚽ DE CABEÇA! ${scorer.name} testa firme e abre o placar! ${score}`,
+    `⚽ GOL DE LETRA! ${scorer.name} dá show e marca pra ${teamName}! ${score}`,
+    `⚽ NO CONTRAPÉ! ${scorer.name} bate colocado e comemora! ${score}`,
+    `⚽ GOL RELÂMPAGO! ${scorer.name} não deu tempo nem do goleiro piscar! ${score}`,
+    `⚽ GOLAÇO DE FORA DA ÁREA! ${scorer.name} acerta o ângulo! ${score}`,
+    `⚽ FINALIZAÇÃO PRECISA! ${scorer.name} coloca ${teamName} em vantagem! ${score}`,
+    `⚽ É DELE! ${scorer.name} aparece como elemento surpresa e marca! ${score}`,
+    `⚽ GOL DE OPORTUNISTA! ${scorer.name} trombou com a bola e fez! ${score}`,
   ]);
 }
 
@@ -170,6 +186,13 @@ export function generateMiss(teamName: string, attacker: Player): string {
     `Oportunidade desperdiçada! ${attacker.name} não acerta o alvo.`,
     `${attacker.name} tenta de fora da área... sem direção.`,
     `Que perigo! ${attacker.name} quase abre o placar.`,
+    `${attacker.name} isola! A bola foi parar na arquibancada.`,
+    `Finalização precipitada de ${attacker.name}. Podia ter passado.`,
+    `${attacker.name} chuta em cima da marcação. Bloqueado!`,
+    `Por muito pouco! ${attacker.name} raspou o travessão.`,
+    `${attacker.name} pega de primeira... a bola explode o alambrado!`,
+    `Péssima pontaria de ${attacker.name}. A torcida vaia.`,
+    `${attacker.name} dominou mal e desperdiçou boa chance.`,
   ]);
 }
 
@@ -189,6 +212,11 @@ export function generateSave(teamName: string, goalkeeper: Player): string {
     `O goleiro ${goalkeeper.name} (${teamName}) evita o gol!`,
     `🛡️ ${goalkeeper.name} voa no ângulo e salva ${teamName}!`,
     `Defesaça de ${goalkeeper.name}! ${teamName} segue vivo.`,
+    `${goalkeeper.name} se estica todo e espalma pra escanteio!`,
+    `🛡️ ${goalkeeper.name} faz milagre! Que defesa impressionante!`,
+    `O arqueiro ${goalkeeper.name} defende com a ponta dos dedos!`,
+    `${goalkeeper.name} fecha o ângulo e bloqueia com o peito!`,
+    `🛡️ Defesa no reflexo! ${goalkeeper.name} tava vendido e ainda salvou!`,
   ]);
 }
 

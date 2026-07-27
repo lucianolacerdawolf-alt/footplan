@@ -9,6 +9,8 @@ import TacticPresets from './shared/TacticPresets';
 import type { SubWindow, LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchState, loadLiveMatchMeta, clearLiveMatchMeta } from '../utils/liveMatchPersistence';
 import { playGoal, playWhistle, playFullTime, playCard } from '../utils/gameAudio';
+import LiveScoreTicker from './LiveScoreTicker';
+import type { LeagueFixture } from '../engine/tournament';
 
 // Janelas de parada em que substituições podem ser feitas — estruturalmente só existem 3
 // (pausa no 1º tempo, intervalo, pausa no 2º tempo), então o limite de "até 3 pausas" já
@@ -61,9 +63,12 @@ interface Props {
   resumeSnapshot?: LiveMatchSnapshot | null;
   onResumeConsumed?: () => void;
   gameMode?: GameMode;
+  /** Fixtures da rodada atual (outros jogos) — só usado em liga pra mostrar placar ao vivo */
+  roundFixtures?: LeagueFixture[];
+  teams?: Team[];
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed, gameMode }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed, gameMode, roundFixtures, teams }: Props) {
   const [home, setHome] = useState<Team>(() => {
     if (resumeSnapshot) return resumeSnapshot.home;
     const t = cloneTeam(initialHome);
@@ -109,7 +114,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     homeScore, awayScore, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef, isFirstHalfRef, nextCycleRef,
     runFirstHalf, runSecondHalf, updateLiveTeams, restoreSnapshot,
-    paused, isGoalPause, pauseReplay, resumeReplay, consumePause, pausesRemaining, setInjuryCallback,
+    paused, isGoalPause, pauseReplay, resumeReplay, consumePause, pausesRemaining, setInjuryCallback, skipToEnd,
   } = useMatchSimulation(initialHome.id, speedRef, rng);
 
   const [injuredIds, setInjuredIds] = useState<string[]>(() => resumeSnapshot?.injuredIds ?? []);
@@ -506,6 +511,10 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           <span className="score-label" style={{ color: away.color }}>{away.abbreviation}</span>
         </div>
       </div>
+
+      {roundFixtures && teams && matchContext === 'league' && (
+        <LiveScoreTicker fixtures={roundFixtures} teams={teams} userFixtureId="" />
+      )}
 
       {/* Momentum indicator */}
       {started && engineStateRef.current && (
@@ -954,7 +963,13 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   </button>
                 )}
               </>
-            ) : null}
+            ) : (
+              started && phase === 'simulating' && (
+                <button className="simulate-btn" onClick={skipToEnd} style={{ fontSize: 11, opacity: 0.7 }}>
+                  ⚡ Simular até o fim
+                </button>
+              )
+            )}
           </div>
         )}
       </div>

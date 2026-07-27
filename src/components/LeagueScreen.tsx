@@ -68,7 +68,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
         <div className={styles.userResult}>
           Você terminou em <strong>{userPos}º lugar</strong> com {userStanding.points} pontos
         </div>
-        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} />
+        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
         <button className="start-btn" onClick={onBack}>Nova Partida</button>
       </div>
     );

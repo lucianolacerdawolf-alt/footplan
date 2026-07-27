@@ -375,6 +375,13 @@ const screenMap: Record<Screen, ScreenRenderer> = {
       peerConnected: p.peer.peerConnected,
     } : undefined;
     const isTournament = p.matchContext === 'league' || p.matchContext === 'bracket';
+    const leagueForTicker = p.isCareerMode ? p.careerState?.season.league : p.leagueState;
+    const tickerFixtures = p.matchContext === 'league' && leagueForTicker
+      ? leagueForTicker.fixtures[leagueForTicker.currentRound] ?? undefined
+      : undefined;
+    const tickerTeams = p.matchContext === 'league' && leagueForTicker
+      ? leagueForTicker.teams
+      : undefined;
     const userSide: 'home' | 'away' | undefined =
       p.matchContext === 'league'
         ? p.isCareerMode
@@ -401,6 +408,8 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         resumeSnapshot={p.pendingResumeSnapshot}
         onResumeConsumed={() => p.setPendingResumeSnapshot(null)}
         gameMode={p.gameMode}
+        roundFixtures={tickerFixtures}
+        teams={tickerTeams}
       />
     );
   },

@@ -1,8 +1,27 @@
 import type { Team } from '../engine/types';
-import type { LeagueState, Standing } from '../engine/tournament';
+import type { LeagueState, Standing, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { computeStandings } from '../engine/tournament';
 import styles from './LeagueTableScreen.module.css';
+
+function getRecentForm(teamId: string, fixtures: LeagueFixture[][]): ('W' | 'D' | 'L')[] {
+  const results: ('W' | 'D' | 'L')[] = [];
+  for (let r = fixtures.length - 1; r >= 0 && results.length < 5; r--) {
+    const round = fixtures[r];
+    for (const f of round) {
+      if (!f.played || f.homeScore == null || f.awayScore == null) continue;
+      if (f.homeTeamId === teamId) {
+        results.unshift(f.homeScore > f.awayScore ? 'W' : f.homeScore === f.awayScore ? 'D' : 'L');
+        break;
+      }
+      if (f.awayTeamId === teamId) {
+        results.unshift(f.awayScore > f.homeScore ? 'W' : f.awayScore === f.homeScore ? 'D' : 'L');
+        break;
+      }
+    }
+  }
+  return results;
+}
 
 function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
@@ -20,7 +39,8 @@ function getZoneColor(pos: number, league: LeagueDefinition): string {
   return 'transparent';
 }
 
-export function StandingsTable({ standings, teams, userTeamId, league }: { standings: Standing[]; teams: Team[]; userTeamId: string; league: LeagueDefinition }) {
+export function StandingsTable({ standings, teams, userTeamId, league, fixtures }: { standings: Standing[]; teams: Team[]; userTeamId: string; league: LeagueDefinition; fixtures?: LeagueFixture[][] }) {
+  const showForm = !!fixtures;
   return (
     <table className={styles.table}>
       <thead>
@@ -31,6 +51,7 @@ export function StandingsTable({ standings, teams, userTeamId, league }: { stand
           <th className={styles.thPts}>Pts</th>
           <th>J</th><th>V</th><th>E</th><th>D</th>
           <th>GP</th><th>GC</th><th className={styles.thSg}>SG</th>
+          {showForm && <th className={styles.thForm}>Forma</th>}
         </tr>
       </thead>
       <tbody>
@@ -39,6 +60,7 @@ export function StandingsTable({ standings, teams, userTeamId, league }: { stand
           const team = teamById(teams, s.teamId);
           const isUser = s.teamId === userTeamId;
           const sg = s.goalsFor - s.goalsAgainst;
+          const form = showForm ? getRecentForm(s.teamId, fixtures!) : null;
           return (
             <tr key={s.teamId} className={`${styles.row} ${isUser ? styles.rowUser : ''}`}>
               <td className={styles.tdZone} style={{ background: getZoneColor(pos, league) }} />
@@ -55,6 +77,15 @@ export function StandingsTable({ standings, teams, userTeamId, league }: { stand
               <td>{s.goalsFor}</td>
               <td>{s.goalsAgainst}</td>
               <td className={sg >= 0 ? styles.sgPos : styles.sgNeg}>{sg > 0 ? '+' : ''}{sg}</td>
+              {showForm && (
+                <td className={styles.tdForm}>
+                  {form!.map((r, idx) => (
+                    <span key={idx} className={`${styles.formDot} ${r === 'W' ? styles.formWin : r === 'D' ? styles.formDraw : styles.formLoss}`}>
+                      {r}
+                    </span>
+                  ))}
+                </td>
+              )}
             </tr>
           );
         })}
@@ -88,7 +119,7 @@ export default function LeagueTableScreen({ state, league, onBack, hideTopNav }:
       </header>
 
       <div className={styles.standingsScroll}>
-        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} />
+        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
       </div>
 
       <div className={styles.zoneLegend}>

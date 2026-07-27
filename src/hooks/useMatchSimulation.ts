@@ -52,7 +52,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const [expelledIds, setExpelledIds] = useState<string[]>([]);
   const [paused, setPaused] = useState(false);
   const [isGoalPause, setIsGoalPause] = useState(false);
-  const [pausesRemaining, setPausesRemaining] = useState(1);
+  const [pausesRemaining, setPausesRemaining] = useState(2);
 
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -369,7 +369,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setClockSeconds(0);
     setFatigueMap({});
     setExpelledIds([]);
-    setPausesRemaining(1);
+    setPausesRemaining(2);
 
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
@@ -440,11 +440,31 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     injuryCbRef.current = cb;
   }, []);
 
+  const skipToEnd = useCallback(() => {
+    if (!engineStateRef.current || phase === 'done' || phase === 'idle') return;
+    if (replayRef.current) clearInterval(replayRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    const home = liveHomeRef.current;
+    const away = liveAwayRef.current;
+    if (!home || !away) return;
+    const matchResult = buildMatchResult(home, away, engineStateRef.current);
+    setResult(matchResult);
+    setSimulating(false);
+    setPhase('done');
+    setHomeScore(matchResult.homeScore);
+    setAwayScore(matchResult.awayScore);
+    setShowOverlay(true);
+    setPaused(false);
+    setIsGoalPause(false);
+    setClockSeconds(HALF_SECONDS + (nextCycleRef.current >= FIRST_HALF_CYCLES ? HALF_SECONDS : 0));
+  }, [phase]);
+
   return {
     result, simulating, replayEvents, currentEvent,
     homeScore, awayScore, showOverlay, phase, started, clockSeconds,
     fatigueMap, expelledIds, engineStateRef, isFirstHalfRef, nextCycleRef,
     runFirstHalf, runSecondHalf, updateLiveTeams, restoreSnapshot,
     paused, isGoalPause, pauseReplay, resumeReplay, consumePause, pausesRemaining, resetPauses, setInjuryCallback,
+    skipToEnd,
   };
 }

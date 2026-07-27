@@ -48,6 +48,19 @@
 .sgPos { color: #4ade80; font-weight: 700; }
 .sgNeg { color: #f87171; font-weight: 700; }
 
+/* Form guide */
+.thForm { text-align: center; font-size: 10px; opacity: 0.5; padding: 0 4px; }
+.tdForm { display: flex; gap: 2px; justify-content: center; padding: 0 2px; }
+.formDot {
+  width: 16px; height: 16px; border-radius: 3px;
+  font-size: 9px; font-weight: 800; display: flex;
+  align-items: center; justify-content: center;
+  color: #fff; font-family: var(--mono);
+}
+.formWin { background: #16a34a; }
+.formDraw { background: #ca8a04; }
+.formLoss { background: #dc2626; }
+
 /* Zone legend */
 .zoneLegend {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
