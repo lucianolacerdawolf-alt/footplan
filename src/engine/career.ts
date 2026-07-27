@@ -7,7 +7,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { calculateMarketValue, computeWageBill } from './transferMarket';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
-import { computeMerchRevenue, getStartingTier, generateSponsor } from './sponsors';
+import { getStartingTier, generateSponsor } from './sponsors';
 
 // =============================================================================
 // TIPOS — Modo Carreira

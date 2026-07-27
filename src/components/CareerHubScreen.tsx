@@ -1,5 +1,5 @@
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances } from '../engine/career';
+import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
 import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
@@ -90,7 +90,6 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
   const isWindowOpen = isTransferWindowOpen(state.season.league.currentRound);
   const sponsorTier = getSponsorTier(state) as SponsorTier;
   const sponsorName = getSponsorName(state);
-  const finances = getFinances(state);
   const nextTier = getNextTierUp(sponsorTier);
 
   return (

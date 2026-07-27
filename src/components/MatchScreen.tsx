@@ -12,7 +12,6 @@ import { playGoal, playWhistle, playFullTime, playCard } from '../utils/gameAudi
 import LiveScoreTicker from './LiveScoreTicker';
 import type { LeagueFixture } from '../engine/tournament';
 import { generateStadium } from '../utils/stadiums';
-import { getSponsorMultiplier, getSponsorLabel, type SponsorTier } from '../engine/sponsors';
 
 // Janelas de parada em que substituições podem ser feitas — estruturalmente só existem 3
 // (pausa no 1º tempo, intervalo, pausa no 2º tempo), então o limite de "até 3 pausas" já
@@ -68,11 +67,9 @@ interface Props {
   /** Fixtures da rodada atual (outros jogos) — só usado em liga pra mostrar placar ao vivo */
   roundFixtures?: LeagueFixture[];
   teams?: Team[];
-  sponsorName?: string;
-  sponsorTier?: string;
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed, gameMode, roundFixtures, teams, sponsorName, sponsorTier }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed, gameMode, roundFixtures, teams }: Props) {
   const [home, setHome] = useState<Team>(() => {
     if (resumeSnapshot) return resumeSnapshot.home;
     const t = cloneTeam(initialHome);

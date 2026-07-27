@@ -357,6 +357,7 @@ function App() {
     handleMarkInboxRead,
     handleMarkAllInboxRead,
     handleMarketRosterSynced,
+    handleRenegotiateSponsor,
     clearHistory,
     setIsTournamentEntry,
     difficulty,

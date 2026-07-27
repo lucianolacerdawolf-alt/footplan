@@ -456,6 +456,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onMarkInboxRead={p.handleMarkInboxRead}
         onAcceptTransferOffer={p.handleAcceptTransferOffer}
         onRejectTransferOffer={p.handleRejectTransferOffer}
+        onRenegotiateSponsor={p.handleRenegotiateSponsor}
       />
     );
   },
