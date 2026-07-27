@@ -208,8 +208,15 @@ function resolveCycleAttack(
     if (shot.result === 'goal') {
       // Timing distribution: suppress early goals, boost late
       if (random() < goalTimingMultiplier(minute)) {
-        state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, scoreStr), teamId: possTeam.id, scorer: shot.scorer.name });
+        // Detect equalizer / comeback antes de atualizar o placar
+        const oldHome = state.homeScore, oldAway = state.awayScore;
         if (possTeam.id === home.id) state.homeScore++; else state.awayScore++;
+        const newScoreStr = `${state.homeScore}-${state.awayScore}`;
+        const isEqualizer = oldHome !== oldAway && state.homeScore === state.awayScore;
+        const isComeback = possTeam.id === home.id
+          ? (oldHome < oldAway && state.homeScore > state.awayScore)
+          : (oldAway < oldHome && state.awayScore > state.homeScore);
+        state.events.push({ minute, type: 'goal', description: generateGoal(possTeam.name, shot.scorer, minute, newScoreStr, isEqualizer, isComeback), teamId: possTeam.id, scorer: shot.scorer.name });
         applyMomentum(state, possTeam.id === home.id ? 'A' : 'B', possTeam.id);
         if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.3) {
           state.events.push({ minute, type: 'possession', description: generateMomentumShift(possTeam.name), teamId: possTeam.id });

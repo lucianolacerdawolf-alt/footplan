@@ -630,9 +630,22 @@
 .screen-fade { animation: fpScreenFade 180ms ease-out; }
 
 .lazy-loading {
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   min-height: 60dvh; font-size: 13px; font-weight: 600; opacity: 0.4;
-  font-family: var(--mono);
+  font-family: var(--mono); gap: 16px;
+}
+
+@keyframes fpSpinner {
+  to { transform: rotate(360deg); }
+}
+
+.lazy-loading::before {
+  content: '';
+  width: 28px; height: 28px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: fpSpinner 0.7s linear infinite;
 }
 
 /* ── Toast ─────────────────────────────────────────────────────────── */

@@ -925,6 +925,33 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                       </>
                     )}
 
+                    {() => {
+                      const side = online ? (online.isHost ? 'home' : 'away') : (userSide ?? 'home');
+                      const team = side === 'home' ? home : away;
+                      const starters = team.squad.slice(0, 11);
+                      const mostTired = starters.filter(p => (p.currentFatigue ?? 0) > 70 && p.position !== 'GK').sort((a, b) => (b.currentFatigue ?? 0) - (a.currentFatigue ?? 0))[0];
+                      if (!mostTired) return null;
+                      const benchSamePos = team.squad.slice(11).filter(p => p.position === mostTired.position && (p.currentFatigue ?? 0) < 50);
+                      const bestBench = benchSamePos.sort((a, b) => playerOvr(b) - playerOvr(a))[0];
+                      if (!bestBench) return null;
+                      return (
+                        <div className="sub-toast" style={{ background: 'color-mix(in srgb, var(--accent-2) 10%, var(--surface))', border: '1px solid var(--accent-2)', padding: 8, borderRadius: 8, marginBottom: 8, fontSize: 12, fontWeight: 600, opacity: 0.9, textAlign: 'center', cursor: 'pointer' }}
+                          onClick={() => {
+                            const teamSquad = [...team.squad];
+                            const starterIdx = teamSquad.findIndex(p => p.id === mostTired.id);
+                            const benchIdx = teamSquad.findIndex(p => p.id === bestBench.id);
+                            [teamSquad[starterIdx], teamSquad[benchIdx]] = [teamSquad[benchIdx], teamSquad[starterIdx]];
+                            if (side === 'home') setHome({ ...team, squad: teamSquad }); else setAway({ ...team, squad: teamSquad });
+                            const subCount = side === 'home' ? subsHome : subsAway;
+                            const setSubs = side === 'home' ? setSubsHome : setSubsAway;
+                            if (subCount < MAX_SUBS) { setSubs(subCount + 1); showSubToast(mostTired.name, bestBench.name); }
+                          }}
+                        >
+                          🔁 {mostTired.name} exausto ({(mostTired.currentFatigue ?? 0)}%) → {bestBench.name} ({playerOvr(bestBench)})? <strong>Clique pra substituir</strong>
+                        </div>
+                      );
+                    }}
+
                     {subToast && (
                       <div className="sub-toast">{subToast}</div>
                     )}

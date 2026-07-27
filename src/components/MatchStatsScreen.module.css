@@ -203,3 +203,38 @@
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
   color: var(--text); opacity: 0.7;
 }
+
+/* Highlights */
+.highlightsBlock {
+  margin-top: 4px;
+  padding: 10px 14px; border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-2) 5%, var(--code-bg));
+  border: 1px solid color-mix(in srgb, var(--accent-2) 15%, var(--border));
+}
+.highlightsList {
+  display: flex; flex-direction: column; gap: 4px; margin-top: 6px;
+}
+.highlightItem {
+  font-size: 13px; font-weight: 600; line-height: 1.4;
+}
+
+/* Confetti celebration */
+@keyframes fpConfetti {
+  0% { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%; opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { background-position: 100% 100%, -100% 100%, 200% 0%, -200% 0%; opacity: 0; }
+}
+.confetti {
+  position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+  animation: fpConfetti 3s ease-out forwards;
+  background:
+    radial-gradient(circle at 20% 30%, #f59e0b 2px, transparent 3px),
+    radial-gradient(circle at 70% 20%, #22c55e 2px, transparent 3px),
+    radial-gradient(circle at 40% 50%, #3b82f6 2px, transparent 3px),
+    radial-gradient(circle at 60% 40%, #ef4444 2px, transparent 3px),
+    radial-gradient(circle at 80% 60%, #a855f7 2px, transparent 3px),
+    radial-gradient(circle at 30% 70%, #f59e0b 2px, transparent 3px),
+    radial-gradient(circle at 10% 80%, #22c55e 2px, transparent 3px),
+    radial-gradient(circle at 90% 10%, #ec4899 2px, transparent 3px);
+  background-size: 50px 50px, 60px 60px, 40px 40px, 55px 55px, 45px 45px, 35px 35px, 50px 50px, 55px 55px;
+}

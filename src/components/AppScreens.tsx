@@ -417,6 +417,10 @@ const screenMap: Record<Screen, ScreenRenderer> = {
   'stats': (p) => {
     if (!p.lastResult) return null;
     const isTournament = p.matchContext !== 'regular' && p.matchContext !== 'online';
+    const isTitleWin = p.matchContext === 'bracket' && p.lastResult.winner
+      && (p.isCareerMode
+        ? p.careerState?.season.cup.userTeamId === p.lastResult.winner.id
+        : p.bracketState?.userTeamId === p.lastResult.winner.id);
     return (
       <MatchStatsScreen
         result={p.lastResult}
@@ -425,6 +429,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onClearHistory={p.clearHistory}
         onContinue={isTournament ? p.handleContinueTournament : undefined}
         continueLabel={p.matchContext === 'league' ? (p.selectedLeague ? `Continuar ${p.selectedLeague.name}` : 'Continuar Liga') : p.matchContext === 'bracket' ? `Continuar ${p.bracketState?.cupName ?? 'Copa'}` : undefined}
+        isTitleWin={isTitleWin}
       />
     );
   },

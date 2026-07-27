@@ -13,6 +13,8 @@ interface Props {
   onClearHistory: () => void;
   onContinue?: () => void;
   continueLabel?: string;
+  /** Se true, mostra celebração de título (confetes). Usado em finais de copa / decisão de liga. */
+  isTitleWin?: boolean;
 }
 
 interface StatRowProps {
@@ -99,16 +101,37 @@ function ratingColor(r: number): string {
   return '#ef4444';
 }
 
-export default function MatchStatsScreen({ result, history, onMenu, onClearHistory, onContinue, continueLabel }: Props) {
-  const { homeTeam, awayTeam, homeScore, awayScore, homePossession, awayPossession, homeStats, awayStats } = result;
+export default function MatchStatsScreen({ result, history, onMenu, onClearHistory, onContinue, continueLabel, isTitleWin }: Props) {
+  const { homeTeam, awayTeam, homeScore, awayScore, homePossession, awayPossession, homeStats, awayStats, events } = result;
   const ratings = useMemo(() => calculateRatings(result), [result]);
   const motm = useMemo(() => manOfTheMatch(ratings), [ratings]);
   const scorers = useMemo(() => goalScorers(result), [result]);
   const cards = useMemo(() => cardEvents(result), [result]);
   const topPerformers = useMemo(() => ratings.slice(0, 5), [ratings]);
 
+  const highlights = useMemo(() => {
+    const result: string[] = [];
+    let h = 0, a = 0;
+    for (const e of events) {
+      if (e.type !== 'goal') continue;
+      const isHome = e.teamId === homeTeam.id;
+      const oh = h, oa = a;
+      if (isHome) h++; else a++;
+      if (oh !== oa && h === a) { result.push(`🔥 ${e.scorer} empatou! (${e.minute}')`); continue; }
+      if (isHome && oh < oa && h > a) { result.push(`⚡ ${e.scorer} virou! (${e.minute}')`); continue; }
+      if (!isHome && oa < oh && a > h) { result.push(`⚡ ${e.scorer} virou! (${e.minute}')`); continue; }
+      if (e.minute >= 80) { result.push(`⏱️ ${e.scorer} — gol decisivo (${e.minute}')`); continue; }
+      if (result.length < 2 && (h + a) <= 3) { result.push(`⚽ ${e.scorer} abriu o placar (${e.minute}')`); }
+    }
+    for (const e of events) {
+      if (e.type === 'redCard') { result.push(`🟥 ${e.scorer ?? 'Jogador'} expulso (${e.minute}')`); }
+    }
+    return result.slice(0, 4);
+  }, [events, homeTeam.id]);
+
   return (
     <div className={`${styles.screen} app-screen`}>
+      {isTitleWin && <div className={styles.confetti} />}
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.team}>
@@ -240,6 +263,18 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
           </div>
         </div>
       </div>
+
+      {/* Highlights */}
+      {highlights.length > 0 && (
+        <div className={styles.highlightsBlock}>
+          <div className={styles.sectionLabel}>⚡ Momentos Decisivos</div>
+          <div className={styles.highlightsList}>
+            {highlights.map((h, i) => (
+              <span key={i} className={styles.highlightItem}>{h}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Actions */}
       <div className={styles.actions}>

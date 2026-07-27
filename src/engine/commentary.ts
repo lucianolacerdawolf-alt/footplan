@@ -140,22 +140,21 @@ export function generateAttack(teamName: string, attacker: Player): string {
   ]);
 }
 
-export function generateGoal(teamName: string, scorer: Player, minute: number, score: string): string {
-  if (minute >= 85) {
+export function generateGoal(teamName: string, scorer: Player, minute: number, score: string, isEqualizer?: boolean, isComeback?: boolean): string {
+  if (isComeback) {
     return rng([
-      `⚽ GOOOOOOL NOS ACRÉSCIMOS! ${scorer.name} decide para ${teamName}! ${score}`,
-      `⚽ GOL AGONIZANTE! ${scorer.name} (${teamName}) nos instantes finais! ${score}`,
-      `⚽ INACREDITÁVEL! ${scorer.name} marca no ÚLTIMO minuto! ${score}`,
-      `⚽ GOL NO FIM! ${scorer.name} explode o estádio para ${teamName}! ${score}`,
-      `⚽ DRAMA NOS ACRÉSCIMOS! ${scorer.name} vira o jogo para ${teamName}! ${score}`,
+      `⚡ VIRADA INCRÍVEL! ${scorer.name} coloca ${teamName} na frente! ${score}`,
+      `🔥 DEU A VOLTA! ${scorer.name} vira o jogo para ${teamName}! ${score}`,
+      `💥 A VIRADA VEIO! ${scorer.name} (${teamName}) completa a remontada! ${score}`,
+      `⚡ É A VIRADA! ${scorer.name} explode o estádio e ${teamName} passa à frente! ${score}`,
     ]);
   }
-  if (minute >= 75) {
+  if (isEqualizer) {
     return rng([
-      `⚽ GOOOOOOL! ${scorer.name} marca nos minutos finais para ${teamName}! ${score}`,
-      `⚽ GOL! ${scorer.name} balança as redes e muda o jogo! ${score}`,
-      `⚽ GOL DECISIVO! ${scorer.name} coloca ${teamName} na frente! ${score}`,
-      `⚽ NA RETA FINAL! ${scorer.name} explode pra ${teamName}! ${score}`,
+      `🔥 EMPATOU! ${scorer.name} iguala para ${teamName}! ${score}`,
+      `⚖️ TUDO IGUAL! ${scorer.name} empata a partida! ${score}`,
+      `⏱️ CHEGOU O EMPATE! ${scorer.name} deixa tudo igual para ${teamName}! ${score}`,
+      `🔥 EMPATAAAA! ${scorer.name} não desperdiça e deixa ${teamName} vivo! ${score}`,
     ]);
   }
   return rng([
