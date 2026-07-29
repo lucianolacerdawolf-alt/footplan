@@ -30,7 +30,7 @@ import {
   generateInjury, generateMatchPenalty, generateCornerGoal, generateMomentumShift,
 } from './commentary';
 import { generateTacticalComment } from './tacticalCommentary';
-import { isDerby } from './rivalries';
+import { isDerby, getDerbyName } from './rivalries';
 import {
   CYCLE_MINUTES, FIRST_HALF_CYCLES, TOTAL_CYCLES, ET_HALF_CYCLE, ET_END_CYCLE,
   MAX_EVENTS_PER_CYCLE, ATK_CHANCE,
@@ -355,11 +355,11 @@ function resolveCycleFoulsAndCards(
   const homeBias = foulerTeam.id === home.id ? 0.85 : 1.0;
   const derbyMult = state.isDerby ? 1.5 : 1.0;
   if (!existingCard && random() < 0.25 * foulMult * homeBias * derbyMult && cycleEvents < MAX_EVENTS_PER_CYCLE) {
-    state.events.push({ minute, type: 'yellowCard', description: generateYellowCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
+    state.events.push({ minute, type: 'yellowCard', description: generateYellowCard(foulerTeam.name, fouler, state.isDerby), teamId: foulerTeam.id, playerId: fouler.id });
     state.cards.set(fouler.id, 'yellow');
     cycleEvents++;
   } else if (existingCard === 'yellow' && random() < 0.3 * foulMult * derbyMult && cycleEvents < MAX_EVENTS_PER_CYCLE) {
-    state.events.push({ minute, type: 'redCard', description: generateRedCard(foulerTeam.name, fouler), teamId: foulerTeam.id, playerId: fouler.id });
+    state.events.push({ minute, type: 'redCard', description: generateRedCard(foulerTeam.name, fouler, state.isDerby), teamId: foulerTeam.id, playerId: fouler.id });
     state.cards.set(fouler.id, 'red');
     cycleEvents++;
   }
@@ -431,7 +431,8 @@ function simularBloco(
   random: RandomFn
 ): void {
   if (includeKickoff) {
-    state.events.push({ minute: 0, type: 'kickoff', description: generateKickoff(home.name, away.name, state.isDerby), teamId: null });
+    const derbyName = getDerbyName(home.id, away.id);
+    state.events.push({ minute: 0, type: 'kickoff', description: generateKickoff(home.name, away.name, state.isDerby, derbyName), teamId: null });
     // Tactical insight at kickoff
     state.events.push({
       minute: 1, type: 'possession',
@@ -621,7 +622,7 @@ export function simularProximoBloco(
   if (!isFirstHalf && reachedHalfEnd) {
     state.events.push({
       minute: 90, type: 'fulltime',
-      description: generateFulltime(home.name, away.name, state.homeScore, state.awayScore),
+      description: generateFulltime(home.name, away.name, state.homeScore, state.awayScore, state.isDerby),
       teamId: null,
     });
   }
@@ -640,7 +641,7 @@ export function simularSegundoTempo(home: Team, away: Team, prevState: MatchStat
 
   prevState.events.push({
     minute: 90, type: 'fulltime',
-    description: generateFulltime(home.name, away.name, prevState.homeScore, prevState.awayScore),
+    description: generateFulltime(home.name, away.name, prevState.homeScore, prevState.awayScore, prevState.isDerby),
     teamId: null,
   });
 

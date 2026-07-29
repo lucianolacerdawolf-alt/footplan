@@ -1,43 +1,52 @@
 const RIVALRY_MAP = new Map<string, Set<string>>();
+const DERBY_NAMES = new Map<string, string>();
 
-function register(a: string, b: string): void {
+function register(a: string, b: string, name?: string): void {
   if (!RIVALRY_MAP.has(a)) RIVALRY_MAP.set(a, new Set());
   if (!RIVALRY_MAP.has(b)) RIVALRY_MAP.set(b, new Set());
   RIVALRY_MAP.get(a)!.add(b);
   RIVALRY_MAP.get(b)!.add(a);
+  if (name) {
+    DERBY_NAMES.set(`${a}:${b}`, name);
+    DERBY_NAMES.set(`${b}:${a}`, name);
+  }
 }
 
 // Premier League
-register('pl-t0', 'pl-mu');  // Arsenal vs Man United
-register('pl-mu', 'pl-t1');  // Man United vs Liverpool
-register('pl-t0', 'pl-ch');  // Arsenal vs Chelsea
-register('pl-ch', 'pl-t1');  // Chelsea vs Liverpool
-register('pl-mu', 'pl-t3');  // Man United vs Man City
-register('pl-t1', 'pl-ev');  // Liverpool vs Everton
-register('pl-t0', 'pl-th');  // Arsenal vs Tottenham
+register('pl-t0', 'pl-mu', 'North London Derby × Manchester');
+register('pl-mu', 'pl-t1', 'North-West Derby');
+register('pl-t0', 'pl-ch', 'London Derby');
+register('pl-ch', 'pl-t1', 'Big Six Clash');
+register('pl-mu', 'pl-t3', 'Manchester Derby');
+register('pl-t1', 'pl-ev', 'Merseyside Derby');
+register('pl-t0', 'pl-th', 'North London Derby');
 
 // La Liga
-register('laliga-t0', 'laliga-t1'); // Real Madrid vs Barcelona
-register('laliga-t2', 'laliga-t1'); // Atlético vs Barcelona
-register('laliga-t0', 'laliga-t2'); // Real Madrid vs Atlético
+register('laliga-t0', 'laliga-t1', 'El Clásico');
+register('laliga-t2', 'laliga-t1', 'Madrid-Barça Rivalry');
+register('laliga-t0', 'laliga-t2', 'Derbi Madrileño');
 
 // Bundesliga
-register('bundesliga-t0', 'bundesliga-t1'); // Bayern vs Dortmund
+register('bundesliga-t0', 'bundesliga-t1', 'Der Klassiker');
 
 // Serie A
-register('seriea-t0', 'seriea-t1'); // Juventus vs Inter
-register('seriea-t0', 'seriea-t3'); // Juventus vs Milan
-register('seriea-t1', 'seriea-t3'); // Inter vs Milan (Derby della Madonnina)
+register('seriea-t0', 'seriea-t1', 'Derby d\'Italia');
+register('seriea-t0', 'seriea-t3', 'Juventus-Milan');
+register('seriea-t1', 'seriea-t3', 'Derby della Madonnina');
 
 // Ligue 1
-register('ligue1-t0', 'ligue1-t2'); // PSG vs Marseille (Le Classique)
+register('ligue1-t0', 'ligue1-t2', 'Le Classique');
 
 // Portugal
-register('portugal-t0', 'portugal-t1'); // Benfica vs Porto
-register('portugal-t0', 'portugal-t2'); // Benfica vs Sporting
+register('portugal-t0', 'portugal-t1', 'O Clássico');
+register('portugal-t0', 'portugal-t2', 'Derby de Lisboa');
 
 export function isDerby(teamA: string, teamB: string): boolean {
   return RIVALRY_MAP.get(teamA)?.has(teamB) ?? false;
+}
+
+export function getDerbyName(teamA: string, teamB: string): string | null {
+  return DERBY_NAMES.get(`${teamA}:${teamB}`) ?? null;
 }
 
 export function getDerbyEffect(): { intensityBonus: number; cardMultiplier: number } {

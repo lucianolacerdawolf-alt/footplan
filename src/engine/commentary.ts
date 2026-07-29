@@ -9,12 +9,13 @@ function rng(arr: string[], random: RandomFn = Math.random): string {
 // Kickoff / Halftime / Fulltime
 // =============================================================================
 
-export function generateKickoff(homeName: string, awayName: string, isDerby?: boolean): string {
+export function generateKickoff(homeName: string, awayName: string, isDerby?: boolean, derbyName?: string | null): string {
   if (isDerby) {
+    const derbyLabel = derbyName ?? 'DÉRBI';
     return rng([
-      `🔥 É O CLÁSSICO! ${homeName} e ${awayName} se enfrentam no dérbi!`,
-      `⚡ DÉRBI! ${homeName} contra ${awayName} — vale mais que 3 pontos!`,
-      `🏟️ O CLÁSSICO VAI COMEÇAR! ${homeName} vs ${awayName}!`,
+      `🔥 É ${derbyLabel}! ${homeName} e ${awayName} se enfrentam no clássico!`,
+      `⚡ ${derbyLabel}! ${homeName} contra ${awayName} — vale mais que 3 pontos!`,
+      `🏟️ ${derbyLabel}! ${homeName} vs ${awayName} — começa o espetáculo!`,
     ]);
   }
   return rng([
@@ -43,8 +44,17 @@ export function generateHalftime(homeScore: number, awayScore: number): string {
 
 export function generateFulltime(
   homeName: string, awayName: string,
-  homeScore: number, awayScore: number
+  homeScore: number, awayScore: number,
+  isDerby?: boolean,
 ): string {
+  if (isDerby) {
+    const result = homeScore === awayScore
+      ? `Empate em ${homeScore}x${homeScore} no clássico!`
+      : homeScore > awayScore
+        ? `Vitória de ${homeName} por ${homeScore}x${awayScore} no clássico! A torcida vai à loucura!`
+        : `Vitória de ${awayName} por ${awayScore}x${homeScore} no clássico! Silêncio no estádio.`;
+    return `🏁 Apito final! ${result}`;
+  }
   const result = homeScore === awayScore
     ? `Empate em ${homeScore}x${homeScore}!`
     : homeScore > awayScore
@@ -270,7 +280,14 @@ export function generateOffside(teamName: string, player: Player): string {
   ]);
 }
 
-export function generateYellowCard(teamName: string, player: Player): string {
+export function generateYellowCard(teamName: string, player: Player, isDerby?: boolean): string {
+  if (isDerby) {
+    return rng([
+      `🟨 Cartão amarelo para ${player.name} (${teamName})! O clássico esquenta!`,
+      `🟨 ${player.name} (${teamName}) amarelado em lance típico de dérbi.`,
+      `O árbitro mostra o amarelo para ${player.name}! Clima tenso no clássico.`,
+    ]);
+  }
   return rng([
     `🟨 Cartão amarelo para ${player.name} (${teamName}).`,
     `O árbitro adverte ${player.name} com cartão amarelo.`,
@@ -278,7 +295,14 @@ export function generateYellowCard(teamName: string, player: Player): string {
   ]);
 }
 
-export function generateRedCard(teamName: string, player: Player): string {
+export function generateRedCard(teamName: string, player: Player, isDerby?: boolean): string {
+  if (isDerby) {
+    return rng([
+      `🟥 Cartão vermelho! ${player.name} (${teamName}) é expulso no clássico!`,
+      `🟥 Expulsão! ${player.name} perde a cabeça no dérbi e deixa ${teamName} com um a menos.`,
+      `O juiz mostra o vermelho! ${player.name} sai de campo sob vaias no clássico.`,
+    ]);
+  }
   return rng([
     `🟥 Cartão vermelho! ${player.name} (${teamName}) é expulso!`,
     `Expulsão! ${player.name} deixa ${teamName} com um a menos.`,

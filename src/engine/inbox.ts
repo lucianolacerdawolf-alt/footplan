@@ -80,6 +80,14 @@ export function createTransferOutCompletedMessage(playerName: string, toClub: st
   });
 }
 
+export function createDerbyPreviewMessage(opponentName: string, derbyName: string, isHome: boolean, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'MATCH_PREVIEW',
+    subject: `Dérbi: ${derbyName}`,
+    body: `Atenção para o clássico! Seu time enfrenta ${opponentName} ${isHome ? 'em casa' : 'fora de casa'} no ${derbyName}. A torcida espera entrega total!`,
+  });
+}
+
 export function hasMandatoryUnread(inbox: InboxMessage[]): boolean {
   return inbox.some(m => m.isMandatory && !m.isRead);
 }
