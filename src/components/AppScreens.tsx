@@ -30,6 +30,7 @@ import TradeProposalScreen from './TradeProposalScreen';
 import SeasonEndScreen from './SeasonEndScreen';
 import TrophyRoomScreen from './TrophyRoomScreen';
 import TransferMarketScreen from './TransferMarketScreen';
+import MatchdayScreen from './MatchdayScreen';
 import { getLeague } from '../data/leagues';
 
 function getResumableSaves(): ResumableSave[] {
@@ -393,11 +394,12 @@ const screenMap: Record<Screen, ScreenRenderer> = {
           ? p.careerState?.season.cup.userTeamId === p.homeTeam.id ? 'home' : 'away'
           : p.bracketState?.userTeamId === p.homeTeam.id ? 'home' : 'away'
         : undefined;
+    const matchBackScreen = isTournament ? 'matchday' : p.matchContext === 'online' ? 'online-lobby' : 'setup';
     return (
       <MatchScreen
         homeTeam={p.homeTeam}
         awayTeam={p.awayTeam}
-        onBack={() => p.setScreen(p.matchContext === 'online' ? 'online-lobby' : 'setup')}
+        onBack={() => p.setScreen(matchBackScreen)}
         onViewStats={p.matchContext === 'online' ? p.handleOnlineMatchResult : p.handleViewStatsFromMatch}
         isKnockout={p.isKnockout}
         rng={onlineRngFn}
@@ -411,6 +413,32 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         gameMode={p.gameMode}
         roundFixtures={tickerFixtures}
         teams={tickerTeams}
+      />
+    );
+  },
+
+  'matchday': (p) => {
+    if (!p.homeTeam || !p.awayTeam) return null;
+    const isTournament = p.matchContext === 'league' || p.matchContext === 'bracket';
+    const roundLabel = p.matchContext === 'league'
+      ? (p.isCareerMode
+        ? `Rodada ${(p.careerState?.season.league.currentRound ?? 0) + 1}`
+        : `Rodada ${(p.leagueState?.currentRound ?? 0) + 1}`)
+      : undefined;
+    return (
+      <MatchdayScreen
+        homeTeam={p.homeTeam}
+        awayTeam={p.awayTeam}
+        matchContext={p.matchContext}
+        roundLabel={roundLabel}
+        onPlay={() => p.setScreen('match')}
+        onBack={() => {
+          if (p.isCareerMode && p.matchContext === 'league') p.setScreen('career-league');
+          else if (p.isCareerMode && p.matchContext === 'bracket') p.setScreen('career-bracket');
+          else if (p.matchContext === 'league') p.setScreen('league');
+          else if (p.matchContext === 'bracket') p.setScreen('bracket');
+          else p.setScreen('setup');
+        }}
       />
     );
   },

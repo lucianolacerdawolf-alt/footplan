@@ -74,7 +74,8 @@ export function useGameFlow({
       return;
     }
     setHomeTeam(home); setAwayTeam(away);
-    setScreen('match');
+    const goViaMatchday = matchContext === 'league' || matchContext === 'bracket';
+    setScreen(goViaMatchday ? 'matchday' : 'match');
   }, [isTournamentEntry, isCareerMode, matchContext, leagueState, bracketState, setLeagueState, setBracketState, setIsTournamentEntry, setScreen, setHomeTeam, setAwayTeam, difficulty, homeTeam]);
 
   const handleViewStats = useCallback((result: MatchResult) => {
