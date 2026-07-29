@@ -1,5 +1,5 @@
-import type { Team, Formation, Mentality, Intensity, DefensiveLine, Width } from '@/engine/types';
-import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '@/engine/types';
+import type { Team, Formation, Mentality, Intensity, DefensiveLine, Width, CornerTactic, FreeKickTactic } from '@/engine/types';
+import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS, CORNER_TACTIC_LABELS, FREEKICK_TACTIC_LABELS } from '@/engine/types';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '@/engine/constants';
 import TacticLabel from '../TacticLabel';
 
@@ -39,6 +39,16 @@ export default function TacticEditor({ strategy, onChange, disabled = false }: P
       <TacticLabel tacticKey="width" />
       <select className="setup-select" value={strategy.width} onChange={e => update('width', e.target.value as Width)} disabled={disabled}>
         {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
+      </select>
+
+      <TacticLabel tacticKey="cornerTactic" />
+      <select className="setup-select" value={strategy.cornerTactic ?? 'mixed'} onChange={e => update('cornerTactic', e.target.value as CornerTactic)} disabled={disabled}>
+        {(['mixed', 'nearPost', 'farPost', 'short'] as CornerTactic[]).map(c => <option key={c} value={c}>{CORNER_TACTIC_LABELS[c]}</option>)}
+      </select>
+
+      <TacticLabel tacticKey="freeKickTactic" />
+      <select className="setup-select" value={strategy.freeKickTactic ?? 'cross'} onChange={e => update('freeKickTactic', e.target.value as FreeKickTactic)} disabled={disabled}>
+        {(['shoot', 'cross', 'short'] as FreeKickTactic[]).map(f => <option key={f} value={f}>{FREEKICK_TACTIC_LABELS[f]}</option>)}
       </select>
     </div>
   );

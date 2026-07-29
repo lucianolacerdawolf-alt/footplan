@@ -72,6 +72,8 @@ export interface Player {
 // =============================================================================
 export type DefensiveLine = 'high' | 'normal' | 'low';
 export type Width = 'narrow' | 'normal' | 'wide';
+export type CornerTactic = 'mixed' | 'nearPost' | 'farPost' | 'short';
+export type FreeKickTactic = 'shoot' | 'cross' | 'short';
 
 export interface Strategy {
   formation: Formation;
@@ -79,6 +81,8 @@ export interface Strategy {
   intensity: Intensity;
   defensiveLine: DefensiveLine;
   width: Width;
+  cornerTactic?: CornerTactic;
+  freeKickTactic?: FreeKickTactic;
 }
 
 export const DEFENSIVE_LINE_LABELS: Record<DefensiveLine, string> = {
@@ -91,6 +95,19 @@ export const WIDTH_LABELS: Record<Width, string> = {
   'narrow': 'Estreito',
   'normal': 'Normal',
   'wide': 'Amplo',
+};
+
+export const CORNER_TACTIC_LABELS: Record<CornerTactic, string> = {
+  'mixed': 'Misto',
+  'nearPost': '1º Poste',
+  'farPost': '2º Poste',
+  'short': 'Curto',
+};
+
+export const FREEKICK_TACTIC_LABELS: Record<FreeKickTactic, string> = {
+  'shoot': 'Chute Direto',
+  'cross': 'Cruzamento',
+  'short': 'Jogada Curta',
 };
 
 export const MENTALITY_LABELS: Record<Mentality, string> = {

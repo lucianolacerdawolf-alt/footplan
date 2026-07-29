@@ -1,4 +1,4 @@
-export type TacticKey = 'formation' | 'mentality' | 'intensity' | 'defensiveLine' | 'width';
+export type TacticKey = 'formation' | 'mentality' | 'intensity' | 'defensiveLine' | 'width' | 'cornerTactic' | 'freeKickTactic';
 
 export interface TacticExplanation {
   icon: string;
@@ -33,5 +33,15 @@ export const TACTIC_EXPLANATIONS: Record<TacticKey, TacticExplanation> = {
     icon: '↔️',
     title: 'Amplitude',
     body: 'Estreito concentra jogadores no meio. Amplo usa as pontas. Normal é equilibrado.',
+  },
+  cornerTactic: {
+    icon: '🚩',
+    title: 'Escanteio',
+    body: 'Misto alterna entre 1º e 2º poste. 1º Poste privilegia cabeceio rápido. 2º Poste busca o alto. Curto prioriza jogada trabalhada.',
+  },
+  freeKickTactic: {
+    icon: '🎯',
+    title: 'Falta',
+    body: 'Chute direto tenta o gol de longe. Cruzamento joga na área. Jogada curta mantém a posse com passes rápidos.',
   },
 };

@@ -4,7 +4,7 @@
 // Centralizadas aqui pra facilitar ajustes de calibração sem precisar
 // caçar pelos 500+ linhas do matchEngine.ts.
 
-import type { Mentality, Intensity, DefensiveLine, Width, Formation } from './types';
+import type { Mentality, Intensity, DefensiveLine, Width, Formation, CornerTactic, FreeKickTactic } from './types';
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
 
@@ -172,3 +172,20 @@ export function getTacticalHardCounter(
   }
   return { defBonus: 1.0, atkBonus: 1.0 };
 }
+
+// =============================================================================
+// Bola parada: escanteio e falta
+// =============================================================================
+
+export const CORNER_TACTIC_MOD: Record<CornerTactic, { headerBonus: number; shortPassBonus: number }> = {
+  'mixed':     { headerBonus: 1.00, shortPassBonus: 1.00 },
+  'nearPost':  { headerBonus: 1.25, shortPassBonus: 0.85 },
+  'farPost':   { headerBonus: 1.15, shortPassBonus: 0.90 },
+  'short':     { headerBonus: 0.70, shortPassBonus: 1.30 },
+};
+
+export const FREEKICK_TACTIC_MOD: Record<FreeKickTactic, { shotBonus: number; headerBonus: number }> = {
+  'shoot':  { shotBonus: 1.30, headerBonus: 0.70 },
+  'cross':  { shotBonus: 0.75, headerBonus: 1.20 },
+  'short':  { shotBonus: 0.85, headerBonus: 0.90 },
+};
