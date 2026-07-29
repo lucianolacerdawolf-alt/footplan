@@ -42,6 +42,8 @@ type MatchSyncMsg =
 import { resolveKnockoutExtraTime, getShooters, buildMatchResult, type MatchState, simularPartida, simularPrimeiroTempo, simularSegundoTempo, resolveKnockoutTiebreak } from '../engine/matchEngine';
 import { useMatchSimulation, getSubWindow } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
+import { getSubSuggestions } from '../engine/subSuggestions';
+import type { SubSuggestion } from '../engine/subSuggestions';
 import CommentaryFeed from './CommentaryFeed';
 import { playerOvr } from '../utils/playerOvr';
 import { fireClick } from '../utils/fireClick';
@@ -94,6 +96,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
   const [pauseTab, setPauseTab] = useState<'tactics' | 'squad'>('tactics');
+  const [showSuggestions, setShowSuggestions] = useState(true);
+
+  const subSuggestions = (userSide && (userSide === 'home' || userSide === 'away'))
+    ? getSubSuggestions(userSide === 'home' ? home : away, userSide === 'home' ? awayScore : homeScore, userSide === 'home' ? homeScore : awayScore, userSide)
+    : [];
 
   // Online coordination state
   const [hostReady, setHostReady] = useState(false);
@@ -762,6 +769,30 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                         >
                           Adversário ({away.abbreviation})
                         </button>
+                      </div>
+                    )}
+
+                    {subSuggestions.length > 0 && showSuggestions && (
+                      <div className="sub-suggestions-banner">
+                        <div className="sub-suggestions-header">
+                          <span>💡 Sugestões do Técnico</span>
+                          <button className="sub-suggestions-close" onClick={() => setShowSuggestions(false)}>✕</button>
+                        </div>
+                        {subSuggestions.slice(0, 2).map((sug, si) => (
+                          <div key={si} className="sub-suggestion-item">
+                            <span className="sub-suggestion-type">
+                              {sug.type === 'fatigue' ? '🔋' : sug.type === 'card_risk' ? '🟨' : '📊'}
+                            </span>
+                            <div className="sub-suggestion-body">
+                              <span className="sub-suggestion-reason">{sug.reason}</span>
+                              {sug.candidates.map((c, ci) => (
+                                <span key={ci} className="sub-suggestion-candidate">
+                                  → {c.player.name} (OVR {c.candidates.length > 0 ? '' : ''}) · {c.reason}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
 
