@@ -105,6 +105,20 @@ export interface CareerState {
   transferListPlayerIds?: string[];
   sponsorTier?: string;   // 'local' | 'regional' | 'national' | 'global'
   sponsorName?: string;   // nome da marca na camisa
+  boardObjectives?: {
+    seasonYear: number;
+    objectives: Array<{
+      id: string;
+      type: string;
+      label: string;
+      target: number;
+      achieved?: boolean;
+      reward: number;
+      penalty: number;
+    }>;
+    evaluated: boolean;
+    streakBad: number;
+  };
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };

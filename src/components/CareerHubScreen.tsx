@@ -1,10 +1,14 @@
+import { useMemo } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName } from '../engine/career';
+import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
+import { getObjectives } from '../engine/boardObjectives';
+import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
+import { playerOvr } from '../utils/playerOvr';
 import InboxPanel from './InboxPanel';
 import styles from './CareerHubScreen.module.css';
 
@@ -82,6 +86,7 @@ function determineNextMatch(state: CareerState): NextMatch {
 
 export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor }: Props) {
   const inbox = getInbox(state);
+  const finances = getFinances(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
   const userPosition = standings.findIndex(s => s.teamId === state.season.league.userTeamId) + 1;
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
@@ -91,6 +96,33 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
   const sponsorTier = getSponsorTier(state) as SponsorTier;
   const sponsorName = getSponsorName(state);
   const nextTier = getNextTierUp(sponsorTier);
+  const boardObj = getObjectives(state);
+
+  const userTeam = useMemo(() =>
+    state.rosters[state.leagueId]?.find(t => t.id === state.season.league.userTeamId),
+    [state.rosters, state.leagueId, state.season.league.userTeamId]);
+
+  const record = useMemo(() =>
+    computeUserSeasonRecord(state.season.league),
+    [state.season.league]);
+
+  const avgOvr = useMemo(() => {
+    if (!userTeam) return 0;
+    const starters = userTeam.squad.slice(0, 11);
+    return Math.round(starters.reduce((s, p) => s + playerOvr(p), 0) / starters.length);
+  }, [userTeam]);
+
+  const totalRounds = state.season.league.fixtures.length;
+  const currentRound = state.season.league.currentRound;
+  const progressPct = totalRounds > 0 ? Math.round((currentRound / totalRounds) * 100) : 0;
+  const gamesPlayed = record.wins + record.draws + record.losses;
+
+  const topScorer = useMemo(() => {
+    const tally = state.season.userGoalScorers ?? {};
+    const entries = Object.entries(tally);
+    if (entries.length === 0) return null;
+    return entries.reduce((best, cur) => cur[1] > best[1] ? cur : best);
+  }, [state.season.userGoalScorers]);
 
   return (
     <div className={`${styles.screen} app-screen`}>
@@ -98,12 +130,137 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
         <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">
           ← Voltar
         </button>
-        <div className={styles.headerTitle}>
-          <h1 className={styles.title}>{state.manager.name}</h1>
-          <span className={styles.progress}>Reputação: {state.manager.reputation}</span>
-          <span className={styles.progress} style={{ color: 'var(--accent)', opacity: 0.65 }}>👕 {sponsorName} · {getSponsorLabel(sponsorTier)}</span>
+      </div>
+
+      {/* Club Identity Hero */}
+      {userTeam && (
+        <div className={styles.clubHero}>
+          <div className={styles.clubCrest}>
+            <img src={userTeam.logoUrl} alt={userTeam.name} className={styles.crestImg} />
+          </div>
+          <div className={styles.clubInfo}>
+            <h1 className={styles.clubName}>{userTeam.name}</h1>
+            <div className={styles.clubMeta}>
+              <span>{league.flag} {league.name}</span>
+              <span>·</span>
+              <span>Temporada {state.currentSeasonYear}</span>
+              {userTeam.stadium && <><span>·</span><span>🏟️ {userTeam.stadium}</span></>}
+            </div>
+            <div className={styles.managerRow}>
+              <span className={styles.managerName}>👔 {state.manager.name}</span>
+              <span className={styles.managerRep}>
+                ⭐ {state.manager.reputation} rep
+              </span>
+              <span className={styles.sponsorBadge}>
+                👕 {sponsorName}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Stats Row */}
+      <div className={styles.quickStats}>
+        <div className={styles.statCard}>
+          <span className={styles.statValue}>{gamesPlayed}</span>
+          <span className={styles.statLabel}>Jogos</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue} style={{ color: '#34d399' }}>{record.wins}</span>
+          <span className={styles.statLabel}>Vitórias</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue} style={{ color: '#9ca3af' }}>{record.draws}</span>
+          <span className={styles.statLabel}>Empates</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue} style={{ color: '#f87171' }}>{record.losses}</span>
+          <span className={styles.statLabel}>Derrotas</span>
+        </div>
+        <div className={styles.statCard}>
+          <span className={styles.statValue}>{record.goalsFor}</span>
+          <span className={styles.statLabel}>Gols</span>
         </div>
       </div>
+
+      {/* Season Progress + Position */}
+      {!seasonReady && (
+        <div className={styles.progressCard}>
+          <div className={styles.progressHeader}>
+            <span>Progresso da Temporada</span>
+            <span>{currentRound}/{totalRounds} rodadas ({progressPct}%)</span>
+          </div>
+          <div className={styles.progressBar}>
+            <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+          </div>
+          <div className={styles.progressFooter}>
+            <span>{userPosition}º lugar · {userTeam ? `OVR titular médio: ${avgOvr}` : ''}</span>
+            {topScorer && <span>⚽ Artilheiro: {topScorer[0]} ({topScorer[1]} gols)</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Finances Mini */}
+      <div className={styles.financeStrip}>
+        <div className={styles.financeItem}>
+          <span className={styles.financeLabel}>Orçamento</span>
+          <span className={styles.financeValue}>€{(finances.budget / 1_000_000).toFixed(1)}M</span>
+        </div>
+        <div className={styles.financeItem}>
+          <span className={styles.financeLabel}>Folha</span>
+          <span className={styles.financeValue}>€{(finances.wageBill / 1_000_000).toFixed(1)}M</span>
+        </div>
+        <div className={styles.financeItem}>
+          <span className={styles.financeLabel}>Renda sem.</span>
+          <span className={styles.financeValue}>€{(finances.weeklyIncome / 1_000_000).toFixed(1)}M</span>
+        </div>
+        <div className={styles.financeItem}>
+          <span className={styles.financeLabel}>Janela</span>
+          <span className={styles.financeValue} style={{ color: isWindowOpen ? '#22c55e' : '#ef4444' }}>
+            {isWindowOpen ? 'Aberta' : 'Fechada'}
+          </span>
+        </div>
+      </div>
+
+      {/* Competition Status */}
+      <div className={styles.compRow}>
+        <span>🏆 {league.cupName}: <strong>{cupStageLabel}</strong></span>
+        {nextTier && (
+          <button className={styles.sponsorBtn} onClick={onRenegotiateSponsor} disabled={!nextTier}>
+            📋 {nextTier ? `Patrocínio → ${getSponsorLabel(nextTier)}` : 'Global'}
+          </button>
+        )}
+      </div>
+
+      {boardObj && boardObj.objectives.length > 0 && (
+        <div className={styles.objectivesCard}>
+          <div className={styles.objectivesTitle}>Objetivos da Diretoria</div>
+          {boardObj.objectives.map(obj => {
+            const isAchieved = obj.achieved === true;
+            const isFailed = obj.achieved === false;
+            const isPending = obj.achieved === undefined;
+            return (
+              <div key={obj.id} className={`${styles.objectiveRow} ${isAchieved ? styles.objAchieved : isFailed ? styles.objFailed : ''}`}>
+                <span className={styles.objectiveIcon}>
+                  {isAchieved ? '✅' : isFailed ? '❌' : '📌'}
+                </span>
+                <span className={styles.objectiveLabel}>{obj.label}</span>
+                <span className={styles.objectiveReward}>
+                  {isPending ? `+${obj.reward} rep` : isAchieved ? `+${obj.reward}` : `-${obj.penalty}`}
+                </span>
+              </div>
+            );
+          })}
+          {!boardObj.evaluated && (
+            <div className={styles.objectivesPending}>Em andamento — avaliação ao fim da temporada</div>
+          )}
+          {boardObj.streakBad >= 2 && (
+            <div className={styles.objectivesWarning}>
+              ⚠️ {boardObj.streakBad >= 3 ? 'Última chance: ' : ''}Diretoria insatisfeita ({boardObj.streakBad} temporada{boardObj.streakBad > 1 ? 's' : ''} consecutiva{boardObj.streakBad > 1 ? 's' : ''} abaixo do esperado)
+            </div>
+          )}
+        </div>
+      )}
 
       <InboxPanel
         messages={inbox}
@@ -111,48 +268,6 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
         onAcceptTransferOffer={onAcceptTransferOffer}
         onRejectTransferOffer={onRejectTransferOffer}
       />
-
-      <div className={styles.summaryCard}>
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Liga</span>
-          <span className={styles.summaryValue}>{league.name}</span>
-        </div>
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Temporada</span>
-          <span className={styles.summaryValue}>{state.currentSeasonYear}</span>
-        </div>
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Posição na liga</span>
-          <span className={styles.summaryValue}>{userPosition}º</span>
-        </div>
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>{league.cupName}</span>
-          <span className={styles.summaryValue}>{cupStageLabel}</span>
-        </div>
-        <div className={styles.summaryRow}>
-          <span className={styles.summaryLabel}>Janela de transferências</span>
-          <span className={styles.summaryValue} style={{ color: isWindowOpen ? '#22c55e' : '#ef4444' }}>
-            {isWindowOpen ? 'Aberta' : 'Fechada'}
-          </span>
-        </div>
-        {nextTier && (
-          <div className={styles.summaryRow}>
-            <span className={styles.summaryLabel}>Próximo patrocínio</span>
-            <span className={styles.summaryValue} style={{ color: 'var(--accent)' }}>
-              {getSponsorLabel(nextTier)} · reputação {state.manager.reputation} meta
-            </span>
-          </div>
-        )}
-      </div>
-
-      <button
-        className={styles.advanceBtn}
-        style={{ fontSize: 11, padding: '6px 14px', marginTop: 4 }}
-        onClick={onRenegotiateSponsor}
-        disabled={!nextTier}
-      >
-        📋 Renegociar Patrocínio{nextTier ? ` (→ ${getSponsorLabel(nextTier)})` : ' (já é Global)'}
-      </button>
 
       {nextMatch && !seasonReady && (
         <div className={styles.nextMatchCard}>

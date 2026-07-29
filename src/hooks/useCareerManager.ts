@@ -20,6 +20,7 @@ import {
 } from '../engine/inbox';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason, tallyUserGoals, mergeGoalTally } from '../engine/seasonClosure';
 import { generateFreeAgentPool, refreshFreeAgentPool } from '../engine/freeAgentPool';
+import { generateBoardObjectives, evaluateBoardObjectives, createBoardObjectivesInboxMessage, createBoardObjectivesResultMessage } from '../engine/boardObjectives';
 import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import { getStageMatches, updateStageMatch } from '../engine/bracketHelpers';
@@ -124,6 +125,7 @@ export function useCareerManager({
     const trimmedName = managerName.trim().slice(0, 24) || 'Técnico';
     const startingTier = getStartingTier(leagueDef.id);
     const sponsor = generateSponsor(leagueDef.id, userTeam.id, startingTier);
+    const boardObj = generateBoardObjectives(league, 0);
     const newState: CareerState = {
       version: 1,
       leagueId: leagueDef.id,
@@ -133,10 +135,11 @@ export function useCareerManager({
       rosters,
       history: [],
       finances: { budget, wageBill: computeWageBill(userTeamWithValues), weeklyIncome: computeWeeklyIncome(leagueDef.id) },
-      inbox: [createWelcomeMessage(trimmedName, budget, 'Temporada 1')],
+      inbox: [createWelcomeMessage(trimmedName, budget, 'Temporada 1'), createBoardObjectivesInboxMessage(boardObj)],
       freeAgentPool: generateFreeAgentPool(),
       sponsorTier: startingTier,
       sponsorName: sponsor.name,
+      boardObjectives: boardObj,
     };
     setCareerState(newState);
     setScreen('career-hub');
@@ -777,10 +780,20 @@ export function useCareerManager({
       const cupChampion = careerState.season.cup.championId === careerState.season.league.userTeamId;
       const cupResult = deriveCupResult(careerState.season.cup, careerState.season.league.userTeamId);
       const reputationDelta = computeReputationDelta({ leagueChampion, cupChampion, leaguePosition, totalTeams });
-      const newReputation = Math.max(0, Math.min(100, careerState.manager.reputation + reputationDelta));
+      let newReputation = Math.max(0, Math.min(100, careerState.manager.reputation + reputationDelta));
 
       const record = computeUserSeasonRecord(careerState.season.league);
       const finances = getFinances(careerState);
+
+      // ── Board objectives evaluation ──
+      const currentObj = careerState.boardObjectives ?? generateBoardObjectives(careerState.season.league, careerState.manager.reputation, leaguePosition);
+      const objEval = evaluateBoardObjectives(
+        currentObj, leaguePosition, cupResult, finances.budget,
+        currentObj?.streakBad ?? 0,
+      );
+      newReputation = Math.max(0, Math.min(100, newReputation + objEval.totalRepDelta));
+      // eslint-disable-next-line prefer-const
+      let objectiveMessages: InboxMessage[] = [createBoardObjectivesResultMessage(objEval.results, objEval.totalRepDelta, objEval.warnings)];
       const budgetAtStart = careerState.season.budgetAtSeasonStart ?? finances.budget;
       const leaguePrize = getLeaguePrizeMoney(careerState.leagueId, leaguePosition);
       const cupPrize = getCupPrizeMoney(careerState.leagueId, cupResult);
@@ -841,6 +854,10 @@ export function useCareerManager({
       const sponsoredIncome = Math.round(baseIncome * getSponsorMultiplier(nextSponsorTier));
       const merch = computeMerchRevenue(newReputation);
 
+      // Generate objectives for the new season
+      const nextBoardObj = generateBoardObjectives(nextLeague, newReputation, leaguePosition);
+      objectiveMessages.push(createBoardObjectivesInboxMessage(nextBoardObj));
+
       setCareerState({
         ...careerState,
         manager: { ...careerState.manager, reputation: newReputation },
@@ -852,9 +869,11 @@ export function useCareerManager({
         rosters: evolvedRosters,
         history: [...careerState.history, entry],
         finances: { budget: finances.budget + leaguePrize + cupPrize, wageBill: computeWageBill(evolvedUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
+        inbox: [...(careerState.inbox ?? []), ...objectiveMessages],
         freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(careerState), careerState.currentSeasonYear + 1),
         sponsorTier: nextSponsorTier,
         sponsorName: nextSponsorName,
+        boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },
       });
       setScreen('season-end');
     } catch (err) {

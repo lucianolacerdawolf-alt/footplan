@@ -1,20 +1,10 @@
 .screen {
-  max-width: 720px; gap: 16px;
+  max-width: 720px; gap: 12px;
 }
 
 .header {
-  display: flex; align-items: center; gap: 14px;
+  display: flex; align-items: center;
 }
-.headerTitle {
-  display: flex; align-items: baseline; gap: 10px;
-}
-.title {
-  font-size: 28px; font-weight: 400; font-family: var(--display); letter-spacing: 0.05em;
-}
-.progress {
-  font-size: 14px; font-weight: 700; opacity: 0.45; font-family: var(--mono);
-}
-
 .backBtn {
   background: transparent; border: 1px solid var(--border); border-radius: 8px;
   padding: 6px 14px; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
@@ -23,54 +13,109 @@
 }
 .backBtn:hover { background: var(--surface); color: var(--text-primary); }
 
-.summaryCard {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 14px; border-radius: 12px;
-  border: 1.5px solid var(--border);
-  background: var(--code-bg);
+/* ── Club Hero ────────────────────────────────────────────── */
+.clubHero {
+  display: flex; gap: 16px; align-items: center;
+  padding: 16px; border-radius: 14px;
+  background: linear-gradient(135deg, #111827 0%, #1a1f3a 60%, #1e293b 100%);
+  border: 1.5px solid #1f2937;
 }
-.summaryRow {
-  display: flex; align-items: center; justify-content: space-between;
+.clubCrest { flex-shrink: 0; }
+.crestImg { width: 56px; height: 56px; object-fit: contain; }
+.clubInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.clubName {
+  font-size: 20px; font-weight: 700; font-family: var(--display);
+  letter-spacing: 0.03em; color: #f1f5f9; margin: 0;
 }
-.summaryLabel {
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
-  opacity: 0.55; font-family: var(--sans);
+.clubMeta {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  font-size: 11px; color: #9ca3af; font-weight: 500;
 }
-.summaryValue {
-  font-size: 14px; font-weight: 800; font-family: var(--heading); color: var(--text-primary);
+.managerRow {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  font-size: 11px; margin-top: 2px;
+}
+.managerName { color: #d1d5db; font-weight: 600; }
+.managerRep { color: #fbbf24; font-weight: 700; }
+.sponsorBadge {
+  background: #1f2937; color: #9ca3af; padding: 2px 8px;
+  border-radius: 99px; font-size: 10px; font-weight: 600;
 }
 
+/* ── Quick Stats ──────────────────────────────────────────── */
+.quickStats {
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
+}
+.statCard {
+  background: #111827; border: 1px solid #1f2937; border-radius: 10px;
+  padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.statValue { font-size: 18px; font-weight: 800; color: #e5e7eb; }
+.statLabel { font-size: 9px; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+
+/* ── Season Progress ──────────────────────────────────────── */
+.progressCard {
+  background: #111827; border: 1px solid #1f2937; border-radius: 10px;
+  padding: 12px 14px;
+}
+.progressHeader {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: #6b7280; font-weight: 600; margin-bottom: 6px;
+}
+.progressBar {
+  height: 6px; background: #1f2937; border-radius: 99px; overflow: hidden; margin-bottom: 6px;
+}
+.progressFill {
+  height: 100%; background: linear-gradient(90deg, #3b82f6, #2563eb);
+  border-radius: 99px; transition: width 0.3s;
+}
+.progressFooter {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: #6b7280; font-weight: 500;
+}
+
+/* ── Finances Strip ───────────────────────────────────────── */
+.financeStrip {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+}
+.financeItem {
+  background: #111827; border: 1px solid #1f2937; border-radius: 8px;
+  padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.financeLabel { font-size: 9px; color: #6b7280; font-weight: 600; text-transform: uppercase; }
+.financeValue { font-size: 12px; font-weight: 700; color: #e5e7eb; }
+
+/* ── Competition + Sponsor Row ────────────────────────────── */
+.compRow {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: #9ca3af; gap: 8px;
+}
+.compRow strong { color: #d1d5db; }
+.sponsorBtn {
+  background: #1f2937; border: 1px solid #374151; border-radius: 7px;
+  padding: 5px 10px; font-size: 10px; font-weight: 600; color: #9ca3af;
+  cursor: pointer; font-family: var(--sans); white-space: nowrap;
+  transition: background 0.15s;
+}
+.sponsorBtn:hover { background: #374151; }
+.sponsorBtn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Next Match ───────────────────────────────────────────── */
 .nextMatchCard {
   background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.02));
   border: 1px solid var(--accent);
-  border-radius: 12px;
-  padding: 16px;
-  text-align: center;
+  border-radius: 12px; padding: 16px; text-align: center;
 }
 .nextMatchLabel {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--accent);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  font-size: 12px; font-weight: 600; color: var(--accent);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
 }
 .nextMatchTeams {
-  font-size: 16px;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  font-size: 16px; color: var(--text-primary);
+  display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px;
 }
-.nextMatchVs {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-weight: 400;
-}
+.nextMatchVs { font-size: 12px; color: var(--text-secondary); font-weight: 400; }
 
-.playRow { text-align: center; }
 .playBtn {
   padding: 13px 32px; font-size: 15px; font-weight: 700; font-family: var(--sans); border: none;
   border-radius: 10px; cursor: pointer;
@@ -79,6 +124,7 @@
 }
 .playBtn:hover { opacity: 0.9; }
 
+/* ── Advance / Status ─────────────────────────────────────── */
 .advanceRow { text-align: center; }
 .advanceBtn {
   padding: 13px 32px; font-size: 15px; font-weight: 700; font-family: var(--sans); border: none;
@@ -87,12 +133,11 @@
   letter-spacing: 0.3px; transition: all 0.2s;
 }
 .advanceBtn:hover { opacity: 0.9; }
-
 .advanceStatus {
-  text-align: center; font-size: 12px; font-weight: 600; opacity: 0.5;
-  font-family: var(--sans);
+  text-align: center; font-size: 12px; font-weight: 600; opacity: 0.5; font-family: var(--sans);
 }
 
+/* ── New Career ───────────────────────────────────────────── */
 .newCareerRow { text-align: center; }
 .newCareerBtn {
   background: transparent; border: none; padding: 4px;
@@ -102,7 +147,43 @@
 }
 .newCareerBtn:hover { opacity: 0.8; }
 
+/* ── Board Objectives ─────────────────────────────────────── */
+.objectivesCard {
+  padding: 12px 14px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--code-bg);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.objectivesTitle {
+  font-size: 11px; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.objectiveRow {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px; border-radius: 6px;
+  background: #111827; font-size: 11px;
+}
+.objectiveIcon { font-size: 13px; flex-shrink: 0; }
+.objectiveLabel { color: #d1d5db; flex: 1; }
+.objectiveReward { font-size: 10px; color: #6b7280; font-weight: 600; }
+.objAchieved { opacity: 0.7; }
+.objAchieved .objectiveLabel { text-decoration: line-through; color: #6b7280; }
+.objFailed .objectiveLabel { color: #fca5a5; }
+.objFailed .objectiveReward { color: #f87171; }
+.objectivesPending {
+  font-size: 10px; color: #4b5563; text-align: center; font-style: italic;
+}
+.objectivesWarning {
+  font-size: 10px; color: #f87171; text-align: center; font-weight: 600;
+}
+
 @media (max-width: 640px) {
-  .screen { padding: 12px 10px 24px; gap: 12px; }
-  .title { font-size: 18px; }
+  .screen { padding: 10px 8px 24px; gap: 10px; }
+  .clubName { font-size: 17px; }
+  .crestImg { width: 44px; height: 44px; }
+  .clubHero { padding: 12px; gap: 12px; }
+  .quickStats { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .statCard { padding: 8px 4px; }
+  .statValue { font-size: 15px; }
+  .statLabel { font-size: 8px; }
+  .financeStrip { grid-template-columns: repeat(2, 1fr); }
+  .compRow { flex-direction: column; align-items: flex-start; gap: 4px; }
 }

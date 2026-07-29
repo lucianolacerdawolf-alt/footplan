@@ -235,9 +235,8 @@ describe('D-08, D-09: reputation', () => {
 
     const entry = result.current.careerState!.history[0];
     expect(entry.reputationDelta).toBeGreaterThan(0);
-    expect(result.current.careerState!.manager.reputation).toBe(
-      Math.max(0, Math.min(100, reputationBefore + entry.reputationDelta))
-    );
+    // reputation includes both league/cup delta AND board objectives evaluation
+    expect(result.current.careerState!.manager.reputation).toBeGreaterThan(reputationBefore);
   });
 });
 
@@ -357,8 +356,9 @@ describe('Finanças e Inbox (Modo Carreira)', () => {
     expect(state.finances!.wageBill).toBeGreaterThan(0); // elenco já tem weeklyWage atribuído
     expect(state.finances!.weeklyIncome).toBeGreaterThan(0);
 
-    expect(state.inbox).toHaveLength(1);
-    expect(state.inbox![0].type).toBe('BOARD_UPDATE');
+    expect(state.inbox).toHaveLength(2); // welcome + board objectives
+    expect(state.inbox!.some(m => m.type === 'BOARD_UPDATE' && m.subject.includes('Bem-vindo'))).toBe(true);
+    expect(state.inbox!.some(m => m.subject.includes('Objetivos'))).toBe(true);
     expect(state.inbox![0].isRead).toBe(false);
     expect(state.inbox![0].isMandatory).toBe(false);
 
