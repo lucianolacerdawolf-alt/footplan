@@ -1,6 +1,9 @@
 import type { Player, Position, Team } from './types';
 import type { LeagueState, BracketState } from './tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
+// type-only: boardObjectives importa CareerState de volta, mas imports de tipo
+// são apagados na compilação — não há ciclo em runtime.
+import type { BoardObjectivesState } from './boardObjectives';
 import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
@@ -105,20 +108,7 @@ export interface CareerState {
   transferListPlayerIds?: string[];
   sponsorTier?: string;   // 'local' | 'regional' | 'national' | 'global'
   sponsorName?: string;   // nome da marca na camisa
-  boardObjectives?: {
-    seasonYear: number;
-    objectives: Array<{
-      id: string;
-      type: string;
-      label: string;
-      target: number;
-      achieved?: boolean;
-      reward: number;
-      penalty: number;
-    }>;
-    evaluated: boolean;
-    streakBad: number;
-  };
+  boardObjectives?: BoardObjectivesState;
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };

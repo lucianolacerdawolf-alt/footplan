@@ -13,17 +13,17 @@ function register(a: string, b: string, name?: string): void {
 }
 
 // Premier League
-register('pl-t0', 'pl-mu', 'North London Derby × Manchester');
+register('pl-t0', 'pl-mu', 'Arsenal × United');
 register('pl-mu', 'pl-t1', 'North-West Derby');
 register('pl-t0', 'pl-ch', 'London Derby');
-register('pl-ch', 'pl-t1', 'Big Six Clash');
+register('pl-ch', 'pl-t1', 'Chelsea × Liverpool');
 register('pl-mu', 'pl-t3', 'Manchester Derby');
 register('pl-t1', 'pl-ev', 'Merseyside Derby');
 register('pl-t0', 'pl-th', 'North London Derby');
 
 // La Liga
 register('laliga-t0', 'laliga-t1', 'El Clásico');
-register('laliga-t2', 'laliga-t1', 'Madrid-Barça Rivalry');
+register('laliga-t2', 'laliga-t1', 'Atlético × Barça');
 register('laliga-t0', 'laliga-t2', 'Derbi Madrileño');
 
 // Bundesliga
@@ -31,7 +31,7 @@ register('bundesliga-t0', 'bundesliga-t1', 'Der Klassiker');
 
 // Serie A
 register('seriea-t0', 'seriea-t1', 'Derby d\'Italia');
-register('seriea-t0', 'seriea-t3', 'Juventus-Milan');
+register('seriea-t0', 'seriea-t3', 'Derby del Made in Italy');
 register('seriea-t1', 'seriea-t3', 'Derby della Madonnina');
 
 // Ligue 1

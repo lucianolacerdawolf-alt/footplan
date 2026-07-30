@@ -419,7 +419,6 @@ const screenMap: Record<Screen, ScreenRenderer> = {
 
   'matchday': (p) => {
     if (!p.homeTeam || !p.awayTeam) return null;
-    const isTournament = p.matchContext === 'league' || p.matchContext === 'bracket';
     const roundLabel = p.matchContext === 'league'
       ? (p.isCareerMode
         ? `Rodada ${(p.careerState?.season.league.currentRound ?? 0) + 1}`
@@ -432,13 +431,10 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         matchContext={p.matchContext}
         roundLabel={roundLabel}
         onPlay={() => p.setScreen('match')}
-        onBack={() => {
-          if (p.isCareerMode && p.matchContext === 'league') p.setScreen('career-league');
-          else if (p.isCareerMode && p.matchContext === 'bracket') p.setScreen('career-bracket');
-          else if (p.matchContext === 'league') p.setScreen('league');
-          else if (p.matchContext === 'bracket') p.setScreen('bracket');
-          else p.setScreen('setup');
-        }}
+        // O caminho é lista → setup → matchday → match. Voltar direto pra lista
+        // pulava o setup e fazia o usuário perder as táticas que acabou de ajustar;
+        // o próprio setup já sabe voltar pra lista certa em cada contexto.
+        onBack={() => p.setScreen('setup')}
       />
     );
   },
@@ -472,6 +468,9 @@ const screenMap: Record<Screen, ScreenRenderer> = {
 
   'career-hub': (p) => {
     if (!p.careerState) return null;
+    const hubBlockAdvanceReason = hasMandatoryUnread(getInbox(p.careerState))
+      ? 'Leia as mensagens obrigatórias acima antes de avançar'
+      : undefined;
     return (
       <CareerHubScreen
         state={p.careerState}
@@ -485,6 +484,9 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onAcceptTransferOffer={p.handleAcceptTransferOffer}
         onRejectTransferOffer={p.handleRejectTransferOffer}
         onRenegotiateSponsor={p.handleRenegotiateSponsor}
+        onNextRound={p.handleNextCareerLeagueRound}
+        onViewLeague={() => p.setScreen('career-league')}
+        blockAdvanceReason={hubBlockAdvanceReason}
       />
     );
   },
@@ -507,6 +509,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         onUnlistPlayerForSale={p.handleUnlistPlayerForSale}
         onSignFreeAgent={p.handleSignFreeAgent}
         onRosterSynced={p.handleMarketRosterSynced}
+        onProposeTrade={() => p.setScreen('trade-propose')}
       />
     );
   },
@@ -586,7 +589,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         userTeam={p.careerState.season.league.teams.find(t => t.id === p.careerState!.season.league.userTeamId)!}
         opponentTeams={p.careerState.rosters[p.careerState.leagueId].filter(t => t.id !== p.careerState!.season.league.userTeamId)}
         budget={getFinances(p.careerState).budget}
-        onBack={() => p.setScreen('career-hub')}
+        onBack={() => p.setScreen('transfer-market')}
         onPropose={p.handleProposeTrade}
       />
     );

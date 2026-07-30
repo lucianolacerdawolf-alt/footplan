@@ -29,6 +29,9 @@ interface Props {
    *  aqui no Mercado, sincroniza ela sob demanda (uma vez, cache de 7 dias) pra trazer
    *  nome/idade/nacionalidade reais também pros times de fora da liga do usuário. */
   onRosterSynced?: (leagueId: string, teams: Team[]) => void;
+  /** Abre a tela de proposta de troca (jogador por jogador, com ou sem dinheiro).
+   *  É o único caminho de entrada dela — sem isso a tela fica inalcançável. */
+  onProposeTrade?: () => void;
 }
 
 const POSITIONS: Position[] = ['GK', 'DEF', 'MID', 'FWD'];
@@ -67,7 +70,7 @@ function sortPlayers<T extends Player>(players: T[], sortBy: SortKey): T[] {
   });
 }
 
-export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced }: Props) {
+export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
@@ -236,6 +239,11 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
         <button className={`${styles.tabBtn} ${activeTab === 'free-agents' ? styles.active : ''}`} onClick={() => switchTab('free-agents')}>
           🆓 Agentes Livres ({freeAgents.length})
         </button>
+        {onProposeTrade && (
+          <button className={styles.tabBtn} onClick={onProposeTrade}>
+            🔄 Propor Troca
+          </button>
+        )}
       </div>
 
       {!isWindowOpen ? (

@@ -47,6 +47,36 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
     setTimeout(() => { fn(); setSimulating(false); }, 200);
   };
 
+  // Precisa ficar ANTES do retorno antecipado de `phase === 'done'`: com o hook
+  // depois dele, a última rodada da temporada renderizava menos hooks que a
+  // anterior e o React derrubava a tela ("Rendered fewer hooks than expected").
+  const seasonStats = useMemo(() => {
+    let totalGoals = 0, playedCount = 0, homeWins = 0, draws = 0;
+    let userGF = 0, userGA = 0, userClean = 0;
+    for (const round of fixtures) {
+      for (const f of round) {
+        if (!f.played || f.homeScore == null || f.awayScore == null) continue;
+        totalGoals += f.homeScore + f.awayScore;
+        playedCount++;
+        if (f.homeScore > f.awayScore) homeWins++;
+        else if (f.homeScore === f.awayScore) draws++;
+        if (f.homeTeamId === userTeamId) { userGF += f.homeScore; userGA += f.awayScore; if (f.awayScore === 0) userClean++; }
+        else if (f.awayTeamId === userTeamId) { userGF += f.awayScore; userGA += f.homeScore; if (f.homeScore === 0) userClean++; }
+      }
+    }
+    if (playedCount === 0) return null;
+    return (
+      <div className={styles.statsStrip}>
+        <span className={styles.statItem}>⚽ Gols: <b>{totalGoals}</b></span>
+        <span className={styles.statItem}>📊 Média: <b>{(totalGoals / playedCount).toFixed(2)}</b></span>
+        <span className={styles.statItem}>🏟️ Casa: <b>{(homeWins / playedCount * 100).toFixed(0)}%</b></span>
+        <span className={styles.statItem}>🤝 Empate: <b>{(draws / playedCount * 100).toFixed(0)}%</b></span>
+        <span className={styles.statItem}>🔢 Seu time: <b>{userGF} GP · {userGA} GC {userGF - userGA >= 0 ? '+' : ''}{userGF - userGA}</b></span>
+        <span className={styles.statItem}>🧤 Clean sheets: <b>{userClean}</b></span>
+      </div>
+    );
+  }, [fixtures, userTeamId]);
+
   if (phase === 'done') {
     const standings = computeStandings(teams, fixtures);
     const champion = teamById(teams, standings[0].teamId);
@@ -79,33 +109,6 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
   const otherFixtures = round.filter(f => f !== userFixture);
   const roundComplete = round.every(f => f.played);
   const othersComplete = otherFixtures.every(f => f.played);
-
-  const seasonStats = useMemo(() => {
-    let totalGoals = 0, playedCount = 0, homeWins = 0, draws = 0;
-    let userGF = 0, userGA = 0, userClean = 0;
-    for (const round of fixtures) {
-      for (const f of round) {
-        if (!f.played || f.homeScore == null || f.awayScore == null) continue;
-        totalGoals += f.homeScore + f.awayScore;
-        playedCount++;
-        if (f.homeScore > f.awayScore) homeWins++;
-        else if (f.homeScore === f.awayScore) draws++;
-        if (f.homeTeamId === userTeamId) { userGF += f.homeScore; userGA += f.awayScore; if (f.awayScore === 0) userClean++; }
-        else if (f.awayTeamId === userTeamId) { userGF += f.awayScore; userGA += f.homeScore; if (f.homeScore === 0) userClean++; }
-      }
-    }
-    if (playedCount === 0) return null;
-    return (
-      <div className={styles.statsStrip}>
-        <span className={styles.statItem}>⚽ Gols: <b>{totalGoals}</b></span>
-        <span className={styles.statItem}>📊 Média: <b>{(totalGoals / playedCount).toFixed(2)}</b></span>
-        <span className={styles.statItem}>🏟️ Casa: <b>{(homeWins / playedCount * 100).toFixed(0)}%</b></span>
-        <span className={styles.statItem}>🤝 Empate: <b>{(draws / playedCount * 100).toFixed(0)}%</b></span>
-        <span className={styles.statItem}>🔢 Seu time: <b>{userGF} GP · {userGA} GC {userGF - userGA >= 0 ? '+' : ''}{userGF - userGA}</b></span>
-        <span className={styles.statItem}>🧤 Clean sheets: <b>{userClean}</b></span>
-      </div>
-    );
-  }, [fixtures, userTeamId]);
 
   const renderScore = (f: LeagueFixture) => {
     if (!f.played) return <span className={styles.fixtureVs}>vs</span>;

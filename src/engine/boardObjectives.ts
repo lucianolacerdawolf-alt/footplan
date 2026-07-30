@@ -1,5 +1,6 @@
 import type { CareerState, InboxMessage } from './career';
 import type { LeagueState } from './tournament';
+import { getAvgOvr } from '../utils/teamUtils';
 
 export type BoardObjectiveType =
   | 'league_position'
@@ -21,7 +22,6 @@ export interface BoardObjective {
 export interface BoardObjectivesState {
   seasonYear: number;
   objectives: BoardObjective[];
-  evaluated: boolean;
   streakBad: number; // consecutive seasons with majority of objectives failed
 }
 
@@ -30,35 +30,48 @@ function makeId(): string {
 }
 
 export function getObjectives(state: CareerState): BoardObjectivesState | null {
-  return (state as any).boardObjectives ?? null;
+  return state.boardObjectives ?? null;
+}
+
+/**
+ * Estatura do clube na liga (0-100) pela média de OVR do elenco: 100 = melhor
+ * time da liga, 0 = pior. É o que impede um técnico estreante no Real Madrid de
+ * receber "evitar o rebaixamento" só porque a reputação dele começa em zero.
+ */
+export function getClubStature(league: LeagueState): number {
+  const ranked = [...league.teams].sort((a, b) => getAvgOvr(b) - getAvgOvr(a));
+  const idx = ranked.findIndex(t => t.id === league.userTeamId);
+  if (idx < 0 || ranked.length < 2) return 50;
+  return Math.round(((ranked.length - 1 - idx) / (ranked.length - 1)) * 100);
 }
 
 export function generateBoardObjectives(
   league: LeagueState,
   reputation: number,
+  seasonYear: number,
   previousPosition?: number,
 ): BoardObjectivesState {
   const totalTeams = league.teams.length;
   const objectives: BoardObjective[] = [];
-  const isBigClub = reputation >= 60;
-  const isTopLeague = league.teams.length >= 20;
+  // A cobrança é a maior entre o que o técnico já provou e o que o elenco vale.
+  const standing = Math.max(reputation, getClubStature(league));
+  const isBigClub = standing >= 60;
 
   // ── Objective 1: League position ──
-  if (isBigClub && isTopLeague) {
-    if (reputation >= 85) {
-      objectives.push({
-        id: makeId(), type: 'league_position',
-        label: 'Disputar o título (Top 2)',
-        target: 2, reward: 12, penalty: 8,
-      });
-    } else {
-      objectives.push({
-        id: makeId(), type: 'league_position',
-        label: 'Classificar para competições europeias (Top 4)',
-        target: 4, reward: 10, penalty: 6,
-      });
-    }
-  } else if (reputation >= 40) {
+  if (isBigClub) {
+    // A diretoria nunca pede menos do que o time entregou na temporada passada.
+    const repTarget = standing >= 85 ? 2 : 4;
+    const target = previousPosition
+      ? Math.max(2, Math.min(repTarget, previousPosition))
+      : repTarget;
+    objectives.push({
+      id: makeId(), type: 'league_position',
+      label: target <= 2 ? 'Disputar o título (Top 2)' : `Classificar para competições europeias (Top ${target})`,
+      target,
+      reward: target <= 2 ? 12 : 10,
+      penalty: target <= 2 ? 8 : 6,
+    });
+  } else if (standing >= 40) {
     objectives.push({
       id: makeId(), type: 'top_half',
       label: `Terminar na metade de cima (Top ${Math.ceil(totalTeams / 2)})`,
@@ -67,7 +80,7 @@ export function generateBoardObjectives(
   } else {
     objectives.push({
       id: makeId(), type: 'avoid_relegation',
-      label: `Evitar o rebaixamento (acima de ${totalTeams - 3}º)`,
+      label: `Evitar o rebaixamento (terminar até ${totalTeams - 3}º)`,
       target: totalTeams - 3, reward: 10, penalty: 6,
     });
   }
@@ -80,7 +93,7 @@ export function generateBoardObjectives(
       target: 2, // runner-up or better
       reward: 8, penalty: 4,
     });
-  } else if (reputation >= 40) {
+  } else if (standing >= 40) {
     objectives.push({
       id: makeId(), type: 'cup_progress',
       label: 'Chegar às semifinais da copa',
@@ -103,12 +116,7 @@ export function generateBoardObjectives(
     target: 0, reward: 6, penalty: 3,
   });
 
-  return {
-    seasonYear: league.fixtures.length > 0 ? new Date().getFullYear() : 2024,
-    objectives,
-    evaluated: false,
-    streakBad: 0,
-  };
+  return { seasonYear, objectives, streakBad: 0 };
 }
 
 export interface ObjectiveResult {
@@ -202,12 +210,12 @@ export function evaluateBoardObjectives(
 export function createBoardObjectivesInboxMessage(objectives: BoardObjectivesState): InboxMessage {
   const lines = objectives.objectives.map(o => `• ${o.label}`);
   return {
-    id: `board-obj-${objectives.seasonYear}`,
+    id: crypto.randomUUID(),
     date: new Date().toISOString().slice(0, 10),
     isRead: false,
     isMandatory: false,
     type: 'BOARD_UPDATE',
-    subject: 'Objetivos da Temporada',
+    subject: `Objetivos da Temporada ${objectives.seasonYear}`,
     body: `A diretoria definiu os seguintes objetivos para esta temporada:\n\n${lines.join('\n')}\n\nBoa sorte!`,
   };
 }
@@ -230,7 +238,7 @@ export function createBoardObjectivesResultMessage(
   }
 
   return {
-    id: `board-result-${Date.now()}`,
+    id: crypto.randomUUID(),
     date: new Date().toISOString().slice(0, 10),
     isRead: false,
     isMandatory: true,

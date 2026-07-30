@@ -28,6 +28,7 @@ import {
   generateExtraTimeKickoff, generateExtraTimeMidpoint,
   generatePenaltyKick, generatePenaltyWin,
   generateInjury, generateMatchPenalty, generateCornerGoal, generateMomentumShift,
+  generateShortCornerGoal, generateFreeKick, generateFreeKickGoal, generateFreeKickMiss,
 } from './commentary';
 import { generateTacticalComment } from './tacticalCommentary';
 import { isDerby, getDerbyName } from './rivalries';
@@ -35,6 +36,7 @@ import {
   CYCLE_MINUTES, FIRST_HALF_CYCLES, TOTAL_CYCLES, ET_HALF_CYCLE, ET_END_CYCLE,
   MAX_EVENTS_PER_CYCLE, ATK_CHANCE,
   INTENSITY_FOUL_MULT, INTENSITY_INJURY_MULT, DEFENSIVE_LINE_OFFSIDE,
+  CORNER_TACTIC_MOD, FREEKICK_TACTIC_MOD, FREEKICK_DIFFICULTY,
 } from './matchConfig';
 import {
   effective, getPlayersByPosition, getGoalkeeper, pickRandom, getStarters,
@@ -271,17 +273,34 @@ function resolveCycleCorner(
   const atkAerialPwr = eligible.reduce((s, p) => s + p.attributes.positioning, 0) / Math.max(1, eligible.length);
   const defAerialPwr = defCornerEligible.reduce((s, p) => s + p.attributes.positioning, 0) / Math.max(1, defCornerEligible.length);
   const cornerGoalChance = 0.05 + 0.10 * (atkAerialPwr / (atkAerialPwr + defAerialPwr));
+
+  // Tática de escanteio escolhida pelo usuário: decide a rota (cabeceio × jogada
+  // curta) e o quanto cada uma rende. A frequência de escanteios não muda — só
+  // quem finaliza e com que força — para não desbalancear o placar médio.
+  const cMod = CORNER_TACTIC_MOD[possTeam.strategy.cornerTactic ?? 'mixed'];
+  const shortRoute = random() < 0.25 * cMod.shortPassBonus;
+
   if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < cornerGoalChance) {
-    if (eligible.length > 0) {
-      const header = pickRandom(eligible, 1, random)[0];
+    const shortEligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'MID'),
+                           ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
+    const takers = shortRoute ? shortEligible : eligible;
+    if (takers.length > 0) {
+      const finisher = pickRandom(takers, 1, random)[0];
       const gk = getGoalkeeper(getStarters(defTeam, state.cards, state.injured));
       if (gk) {
-        const headerPower = effective(header.attributes.positioning, atkFatigue.get(header.id) ?? 0) * 1.2 +
-                            effective(header.attributes.finishing, atkFatigue.get(header.id) ?? 0) * 0.5;
+        const fatigue = atkFatigue.get(finisher.id) ?? 0;
+        const power = shortRoute
+          ? (effective(finisher.attributes.passing, fatigue) * 0.6 +
+             effective(finisher.attributes.finishing, fatigue) * 0.9) * cMod.shortPassBonus
+          : (effective(finisher.attributes.positioning, fatigue) * 1.2 +
+             effective(finisher.attributes.finishing, fatigue) * 0.5) * cMod.headerBonus;
         const gkPower = effective(gk.attributes.positioning, defFatigue.get(gk.id) ?? 0) * rngFallback(random, 0.8, 1.2);
-        if (headerPower * rngFallback(random, 0.7, 1.3) > gkPower && random() < goalTimingMultiplier(minute)) {
+        if (power * rngFallback(random, 0.7, 1.3) > gkPower && random() < goalTimingMultiplier(minute)) {
           const newScore = `${state.homeScore}-${state.awayScore}`;
-          state.events.push({ minute, type: 'goal', description: generateCornerGoal(possTeam.name, header, minute, newScore), teamId: possTeam.id, scorer: header.name });
+          const description = shortRoute
+            ? generateShortCornerGoal(possTeam.name, finisher, newScore)
+            : generateCornerGoal(possTeam.name, finisher, minute, newScore);
+          state.events.push({ minute, type: 'goal', description, teamId: possTeam.id, scorer: finisher.name });
           if (possTeam.id === home.id) state.homeScore++; else state.awayScore++;
           applyMomentum(state, possTeam.id === home.id ? 'A' : 'B', possTeam.id);
           cycleEvents++;
@@ -291,6 +310,61 @@ function resolveCycleCorner(
   }
 
   return cycleEvents;
+}
+
+// ---------------------------------------------------------------------------
+// resolveFreeKick — cobrança de falta em duas rotas
+// A tática de falta do time atacante (chute / cruzamento / curta) define a
+// probabilidade de cada rota e o multiplicador de força da finalização.
+// ---------------------------------------------------------------------------
+function resolveFreeKick(
+  atkTeam: Team, defTeam: Team,
+  state: MatchState,
+  random: RandomFn,
+  minute: number,
+  cycleEvents: number,
+  home: Team
+): number {
+  const fMod = FREEKICK_TACTIC_MOD[atkTeam.strategy.freeKickTactic ?? 'cross'];
+  const directRoute = random() < fMod.shotBonus / (fMod.shotBonus + fMod.headerBonus);
+
+  const atkStarters = getStarters(atkTeam, state.cards, state.injured);
+  const pool = directRoute
+    ? [...getPlayersByPosition(atkStarters, 'MID'), ...getPlayersByPosition(atkStarters, 'FWD')]
+    : [...getPlayersByPosition(atkStarters, 'DEF'), ...getPlayersByPosition(atkStarters, 'FWD')];
+  const gk = getGoalkeeper(getStarters(defTeam, state.cards, state.injured));
+  if (pool.length === 0 || !gk) return cycleEvents;
+
+  // Cobrador: melhor finalizador na rota direta, melhor no jogo aéreo no cruzamento
+  const taker = [...pool].sort((a, b) => directRoute
+    ? b.attributes.finishing - a.attributes.finishing
+    : b.attributes.positioning - a.attributes.positioning)[0];
+
+  state.events.push({ minute, type: 'foul', description: generateFreeKick(atkTeam.name, taker, directRoute), teamId: atkTeam.id });
+  cycleEvents++;
+  if (cycleEvents >= MAX_EVENTS_PER_CYCLE) return cycleEvents;
+
+  const atkFatigue = atkTeam.id === home.id ? state.fatigueHome : state.fatigueAway;
+  const defFatigue = defTeam.id === home.id ? state.fatigueHome : state.fatigueAway;
+  const fatigue = atkFatigue.get(taker.id) ?? 0;
+  const power = (directRoute
+    ? effective(taker.attributes.finishing, fatigue) * fMod.shotBonus
+    : effective(taker.attributes.positioning, fatigue) * fMod.headerBonus) * FREEKICK_DIFFICULTY;
+  const gkPower = effective(gk.attributes.positioning, defFatigue.get(gk.id) ?? 0) * rngFallback(random, 0.9, 1.4);
+
+  if (power * rngFallback(random, 0.7, 1.3) > gkPower && random() < goalTimingMultiplier(minute)) {
+    const newScore = `${state.homeScore}-${state.awayScore}`;
+    state.events.push({
+      minute, type: 'goal',
+      description: generateFreeKickGoal(atkTeam.name, taker, newScore, !directRoute),
+      teamId: atkTeam.id, scorer: taker.name,
+    });
+    if (atkTeam.id === home.id) state.homeScore++; else state.awayScore++;
+    applyMomentum(state, atkTeam.id === home.id ? 'A' : 'B', atkTeam.id);
+  } else {
+    state.events.push({ minute, type: 'miss', description: generateFreeKickMiss(atkTeam.name, taker), teamId: atkTeam.id });
+  }
+  return cycleEvents + 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -338,7 +412,9 @@ function resolveCycleFoulsAndCards(
         const savePwr = effective(gk.attributes.positioning, state.fatigueHome.get(gk.id) ?? state.fatigueAway.get(gk.id) ?? 0) * rngFallback(random, 0.8, 1.2);
         const scored = shotPwr * 1.35 > savePwr;
         if (scored && random() < goalTimingMultiplier(minute)) {
-          state.events.push({ minute, type: 'penalty', description: generateMatchPenalty(otherTeam.name, taker, true, gk), teamId: otherTeam.id, scorer: taker.name });
+          // Pênalti convertido é um GOL: com type 'penalty' ele não entrava na
+          // contagem de gols/finalizações, nem disparava som e animação de gol.
+          state.events.push({ minute, type: 'goal', description: generateMatchPenalty(otherTeam.name, taker, true, gk), teamId: otherTeam.id, scorer: taker.name });
           if (otherTeam.id === home.id) state.homeScore++; else state.awayScore++;
           applyMomentum(state, otherTeam.id === home.id ? 'A' : 'B', otherTeam.id);
         } else {
@@ -347,6 +423,11 @@ function resolveCycleFoulsAndCards(
       }
       cycleEvents++;
     }
+  }
+  // Falta → cobrança direta (12% das faltas). A tática escolhida decide se a bola
+  // vai no chute ou no cruzamento; ~0.8 cobranças e ~0.1 gol por partida.
+  else if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.12) {
+    cycleEvents = resolveFreeKick(otherTeam, foulerTeam, state, random, minute, cycleEvents, home);
   }
 
   // Cards: intensity increases card risk; árbitro caseiro reduz 15% a chance do mandante

@@ -17,7 +17,9 @@ import {
 import {
   createInjuryMessage, createMatchPreviewMessage, createTransferWindowMessage, createWelcomeMessage, hasMandatoryUnread,
   createTransferOfferMessage, createTransferAcceptedMessage, createTransferRejectedMessage, createTransferOutCompletedMessage,
+  createDerbyPreviewMessage,
 } from '../engine/inbox';
+import { getDerbyName } from '../engine/rivalries';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason, tallyUserGoals, mergeGoalTally } from '../engine/seasonClosure';
 import { generateFreeAgentPool, refreshFreeAgentPool } from '../engine/freeAgentPool';
 import { generateBoardObjectives, evaluateBoardObjectives, createBoardObjectivesInboxMessage, createBoardObjectivesResultMessage } from '../engine/boardObjectives';
@@ -125,7 +127,7 @@ export function useCareerManager({
     const trimmedName = managerName.trim().slice(0, 24) || 'Técnico';
     const startingTier = getStartingTier(leagueDef.id);
     const sponsor = generateSponsor(leagueDef.id, userTeam.id, startingTier);
-    const boardObj = generateBoardObjectives(league, 0);
+    const boardObj = generateBoardObjectives(league, 0, 1);
     const newState: CareerState = {
       version: 1,
       leagueId: leagueDef.id,
@@ -311,7 +313,10 @@ export function useCareerManager({
         const isHome = nextFixture.homeTeamId === leg.userTeamId;
         const oppId = isHome ? nextFixture.awayTeamId : nextFixture.homeTeamId;
         const oppName = variedTeams.find(t => t.id === oppId)?.name ?? '???';
-        newMessages.push(createMatchPreviewMessage(oppName, isHome, `Rodada ${next + 1}`, dateLabel));
+        const derbyName = getDerbyName(leg.userTeamId, oppId);
+        newMessages.push(derbyName
+          ? createDerbyPreviewMessage(oppName, derbyName, isHome, dateLabel)
+          : createMatchPreviewMessage(oppName, isHome, `Rodada ${next + 1}`, dateLabel));
       }
     }
 
@@ -786,14 +791,15 @@ export function useCareerManager({
       const finances = getFinances(careerState);
 
       // ── Board objectives evaluation ──
-      const currentObj = careerState.boardObjectives ?? generateBoardObjectives(careerState.season.league, careerState.manager.reputation, leaguePosition);
+      // Saves anteriores à feature não têm objetivos gravados — reconstrói os da
+      // temporada que acabou para poder avaliá-la.
+      const currentObj = careerState.boardObjectives
+        ?? generateBoardObjectives(careerState.season.league, careerState.manager.reputation, careerState.currentSeasonYear);
       const objEval = evaluateBoardObjectives(
-        currentObj, leaguePosition, cupResult, finances.budget,
-        currentObj?.streakBad ?? 0,
+        currentObj, leaguePosition, cupResult, finances.budget, currentObj.streakBad,
       );
       newReputation = Math.max(0, Math.min(100, newReputation + objEval.totalRepDelta));
-      // eslint-disable-next-line prefer-const
-      let objectiveMessages: InboxMessage[] = [createBoardObjectivesResultMessage(objEval.results, objEval.totalRepDelta, objEval.warnings)];
+      const objectiveMessages: InboxMessage[] = [createBoardObjectivesResultMessage(objEval.results, objEval.totalRepDelta, objEval.warnings)];
       const budgetAtStart = careerState.season.budgetAtSeasonStart ?? finances.budget;
       const leaguePrize = getLeaguePrizeMoney(careerState.leagueId, leaguePosition);
       const cupPrize = getCupPrizeMoney(careerState.leagueId, cupResult);
@@ -855,7 +861,7 @@ export function useCareerManager({
       const merch = computeMerchRevenue(newReputation);
 
       // Generate objectives for the new season
-      const nextBoardObj = generateBoardObjectives(nextLeague, newReputation, leaguePosition);
+      const nextBoardObj = generateBoardObjectives(nextLeague, newReputation, careerState.currentSeasonYear + 1, leaguePosition);
       objectiveMessages.push(createBoardObjectivesInboxMessage(nextBoardObj));
 
       setCareerState({

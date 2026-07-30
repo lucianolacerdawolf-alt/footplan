@@ -8,6 +8,7 @@ import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue
 import { computeStandings } from '@/engine/tournament';
 import { deriveCupResult } from '@/engine/career';
 import type { MatchResult, MatchEvent, Team } from '@/engine/types';
+import * as careerEvents from '@/engine/careerEvents';
 
 // Node 22+'s built-in global `localStorage` shadows jsdom's window.localStorage
 // in vitest's jsdom environment (it's excluded from vitest's window-key copy
@@ -42,6 +43,7 @@ function mockParams() {
 
 beforeEach(() => {
   localStorage.clear();
+  vi.restoreAllMocks();
 });
 
 describe('handleStartCareer (D-01, D-13)', () => {
@@ -235,8 +237,19 @@ describe('D-08, D-09: reputation', () => {
 
     const entry = result.current.careerState!.history[0];
     expect(entry.reputationDelta).toBeGreaterThan(0);
-    // reputation includes both league/cup delta AND board objectives evaluation
-    expect(result.current.careerState!.manager.reputation).toBeGreaterThan(reputationBefore);
+
+    // A reputação final soma o delta de liga/copa E a avaliação dos objetivos da
+    // diretoria, cada um clampado em 0-100. O impacto dos objetivos é publicado na
+    // mensagem de avaliação, então dá para conferir o valor exato.
+    const boardMsg = result.current.careerState!.inbox!
+      .find(m => m.subject.startsWith('Avaliação da Temporada'));
+    expect(boardMsg).toBeDefined();
+    const objDelta = Number(/Impacto na reputação: ([+-]?\d+)/.exec(boardMsg!.body)![1]);
+
+    const clamp = (n: number) => Math.max(0, Math.min(100, n));
+    expect(result.current.careerState!.manager.reputation).toBe(
+      clamp(clamp(reputationBefore + entry.reputationDelta) + objDelta)
+    );
   });
 });
 
@@ -369,6 +382,10 @@ describe('Finanças e Inbox (Modo Carreira)', () => {
   });
 
   it('handleNextCareerLeagueRound credita a renda semanal e debita a folha salarial do orçamento', () => {
+    // Eventos aleatórios de carreira mexem no orçamento (25% de chance por rodada) e
+    // deixariam esta conta exata intermitente — este teste é só sobre renda × folha.
+    vi.spyOn(careerEvents, 'maybeGetCareerEvent').mockReturnValue(null);
+
     const { result } = renderHook(() => useCareerManager(mockParams()));
     const { leagueId } = startPlCareer(result);
 
@@ -691,9 +708,15 @@ describe('handleBuyPlayer', () => {
     const oppTeam = result.current.careerState!.rosters[leagueId].find(t => t.id === opponentTeamId)!;
     const gk = oppTeam.squad.find(p => p.position === 'GK')!;
 
+    // handleBuyPlayer checa orçamento ANTES da guarda de posição. Os valores de mercado
+    // são gerados aleatoriamente, então 2× pode estourar o orçamento e devolver
+    // 'insufficient-budget' — limita a oferta ao caixa pra isolar a guarda de posição.
+    const budget = result.current.careerState!.finances!.budget;
+    const offer = Math.min((gk.marketValue ?? 0) * 2, budget);
+
     let res: { success: boolean; reason: string } | undefined;
     act(() => {
-      res = result.current.handleBuyPlayer(gk.id, opponentTeamId, (gk.marketValue ?? 0) * 2);
+      res = result.current.handleBuyPlayer(gk.id, opponentTeamId, offer);
     });
 
     expect(res).toEqual({ success: false, reason: 'seller-last-at-position' });

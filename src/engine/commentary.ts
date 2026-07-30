@@ -347,6 +347,52 @@ export function generateCornerGoal(teamName: string, scorer: Player, _minute: nu
   ]);
 }
 
+/** Gol de escanteio curto — jogada trabalhada, não cabeceio. */
+export function generateShortCornerGoal(teamName: string, scorer: Player, score: string): string {
+  return rng([
+    `⚽ GOL! Escanteio curto trabalhado e ${scorer.name} finaliza para ${teamName}! ${score}`,
+    `⚽ GOOOOL! ${teamName} tabela na quina da área e ${scorer.name} conclui! ${score}`,
+    `⚽ Jogada ensaiada! ${scorer.name} recebe do escanteio curto e marca! ${score}`,
+  ]);
+}
+
+export function generateFreeKick(teamName: string, taker: Player, direct: boolean): string {
+  if (direct) {
+    return rng([
+      `🎯 Falta perigosa! ${taker.name} vai para a cobrança direta de ${teamName}.`,
+      `🎯 ${taker.name} ajeita a bola na entrada da área. ${teamName} tenta o gol olímpico da falta.`,
+      `🎯 Barreira armada! ${taker.name} (${teamName}) prepara o chute.`,
+    ]);
+  }
+  return rng([
+    `🎯 Falta na lateral. ${taker.name} vai cruzar para a área de ${teamName}.`,
+    `🎯 ${teamName} joga na área: ${taker.name} na cobrança.`,
+    `🎯 Bola alçada por ${taker.name} — ${teamName} busca o desvio.`,
+  ]);
+}
+
+export function generateFreeKickGoal(teamName: string, scorer: Player, score: string, header: boolean): string {
+  if (header) {
+    return rng([
+      `⚽ GOL DE CABEÇA NA FALTA! ${scorer.name} sobe sozinho para ${teamName}! ${score}`,
+      `⚽ GOOOOL! Cruzamento na medida e ${scorer.name} testa firme! ${score}`,
+    ]);
+  }
+  return rng([
+    `⚽ GOLAÇO DE FALTA! ${scorer.name} pega no ângulo para ${teamName}! ${score}`,
+    `⚽ NO ÂNGULO! ${scorer.name} cobra com categoria e é gol de ${teamName}! ${score}`,
+    `⚽ A barreira pulou e a bola passou por baixo! ${scorer.name} marca! ${score}`,
+  ]);
+}
+
+export function generateFreeKickMiss(teamName: string, taker: Player): string {
+  return rng([
+    `A cobrança de ${taker.name} passa por cima do travessão. Segue ${teamName} tentando.`,
+    `${taker.name} bate na barreira! Chance desperdiçada para ${teamName}.`,
+    `O goleiro espalma a cobrança de ${taker.name}! Grande defesa.`,
+  ]);
+}
+
 export function generateMomentumShift(teamName: string): string {
   return rng([
     `${teamName} cresceu no jogo após o lance anterior!`,

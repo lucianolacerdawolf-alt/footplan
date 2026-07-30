@@ -24,6 +24,12 @@ interface Props {
   onAcceptTransferOffer: (id: string) => void;
   onRejectTransferOffer: (id: string) => void;
   onRenegotiateSponsor: () => void;
+  /** Avança a rodada da liga direto da Central, sem passar pelo Escritório. */
+  onNextRound: () => void;
+  /** Abre o Escritório (tela da liga) — usado quando ainda faltam jogos da rodada. */
+  onViewLeague: () => void;
+  /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
+  blockAdvanceReason?: string;
 }
 
 const CUP_STAGE_LABELS: Record<string, string> = {
@@ -84,7 +90,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, blockAdvanceReason }: Props) {
   const inbox = getInbox(state);
   const finances = getFinances(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
@@ -92,6 +98,13 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
   const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
   const nextMatch = determineNextMatch(state);
+
+  // Sem próxima partida e sem temporada encerrada, a Central ficava sem nenhuma
+  // ação: o "Avançar Rodada" só existia no Escritório. Acontece toda rodada, assim
+  // que o usuário joga o jogo dele.
+  const currentRoundFixtures = state.season.league.fixtures[state.season.league.currentRound];
+  const roundComplete = currentRoundFixtures?.every(f => f.played) ?? false;
+  const awaitingRound = !nextMatch && !seasonReady && state.season.league.phase !== 'done';
   const isWindowOpen = isTransferWindowOpen(state.season.league.currentRound);
   const sponsorTier = getSponsorTier(state) as SponsorTier;
   const sponsorName = getSponsorName(state);
@@ -251,7 +264,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
               </div>
             );
           })}
-          {!boardObj.evaluated && (
+          {boardObj.objectives.some(o => o.achieved === undefined) && (
             <div className={styles.objectivesPending}>Em andamento — avaliação ao fim da temporada</div>
           )}
           {boardObj.streakBad >= 2 && (
@@ -285,6 +298,28 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
           }}>
             ⚽ Jogar
           </button>
+        </div>
+      )}
+
+      {awaitingRound && (
+        <div className={styles.advanceRow}>
+          {roundComplete ? (
+            <>
+              <button
+                className={styles.advanceBtn}
+                onClick={onNextRound}
+                disabled={!!blockAdvanceReason}
+                title={blockAdvanceReason}
+              >
+                Avançar Rodada →
+              </button>
+              {blockAdvanceReason && <div className={styles.advanceStatus}>🔔 {blockAdvanceReason}</div>}
+            </>
+          ) : (
+            <button className={styles.advanceBtn} onClick={onViewLeague}>
+              Simular resto da rodada no Escritório →
+            </button>
+          )}
         </div>
       )}
 

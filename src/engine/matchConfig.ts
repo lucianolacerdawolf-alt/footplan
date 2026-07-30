@@ -184,6 +184,13 @@ export const CORNER_TACTIC_MOD: Record<CornerTactic, { headerBonus: number; shor
   'short':     { headerBonus: 0.70, shortPassBonus: 1.30 },
 };
 
+/**
+ * Cobrança de falta converte pouco no futebol real (~8% das diretas). Este fator
+ * segura a força do cobrador para que a bola parada adicione ~0.1 gol por partida
+ * em vez de inflar o placar médio.
+ */
+export const FREEKICK_DIFFICULTY = 0.85;
+
 export const FREEKICK_TACTIC_MOD: Record<FreeKickTactic, { shotBonus: number; headerBonus: number }> = {
   'shoot':  { shotBonus: 1.30, headerBonus: 0.70 },
   'cross':  { shotBonus: 0.75, headerBonus: 1.20 },

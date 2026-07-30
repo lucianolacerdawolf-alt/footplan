@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn, Player, PenaltyResult } from '../engine/types';
 import type { GameMode } from './TeamSelectionScreen';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
@@ -43,7 +43,6 @@ import { resolveKnockoutExtraTime, getShooters, buildMatchResult, type MatchStat
 import { useMatchSimulation, getSubWindow } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
 import { getSubSuggestions } from '../engine/subSuggestions';
-import type { SubSuggestion } from '../engine/subSuggestions';
 import CommentaryFeed from './CommentaryFeed';
 import { playerOvr } from '../utils/playerOvr';
 import { fireClick } from '../utils/fireClick';
@@ -98,10 +97,6 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [pauseTab, setPauseTab] = useState<'tactics' | 'squad'>('tactics');
   const [showSuggestions, setShowSuggestions] = useState(true);
 
-  const subSuggestions = (userSide && (userSide === 'home' || userSide === 'away'))
-    ? getSubSuggestions(userSide === 'home' ? home : away, userSide === 'home' ? awayScore : homeScore, userSide === 'home' ? homeScore : awayScore, userSide)
-    : [];
-
   // Online coordination state
   const [hostReady, setHostReady] = useState(false);
   const [guestReady, setGuestReady] = useState(false);
@@ -128,6 +123,31 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [injuredIds, setInjuredIds] = useState<string[]>(() => resumeSnapshot?.injuredIds ?? []);
   const [injuryToast, setInjuryToast] = useState<string | null>(null);
   const injuryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // O mapa de cartões do motor vive num ref, que não dispara render. Reconstruí-lo
+  // a partir dos eventos já exibidos mantém as sugestões reagindo a cada cartão —
+  // o vermelho sempre sobrescreve o amarelo porque vem depois na lista.
+  const liveCards = useMemo(() => {
+    const map = new Map<string, 'yellow' | 'red'>();
+    for (const e of replayEvents) {
+      if (!e.playerId) continue;
+      if (e.type === 'yellowCard') map.set(e.playerId, 'yellow');
+      else if (e.type === 'redCard') map.set(e.playerId, 'red');
+    }
+    return map;
+  }, [replayEvents]);
+
+  const subSuggestions = useMemo(() => {
+    if (!userSide) return [];
+    const userTeam = userSide === 'home' ? home : away;
+    const userScore = userSide === 'home' ? homeScore : awayScore;
+    const opponentScore = userSide === 'home' ? awayScore : homeScore;
+    return getSubSuggestions(userTeam, userScore, opponentScore, {
+      fatigueMap,
+      cards: liveCards,
+      injuredIds: [...injuredIds, ...expelledIds],
+    });
+  }, [userSide, home, away, homeScore, awayScore, fatigueMap, injuredIds, expelledIds, liveCards]);
 
   // Audio feedback — trigger sounds on new replay events (goal, cards, kickoff)
   const audioEventIdxRef = useRef(0);
@@ -787,7 +807,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                               <span className="sub-suggestion-reason">{sug.reason}</span>
                               {sug.candidates.map((c, ci) => (
                                 <span key={ci} className="sub-suggestion-candidate">
-                                  → {c.player.name} (OVR {c.candidates.length > 0 ? '' : ''}) · {c.reason}
+                                  → {c.player.name} (OVR {playerOvr(c.player)}) · {c.reason}
                                 </span>
                               ))}
                             </div>
