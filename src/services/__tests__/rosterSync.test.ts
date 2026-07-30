@@ -339,4 +339,50 @@ describe('syncLeagueRoster', () => {
     const mallorcaTeam = result.league.teams.find(t => t.id === 'mallorca')!;
     expect(mallorcaTeam.squad.map(p => p.name)).toContain('Old Keeper');
   });
+
+  it('jogador de OUTRA liga no meio da resposta não é absorvido por time estático (regressão Meslier-no-Arsenal)', async () => {
+    vi.stubEnv('VITE_FOOTBALL_API_KEY', 'test-key-123');
+    // Liga estática com Arsenal e Aston Villa. A resposta da API (que deveria
+    // conter SÓ times da PL) "vaza" o Leeds (Championship) no meio — simula
+    // contaminação/correção de catálogo. Casamento por nome não deve colocar
+    // jogadores do Leeds no Arsenal nem no Aston Villa.
+    const league: LeagueDefinition = {
+      ...makeLeague(),
+      teams: [
+        makeTeam('arsenal', 'Arsenal', 'ARS'),
+        makeTeam('aston-villa', 'Aston Villa', 'AVL'),
+      ],
+    };
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        count: 3,
+        teams: [
+          { id: 1, name: 'Arsenal', shortName: 'Arsenal', tla: 'ARS', crest: '', squad: [
+            { id: 11, name: 'David Raya', position: 'Goalkeeper', dateOfBirth: null, nationality: null, shirtNumber: 22 },
+          ] },
+          { id: 2, name: 'Aston Villa', shortName: 'Aston Villa', tla: 'AVL', crest: '', squad: [
+            { id: 21, name: 'Emiliano Martinez', position: 'Goalkeeper', dateOfBirth: null, nationality: null, shirtNumber: 1 },
+          ] },
+          // Leeds (outra liga) vazado na resposta — com Illan Meslier no elenco.
+          { id: 3, name: 'Leeds United', shortName: 'Leeds', tla: 'LEE', crest: '', squad: [
+            { id: 31, name: 'Illan Meslier', position: 'Goalkeeper', dateOfBirth: null, nationality: null, shirtNumber: 1 },
+          ] },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await syncLeagueRoster(league);
+
+    const arsenal = result.league.teams.find(t => t.id === 'arsenal')!;
+    const villa = result.league.teams.find(t => t.id === 'aston-villa')!;
+    const arsenalNames = arsenal.squad.map(p => p.name);
+    const villaNames = villa.squad.map(p => p.name);
+    expect(arsenalNames, 'Meslier (Leeds) não deve aparecer no Arsenal').not.toContain('Illan Meslier');
+    expect(villaNames, 'Meslier (Leeds) não deve aparecer no Aston Villa').not.toContain('Illan Meslier');
+    // E os goleiros corretos continuam lá.
+    expect(arsenalNames).toContain('David Raya');
+    expect(villaNames).toContain('Emiliano Martinez');
+  });
 });

@@ -26,10 +26,17 @@ import { rebalanceForFormation } from '../engine/squadUtils';
 
 const CACHE_PREFIX = 'fp:rosterCache:';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
+// Versão do schema do cache. Bumpar quando o formato mudar — caches gravados com
+// versão anterior (ou sem versão) são descartados por readCache, evitando que
+// dados contaminados de builds antigos persistam 7 dias e atribuam jogadores ao
+// clube errado (bug "Bizot no Aston Villa" — ver repro-roster-cache-blind.test).
+const CACHE_VERSION = 2;
 
 interface CachedRoster {
   fetchedAt: number;
   teams: Team[];
+  version?: number;
+  staticIds?: string[];
 }
 
 /** Remove acentos (via decomposição NFD + filtro de marcas combinantes U+0300-U+036F) e
@@ -202,22 +209,38 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[]): { team:
   };
 }
 
-function readCache(leagueId: string): CachedRoster | null {
+function readCache(league: LeagueDefinition): CachedRoster | null {
   try {
-    const raw = localStorage.getItem(CACHE_PREFIX + leagueId);
+    const raw = localStorage.getItem(CACHE_PREFIX + league.id);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedRoster;
     if (!parsed.fetchedAt || Date.now() - parsed.fetchedAt > CACHE_TTL_MS) return null;
     if (!Array.isArray(parsed.teams) || parsed.teams.length === 0) return null;
+    // Validação de schema: descarta cache de versão anterior (sem campo `version`)
+    // ou gravado contra uma liga diferente (ids de times não batem). Sem isso, um
+    // cache contaminado por um build antigo/debug manual é confiado cegamente por
+    // 7 dias — o mecanismo por trás do bug "jogador no clube errado".
+    if (parsed.version !== CACHE_VERSION) return null;
+    const expectedIds = new Set(league.teams.map(t => t.id));
+    const cachedIds = parsed.staticIds ?? parsed.teams.map(t => t.id);
+    if (cachedIds.length !== expectedIds.size) return null;
+    for (const id of cachedIds) {
+      if (!expectedIds.has(id)) return null;
+    }
     return parsed;
   } catch {
     return null;
   }
 }
 
-function writeCache(leagueId: string, teams: Team[]): void {
+function writeCache(leagueId: string, teams: Team[], staticIds: string[]): void {
   try {
-    const payload: CachedRoster = { fetchedAt: Date.now(), teams };
+    const payload: CachedRoster = {
+      fetchedAt: Date.now(),
+      teams,
+      version: CACHE_VERSION,
+      staticIds,
+    };
     localStorage.setItem(CACHE_PREFIX + leagueId, JSON.stringify(payload));
   } catch { /* noop — quota cheia ou storage indisponível, não é crítico */ }
 }
@@ -247,7 +270,7 @@ interface RemoteSource {
 
 export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?: boolean }): Promise<RosterSyncResult> {
   if (!opts?.force) {
-    const cached = readCache(league.id);
+    const cached = readCache(league);
     if (cached) {
       return { league: { ...league, teams: cached.teams }, source: 'cache', stats: [] };
     }
@@ -292,7 +315,7 @@ export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?
       return team;
     });
 
-    writeCache(league.id, mergedTeams);
+    writeCache(league.id, mergedTeams, league.teams.map(t => t.id));
     return { league: { ...league, teams: mergedTeams }, source: 'live', stats };
   }
 
