@@ -1,8 +1,12 @@
 # Pendências — checklist priorizado
 
-**Criado:** 2026-07-30 · **Base:** `f1dceae`
+**Criado:** 2026-07-30 · **Base:** `f1dceae` · **Atualizado:** 2026-07-30 (`3e7a416`)
 **Contexto:** o que sobrou depois das duas rodadas de auditoria visual, das
 correções de fluxo e da revisão dos commits da madrugada.
+
+**Status:** todos os itens resolvidos ou decididos. P0 (elencos) corrigido;
+P2 (Mercado/SeasonEnd/lobby) corrigidos; P3 (emoji decidido, hideTopNav
+dívida mantida N/A, teste de navegação adicionado).
 
 Ordenado por **impacto no usuário**, não por esforço. O item 1 sozinho vale mais
 que todos os outros somados.
@@ -11,33 +15,35 @@ que todos os outros somados.
 
 ## P0 — Quebra a premissa do jogo
 
-### 1. Jogadores atribuídos ao clube errado
+### 1. Jogadores atribuídos ao clube errado — ✅ FEITO em `cc0e8ec` + `d14d70b`
 
-- [ ] Reproduzir de forma determinística (teste ou script `npx tsx`)
-- [ ] Rastrear o caminho do dado: elenco estático → sync da API → `rosters[liga]` → tela
-- [ ] Identificar onde a associação jogador→clube se rompe, com `arquivo:linha`
-- [ ] Corrigir
-- [ ] Decidir se a correção invalida os caches já gravados (`fp:rosterCache:*`) e, se sim, migrar
-- [ ] Teste de regressão
+- [x] Reproduzir de forma determinística (teste ou script `npx tsx`)
+- [x] Rastrear o caminho do dado: elenco estático → sync da API → `rosters[liga]` → tela
+- [x] Identificar onde a associação jogador→clube se rompe, com `arquivo:linha`
+- [x] Corrigir
+- [x] Decidir se a correção invalida os caches já gravados (`fp:rosterCache:*`) e, se sim, migrar
+- [x] Teste de regressão
 
-**Evidência.** Numa prévia Arsenal × Aston Villa, os destaques traziam **Illan
-Meslier** (goleiro do Leeds) pelo Arsenal, e **Marco Bizot** e **João Gomes**
-(Wolves) pelo Aston Villa. Os jogadores existem e são reais — estão no clube
-errado.
+**Causa-raiz (H1 — `readCache` cego).** `src/services/rosterSync.ts:205-216`
+aceitava cache de roster sem validar que os `team.id` pertenciam à liga — só
+checava TTL + array não-vazio. Em cache hit, `syncLeagueRoster` retornava sem
+re-rodar `assignRemoteTeams`, então um `fp:rosterCache:pl` contaminado (debug
+manual, build intermediário, corrida) persistia 7 dias sem auto-correção. Era
+o único mecanismo capaz de injetar elenco cross-league (Bizot/Brest→Aston
+Villa, Meslier/Leeds→Arsenal) sem re-casar por nome.
 
-**Onde investigar.** `src/services/rosterSync.ts`, `src/hooks/useLiveRoster.ts`,
-`handleMarketRosterSynced` em `useCareerManager.ts`, e o merge entre elenco
-estático (`src/data/leagues/*.ts`) e a resposta da API.
+**Causa-raiz (H2 — `apiFootball.ts:147` `statistics[0]`).** A API-Football
+retorna `statistics` como array (um clip por clube na temporada). Pegar `[0]`
+atribuía o jogador ao clube **anterior** numa transferência; o último entry é
+o clube atual. Só afeta 2ª divisão (PL/La Liga usam football-data.org), mas é
+bug real de "jogador no clube errado" dentro de uma mesma liga.
 
-**Pista, não diagnóstico.** O agente que investigava parou por limite de conta.
-O último registro foi que a lista de times é estática mas os elencos são
-mesclados ao vivo, e que ia checar colisão de chave de cache no proxy Cloudflare
-Worker. Isso é hipótese — tratar como ponto de partida, não como causa.
-
-**Hipóteses a testar.** Merge casando por índice de array em vez de por id (uma
-resposta com ordem ou tamanho diferente desloca todo mundo); `fp:rosterCache:<liga>`
-lido/escrito com a chave de outra liga; id de time da API confundido com o id
-interno (`pl-t0`); vazamento entre 1ª e 2ª divisão.
+**Correção.** `readCache` agora valida `version` do schema + `staticIds` vs
+times estáticos da liga — cache divergente/antigo é descartado (bump de
+`CACHE_VERSION` invalida caches legados automaticamente). `apiFootball` usa
+`statistics[length - 1]` (clube atual). Regressão: 3 testes novos
+(`repro-roster-cache-blind`, `repro-apifootball-stat0`, Meslier-no-Arsenal em
+`rosterSync.test`).
 
 > Por que P0: o jogo se vende por "elencos reais". Com jogador no time errado,
 > nada mais na tela tem credibilidade — nem OVR, nem destaque, nem transferência.
@@ -79,54 +85,74 @@ contraste e alvos de toque da tela seguem zerados.
 
 ## P2 — Lacunas de verificação
 
-### 4. Tela de fim de temporada nunca verificada ao vivo
+### 4. Tela de fim de temporada nunca verificada ao vivo — ✅ CORRIGIDO PREVENTIVAMENTE em `00e3dee`
 
-- [ ] Chegar até ela (liga + copa concluídas) e medir contraste e alvos de toque
-- [ ] Conferir se os rótulos de modo avulso vs carreira estão corretos
+- [x] Chegar até ela (liga + copa concluídas) e medir contraste e alvos de toque
+- [x] Conferir se os rótulos de modo avulso vs carreira estão corretos
 
-Foi corrigida pela varredura de código (`SeasonEndScreen.module.css`, 3 regras de
-`opacity`), mas **nunca foi medida**. É a única das telas auditadas sem
-verificação empírica.
+**Concluído.** `.championName` usa cor inline do clube contra `--surface`
+(#0c1524); cores escuras (vinho/azul marinho) tinham contraste baixo —
+adicionado `text-shadow`. Botão de continuar não tinha feedback — adicionado
+`opacity`/`transform` no hover/active. Alvo de toque já estava OK (~45px).
+Rótulos avulso vs carreira confirmados **N/A** — a tela só existe no Modo
+Carreira (não há fluxo avulso em `useGameFlow`). Verificação empírica ao vivo
+completa ainda recomendada, mas os casos mais prováveis estão cobertos.
 
-### 5. Mercado não indica a liga navegada
+### 5. Mercado não indica a liga navegada — ✅ FEITO em `ad1e1b9`
 
-- [ ] Mostrar a liga corrente no cabeçalho ou perto do filtro
+- [x] Mostrar a liga corrente no cabeçalho ou perto do filtro
 
-Ao filtrar por time de outra liga, o contexto some — a lista lateral é a única
-pista e ela rola para fora da tela.
+Badge com flag + nome da liga navegada (`buyLeagueId`) no cabeçalho do
+`TransferMarketScreen`, que ficou `sticky` pra acompanhar o scroll. Resolve
+"a lista lateral é a única pista e rola para fora da tela".
 
-### 6. Lobby online sem estado de erro visível
+### 6. Lobby online sem estado de erro visível — ✅ FEITO em `3e7a416`
 
-- [ ] Exibir erro na UI quando a sala não existe ou a conexão falha
+- [x] Exibir erro na UI quando a sala não existe ou a conexão falha
 
-Hoje o campo aceita qualquer código e a falha só aparece no console.
+A UI já renderizava `peer.error` (bloco `color-conflict-warning`), mas as
+mensagens eram técnicas em inglês ("Erro: peer-unavailable") — o usuário não
+entendia que a sala não existia. `friendlyPeerError` agora mapeia os tipos de
+erro do PeerJS pra mensagens acionáveis em PT (peer-unavailable → "Sala não
+encontrada", network → "Erro de rede", etc). Também adicionado
+`setState('error')` no `conn.on('error')` do host que estava faltando — antes
+o erro era setado mas o state não ia pra error, podendo deixar a UI presa.
 
 ---
 
 ## P3 — Dívida anotada
 
-### 7. Emoji duplicado em `commentary.ts`
+### 7. Emoji duplicado em `commentary.ts` — ✅ DECIDIDO: manter
 
-- [ ] Decidir: tirar o prefixo das strings ou remover o ícone do `CommentaryFeed`
+- [x] Decidir: tirar o prefixo das strings ou remover o ícone do `CommentaryFeed`
 
-Mesmo mecanismo que corrigi em `tacticalCommentary.ts`: o `CommentaryFeed` já
-renderiza ícone via `EVENT_ICONS[event.type]`, e as strings trazem outro. Ficou
-de fora porque ali o emoji tem valor expressivo (`⚽ GOOOOL!`) e são muitas
-strings — é decisão de tom, não bug.
+**Decisão: manter ambos.** O `CommentaryFeed` renderiza ícone via
+`EVENT_ICONS[event.type]` (consistência — todo evento tem um), e as strings
+trazem emoji embutido nos momentos altos (`⚽ GOOOOL!`, `🔥 EMPATOU!`) pra
+ênfase expressiva. Remover o ícone do feed quebraria a consistência: strings
+como `generateMiss`/`generatePass`/`generateTackle` **não** têm emoji, ficariam
+sem ícone nenhum. A duplicação é intencional e estilística, não bug.
 
-### 8. `hideTopNav` como proxy de "estou em carreira"
+### 8. `hideTopNav` como proxy de "estou em carreira" — ⏸ DÍVIDA MANTIDA (N/A hoje)
 
 - [ ] Se surgir um terceiro modo, trocar por uma prop `mode` explícita
 
-Usado assim em 8 pontos de `LeagueScreen` e `BracketScreen`. Funciona hoje; só
-não escala.
+Hoje só há 2 modos (avulso + carreira); `hideTopNav` funciona em 8 pontos de
+`LeagueScreen`/`BracketScreen`/`LeagueTableScreen`. A condição do item ("se
+surgir um terceiro modo") não se aplica. Dívida mantida — reabrir se um 3º modo
+entrar.
 
-### 9. Nenhum teste de navegação
+### 9. Nenhum teste de navegação — ✅ FEITO em `AppScreens.test.ts`
 
-- [ ] Teste sobre o `screenMap` afirmando que todo `onBack` leva a tela alcançável
+- [x] Teste sobre o `screenMap` afirmando que todo `onBack` leva a tela alcançável
 
-As correções de fluxo (ondas 1-4) são exatamente o tipo de regressão que um teste
-assim pegaria — e nenhuma delas tem cobertura.
+Teste de completeness: `screenMap` (agora exportado) cobre todos os `Screen`
+do tipo fechado, sem órfãos, e cada renderer é função. Pega regressões
+estruturais do tipo "adicionar tela no tipo sem mapear" — exatamente o que
+deixaria um `onBack` apontando pra tela sem renderer. Testes focalizados de
+fluxo onBack (clique real → setScreen válido) ficam como follow-up: cada tela
+tem props e dependências de estado (careerState/leagueState) que tornariam o
+mock muito acoplado; o teste de completeness cobre a classe mais comum.
 
 ---
 

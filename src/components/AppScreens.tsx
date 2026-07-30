@@ -179,7 +179,10 @@ export interface AppScreensProps {
 
 type ScreenRenderer = (props: AppScreensProps) => React.ReactNode;
 
-const screenMap: Record<Screen, ScreenRenderer> = {
+/** Mapa tela→renderer. Exportado pra teste de navegação (P3 #9) — afere que
+ *  todo `Screen` do tipo fechado tem renderer, e que nenhum onBack pode apontar
+ *  pra uma tela sem mapeamento. */
+export const screenMap: Record<Screen, ScreenRenderer> = {
   'cup-select': (p) => (
     <CupSelectScreen
       onBack={p.goHome}
