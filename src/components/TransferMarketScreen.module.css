@@ -7,14 +7,44 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 2;
+  padding-bottom: 4px;
 }
 
 .title {
-  flex: 1;
   font-size: 18px;
   font-weight: 400;
   font-family: var(--display);
   letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.leagueBadge {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-family: var(--mono);
+  min-width: 0;
+}
+
+.leagueBadgeFlag {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.leagueBadgeName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .budget {

@@ -226,6 +226,12 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
         <h1 className={styles.title}>🛒 Mercado</h1>
+        {activeTab === 'buy' && buyLeagueId && leagueMeta(buyLeagueId) && (
+          <span className={styles.leagueBadge} aria-label={`Navegando em ${leagueMeta(buyLeagueId)!.name}`}>
+            <span className={styles.leagueBadgeFlag}>{leagueMeta(buyLeagueId)!.flag}</span>
+            <span className={styles.leagueBadgeName}>{leagueMeta(buyLeagueId)!.name}</span>
+          </span>
+        )}
         <span className={styles.budget}>{formatMoney(budget)}</span>
       </div>
 
