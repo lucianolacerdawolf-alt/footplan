@@ -163,6 +163,12 @@
 }
 .objectiveIcon { font-size: 13px; flex-shrink: 0; }
 .objectiveLabel { color: #d1d5db; flex: 1; }
+/* Situação atual sob a meta — sem isto todo objetivo ficava "pendente" até a
+   avaliação do fim da temporada. */
+.objectiveProgress {
+  display: block; font-size: 10px; color: var(--text-secondary);
+  font-weight: 500; margin-top: 2px;
+}
 .objectiveReward { font-size: 10px; color: var(--text-secondary); font-weight: 600; }
 .objAchieved { color: var(--text-secondary); }
 .objAchieved .objectiveLabel { text-decoration: line-through; color: var(--text-secondary); }

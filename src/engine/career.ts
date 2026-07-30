@@ -1,5 +1,5 @@
 import type { Player, Position, Team } from './types';
-import type { LeagueState, BracketState } from './tournament';
+import type { LeagueState, BracketState, BracketMatch } from './tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
 // type-only: boardObjectives importa CareerState de volta, mas imports de tipo
 // são apagados na compilação — não há ciclo em runtime.
@@ -365,6 +365,31 @@ export function computeReputationDelta(input: {
 // =============================================================================
 
 /** Deriva o resultado do usuário na copa a partir do bracket resolvido — só chamado quando cup.stage === 'champion'. */
+/**
+ * Fase que o usuário alcançou ATÉ AGORA, com a copa ainda em andamento.
+ * `deriveCupResult` devolve 'not-played' enquanto a copa não terminou, então não
+ * serve pra mostrar progresso no meio da temporada.
+ */
+export function deriveCupProgress(
+  cup: BracketState,
+  userTeamId: string,
+): { stage: CareerSeasonHistoryEntry['cupResult']; eliminated: boolean } {
+  const inMatch = (m: BracketMatch) => m.homeTeamId === userTeamId || m.awayTeamId === userTeamId;
+
+  if (cup.championId === userTeamId) return { stage: 'champion', eliminated: false };
+
+  // Sem nenhum jogo pendente e sem o título: caiu em algum momento.
+  const todas = [...cup.roundOf16, ...cup.quarterFinals, ...cup.semiFinals, cup.final];
+  const eliminated = !todas.some(m => !m.played && inMatch(m));
+
+  // Fase mais profunda em que o usuário aparece.
+  if (inMatch(cup.final)) return { stage: 'runner-up', eliminated };
+  if (cup.semiFinals.some(inMatch)) return { stage: 'semifinal', eliminated };
+  if (cup.quarterFinals.some(inMatch)) return { stage: 'quarterfinal', eliminated };
+  if (cup.roundOf16.some(inMatch)) return { stage: 'roundOf16', eliminated };
+  return { stage: 'not-played', eliminated: true };
+}
+
 export function deriveCupResult(cup: BracketState, userTeamId: string): CareerSeasonHistoryEntry['cupResult'] {
   if (cup.stage !== 'champion') return 'not-played';
   if (cup.championId === userTeamId) return 'champion';

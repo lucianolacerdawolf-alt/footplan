@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances } from '../engine/career';
+import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
-import { getObjectives } from '../engine/boardObjectives';
+import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
@@ -112,6 +112,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
   const sponsorName = getSponsorName(state);
   const nextTier = getNextTierUp(sponsorTier);
   const boardObj = getObjectives(state);
+  const cupProgress = deriveCupProgress(state.season.cup, state.season.league.userTeamId);
 
   const userTeam = useMemo(() =>
     state.rosters[state.leagueId]?.find(t => t.id === state.season.league.userTeamId),
@@ -254,12 +255,24 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
             const isAchieved = obj.achieved === true;
             const isFailed = obj.achieved === false;
             const isPending = obj.achieved === undefined;
+            // Enquanto a temporada corre, mostra onde o time está em relação à meta.
+            // Sem isto tudo ficava "📌 pendente" até o último dia, e o usuário só
+            // descobria que falhou quando já não dava pra reagir.
+            const prog = isPending
+              ? getObjectiveProgress(obj, userPosition, cupProgress.stage, cupProgress.eliminated, finances.budget)
+              : null;
+            const icon = isAchieved ? '✅'
+              : isFailed ? '❌'
+              : prog?.status === 'atingido' ? '✅'
+              : prog?.status === 'fora' ? '⚠️'
+              : '📌';
             return (
               <div key={obj.id} className={`${styles.objectiveRow} ${isAchieved ? styles.objAchieved : isFailed ? styles.objFailed : ''}`}>
-                <span className={styles.objectiveIcon}>
-                  {isAchieved ? '✅' : isFailed ? '❌' : '📌'}
+                <span className={styles.objectiveIcon}>{icon}</span>
+                <span className={styles.objectiveLabel}>
+                  {obj.label}
+                  {prog && <span className={styles.objectiveProgress}>{prog.detail}</span>}
                 </span>
-                <span className={styles.objectiveLabel}>{obj.label}</span>
                 <span className={styles.objectiveReward}>
                   {isPending ? `+${obj.reward} rep` : isAchieved ? `+${obj.reward}` : `-${obj.penalty}`}
                 </span>
