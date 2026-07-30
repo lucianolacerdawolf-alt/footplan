@@ -144,7 +144,11 @@ export async function fetchApiFootballLeague(leagueId: string, force = false): P
   // 3. Group players by team
   const byTeam = new Map<number, RemotePlayer[]>();
   for (const ap of playersData) {
-    const stat = ap.statistics[0];
+    // A API-Football retorna `statistics` como array — um jogador transferido no
+    // meio da temporada tem múltiplas entradas (uma por clube). Pegar `[0]`
+    // atribui ao clube ANTERIOR; o último entry é o clube mais recente (atual).
+    // Ver repro-apifootball-stat0.test.ts.
+    const stat = ap.statistics[ap.statistics.length - 1];
     if (!stat) continue;
     const teamId = stat.team.id;
     if (!byTeam.has(teamId)) byTeam.set(teamId, []);
