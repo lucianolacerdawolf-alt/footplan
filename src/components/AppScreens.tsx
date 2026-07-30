@@ -428,16 +428,34 @@ const screenMap: Record<Screen, ScreenRenderer> = {
 
   'matchday': (p) => {
     if (!p.homeTeam || !p.awayTeam) return null;
+    const totalRounds = p.isCareerMode
+      ? p.careerState?.season.league.fixtures.length ?? 38
+      : p.leagueState?.fixtures.length ?? 38;
+    const currentRound = p.isCareerMode
+      ? (p.careerState?.season.league.currentRound ?? 0) + 1
+      : (p.leagueState?.currentRound ?? 0) + 1;
+    const stageLabel = (stage: string) =>
+      stage === 'roundOf16' ? 'Oitavas' : stage === 'quarterfinals' ? 'Quartas' : stage === 'semifinals' ? 'Semis' : stage === 'final' ? 'Final' : stage === 'champion' ? 'Campeão' : undefined;
     const roundLabel = p.matchContext === 'league'
-      ? (p.isCareerMode
-        ? `Rodada ${(p.careerState?.season.league.currentRound ?? 0) + 1}`
-        : `Rodada ${(p.leagueState?.currentRound ?? 0) + 1}`)
-      : undefined;
+      ? `Rodada ${currentRound} / ${totalRounds}`
+      : p.matchContext === 'bracket'
+        ? (p.isCareerMode
+          ? stageLabel(p.careerState?.season.cup.stage ?? '')
+          : stageLabel(p.bracketState?.stage ?? ''))
+        : undefined;
+
+    let contextLabel = p.matchContext === 'bracket'
+      ? (p.isCareerMode ? (p.careerState?.season.cup.cupName ?? 'Copa') : (p.bracketState?.cupName ?? 'Copa'))
+      : p.matchContext === 'league'
+        ? (p.isCareerMode ? (getLeague(p.careerState?.leagueId ?? '')?.name ?? 'Liga') : (p.selectedLeague?.name ?? 'Liga'))
+        : 'Amistoso';
+    if (p.isCareerMode) contextLabel += ` · Temporada ${p.careerState?.currentSeasonYear ?? 1}`;
+
     return (
       <MatchdayScreen
         homeTeam={p.homeTeam}
         awayTeam={p.awayTeam}
-        matchContext={p.matchContext}
+        contextLabel={contextLabel}
         roundLabel={roundLabel}
         onPlay={() => p.setScreen('match')}
         onBack={() => p.setScreen('setup')}

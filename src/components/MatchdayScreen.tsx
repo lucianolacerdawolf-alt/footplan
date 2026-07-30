@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import type { Team, Player } from '../engine/types';
 import { MENTALITY_LABELS } from '../engine/types';
 import { useH2H } from '../hooks/useH2H';
-import type { MatchContext } from '../types/navigation';
 import { playerOvr } from '../utils/playerOvr';
 import { generateStadium } from '../utils/stadiums';
 import { isDerby } from '../engine/rivalries';
@@ -12,7 +11,7 @@ import styles from './MatchdayScreen.module.css';
 interface Props {
   homeTeam: Team;
   awayTeam: Team;
-  matchContext: MatchContext;
+  contextLabel: string;
   onPlay: () => void;
   onBack: () => void;
   roundLabel?: string;
@@ -47,7 +46,7 @@ function getWeather(): { icon: string; label: string } {
   return weathers[Math.floor(Math.random() * weathers.length)];
 }
 
-export default function MatchdayScreen({ homeTeam, awayTeam, matchContext, onPlay, onBack, roundLabel }: Props) {
+export default function MatchdayScreen({ homeTeam, awayTeam, contextLabel, onPlay, onBack, roundLabel }: Props) {
   const { get: getH2H } = useH2H();
   const h2h = getH2H(homeTeam.id, awayTeam.id);
   const weather = useMemo(() => getWeather(), []);
@@ -67,10 +66,6 @@ export default function MatchdayScreen({ homeTeam, awayTeam, matchContext, onPla
       homeTeam.strategy.mentality, awayTeam.strategy.mentality,
       homeTeam.strategy.defensiveLine, awayTeam.strategy.defensiveLine,
     ), [homeTeam, awayTeam]);
-
-  const contextLabel = matchContext === 'league' ? 'Liga'
-    : matchContext === 'bracket' ? 'Copa'
-    : 'Amistoso';
 
   return (
     <div className={`${styles.screen} app-screen`}>
