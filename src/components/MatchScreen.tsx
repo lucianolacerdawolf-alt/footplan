@@ -1,11 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width, MatchResult, RandomFn, Player, PenaltyResult } from '../engine/types';
+import type { Team, Strategy, MatchResult, RandomFn, Player, PenaltyResult } from '../engine/types';
 import type { GameMode } from './TeamSelectionScreen';
-import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
-import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engine/constants';
-import TacticLabel from './TacticLabel';
 import TacticPresets from './shared/TacticPresets';
+import TacticEditor from './shared/TacticEditor';
 import type { SubWindow, LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchState, loadLiveMatchMeta, clearLiveMatchMeta } from '../utils/liveMatchPersistence';
 import { playGoal, playWhistle, playFullTime, playCard } from '../utils/gameAudio';
@@ -527,7 +525,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       {/* Placar + Tempo */}
       <div className="match-scorebar">
         <div className="score-side home" style={{ borderLeftColor: home.color }}>
-          <span className="score-label" style={{ color: home.color }}>{home.abbreviation}</span>
+          <span className="score-label">{home.abbreviation}</span>
           <span className="score-num" key={`h-${goalAnimKey}`}>{started ? homeScore : '–'}</span>
         </div>
         <div className="score-clock">
@@ -536,7 +534,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         </div>
         <div className="score-side away" style={{ borderRightColor: away.color }}>
           <span className="score-num" key={`a-${goalAnimKey}`}>{started ? awayScore : '–'}</span>
-          <span className="score-label" style={{ color: away.color }}>{away.abbreviation}</span>
+          <span className="score-label">{away.abbreviation}</span>
         </div>
       </div>
 
@@ -574,11 +572,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           <div className="possession-section">
             <div className="poss-label-row">Posse de Bola</div>
             <div className="possession-bar-wrap">
-              <span className="poss-pct poss-home" style={{ color: home.color }}>{homePct}%</span>
+              <span className="poss-pct poss-home">{homePct}%</span>
               <div className="possession-bar">
                 <div className="possession-fill home-fill" style={{ width: `${homePct}%`, background: home.color }} />
               </div>
-              <span className="poss-pct poss-away" style={{ color: away.color }}>{awayPct}%</span>
+              <span className="poss-pct poss-away">{awayPct}%</span>
             </div>
           </div>
         );
@@ -831,57 +829,20 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                       </button>
                     </div>
 
+                    {/* Antes havia aqui um formulário inline duplicando o TacticEditor,
+                      * mas com 5 campos em vez de 7: Escanteio e Falta foram adicionados
+                      * ao editor compartilhado e esta cópia ficou atrás, então a pausa no
+                      * meio do jogo não oferecia bola parada e o intervalo sim. */}
                     {pauseTab === 'tactics' ? (
                       <div className="halftime-team" style={{ marginBottom: 8 }}>
-                        {!showOpponent ? (
-                          <>
-                            <TacticPresets onApply={updateHome} currentStrategy={home.strategy} />
-                            <TacticLabel tacticKey="formation" />
-                            <select value={home.strategy.formation} onChange={e => updateHome({ ...home.strategy, formation: e.target.value as Formation })}>
-                              {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                            <TacticLabel tacticKey="mentality" />
-                            <select value={home.strategy.mentality} onChange={e => updateHome({ ...home.strategy, mentality: e.target.value as Mentality })}>
-                              {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
-                            </select>
-                            <TacticLabel tacticKey="intensity" />
-                            <select value={home.strategy.intensity} onChange={e => updateHome({ ...home.strategy, intensity: e.target.value as Intensity })}>
-                              {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
-                            </select>
-                            <TacticLabel tacticKey="defensiveLine" />
-                            <select value={home.strategy.defensiveLine} onChange={e => updateHome({ ...home.strategy, defensiveLine: e.target.value as DefensiveLine })}>
-                              {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
-                            </select>
-                            <TacticLabel tacticKey="width" />
-                            <select value={home.strategy.width} onChange={e => updateHome({ ...home.strategy, width: e.target.value as Width })}>
-                              {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
-                            </select>
-                          </>
-                        ) : (
-                          <>
-                            <TacticPresets onApply={updateAway} currentStrategy={away.strategy} />
-                            <TacticLabel tacticKey="formation" />
-                            <select value={away.strategy.formation} onChange={e => updateAway({ ...away.strategy, formation: e.target.value as Formation })}>
-                              {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-                            </select>
-                            <TacticLabel tacticKey="mentality" />
-                            <select value={away.strategy.mentality} onChange={e => updateAway({ ...away.strategy, mentality: e.target.value as Mentality })}>
-                              {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
-                            </select>
-                            <TacticLabel tacticKey="intensity" />
-                            <select value={away.strategy.intensity} onChange={e => updateAway({ ...away.strategy, intensity: e.target.value as Intensity })}>
-                              {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
-                            </select>
-                            <TacticLabel tacticKey="defensiveLine" />
-                            <select value={away.strategy.defensiveLine} onChange={e => updateAway({ ...away.strategy, defensiveLine: e.target.value as DefensiveLine })}>
-                              {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
-                            </select>
-                            <TacticLabel tacticKey="width" />
-                            <select value={away.strategy.width} onChange={e => updateAway({ ...away.strategy, width: e.target.value as Width })}>
-                              {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
-                            </select>
-                          </>
-                        )}
+                        <TacticPresets
+                          onApply={showOpponent ? updateAway : updateHome}
+                          currentStrategy={showOpponent ? away.strategy : home.strategy}
+                        />
+                        <TacticEditor
+                          strategy={showOpponent ? away.strategy : home.strategy}
+                          onChange={showOpponent ? updateAway : updateHome}
+                        />
                       </div>
                     ) : (
                       <>

@@ -15,8 +15,13 @@
 
   --text-primary: #dde6f0;
   --text-h: #dde6f0;                /* alias compat */
-  --text-secondary: #5a7a96;
-  --text: #5a7a96;                  /* alias compat */
+  /* #5a7a96 sobre --surface dava ~4.0:1, abaixo do mínimo AA de 4.5:1 para texto
+   * pequeno. Os rótulos do app são quase todos 10-12px, então precisam do piso.
+   * Este tom entrega ~4.9:1 sobre --surface e ~5.6:1 sobre --bg. */
+  --text-secondary: #6b8faa;
+  --text: #6b8faa;                  /* alias compat */
+  /* Só para texto realmente acessório (separadores, "vs"), nunca para informação. */
+  --text-tertiary: #4d6b85;
 
   --home: #3b82f6;
   --away: #ef4444;

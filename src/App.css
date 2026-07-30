@@ -87,24 +87,26 @@
 .home .setup-team-crest { background: transparent; }
 .away .setup-team-crest { background: transparent; }
 .setup-team-header h2 { font-size: 15px; margin: 0; color: var(--text-h); }
-.setup-team-sub { font-size: 11px; opacity: 0.45; font-weight: 600; }
+.setup-team-sub { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
 
 /* Tooltip "?" de explicação de tática */
 .info-tooltip { position: relative; display: inline-flex; vertical-align: middle; margin-left: 2px; }
 .info-tooltip-btn {
   position: relative;
-  width: 13px; height: 13px; border-radius: 50%; border: 1px solid var(--border);
-  background: var(--bg); color: var(--text-h); font-size: 9px; font-weight: 700;
+  width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--border-light);
+  background: var(--bg); color: var(--text-secondary); font-size: 10px; font-weight: 700;
   line-height: 1; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center;
-  opacity: 0.55; transition: opacity 0.15s, border-color 0.15s;
+  transition: color 0.15s, border-color 0.15s;
 }
-/* Área de toque real de 24x24 (mínimo recomendado, WCAG 2.5.8) centrada no ícone
-   visível de 13px — sem mudar a aparência, só facilita acertar o toque no celular. */
+/* Área de toque de 32x32 centrada no ícone visível de 14px. O mínimo do WCAG 2.5.8
+   é 24px, mas são 7 desses botões por tela de táticas, lado a lado com selects —
+   32px reduz o erro de toque sem mudar a aparência. O `opacity: 0.55` que havia
+   aqui derrubava o contraste do "?" abaixo do mínimo; agora a cor é o token. */
 .info-tooltip-btn::before {
   content: ''; position: absolute; top: 50%; left: 50%;
-  width: 24px; height: 24px; transform: translate(-50%, -50%);
+  width: 32px; height: 32px; transform: translate(-50%, -50%);
 }
-.info-tooltip-btn:hover, .info-tooltip-btn[aria-expanded="true"] { opacity: 1; border-color: var(--accent); color: var(--accent); }
+.info-tooltip-btn:hover, .info-tooltip-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
 .info-tooltip-popover {
   position: absolute; top: 18px; left: 0; z-index: 50; width: 200px;
   background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
@@ -116,7 +118,7 @@
 
 .setup-squad-badges { display: flex; gap: 4px; margin-bottom: 8px; flex-wrap: wrap; }
 .setup-presets { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
-.setup-presets label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.45; }
+.setup-presets label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); }
 .preset-buttons { display: flex; gap: 4px; }
 .preset-btn {
   flex: 1; min-height: 40px; padding: 5px 4px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
@@ -128,12 +130,12 @@
 .preset-btn:disabled { cursor: not-allowed; opacity: 0.5; }
 .setup-controls { display: flex; flex-direction: column; gap: 5px; margin-bottom: 6px; }
 .setup-select { display: flex; flex-direction: column; gap: 1px; }
-.setup-select label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.45; }
+.setup-select label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); }
 .setup-select select {
   padding: 5px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
   color: var(--text-h); font-size: 12px; font-family: var(--sans); cursor: pointer; outline: none; transition: border-color 0.2s;
 }
-.setup-select label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.45; }
+.setup-select label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); }
 
 .setup-players { margin-top: 4px; }
 .setup-players summary { font-size: 12px; font-weight: 600; cursor: pointer; padding: 3px 0; opacity: 0.55; }
@@ -216,7 +218,7 @@
 .slot-crest { width: 60px; height: 60px; flex-shrink: 0; }
 .slot-name { font-size: 14px; font-weight: 600; color: var(--text); }
 .slot-ovr { font-size: 12px; font-weight: 700; color: var(--accent); }
-.slot-empty { font-size: 14px; font-weight: 700; opacity: 0.4; letter-spacing: 1px; }
+.slot-empty { font-size: 14px; font-weight: 700; color: var(--text-secondary); letter-spacing: 1px; }
 
 /* Grid de times */
 .team-grid {
@@ -242,7 +244,15 @@
 .tile-ovr { font-size: 12px; font-weight: 700; color: var(--accent); }
 .tile-value { font-size: 10px; font-weight: 600; opacity: 0.6; font-family: var(--mono); }
 
-.select-action { text-align: center; padding: 10px; }
+/* O CTA fica no DOM acima da grade de times, que tem 20-24 clubes e passa de
+ * 3000px no celular: o usuário escolhia o time no fim da lista e tinha que rolar
+ * tudo de volta pra confirmar. Sticky no rodapé mantém o botão sempre alcançável
+ * e ele reassume a posição natural quando a página chega ao fim. */
+.select-action {
+  text-align: center; padding: 10px;
+  position: sticky; bottom: 0; z-index: 5;
+  background: linear-gradient(to top, var(--bg) 55%, transparent);
+}
 
 .select-tournament-entry { text-align: center; padding: 0 10px 14px; }
 .tournament-entry-btn {
@@ -279,7 +289,7 @@
 }
 .squad-section-title {
   font-size: 12px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.4px; opacity: 0.45; margin-bottom: 6px;
+  letter-spacing: 0.4px; color: var(--text-secondary); margin-bottom: 6px;
 }
 .squad-section { flex: 1; margin-bottom: 0; }
 .bench-section { border-left: 1px dashed var(--border); padding-left: 10px; margin-left: 8px; }
@@ -351,7 +361,7 @@
 .back-btn:hover:not(:disabled) { opacity: 0.7; }
 .back-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .match-title { font-size: 13px; font-weight: 700; color: var(--text-h); flex: 1; }
-.match-formations { font-size: 11px; opacity: 0.4; font-weight: 600; }
+.match-formations { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
 
 /* Scorebar */
 .match-scorebar {
@@ -364,7 +374,11 @@
 }
 .score-side.home { border-left: 3px solid var(--home); }
 .score-side.away { border-right: 3px solid var(--away); flex-direction: row-reverse; }
-.score-label { font-size: 11px; font-weight: 800; opacity: 0.45; font-family: var(--heading); letter-spacing: 0.3px; }
+/* A identidade do clube fica na borda de 3px (.score-side.home/.away) e nas barras
+ * de momentum/posse. A abreviação NÃO é tingida com team.color: cores de clube vão
+ * de #000000 a #FFFFFF, então tingir texto pequeno sobre fundo escuro deixava times
+ * de cor escura ilegíveis — e o opacity: 0.45 que havia aqui piorava todos. */
+.score-label { font-size: 12px; font-weight: 800; color: var(--text-primary); font-family: var(--heading); letter-spacing: 0.3px; }
 .score-num {
   font-size: 26px; font-weight: 800; font-family: var(--mono); color: var(--text-primary);
   min-width: 22px; text-align: center; transition: transform 0.2s; line-height: 1;
@@ -377,7 +391,7 @@
   min-width: 38px;
 }
 .clock-num { font-size: 18px; font-weight: 800; font-family: var(--mono); color: var(--accent); line-height: 1; }
-.clock-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.35; line-height: 1; margin-top: 1px; }
+.clock-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); line-height: 1; margin-top: 1px; }
 
 /* Status da partida (texto — sem campo visual) */
 .match-pitch-area { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 3px 16px 4px; }
@@ -392,7 +406,7 @@
 }
 .formation-text-team { font-weight: 800; }
 .formation-text-value { font-weight: 700; color: var(--text-h); }
-.formation-text-vs { opacity: 0.4; font-weight: 600; }
+.formation-text-vs { color: var(--text-tertiary); font-weight: 600; }
 
 .simulate-btn {
   padding: 7px 26px; font-size: 13px; font-weight: 700; font-family: var(--sans); border: none;
@@ -413,7 +427,7 @@
 .possession-section { width: 100%; }
 .poss-label-row {
   text-align: center; font-size: 9px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.5px; opacity: 0.4; margin-bottom: 2px;
+  letter-spacing: 0.5px; color: var(--text-secondary); margin-bottom: 2px;
 }
 .possession-bar-wrap {
   display: flex; align-items: center; gap: 6px;
@@ -426,8 +440,11 @@
 .possession-fill {
   height: 100%; border-radius: 3px; transition: width 0.5s ease;
 }
+/* Mesma razão do .score-label: a cor do clube já está no preenchimento da barra,
+ * então o número não precisa ser tingido e ganha contraste garantido. */
 .poss-pct {
-  font-size: 10px; font-weight: 700; font-family: var(--mono); min-width: 28px;
+  font-size: 11px; font-weight: 700; font-family: var(--mono); min-width: 28px;
+  color: var(--text-primary);
 }
 .poss-home { text-align: right; }
 .poss-away { text-align: left; }
@@ -478,9 +495,14 @@
 /* =============================================================================
    INTERVALO (HALFTIME) — overlay de tela cheia (independente de qualquer campo visual)
    ============================================================================= */
+/* rgba(0,0,0,0.65) deixava 35% do feed de comentários passar — em tema escuro com
+ * texto ciano isso é muito, e as frases apareciam cortadas colando nas bordas do
+ * card, parecendo bug de z-index. O blur separa os planos sem esconder o jogo. */
 .halftime-overlay {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(0,0,0,0.65); z-index: 1000; padding: 16px;
+  background: rgba(3, 6, 12, 0.88); z-index: 1000; padding: 16px;
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
 }
 .halftime-inner {
   display: flex; flex-direction: column; align-items: center; gap: 10px;
@@ -498,13 +520,32 @@
   flex: 1; display: flex; flex-direction: column; gap: 4px;
 }
 .halftime-team strong { font-size: 12px; text-align: center; }
+
+/* TacticEditor: os rótulos são filhos diretos de .tactic-card, então a regra
+ * `.setup-select label` nunca casava (setup-select fica no <select>, não num
+ * wrapper) e os rótulos herdavam os 16px da raiz — ficando MAIORES que o valor
+ * dentro do select, o que invertia a hierarquia. O dado é o que importa. */
+.tactic-card { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+.tactic-card label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: var(--text-secondary);
+  display: flex; align-items: center; gap: 2px; margin-top: 4px;
+}
+.tactic-card select.setup-select {
+  padding: 7px 8px; border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg); color: var(--text-h); font-size: 14px; font-weight: 600;
+  font-family: var(--sans); cursor: pointer; outline: none; transition: border-color 0.2s;
+  min-height: 38px;
+}
+.tactic-card select.setup-select:focus { border-color: var(--accent); }
+.tactic-card select.setup-select:disabled { opacity: 0.6; cursor: not-allowed; }
 .halftime-team select {
   padding: 4px 6px; border: 1px solid var(--border); border-radius: 4px;
   background: var(--bg); color: var(--text-h); font-size: 11px;
   font-family: var(--sans); cursor: pointer; outline: none;
 }
 .halftime-team select:focus { border-color: var(--accent); }
-.halftime-vs { font-size: 11px; font-weight: 600; opacity: 0.4; padding-top: 16px; }
+.halftime-vs { font-size: 11px; font-weight: 600; color: var(--text-tertiary); padding-top: 16px; }
 
 /* Halftime/Pause tab buttons */
 .ht-tabs {
@@ -517,8 +558,12 @@
   transition: all 0.15s; white-space: nowrap;
 }
 .ht-tab:hover { background: var(--social-bg); color: var(--text-h); }
+/* Aba e preset selecionados usavam o mesmo pill de contorno ciano, então nada
+ * distinguia navegação (aba) de escolha de valor (preset). A aba passa a marcar
+ * com sublinhado — o contorno fica reservado ao preset. */
 .ht-tab.active {
-  background: var(--accent-bg); border-color: var(--accent); color: var(--accent);
+  background: var(--accent-bg); border-color: transparent; color: var(--accent);
+  border-radius: 6px 6px 0 0; border-bottom: 2px solid var(--accent);
 }
 
 /* Halftime squad swaps */
@@ -534,7 +579,7 @@
 .ht-squad-row.picked { background: var(--accent-bg); border: 1px solid var(--accent); margin: -1px; }
 .ht-squad-row.clickable { opacity: 0.8; }
 .ht-squad-row.clickable:hover { opacity: 1; }
-.ht-sub-group-label { font-size: 9px; text-transform: uppercase; opacity: 0.35; padding: 3px 5px 0; letter-spacing: 0.5px; }
+.ht-sub-group-label { font-size: 10px; text-transform: uppercase; color: var(--text-secondary); padding: 3px 5px 0; letter-spacing: 0.5px; }
 
 /* =============================================================================
    COMMENTARY
@@ -562,8 +607,8 @@
 .event-minute { font-family: var(--mono); font-size: 10px; font-weight: 700; min-width: 24px; color: var(--accent); }
 .event-icon { font-size: 12px; }
 .event-text { flex: 1; color: var(--text-h); }
-.feed-empty { text-align: center; padding: 18px 14px; opacity: 0.35; font-style: italic; font-size: 12px; }
-.feed-hidden { text-align: center; padding: 6px 14px; opacity: 0.4; font-size: 11px; font-style: italic; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.feed-empty { text-align: center; padding: 18px 14px; color: var(--text-secondary); font-style: italic; font-size: 12px; }
+.feed-hidden { text-align: center; padding: 6px 14px; color: var(--text-secondary); font-size: 11px; font-style: italic; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 
 .color-conflict-warning {
   display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -654,7 +699,7 @@
 
 .lazy-loading {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 60dvh; font-size: 13px; font-weight: 600; opacity: 0.4;
+  min-height: 60dvh; font-size: 13px; font-weight: 600; color: var(--text-secondary);
   font-family: var(--mono); gap: 16px;
 }
 
@@ -731,7 +776,7 @@
 .h2h-log-row { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
 .h2h-log-date { opacity: 0.55; min-width: 80px; font-size: 11px; }
 .h2h-log-score { font-weight: 900; font-size: 13px; min-width: 14px; text-align: center; }
-.h2h-log-sep { opacity: 0.4; }
+.h2h-log-sep { color: var(--text-tertiary); }
 .h2h-details summary > .h2h-strip { margin: 0; }
 
 /* ── Loading state nos botões de simular ──────────────────────────── */
@@ -753,7 +798,7 @@
 .tutorial-skip {
   position: absolute; top: 8px; right: 12px;
   background: none; border: none; color: var(--text);
-  opacity: 0.4; font-size: 11px; cursor: pointer; font-weight: 700;
+  color: var(--text-secondary); font-size: 11px; cursor: pointer; font-weight: 700;
 }
 .tutorial-skip:hover { opacity: 0.8; }
 .tutorial-icon { font-size: 52px; line-height: 1; }
@@ -797,7 +842,16 @@
   .squad-panel { flex-direction: column !important; min-width: 0; }
   .bench-section { border-left: none; border-top: 1px dashed var(--border); padding-left: 0; padding-top: 10px; margin-left: 0; margin-top: 8px; }
   .setup-team-card { width: 100%; max-width: 340px; }
-  .match-topbar { flex-wrap: wrap; gap: 6px; font-size: 13px; }
+  /* O `flex-wrap: wrap` fazia "FCU vs BAY" quebrar em três linhas empilhadas,
+   * colidindo com as formações e com os controles de velocidade na mesma faixa.
+   * Sem wrap e com o título encolhendo, tudo cabe numa linha; as formações já
+   * aparecem no Matchday e no painel de táticas, então somem aqui no mobile. */
+  .match-topbar { flex-wrap: nowrap; gap: 6px; font-size: 13px; }
+  .match-topbar .match-title {
+    flex: 1 1 auto; min-width: 0; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+  }
+  .match-formations { display: none; }
   .match-scorebar .score-num { font-size: 28px; }
   .match-scorebar .clock-num { font-size: 18px; }
   .score-side { padding: 6px 8px; gap: 4px; }

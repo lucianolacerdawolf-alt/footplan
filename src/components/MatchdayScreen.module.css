@@ -22,13 +22,15 @@
 .infoGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .infoCard { background: #111827; border: 1px solid #1f2937; border-radius: 10px; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
 .cardIcon { font-size: 18px; }
+.cardLabel { color: var(--text-secondary); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; }
 .cardValue { color: #e5e7eb; font-size: 11px; font-weight: 600; text-align: center; line-height: 1.3; word-break: break-word; }
-.cardSub { color: #4b5563; font-size: 9px; text-align: center; }
+.cardSub { color: var(--text-secondary); font-size: 10px; text-align: center; }
 
 .derbyBanner { display: flex; align-items: center; gap: 8px; background: linear-gradient(135deg, #1a1118, #1f1414); border: 1px solid #7f1d1d44; border-radius: 10px; padding: 12px 14px; color: #fca5a5; font-size: 12px; line-height: 1.4; }
 .derbyIcon { font-size: 20px; flex-shrink: 0; }
 
 .h2hSection { background: #111827; border: 1px solid #1f2937; border-radius: 10px; padding: 12px 14px; }
+.h2hEmpty { color: var(--text-secondary); font-size: 12px; line-height: 1.5; margin: 0; }
 .sectionTitle { color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 10px; }
 .h2hStats { display: flex; justify-content: space-around; text-align: center; }
 .h2hStat { display: flex; flex-direction: column; gap: 2px; }
@@ -54,10 +56,10 @@
 .tacticalText { color: #9ca3af; font-size: 11px; line-height: 1.5; }
 
 .actions { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #1f2937; background: #0a0b14; }
-.backBtn { flex: 0 0 auto; padding: 10px 16px; border-radius: 8px; border: 1px solid #374151; background: transparent; color: #9ca3af; font-size: 13px; font-weight: 600; cursor: pointer; }
+.backBtn { flex: 0 0 auto; min-height: 44px; padding: 10px 18px; border-radius: 8px; border: 1px solid #374151; background: transparent; color: #9ca3af; font-size: 13px; font-weight: 600; cursor: pointer; }
 .backBtn:hover { background: #1f2937; }
-.playBtn { flex: 1; padding: 12px 20px; border-radius: 8px; border: none; background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; font-size: 14px; font-weight: 700; cursor: pointer; }
-.playBtn:hover { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.playBtn { flex: 1; padding: 14px 20px; border-radius: 8px; border: none; background: var(--accent); color: #04222a; font-size: 15px; font-weight: 700; cursor: pointer; }
+.playBtn:hover { filter: brightness(1.12); }
 
 @media (max-width: 400px) {
   .infoGrid { grid-template-columns: repeat(3, 1fr); gap: 4px; }

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import type { Team } from '../engine/types';
+import type { Team, Player } from '../engine/types';
+import { MENTALITY_LABELS } from '../engine/types';
 import { useH2H } from '../hooks/useH2H';
 import type { MatchContext } from '../types/navigation';
 import { playerOvr } from '../utils/playerOvr';
@@ -15,6 +16,23 @@ interface Props {
   onPlay: () => void;
   onBack: () => void;
   roundLabel?: string;
+}
+
+/**
+ * Escolhe os 3 destaques do time. Ordenar só por OVR enchia a lista de goleiros —
+ * o OVR de GK é calibrado em outra escala e domina o topo do elenco, então uma
+ * prévia de jogo mostrava "3 goleiros em destaque". No máximo 1 GK entra, e só
+ * se sobrar vaga depois dos jogadores de linha.
+ */
+export function pickHighlights(squad: Player[], count = 3): Player[] {
+  const byOvr = (a: Player, b: Player) => playerOvr(b) - playerOvr(a);
+  const outfield = squad.filter(p => p.position !== 'GK').sort(byOvr);
+  const keepers = squad.filter(p => p.position === 'GK').sort(byOvr);
+
+  const picked = outfield.slice(0, count);
+  // Só completa com goleiro se o elenco não tiver jogadores de linha suficientes.
+  if (picked.length < count && keepers.length > 0) picked.push(keepers[0]);
+  return picked.slice(0, count);
 }
 
 function getWeather(): { icon: string; label: string } {
@@ -39,13 +57,8 @@ export default function MatchdayScreen({ homeTeam, awayTeam, matchContext, onPla
     return generateStadium(homeTeam.name, sid);
   }, [homeTeam.name, homeTeam.id, awayTeam.id]);
 
-  const topHome = useMemo(() =>
-    [...homeTeam.squad].sort((a, b) => playerOvr(b) - playerOvr(a)).slice(0, 3),
-    [homeTeam.squad]);
-
-  const topAway = useMemo(() =>
-    [...awayTeam.squad].sort((a, b) => playerOvr(b) - playerOvr(a)).slice(0, 3),
-    [awayTeam.squad]);
+  const topHome = useMemo(() => pickHighlights(homeTeam.squad), [homeTeam.squad]);
+  const topAway = useMemo(() => pickHighlights(awayTeam.squad), [awayTeam.squad]);
 
   const tacticalComment = useMemo(() =>
     generateTacticalComment(
@@ -89,20 +102,25 @@ export default function MatchdayScreen({ homeTeam, awayTeam, matchContext, onPla
 
       <div className={styles.content}>
         <div className={styles.infoGrid}>
+          {/* Os três cards seguem o mesmo contrato: rótulo da categoria em cima,
+            * valor embaixo. Antes a segunda linha era usada para três coisas
+            * diferentes (detalhe do valor, nome da categoria e outro valor). */}
           <div className={styles.infoCard}>
             <span className={styles.cardIcon}>🏟️</span>
+            <span className={styles.cardLabel}>Estádio</span>
             <span className={styles.cardValue}>{stadium.name}</span>
             <span className={styles.cardSub}>{stadium.capacity.toLocaleString()} lugares</span>
           </div>
           <div className={styles.infoCard}>
             <span className={styles.cardIcon}>{weather.icon}</span>
+            <span className={styles.cardLabel}>Clima</span>
             <span className={styles.cardValue}>{weather.label}</span>
-            <span className={styles.cardSub}>Condições do jogo</span>
           </div>
           <div className={styles.infoCard}>
             <span className={styles.cardIcon}>📊</span>
+            <span className={styles.cardLabel}>Formações</span>
             <span className={styles.cardValue}>{`${homeTeam.strategy.formation} vs ${awayTeam.strategy.formation}`}</span>
-            <span className={styles.cardSub}>{homeTeam.strategy.mentality === 'counter-attack' ? 'Contra-ataque' : homeTeam.strategy.mentality === 'high-press' ? 'Pressão Alta' : homeTeam.strategy.mentality === 'defensive' ? 'Retranca' : 'Posse de Bola'}</span>
+            <span className={styles.cardSub}>{MENTALITY_LABELS[homeTeam.strategy.mentality]}</span>
           </div>
         </div>
 
@@ -110,6 +128,19 @@ export default function MatchdayScreen({ homeTeam, awayTeam, matchContext, onPla
           <div className={styles.derbyBanner}>
             <span className={styles.derbyIcon}>⚔️</span>
             <span>Dérbi! A rivalidade promete jogo intenso com mais faltas e emoção.</span>
+          </div>
+        )}
+
+        {/* Sem histórico a seção inteira desaparecia e deixava um buraco de várias
+          * centenas de pixels antes da barra de ações. Estado vazio explícito
+          * preenche o espaço com informação em vez de vazio. */}
+        {(!h2h || h2h.wins + h2h.draws + h2h.losses === 0) && (
+          <div className={styles.h2hSection}>
+            <h3 className={styles.sectionTitle}>Histórico de Confrontos</h3>
+            <p className={styles.h2hEmpty}>
+              Primeiro encontro entre {homeTeam.name} e {awayTeam.name}. O retrospecto
+              começa a contar a partir desta partida.
+            </p>
           </div>
         )}
 
