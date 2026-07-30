@@ -7,3 +7,7 @@ export type Screen =
 export type MatchContext = 'regular' | 'league' | 'bracket' | 'online';
 
 export type TournamentMode = 'league' | 'bracket';
+
+export function goesViaMatchday(matchContext: MatchContext): boolean {
+  return matchContext === 'league' || matchContext === 'bracket';
+}

@@ -35,6 +35,7 @@ function mockParams() {
     setMatchContext: vi.fn(),
     setIsKnockout: vi.fn(),
     setIsTournamentEntry: vi.fn(),
+    setIsCareerMode: vi.fn(),
     recordH2H: vi.fn(),
     notifySave: vi.fn(),
     setToastMsg: vi.fn(),

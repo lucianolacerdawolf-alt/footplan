@@ -51,13 +51,14 @@ interface UseCareerManagerParams {
   setMatchContext: (c: 'regular' | 'league' | 'bracket' | 'online') => void;
   setIsKnockout: (v: boolean) => void;
   setIsTournamentEntry: (v: boolean) => void;
+  setIsCareerMode: (v: boolean) => void;
   recordH2H: (homeId: string, awayId: string, homeScore: number, awayScore: number) => void;
   notifySave: () => void;
   setToastMsg: (msg: string | null) => void;
 }
 
 export function useCareerManager({
-  setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
+  setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setIsCareerMode,
   recordH2H, notifySave, setToastMsg,
 }: UseCareerManagerParams) {
   const [careerState, setCareerState] = usePersistedState<CareerState | null>('fp:career', null, { onPersist: notifySave });
@@ -144,8 +145,9 @@ export function useCareerManager({
       boardObjectives: boardObj,
     };
     setCareerState(newState);
+    setIsCareerMode(true);
     setScreen('career-hub');
-  }, [setCareerState, setScreen]);
+  }, [setCareerState, setIsCareerMode, setScreen]);
 
   const handleEditCareerLeagueTactics = useCallback(() => {
     if (!careerState) return;
@@ -394,10 +396,43 @@ export function useCareerManager({
     setScreen('setup');
   }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
 
+  /** Atalho do Hub: pula direto pra tática do próximo jogo de copa, sem passar pelo chaveamento. */
+  const handlePlayNextCareerCupMatch = useCallback(() => {
+    if (!careerState) return;
+    const cup = careerState.season.cup;
+    if (cup.stage === 'champion') { setScreen('career-bracket'); return; }
+    const stageMatches = getStageMatches(cup);
+    const matchIdx = stageMatches.findIndex(m =>
+      !m.played &&
+      (m.homeTeamId === cup.userTeamId || m.awayTeamId === cup.userTeamId)
+    );
+    if (matchIdx < 0 || !stageMatches[matchIdx]) { setScreen('career-bracket'); return; }
+    const match = stageMatches[matchIdx];
+    const home = cup.teams.find(t => t.id === match.homeTeamId);
+    const away = cup.teams.find(t => t.id === match.awayTeamId);
+    if (!home || !away) { setScreen('career-bracket'); return; }
+    const stage = cup.stage as PlayableStage;
+    handlePlayCareerBracketMatch(match, home, away, stage, matchIdx);
+  }, [careerState, setScreen, handlePlayCareerBracketMatch]);
+
   const handleSimulateOtherCareerBracketMatches = useCallback(() => {
     if (!careerState) return;
     const updated = simulateAllCpuBracketMatches(careerState.season.cup);
     setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: updated } } : prev);
+  }, [careerState, setCareerState]);
+
+  /** Simula todos os jogos de copa restantes até o fim, em 1 clique — útil quando o usuário já foi eliminado. */
+  const handleSimulateCareerCupToEnd = useCallback(() => {
+    if (!careerState) return;
+    let cup = careerState.season.cup;
+    let safety = 0;
+    const MAX_ITER = 5;
+    while (cup.stage !== 'champion' && safety < MAX_ITER) {
+      cup = simulateAllCpuBracketMatches(cup);
+      cup = advanceBracket(cup);
+      safety++;
+    }
+    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup } } : prev);
   }, [careerState, setCareerState]);
 
   const handleSimulateCareerBracketMatch = useCallback((_stage: PlayableStage, matchIdx: number) => {
@@ -958,6 +993,7 @@ export function useCareerManager({
     handleEditCareerLeagueTactics,
     handlePlayCareerLeagueMatch,
     handlePlayNextCareerMatch,
+    handlePlayNextCareerCupMatch,
     handleSimulateUserCareerLeagueMatch,
     handleSimulateCareerLeagueRound,
     handleNextCareerLeagueRound,
@@ -966,6 +1002,7 @@ export function useCareerManager({
     handlePlayCareerBracketMatch,
     handleSimulateOtherCareerBracketMatches,
     handleSimulateCareerBracketMatch,
+    handleSimulateCareerCupToEnd,
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleBuyPlayer,

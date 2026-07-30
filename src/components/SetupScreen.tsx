@@ -64,6 +64,7 @@ interface Props {
   userIsHome?: boolean;
   isTacticsOnly?: boolean;
   mode?: 'single' | 'league' | 'cup' | 'career' | 'online';
+  goesToPreview?: boolean;
 }
 
 /** Move lesionados/suspensos pro banco e promove substitutos disponíveis da mesma posicao */
@@ -84,7 +85,7 @@ function autoBenchUnavailable(team: Team): Team {
 import { playerOvr } from '../utils/playerOvr';
 import { fireClick } from '../utils/fireClick';
 
-export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode }: Props) {
+export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
@@ -312,7 +313,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           </p>
         </header>
         <button className="start-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
-          {isTacticsOnly ? 'Confirmar Táticas ✓' : 'Iniciar Partida →'}
+          {isTacticsOnly ? 'Confirmar Táticas ✓' : goesToPreview ? 'Confirmar e Continuar →' : 'Iniciar Partida →'}
         </button>
       </div>
 

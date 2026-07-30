@@ -8,6 +8,8 @@ interface Props {
   onPlayMatch: (match: BracketMatch, homeTeam: Team, awayTeam: Team) => void;
   onSimulateMatch: (stage: PlayableStage, matchIndex: number) => void;
   onSimulateOthers: () => void;
+  onSimulateToEnd?: () => void;
+  eliminated?: boolean;
   onEditTactics: () => void;
   onBack: () => void;
   /** Só true no Modo Carreira — a barra de abas fixa já cobre "voltar pra Central" e
@@ -82,7 +84,7 @@ function MatchCard({
   );
 }
 
-export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onEditTactics, onBack, hideTopNav }: Props) {
+export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onSimulateToEnd, eliminated, onEditTactics, onBack, hideTopNav }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
   const [simulating, setSimulating] = useState(false);
   const runSimOthers = () => {
@@ -113,7 +115,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
             </div>
           )}
         </div>
-        <button className="start-btn" onClick={onBack}>Jogar Novamente</button>
+        <button className="start-btn" onClick={onBack}>{hideTopNav ? '← Voltar à Central' : 'Jogar Novamente'}</button>
       </div>
     );
   }
@@ -178,6 +180,14 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
       {stage === 'quarterfinals' && renderStage('Quartas de Final', quarterFinals, true)}
       {stage === 'semifinals'    && renderStage('Semifinais',       semiFinals,    true)}
       {stage === 'final'         && renderStage('Final',            [final],       true)}
+
+      {onSimulateToEnd && eliminated && stage !== 'champion' && (
+        <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'center' }}>
+          <button className={styles.simAllBtn} onClick={onSimulateToEnd}>
+            Simular até o fim da copa
+          </button>
+        </div>
+      )}
     </div>
   );
 }

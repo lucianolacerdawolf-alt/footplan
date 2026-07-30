@@ -58,7 +58,14 @@
       "Bash(git commit -m ' *)",
       "Bash(rtk npx *)",
       "Bash(sed 's/=.*/=<set-or-empty>/')",
-      "Bash(awk -F= '/VITE_FOOTBALL_PROXY_URL/{print \"proxy_len=\"length\\($2\\)} /VITE_FOOTBALL_API_KEY/{print \"key_len=\"length\\($2\\)}' .env)"
+      "Bash(awk -F= '/VITE_FOOTBALL_PROXY_URL/{print \"proxy_len=\"length\\($2\\)} /VITE_FOOTBALL_API_KEY/{print \"key_len=\"length\\($2\\)}' .env)",
+      "Bash(awk -F= '/VITE_RAPIDAPI_KEY/{print \"key_len=\"length\\($2\\)}' .env)",
+      "Bash(npx wrangler *)",
+      "Bash(rtk curl *)",
+      "Bash(git check-ignore *)",
+      "WebFetch(domain:www.football-data.org)",
+      "Read(//tmp/**)",
+      "Bash(rtk npx tsx -e ' *)"
     ]
   }
 }

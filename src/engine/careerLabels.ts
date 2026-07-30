@@ -8,3 +8,11 @@ export const CUP_RESULT_LABELS: Record<CareerSeasonHistoryEntry['cupResult'], st
   roundOf16: 'Oitavas de final',
   'not-played': 'Não disputada',
 };
+
+export const CUP_STAGE_LABELS: Record<string, string> = {
+  roundOf16: 'Oitavas',
+  quarterfinals: 'Quartas',
+  semifinals: 'Semis',
+  final: 'Final',
+  champion: 'Campeão',
+};

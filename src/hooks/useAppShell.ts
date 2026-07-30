@@ -39,6 +39,7 @@ export function useAppShell() {
 
   const goHome = useCallback(() => {
     setSelectedLeague(null);
+    setReturnScreen(null);
     try { localStorage.removeItem('fp:selectedLeague'); } catch {}
     try { localStorage.removeItem('fp:homeId'); } catch {}
     try { localStorage.removeItem('fp:awayId'); } catch {}

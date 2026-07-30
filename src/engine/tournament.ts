@@ -371,3 +371,23 @@ export function simularFixtureAuto(fixture: LeagueFixture, teams: Team[]): Leagu
   const result = simularPartidaRapida(cloneTeam(home), cloneTeam(away));
   return { ...fixture, ...result, played: true };
 }
+
+export function isUserEliminated(state: BracketState): boolean {
+  if (state.stage === 'champion' && state.championId === state.userTeamId) return false;
+  if (state.championId === state.userTeamId) return false;
+
+  const userId = state.userTeamId;
+  const allMatches: BracketMatch[] = [];
+  if (state.stage === 'roundOf16' || state.stage === 'champion') allMatches.push(...state.roundOf16);
+  if (state.stage === 'quarterfinals' || state.stage === 'champion' || state.stage === 'roundOf16') allMatches.push(...state.quarterFinals);
+  if (state.stage === 'semifinals' || state.stage === 'champion' || state.stage === 'quarterfinals' || state.stage === 'roundOf16') allMatches.push(...state.semiFinals);
+  // final is always included (if not champion, the user could still be there)
+  allMatches.push(state.final);
+
+  const pendingUserMatch = allMatches.some(m =>
+    !m.played &&
+    (m.homeTeamId === userId || m.awayTeamId === userId)
+  );
+
+  return !pendingUserMatch;
+}

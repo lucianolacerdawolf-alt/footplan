@@ -99,7 +99,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
           Você terminou em <strong>{userPos}º lugar</strong> com {userStanding.points} pontos
         </div>
         <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
-        <button className="start-btn" onClick={onBack}>Nova Partida</button>
+        <button className="start-btn" onClick={onBack}>{hideTopNav ? '← Voltar à Central' : 'Nova Partida'}</button>
       </div>
     );
   }

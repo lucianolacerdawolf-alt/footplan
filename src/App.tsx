@@ -95,6 +95,7 @@ function App() {
     handleEditCareerLeagueTactics,
     handlePlayCareerLeagueMatch,
     handlePlayNextCareerMatch,
+    handlePlayNextCareerCupMatch,
     handleSimulateUserCareerLeagueMatch,
     handleSimulateCareerLeagueRound,
     handleNextCareerLeagueRound,
@@ -103,6 +104,7 @@ function App() {
     handlePlayCareerBracketMatch,
     handleSimulateOtherCareerBracketMatches,
     handleSimulateCareerBracketMatch,
+    handleSimulateCareerCupToEnd,
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleBuyPlayer,
@@ -119,7 +121,7 @@ function App() {
     handleRestorePendingCareerBracketMatch,
     handleRenegotiateSponsor,
   } = useCareerManager({
-    setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
+    setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setIsCareerMode,
     recordH2H, notifySave, setToastMsg,
   });
 
@@ -250,17 +252,18 @@ function App() {
     const shuffled = [...league.teams].sort(() => Math.random() - 0.5);
     const home = shuffled[0];
     const away = shuffled[1];
+    setSelectedLeague(league);
     setMatchContext('regular');
     setIsKnockout(false);
     setHomeTeam(home);
     setAwayTeam(away);
+    setReturnScreen('home');
     setScreen('match');
-  }, [setMatchContext, setIsKnockout, setHomeTeam, setAwayTeam, setScreen]);
+  }, [setSelectedLeague, setMatchContext, setIsKnockout, setHomeTeam, setAwayTeam, setReturnScreen, setScreen]);
 
   // ── Modo Carreira: entrada ────────────────────────────────────────────────
   const handleCareerFromHome = useCallback(() => {
-    setIsCareerMode(true);
-    if (careerState) { setScreen('career-hub'); return; }
+    if (careerState) { setIsCareerMode(true); setScreen('career-hub'); return; }
     setTournamentMode('league');
     setReturnScreen('tournament-setup');
     setScreen('league-select');
@@ -337,6 +340,7 @@ function App() {
     handleEditCareerLeagueTactics,
     handlePlayCareerLeagueMatch,
     handlePlayNextCareerMatch,
+    handlePlayNextCareerCupMatch,
     handleSimulateUserCareerLeagueMatch,
     handleSimulateCareerLeagueRound,
     handleNextCareerLeagueRound,
@@ -345,6 +349,7 @@ function App() {
     handlePlayCareerBracketMatch,
     handleSimulateOtherCareerBracketMatches,
     handleSimulateCareerBracketMatch,
+    handleSimulateCareerCupToEnd,
     handleCareerBracketMatchResult,
     handleProposeTrade,
     handleBuyPlayer,
@@ -389,7 +394,7 @@ function App() {
         <CareerTabBar
           active={activeCareerTab}
           onCentral={() => setScreen('career-hub')}
-          onElenco={handleEditCareerLeagueTactics}
+          onElenco={() => { setReturnScreen(screen); handleEditCareerLeagueTactics(); }}
           onTransferencias={() => setScreen('transfer-market')}
           onMeuClube={() => setScreen('career-trophy-room')}
           onEscritorio={() => setScreen('career-league')}

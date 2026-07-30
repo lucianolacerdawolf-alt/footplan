@@ -143,6 +143,7 @@ export interface AppScreensProps {
   handleEditCareerLeagueTactics: () => void;
   handlePlayCareerLeagueMatch: (fixture: LeagueFixture, home: Team, away: Team) => void;
   handlePlayNextCareerMatch: () => void;
+  handlePlayNextCareerCupMatch: () => void;
   handleSimulateUserCareerLeagueMatch: () => void;
   handleSimulateCareerLeagueRound: (roundIndex: number) => void;
   handleNextCareerLeagueRound: () => void;
@@ -151,6 +152,7 @@ export interface AppScreensProps {
   handlePlayCareerBracketMatch: (match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => void;
   handleSimulateOtherCareerBracketMatches: () => void;
   handleSimulateCareerBracketMatch: (stage: PlayableStage, matchIdx: number) => void;
+  handleSimulateCareerCupToEnd: () => void;
   handleCareerBracketMatchResult: (result: MatchResult) => void;
   handleProposeTrade: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
   handleBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
@@ -177,7 +179,7 @@ type ScreenRenderer = (props: AppScreensProps) => React.ReactNode;
 const screenMap: Record<Screen, ScreenRenderer> = {
   'cup-select': (p) => (
     <CupSelectScreen
-      onBack={() => p.setScreen('home')}
+      onBack={p.goHome}
       onSelect={(league) => {
         localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
         p.setSelectedLeague(league);
@@ -203,7 +205,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         p.setReturnScreen(null);
         p.setScreen(save.type === 'league' ? 'league' : 'bracket');
       }}
-      onBack={() => { p.setReturnScreen(null); p.setScreen('home'); }}
+      onBack={p.goHome}
       onSelect={(league) => {
         localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
         p.setSelectedLeague(league);
@@ -351,7 +353,13 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         mode={mode}
         onStartMatch={p.handleStartMatch}
         onBack={() => {
+          const wasTournamentEntry = p.isTournamentEntry;
           p.setIsTournamentEntry(false);
+          if (wasTournamentEntry && p.returnScreen) {
+            p.setScreen(p.returnScreen);
+            p.setReturnScreen(null);
+            return;
+          }
           if (p.isCareerMode && p.matchContext === 'league') { p.setScreen('career-league'); return; }
           if (p.isCareerMode && p.matchContext === 'bracket') { p.setScreen('career-bracket'); return; }
           if (p.matchContext === 'league') p.setScreen('league');
@@ -361,6 +369,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         isTacticsOnly={p.isTournamentEntry}
         lockAway={p.matchContext !== 'regular' || p.gameMode === 'cpu'}
         userIsHome={userIsHome}
+        goesToPreview={p.matchContext === 'league' || p.matchContext === 'bracket'}
       />
     );
   },
@@ -394,7 +403,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
           ? p.careerState?.season.cup.userTeamId === p.homeTeam.id ? 'home' : 'away'
           : p.bracketState?.userTeamId === p.homeTeam.id ? 'home' : 'away'
         : undefined;
-    const matchBackScreen = isTournament ? 'matchday' : p.matchContext === 'online' ? 'online-lobby' : 'setup';
+    const matchBackScreen = isTournament ? 'matchday' : p.matchContext === 'online' ? 'online-lobby' : p.returnScreen === 'home' ? 'home' : 'setup';
     return (
       <MatchScreen
         homeTeam={p.homeTeam}
@@ -431,9 +440,6 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         matchContext={p.matchContext}
         roundLabel={roundLabel}
         onPlay={() => p.setScreen('match')}
-        // O caminho é lista → setup → matchday → match. Voltar direto pra lista
-        // pulava o setup e fazia o usuário perder as táticas que acabou de ajustar;
-        // o próprio setup já sabe voltar pra lista certa em cada contexto.
         onBack={() => p.setScreen('setup')}
       />
     );
@@ -452,8 +458,8 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         history={isTournament ? [] : p.history}
         onMenu={p.goHome}
         onClearHistory={p.clearHistory}
-        onContinue={isTournament ? p.handleContinueTournament : undefined}
-        continueLabel={p.matchContext === 'league' ? (p.selectedLeague ? `Continuar ${p.selectedLeague.name}` : 'Continuar Liga') : p.matchContext === 'bracket' ? `Continuar ${p.bracketState?.cupName ?? 'Copa'}` : undefined}
+        onContinue={isTournament ? p.handleContinueTournament : p.matchContext === 'online' ? () => p.setScreen('online-lobby') : undefined}
+        continueLabel={p.matchContext === 'online' ? 'Voltar ao Lobby' : p.matchContext === 'league' ? (p.selectedLeague ? `Continuar ${p.selectedLeague.name}` : 'Continuar Liga') : p.matchContext === 'bracket' ? `Continuar ${p.bracketState?.cupName ?? 'Copa'}` : undefined}
         isTitleWin={isTitleWin}
       />
     );
@@ -477,6 +483,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         league={getLeague(p.careerState.leagueId)!}
         onViewCup={() => p.setScreen('career-bracket')}
         onPlayNext={p.handlePlayNextCareerMatch}
+        onPlayNextCup={p.handlePlayNextCareerCupMatch}
         onAdvanceSeason={p.handleAdvanceSeason}
         onNewCareer={p.handleNewCareerFromHub}
         onBack={() => { p.setIsCareerMode(false); p.goHome(); }}
@@ -575,6 +582,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         }}
         onSimulateMatch={p.handleSimulateCareerBracketMatch}
         onSimulateOthers={p.handleSimulateOtherCareerBracketMatches}
+        onSimulateToEnd={p.handleSimulateCareerCupToEnd}
         onEditTactics={p.handleEditCareerBracketTactics}
         onBack={() => p.setScreen('career-hub')}
         hideTopNav
