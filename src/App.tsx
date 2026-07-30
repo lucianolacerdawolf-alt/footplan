@@ -264,6 +264,7 @@ function App() {
   // ── Modo Carreira: entrada ────────────────────────────────────────────────
   const handleCareerFromHome = useCallback(() => {
     if (careerState) { setIsCareerMode(true); setScreen('career-hub'); return; }
+    setIsCareerMode(true);
     setTournamentMode('league');
     setReturnScreen('tournament-setup');
     setScreen('league-select');

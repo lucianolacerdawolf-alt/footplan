@@ -127,6 +127,69 @@ export interface ObjectiveResult {
   penaltyApplied: number;
 }
 
+export type CupProgressStage = 'champion' | 'runner-up' | 'semifinal' | 'quarterfinal' | 'roundOf16' | 'not-played';
+
+export interface ObjectiveProgress {
+  /** Como está agora: 'atingido' já garantido, 'no-caminho' ainda possível, 'fora' já perdido. */
+  status: 'atingido' | 'no-caminho' | 'fora';
+  /** Frase curta do estado atual, pra mostrar ao lado da meta. */
+  detail: string;
+}
+
+/**
+ * Situação de um objetivo NO MEIO da temporada. A avaliação final
+ * (`evaluateBoardObjectives`) só roda no fim; sem isto o painel da Central
+ * mostrava todo objetivo como "📌 pendente" até o último dia, escondendo do
+ * usuário se ele estava perto ou longe da cobrança.
+ */
+export function getObjectiveProgress(
+  obj: BoardObjective,
+  leaguePosition: number,
+  cupStage: CupProgressStage,
+  cupEliminated: boolean,
+  budget: number,
+): ObjectiveProgress {
+  switch (obj.type) {
+    case 'league_position':
+    case 'top_half':
+    case 'avoid_relegation': {
+      // Posição na tabela oscila até o fim, então nunca é "fora" definitivo:
+      // ou está dentro da meta agora, ou ainda precisa subir.
+      const dentro = leaguePosition <= obj.target;
+      return {
+        status: dentro ? 'no-caminho' : 'fora',
+        detail: dentro
+          ? `${leaguePosition}º — dentro da meta`
+          : `${leaguePosition}º — precisa subir ${leaguePosition - obj.target}`,
+      };
+    }
+    case 'cup_progress': {
+      const rank = CUP_RANK[cupStage];
+      const label = CUP_PROGRESS_LABELS[cupStage];
+      if (rank <= obj.target) return { status: 'atingido', detail: `${label} — meta cumprida` };
+      // Ainda vivo na copa: cada fase seguinte melhora o rank, então dá pra chegar.
+      if (!cupEliminated) return { status: 'no-caminho', detail: `${label} — ainda pode avançar` };
+      return { status: 'fora', detail: `${label} — eliminado abaixo da meta` };
+    }
+    case 'budget_positive': {
+      const ok = budget >= obj.target;
+      return {
+        status: ok ? 'no-caminho' : 'fora',
+        detail: `€${(budget / 1_000_000).toFixed(1)}M${ok ? '' : ' — negativo'}`,
+      };
+    }
+  }
+}
+
+const CUP_RANK: Record<CupProgressStage, number> = {
+  champion: 1, 'runner-up': 2, semifinal: 3, quarterfinal: 4, roundOf16: 5, 'not-played': 5,
+};
+
+const CUP_PROGRESS_LABELS: Record<CupProgressStage, string> = {
+  champion: 'Campeão', 'runner-up': 'Vice', semifinal: 'Semifinal',
+  quarterfinal: 'Quartas', roundOf16: 'Oitavas', 'not-played': 'Não disputada',
+};
+
 export function evaluateBoardObjectives(
   objectives: BoardObjectivesState,
   leaguePosition: number,

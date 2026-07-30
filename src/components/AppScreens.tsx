@@ -205,7 +205,7 @@ const screenMap: Record<Screen, ScreenRenderer> = {
         p.setReturnScreen(null);
         p.setScreen(save.type === 'league' ? 'league' : 'bracket');
       }}
-      onBack={() => { p.setReturnScreen(null); p.setScreen(p.isCareerMode ? 'career-hub' : 'home'); }}
+      onBack={() => { p.setReturnScreen(null); if (p.isCareerMode && p.careerState) { p.setScreen('career-hub'); } else { p.setIsCareerMode(false); p.setScreen('home'); } }}
       onSelect={(league) => {
         localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
         p.setSelectedLeague(league);
