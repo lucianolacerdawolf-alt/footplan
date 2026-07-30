@@ -30,7 +30,26 @@ function makeEntry(overrides: Partial<CareerSeasonHistoryEntry> = {}): CareerSea
 describe('TrophyRoomScreen', () => {
   it('mostra estado vazio quando não há temporadas concluídas', () => {
     render(<TrophyRoomScreen history={[]} />);
-    expect(screen.getByText('Nenhuma temporada concluída ainda.')).toBeInTheDocument();
+    expect(screen.getByText('A galeria ainda está vazia')).toBeInTheDocument();
+    // Sem dados da temporada em curso, o vazio ao menos explica o que falta.
+    expect(screen.getByText(/Conclua uma temporada de liga e copa/)).toBeInTheDocument();
+  });
+
+  it('estado vazio resume a temporada em curso quando ela é conhecida', () => {
+    render(
+      <TrophyRoomScreen
+        history={[]}
+        currentSeason={{
+          leagueName: 'Bundesliga', position: 3, round: 12, totalRounds: 34,
+          wins: 7, draws: 2, losses: 3, cupStageLabel: 'Quartas',
+        }}
+      />
+    );
+    expect(screen.getByText('Bundesliga')).toBeInTheDocument();
+    expect(screen.getByText('3º')).toBeInTheDocument();
+    expect(screen.getByText('12/34')).toBeInTheDocument();
+    expect(screen.getByText('7V 2E 3D')).toBeInTheDocument();
+    expect(screen.getByText('Quartas')).toBeInTheDocument();
   });
 
   it('renderiza um card por temporada, em ordem crescente de ano', () => {
