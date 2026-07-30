@@ -12,6 +12,9 @@ import type { Difficulty } from '../engine/matchConfig';
 import type { CareerState } from '../engine/career';
 import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen } from '../engine/career';
 import { hasMandatoryUnread } from '../engine/inbox';
+import { computeStandings } from '../engine/tournament';
+import { computeUserSeasonRecord } from '../engine/seasonClosure';
+import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
 
@@ -541,11 +544,28 @@ const screenMap: Record<Screen, ScreenRenderer> = {
 
   'career-trophy-room': (p) => {
     if (!p.careerState) return null;
+    const cs = p.careerState;
+    // Só o estado vazio usa isto: sem nenhuma temporada concluída, a tela mostra
+    // a campanha em curso em vez de "nenhuma temporada concluída ainda" e nada mais.
+    const lg = cs.season.league;
+    const standings = computeStandings(lg.teams, lg.fixtures);
+    const record = computeUserSeasonRecord(lg);
+    const currentSeason = {
+      leagueName: getLeague(cs.leagueId)?.name ?? 'a liga',
+      position: standings.findIndex(s => s.teamId === lg.userTeamId) + 1,
+      round: lg.currentRound,
+      totalRounds: lg.fixtures.length,
+      wins: record.wins,
+      draws: record.draws,
+      losses: record.losses,
+      cupStageLabel: CUP_STAGE_LABELS[cs.season.cup.stage] ?? cs.season.cup.stage,
+    };
     return (
       <TrophyRoomScreen
-        history={p.careerState.history}
-        finances={getFinances(p.careerState)}
-        transfers={getTransferHistory(p.careerState)}
+        history={cs.history}
+        finances={getFinances(cs)}
+        transfers={getTransferHistory(cs)}
+        currentSeason={currentSeason}
       />
     );
   },

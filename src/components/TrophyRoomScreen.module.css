@@ -111,3 +111,26 @@
   .screen { padding: 12px 10px 24px; gap: 12px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
+
+/* Estado vazio com resumo da temporada em curso */
+.emptyIcon { font-size: 40px; display: block; margin-bottom: 8px; opacity: 0.55; }
+.emptyTitle {
+  font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px;
+}
+.emptyText {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+  margin: 0 auto 14px; max-width: 340px;
+}
+.emptyStats {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
+  max-width: 340px; margin: 0 auto;
+}
+.emptyStat {
+  display: flex; flex-direction: column; gap: 2px; padding: 10px 8px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+}
+.emptyStatValue { font-size: 15px; font-weight: 700; color: var(--text-primary); font-family: var(--mono); }
+.emptyStatLabel {
+  font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--text-secondary); font-weight: 600;
+}

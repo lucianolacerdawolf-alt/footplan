@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   generateBoardObjectives, evaluateBoardObjectives, getClubStature,
-  createBoardObjectivesResultMessage,
+  createBoardObjectivesResultMessage, getObjectiveProgress,
 } from '../boardObjectives';
 import type { LeagueState } from '../tournament';
 import type { Team, Player } from '../types';
@@ -135,5 +135,38 @@ describe('createBoardObjectivesResultMessage', () => {
     const a = createBoardObjectivesResultMessage(objEval.results, objEval.totalRepDelta, []);
     const b = createBoardObjectivesResultMessage(objEval.results, objEval.totalRepDelta, []);
     expect(a.id).not.toBe(b.id);
+  });
+});
+
+describe('getObjectiveProgress', () => {
+  const objs = generateBoardObjectives(league(20, 0), 90, 1);
+  const posObj = objs.objectives.find(o => o.type === 'league_position')!;
+  const cupObj = objs.objectives.find(o => o.type === 'cup_progress')!;
+  const budgetObj = objs.objectives.find(o => o.type === 'budget_positive')!;
+
+  it('mostra a posição atual e quanto falta para a meta de liga', () => {
+    const dentro = getObjectiveProgress(posObj, 1, 'roundOf16', false, 1);
+    expect(dentro.status).toBe('no-caminho');
+    expect(dentro.detail).toContain('1º');
+
+    const fora = getObjectiveProgress(posObj, 7, 'roundOf16', false, 1);
+    expect(fora.status).toBe('fora');
+    expect(fora.detail).toContain(`precisa subir ${7 - posObj.target}`);
+  });
+
+  it('copa: já cumprida conta como atingida', () => {
+    const p = getObjectiveProgress(cupObj, 1, 'champion', false, 1);
+    expect(p.status).toBe('atingido');
+  });
+
+  it('copa: abaixo da meta mas ainda vivo é "no caminho"; eliminado é "fora"', () => {
+    expect(getObjectiveProgress(cupObj, 1, 'quarterfinal', false, 1).status).toBe('no-caminho');
+    expect(getObjectiveProgress(cupObj, 1, 'quarterfinal', true, 1).status).toBe('fora');
+  });
+
+  it('orçamento negativo sai como fora, positivo como no caminho', () => {
+    expect(getObjectiveProgress(budgetObj, 1, 'roundOf16', false, -5_000_000).status).toBe('fora');
+    expect(getObjectiveProgress(budgetObj, 1, 'roundOf16', false, 5_000_000).status).toBe('no-caminho');
+    expect(getObjectiveProgress(budgetObj, 1, 'roundOf16', false, 5_000_000).detail).toContain('5.0M');
   });
 });

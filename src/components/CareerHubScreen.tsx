@@ -25,11 +25,11 @@ interface Props {
   onAcceptTransferOffer: (id: string) => void;
   onRejectTransferOffer: (id: string) => void;
   onRenegotiateSponsor: () => void;
-  /** Avança a rodada da liga direto da Central, sem passar pelo Escritório. */
+  /** Avan├ºa a rodada da liga direto da Central, sem passar pelo Escrit├│rio. */
   onNextRound: () => void;
-  /** Abre o Escritório (tela da liga) — usado quando ainda faltam jogos da rodada. */
+  /** Abre o Escrit├│rio (tela da liga) ÔÇö usado quando ainda faltam jogos da rodada. */
   onViewLeague: () => void;
-  /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
+  /** Motivo pra bloquear o avan├ºo de rodada (ex: mensagem obrigat├│ria n├úo lida). */
   blockAdvanceReason?: string;
 }
 
@@ -38,7 +38,7 @@ const CUP_STAGE_LABELS: Record<string, string> = {
   quarterfinals: 'Quartas',
   semifinals: 'Semis',
   final: 'Final',
-  champion: 'Campeão',
+  champion: 'Campe├úo',
 };
 
 type NextMatch =
@@ -101,9 +101,9 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
   const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
   const nextMatch = determineNextMatch(state);
 
-  // Sem próxima partida e sem temporada encerrada, a Central ficava sem nenhuma
-  // ação: o "Avançar Rodada" só existia no Escritório. Acontece toda rodada, assim
-  // que o usuário joga o jogo dele.
+  // Sem pr├│xima partida e sem temporada encerrada, a Central ficava sem nenhuma
+  // a├º├úo: o "Avan├ºar Rodada" s├│ existia no Escrit├│rio. Acontece toda rodada, assim
+  // que o usu├írio joga o jogo dele.
   const currentRoundFixtures = state.season.league.fixtures[state.season.league.currentRound];
   const roundComplete = currentRoundFixtures?.every(f => f.played) ?? false;
   const awaitingRound = !nextMatch && !seasonReady && state.season.league.phase !== 'done';
@@ -143,7 +143,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
         <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">
-          ← Voltar
+          ÔåÉ Voltar
         </button>
       </div>
 
@@ -157,17 +157,17 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
             <h1 className={styles.clubName}>{userTeam.name}</h1>
             <div className={styles.clubMeta}>
               <span>{league.flag} {league.name}</span>
-              <span>·</span>
+              <span>┬À</span>
               <span>Temporada {state.currentSeasonYear}</span>
-              {userTeam.stadium && <><span>·</span><span>🏟️ {userTeam.stadium}</span></>}
+              {userTeam.stadium && <><span>┬À</span><span>­ƒÅƒ´©Å {userTeam.stadium}</span></>}
             </div>
             <div className={styles.managerRow}>
-              <span className={styles.managerName}>👔 {state.manager.name}</span>
+              <span className={styles.managerName}>­ƒæö {state.manager.name}</span>
               <span className={styles.managerRep}>
-                ⭐ {state.manager.reputation} rep
+                Ô¡É {state.manager.reputation} rep
               </span>
               <span className={styles.sponsorBadge}>
-                👕 {sponsorName}
+                ­ƒæò {sponsorName}
               </span>
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
         </div>
         <div className={styles.statCard}>
           <span className={styles.statValue} style={{ color: '#34d399' }}>{record.wins}</span>
-          <span className={styles.statLabel}>Vitórias</span>
+          <span className={styles.statLabel}>Vit├│rias</span>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statValue} style={{ color: '#9ca3af' }}>{record.draws}</span>
@@ -209,8 +209,8 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
             <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
           </div>
           <div className={styles.progressFooter}>
-            <span>{userPosition}º lugar · {userTeam ? `OVR titular médio: ${avgOvr}` : ''}</span>
-            {topScorer && <span>⚽ Artilheiro: {topScorer[0]} ({topScorer[1]} gols)</span>}
+            <span>{userPosition}┬║ lugar ┬À {userTeam ? `OVR titular m├®dio: ${avgOvr}` : ''}</span>
+            {topScorer && <span>ÔÜ¢ Artilheiro: {topScorer[0]} ({topScorer[1]} gols)</span>}
           </div>
         </div>
       )}
@@ -218,16 +218,16 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
       {/* Finances Mini */}
       <div className={styles.financeStrip}>
         <div className={styles.financeItem}>
-          <span className={styles.financeLabel}>Orçamento</span>
-          <span className={styles.financeValue}>€{(finances.budget / 1_000_000).toFixed(1)}M</span>
+          <span className={styles.financeLabel}>Or├ºamento</span>
+          <span className={styles.financeValue}>Ôé¼{(finances.budget / 1_000_000).toFixed(1)}M</span>
         </div>
         <div className={styles.financeItem}>
           <span className={styles.financeLabel}>Folha</span>
-          <span className={styles.financeValue}>€{(finances.wageBill / 1_000_000).toFixed(1)}M</span>
+          <span className={styles.financeValue}>Ôé¼{(finances.wageBill / 1_000_000).toFixed(1)}M</span>
         </div>
         <div className={styles.financeItem}>
           <span className={styles.financeLabel}>Renda sem.</span>
-          <span className={styles.financeValue}>€{(finances.weeklyIncome / 1_000_000).toFixed(1)}M</span>
+          <span className={styles.financeValue}>Ôé¼{(finances.weeklyIncome / 1_000_000).toFixed(1)}M</span>
         </div>
         <div className={styles.financeItem}>
           <span className={styles.financeLabel}>Janela</span>
@@ -239,10 +239,10 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
 
       {/* Competition Status */}
       <div className={styles.compRow}>
-        <span>🏆 {league.cupName}: <strong>{cupStageLabel}</strong></span>
+        <span>­ƒÅå {league.cupName}: <strong>{cupStageLabel}</strong></span>
         {nextTier && (
           <button className={styles.sponsorBtn} onClick={onRenegotiateSponsor} disabled={!nextTier}>
-            📋 {nextTier ? `Patrocínio → ${getSponsorLabel(nextTier)}` : 'Global'}
+            ­ƒôï {nextTier ? `Patroc├¡nio ÔåÆ ${getSponsorLabel(nextTier)}` : 'Global'}
           </button>
         )}
       </div>
@@ -257,7 +257,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
             return (
               <div key={obj.id} className={`${styles.objectiveRow} ${isAchieved ? styles.objAchieved : isFailed ? styles.objFailed : ''}`}>
                 <span className={styles.objectiveIcon}>
-                  {isAchieved ? '✅' : isFailed ? '❌' : '📌'}
+                  {isAchieved ? 'Ô£à' : isFailed ? 'ÔØî' : '­ƒôî'}
                 </span>
                 <span className={styles.objectiveLabel}>{obj.label}</span>
                 <span className={styles.objectiveReward}>
@@ -267,11 +267,11 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
             );
           })}
           {boardObj.objectives.some(o => o.achieved === undefined) && (
-            <div className={styles.objectivesPending}>Em andamento — avaliação ao fim da temporada</div>
+            <div className={styles.objectivesPending}>Em andamento ÔÇö avalia├º├úo ao fim da temporada</div>
           )}
           {boardObj.streakBad >= 2 && (
             <div className={styles.objectivesWarning}>
-              ⚠️ {boardObj.streakBad >= 3 ? 'Última chance: ' : ''}Diretoria insatisfeita ({boardObj.streakBad} temporada{boardObj.streakBad > 1 ? 's' : ''} consecutiva{boardObj.streakBad > 1 ? 's' : ''} abaixo do esperado)
+              ÔÜá´©Å {boardObj.streakBad >= 3 ? '├Ültima chance: ' : ''}Diretoria insatisfeita ({boardObj.streakBad} temporada{boardObj.streakBad > 1 ? 's' : ''} consecutiva{boardObj.streakBad > 1 ? 's' : ''} abaixo do esperado)
             </div>
           )}
         </div>
@@ -287,7 +287,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
       {nextMatch && !seasonReady && (
         <div className={styles.nextMatchCard}>
           <div className={styles.nextMatchLabel}>
-            {nextMatch.type === 'cup' ? '🏆' : '📅'} Próxima Partida · {nextMatch.type === 'cup' ? `Copa (${nextMatch.stageLabel})` : `Liga (Rodada ${nextMatch.round + 1})`}
+            {nextMatch.type === 'cup' ? '­ƒÅå' : '­ƒôà'} Pr├│xima Partida ┬À {nextMatch.type === 'cup' ? `Copa (${nextMatch.stageLabel})` : `Liga (Rodada ${nextMatch.round + 1})`}
           </div>
           <div className={styles.nextMatchTeams}>
             <strong>{nextMatch.homeName}</strong>
@@ -298,7 +298,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
             if (nextMatch.type === 'league') onPlayNext();
             else onPlayNextCup();
           }}>
-            ⚽ Jogar
+            ÔÜ¢ Jogar
           </button>
         </div>
       )}
@@ -313,13 +313,13 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
                 disabled={!!blockAdvanceReason}
                 title={blockAdvanceReason}
               >
-                Avançar Rodada →
+                Avan├ºar Rodada ÔåÆ
               </button>
-              {blockAdvanceReason && <div className={styles.advanceStatus}>🔔 {blockAdvanceReason}</div>}
+              {blockAdvanceReason && <div className={styles.advanceStatus}>­ƒöö {blockAdvanceReason}</div>}
             </>
           ) : (
             <button className={styles.advanceBtn} onClick={onViewLeague}>
-              Simular resto da rodada no Escritório →
+              Simular resto da rodada no Escrit├│rio ÔåÆ
             </button>
           )}
         </div>
@@ -327,15 +327,15 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
 
       {seasonReady ? (
         <div className={styles.advanceRow}>
-          <button className={styles.advanceBtn} onClick={onAdvanceSeason}>Avançar Temporada →</button>
+          <button className={styles.advanceBtn} onClick={onAdvanceSeason}>Avan├ºar Temporada ÔåÆ</button>
         </div>
       ) : (
-        <div className={styles.advanceStatus}>Termine a liga e a copa pra avançar de temporada</div>
+        <div className={styles.advanceStatus}>Termine a liga e a copa pra avan├ºar de temporada</div>
       )}
 
       <div className={styles.newCareerRow}>
         <button className={styles.newCareerBtn} onClick={onNewCareer}>
-          Começar nova carreira noutra liga
+          Come├ºar nova carreira noutra liga
         </button>
       </div>
     </div>

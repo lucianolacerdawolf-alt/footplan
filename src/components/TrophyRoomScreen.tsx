@@ -11,6 +11,18 @@ interface Props {
   finances?: ClubFinances;
   /** Idem — extrato de compras/vendas/trocas/agentes livres da carreira inteira. */
   transfers?: TransferRecord[];
+  /** Resumo da temporada em curso — só usado no estado vazio, pra tela não virar
+   *  um beco quando ainda não há nenhuma temporada concluída. */
+  currentSeason?: {
+    leagueName: string;
+    position: number;
+    round: number;
+    totalRounds: number;
+    wins: number;
+    draws: number;
+    losses: number;
+    cupStageLabel: string;
+  };
 }
 
 function trophyIcon(entry: CareerSeasonHistoryEntry): string {
@@ -36,7 +48,7 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: '#ef4444' };
 }
 
-export default function TrophyRoomScreen({ history, finances, transfers }: Props) {
+export default function TrophyRoomScreen({ history, finances, transfers, currentSeason }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
   const transfersRecent = transfers ? [...transfers].reverse() : [];
@@ -79,7 +91,47 @@ export default function TrophyRoomScreen({ history, finances, transfers }: Props
       )}
 
       {ordered.length === 0 ? (
-        <div className={styles.empty}>Nenhuma temporada concluída ainda.</div>
+        /* Antes era só "Nenhuma temporada concluída ainda." — a tela não dizia o
+         * que falta nem por onde ir. Com a temporada em curso resumida, o vazio
+         * passa a ser um ponto de partida em vez de um beco. */
+        <div className={styles.empty}>
+          <div className={styles.emptyIcon} aria-hidden="true">🏆</div>
+          <p className={styles.emptyTitle}>A galeria ainda está vazia</p>
+          {currentSeason ? (
+            <>
+              <p className={styles.emptyText}>
+                Sua primeira temporada entra aqui quando <strong>{currentSeason.leagueName}</strong> e
+                a copa terminarem. Situação hoje:
+              </p>
+              <div className={styles.emptyStats}>
+                <div className={styles.emptyStat}>
+                  <span className={styles.emptyStatValue}>{currentSeason.position}º</span>
+                  <span className={styles.emptyStatLabel}>na liga</span>
+                </div>
+                <div className={styles.emptyStat}>
+                  <span className={styles.emptyStatValue}>
+                    {currentSeason.round}/{currentSeason.totalRounds}
+                  </span>
+                  <span className={styles.emptyStatLabel}>rodadas</span>
+                </div>
+                <div className={styles.emptyStat}>
+                  <span className={styles.emptyStatValue}>
+                    {currentSeason.wins}V {currentSeason.draws}E {currentSeason.losses}D
+                  </span>
+                  <span className={styles.emptyStatLabel}>campanha</span>
+                </div>
+                <div className={styles.emptyStat}>
+                  <span className={styles.emptyStatValue}>{currentSeason.cupStageLabel}</span>
+                  <span className={styles.emptyStatLabel}>na copa</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <p className={styles.emptyText}>
+              Conclua uma temporada de liga e copa para ver o histórico aqui.
+            </p>
+          )}
+        </div>
       ) : (
         <>
           <div className={styles.grid}>

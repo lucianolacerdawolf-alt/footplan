@@ -2,12 +2,24 @@ import type { MatchResult, MatchEvent } from './types';
 import type { LeagueState, BracketState } from './tournament';
 import { computeStandings } from './tournament';
 
+/** Agrupamento na tela de Conquistas — 15 cards numa lista plana não davam
+ *  nenhuma noção de onde procurar o que falta. */
+export type AchievementCategory = 'partida' | 'campanha' | 'disciplina' | 'marcos';
+
+export const ACHIEVEMENT_CATEGORY_LABELS: Record<AchievementCategory, string> = {
+  partida: 'Na Partida',
+  campanha: 'Campanha',
+  disciplina: 'Disciplina',
+  marcos: 'Marcos',
+};
+
 export interface Achievement {
   id: string;
   name: string;
   description: string;
   icon: string;
   hint: string;
+  category: AchievementCategory;
 }
 
 export interface UnlockedAchievement {
@@ -120,6 +132,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Complete sua primeira partida',
     icon: '🎮',
     hint: 'Jogue uma partida',
+    category: 'marcos',
   },
   {
     id: 'hat_trick',
@@ -127,6 +140,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Um jogador do seu time marcou 3 gols em uma partida',
     icon: '⚽',
     hint: 'Um jogador marcando 3 vezes na mesma partida',
+    category: 'partida',
   },
   {
     id: 'clean_sheet',
@@ -134,6 +148,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Vença uma partida sem sofrer gols',
     icon: '🧤',
     hint: 'Ganhar sem o adversário marcar',
+    category: 'partida',
   },
   {
     id: 'rout',
@@ -141,6 +156,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Vença por 5 ou mais gols de diferença',
     icon: '🔥',
     hint: 'Uma vitória elástica',
+    category: 'partida',
   },
   {
     id: 'penalty_hero',
@@ -148,6 +164,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Vença uma disputa de pênaltis',
     icon: '⏱️',
     hint: 'Sobreviva à prorrogação e brilhe nas penalidades',
+    category: 'partida',
   },
   {
     id: 'comeback',
@@ -155,6 +172,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Estava perdendo no intervalo e venceu a partida',
     icon: '🔄',
     hint: 'Reverter um placar adverso depois do intervalo',
+    category: 'partida',
   },
   {
     id: 'red_card',
@@ -162,6 +180,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Um jogador do seu time foi expulso',
     icon: '🔴',
     hint: 'Levar um cartão vermelho',
+    category: 'disciplina',
   },
   {
     id: 'fair_play',
@@ -169,6 +188,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Complete uma partida sem receber nenhum cartão',
     icon: '🤝',
     hint: 'Uma partida limpa, sem amarelos nem vermelhos',
+    category: 'disciplina',
   },
   {
     id: 'league_champion',
@@ -176,6 +196,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Vença a Premier League',
     icon: '👑',
     hint: 'Termine a temporada no topo da tabela',
+    category: 'campanha',
   },
   {
     id: 'cup_king',
@@ -183,6 +204,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Vença a FA Cup',
     icon: '🏆',
     hint: 'Levante o troféu da copa',
+    category: 'campanha',
   },
   {
     id: 'invincible',
@@ -190,6 +212,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Fique 10 partidas consecutivas sem perder na liga',
     icon: '🛡️',
     hint: 'Uma longa sequência invicta na Premier League',
+    category: 'campanha',
   },
   {
     id: 'streak_5',
@@ -197,6 +220,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Vença 5 partidas consecutivas na liga',
     icon: '💪',
     hint: 'Emendar 5 vitórias seguidas',
+    category: 'campanha',
   },
   {
     id: 'goal_streak',
@@ -204,6 +228,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Marque 3 ou mais gols em 3 partidas consecutivas da liga',
     icon: '🥅',
     hint: 'Fazer 3+ gols em três jogos seguidos',
+    category: 'campanha',
   },
   {
     id: 'marathon',
@@ -211,6 +236,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Jogue 20 partidas no total',
     icon: '📊',
     hint: 'Acumular 20 jogos disputados',
+    category: 'marcos',
   },
   {
     id: 'cup_invincible',
@@ -218,6 +244,7 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: 'Vença a FA Cup sem perder nenhuma partida (só vitórias)',
     icon: '💎',
     hint: 'Campanha perfeita na copa',
+    category: 'campanha',
   },
 ];
 
