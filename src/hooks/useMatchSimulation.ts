@@ -456,7 +456,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     setShowOverlay(true);
     setPaused(false);
     setIsGoalPause(false);
-    setClockSeconds(HALF_SECONDS + (nextCycleRef.current >= FIRST_HALF_CYCLES ? HALF_SECONDS : 0));
+    setClockSeconds(HALF_SECONDS * 2);
   }, [phase]);
 
   return {
