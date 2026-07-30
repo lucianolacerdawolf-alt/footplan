@@ -2,7 +2,7 @@ import type { Player, Position, Team } from './types';
 import type { LeagueState, BracketState } from './tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
 // type-only: boardObjectives importa CareerState de volta, mas imports de tipo
-// s├úo apagados na compila├º├úo ÔÇö n├úo h├í ciclo em runtime.
+// são apagados na compilação — não há ciclo em runtime.
 import type { BoardObjectivesState } from './boardObjectives';
 import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
@@ -13,7 +13,7 @@ import { shuffle } from './rng';
 import { getStartingTier, generateSponsor } from './sponsors';
 
 // =============================================================================
-// TIPOS ÔÇö Modo Carreira
+// TIPOS — Modo Carreira
 // =============================================================================
 
 export interface CareerManagerProfile {
@@ -29,11 +29,11 @@ export interface CareerSeasonHistoryEntry {
   cupResult: 'champion' | 'runner-up' | 'semifinal' | 'quarterfinal' | 'roundOf16' | 'not-played';
   tradesUsed: number;
   reputationDelta: number;
-  // Campos abaixo s├úo opcionais ÔÇö temporadas fechadas antes da Fase 4.5 n├úo os t├¬m.
-  // leagueTopScorer/cupTopScorer/userTopAssister ficaram de fora desta vers├úo:
-  // partidas simuladas automaticamente (CPU x CPU) n├úo geram eventos de gol
-  // individuais hoje, s├│ placar agregado ÔÇö e n├úo existe rastreio de assist├¬ncia
-  // no motor. Rastrear isso exigiria mudar o motor de simula├º├úo r├ípida, fora do
+  // Campos abaixo são opcionais — temporadas fechadas antes da Fase 4.5 não os têm.
+  // leagueTopScorer/cupTopScorer/userTopAssister ficaram de fora desta versão:
+  // partidas simuladas automaticamente (CPU x CPU) não geram eventos de gol
+  // individuais hoje, só placar agregado — e não existe rastreio de assistência
+  // no motor. Rastrear isso exigiria mudar o motor de simulação rápida, fora do
   // escopo desta feature.
   userTopScorer?: { name: string; goals: number };
   userWins?: number;
@@ -56,11 +56,11 @@ export interface InboxMessage {
   id: string;
   date: string;
   isRead: boolean;
-  isMandatory: boolean; // precisa ser lida pra liberar "Avan├ºar Rodada"
+  isMandatory: boolean; // precisa ser lida pra liberar "Avançar Rodada"
   type: 'TRANSFER_OFFER' | 'BOARD_UPDATE' | 'INJURY_REPORT' | 'MATCH_PREVIEW';
   subject: string;
   body: string;
-  // Payload estruturado ÔÇö s├│ populado em TRANSFER_OFFER, ├® o que permite os bot├Áes
+  // Payload estruturado — só populado em TRANSFER_OFFER, é o que permite os botões
   // Aceitar/Recusar saberem qual jogador/time/valor a mensagem se refere sem ter
   // que fazer parsing do texto de `body`.
   meta?: { playerId: string; offeringTeamId: string; amount: number };
@@ -77,7 +77,7 @@ export interface TransferRecord {
   playerPosition: Position;
   fromTeam: string; // 'Free Agent' pra SIGN_FREE_AGENT
   toTeam: string;
-  amount: number;   // parte em dinheiro; 0 numa TRADE sem compensa├º├úo
+  amount: number;   // parte em dinheiro; 0 numa TRADE sem compensação
 }
 
 export interface CareerState {
@@ -87,23 +87,23 @@ export interface CareerState {
   currentSeasonYear: number;
   season: {
     league: LeagueState; cup: BracketState; tradesUsedThisSeason: number;
-    // Opcionais pelo mesmo motivo dos campos de n├¡vel CareerState (compat com saves antigos).
+    // Opcionais pelo mesmo motivo dos campos de nível CareerState (compat com saves antigos).
     budgetAtSeasonStart?: number;       // pra calcular o budgetDelta no fechamento da temporada
-    userGoalScorers?: Record<string, number>; // nome do jogador ÔåÆ gols na temporada (liga + copa)
+    userGoalScorers?: Record<string, number>; // nome do jogador → gols na temporada (liga + copa)
   };
   rosters: Record<string, Team[]>;
   history: CareerSeasonHistoryEntry[];
-  // Opcionais: carreiras salvas antes da Fase 4.5 n├úo t├¬m esses campos ÔÇö todo
+  // Opcionais: carreiras salvas antes da Fase 4.5 não têm esses campos — todo
   // ponto de leitura usa getFinances/getInbox (nunca acessa direto), e toda
-  // escrita parte do valor lido por elas, ent├úo uma carreira antiga se
-  // "autopreenche" na primeira rodada avan├ºada/partida jogada depois do update.
+  // escrita parte do valor lido por elas, então uma carreira antiga se
+  // "autopreenche" na primeira rodada avançada/partida jogada depois do update.
   finances?: ClubFinances;
   inbox?: InboxMessage[];
   freeAgentPool?: Player[];
   transferHistory?: TransferRecord[];
-  // Jogadores que o usu├írio colocou ├á venda ÔÇö a cada rodada com a janela aberta,
+  // Jogadores que o usuário colocou à venda — a cada rodada com a janela aberta,
   // qualquer time do jogo pode fazer uma oferta (ver handleNextCareerLeagueRound).
-  // O usu├írio n├úo escolhe o comprador nem o pre├ºo, s├│ decide aceitar/recusar a
+  // O usuário não escolhe o comprador nem o preço, só decide aceitar/recusar a
   // oferta que chegar na caixa de entrada.
   transferListPlayerIds?: string[];
   sponsorTier?: string;   // 'local' | 'regional' | 'national' | 'global'
@@ -125,7 +125,7 @@ export function getTransferList(state: CareerState): string[] {
   return state.transferListPlayerIds ?? [];
 }
 
-/** Janela de transfer├¬ncias: rounds 1-5 e 19-24 (0-indexed: <=4 e 18-23). Fonte ├║nica ÔÇö
+/** Janela de transferências: rounds 1-5 e 19-24 (0-indexed: <=4 e 18-23). Fonte única —
  *  antes duplicada em 3 lugares (CareerHubScreen, 2x em useCareerManager). */
 export function isTransferWindowOpen(round: number): boolean {
   return round <= 4 || (round >= 18 && round <= 23);
@@ -151,9 +151,9 @@ export function getInbox(state: CareerState): InboxMessage[] {
 }
 
 /**
- * Type guard defensivo para o valor persistido em localStorage `fp:career` ÔÇö
- * JSON pode ser editado manualmente no DevTools, ent├úo nunca confiamos no shape
- * sem checar. Nunca lan├ºa, sempre retorna boolean.
+ * Type guard defensivo para o valor persistido em localStorage `fp:career` —
+ * JSON pode ser editado manualmente no DevTools, então nunca confiamos no shape
+ * sem checar. Nunca lança, sempre retorna boolean.
  */
 export function isValidCareerState(x: unknown): x is CareerState {
   if (x === null || typeof x !== 'object') return false;
@@ -176,10 +176,10 @@ export function isValidCareerState(x: unknown): x is CareerState {
 }
 
 // =============================================================================
-// PROGRESS├âO ÔÇö envelhecimento e evolu├º├úo de OVR
+// PROGRESSÃO — envelhecimento e evolução de OVR
 // =============================================================================
 
-/** Curva de evolu├º├úo de OVR por idade (D-02): crescimento at├® 23, pico 28-30, decl├¡nio ap├│s 31. */
+/** Curva de evolução de OVR por idade (D-02): crescimento até 23, pico 28-30, declínio após 31. */
 export function ageOvrDelta(age: number): number {
   if (age <= 23) return 2;
   if (age <= 27) return 1;
@@ -188,7 +188,7 @@ export function ageOvrDelta(age: number): number {
   return -4;
 }
 
-/** Atribui idade inicial a jogadores sem `.age` ÔÇö goleiros tendem a ser mais velhos. Idempotente. */
+/** Atribui idade inicial a jogadores sem `.age` — goleiros tendem a ser mais velhos. Idempotente. */
 export function assignInitialAges(teams: Team[], rng: () => number = Math.random): Team[] {
   return teams.map(team => ({
     ...team,
@@ -204,8 +204,8 @@ export function assignInitialAges(teams: Team[], rng: () => number = Math.random
 
 /**
  * Evolui um jogador uma temporada: recalcula OVR alvo com base na curva de idade
- * + varia├º├úo de "desempenho recente" (-2..+2), escala os atributos existentes
- * proporcionalmente ao novo OVR em vez de regener├í-los do zero.
+ * + variação de "desempenho recente" (-2..+2), escala os atributos existentes
+ * proporcionalmente ao novo OVR em vez de regenerá-los do zero.
  * Preserva id, name, number (identidade do jogador).
  */
 export function progressPlayer(player: Player, rng: () => number = Math.random): Player {
@@ -254,7 +254,7 @@ export function generateReplacementPlayer(retiring: Player, rng: () => number = 
   };
 }
 
-/** Evolui todo o elenco de um time: aposenta jogadores 34+ (probabil├¡stico) e progride os demais. */
+/** Evolui todo o elenco de um time: aposenta jogadores 34+ (probabilístico) e progride os demais. */
 export function progressTeamRoster(team: Team, rng: () => number = Math.random): Team {
   return {
     ...team,
@@ -266,7 +266,7 @@ export function progressTeamRoster(team: Team, rng: () => number = Math.random):
   };
 }
 
-/** Evolui os elencos de TODAS as ligas de uma vez (D-01) ÔÇö sem filtro de "liga aberta pelo usu├írio". */
+/** Evolui os elencos de TODAS as ligas de uma vez (D-01) — sem filtro de "liga aberta pelo usuário". */
 export function progressAllLeagues(rosters: Record<string, Team[]>, rng: () => number = Math.random): Record<string, Team[]> {
   const result: Record<string, Team[]> = {};
   for (const [leagueId, teams] of Object.entries(rosters)) {
@@ -276,12 +276,12 @@ export function progressAllLeagues(rosters: Record<string, Team[]>, rng: () => n
 }
 
 // =============================================================================
-// TEMPORADA ÔÇö constru├º├úo conjunta de liga + copa (D-13)
+// TEMPORADA — construção conjunta de liga + copa (D-13)
 // =============================================================================
 
 /**
  * Cria a liga e a copa de uma nova temporada da carreira, no mesmo formato usado
- * por handleStartLeague/handleStartBracket ÔÇö garante estruturalmente que liga e
+ * por handleStartLeague/handleStartBracket — garante estruturalmente que liga e
  * copa nascem juntas toda temporada (D-13), nunca uma sem a outra.
  */
 export function createCareerSeason(
@@ -304,10 +304,10 @@ export function createCareerSeason(
 }
 
 // =============================================================================
-// TRANSFER├èNCIAS (D-05, D-06)
+// TRANSFERÊNCIAS (D-05, D-06)
 // =============================================================================
 
-/** Avalia se um clube CPU aceita uma proposta de troca ÔÇö considera valor da oferta, super├ívit na posi├º├úo, reputa├º├úo do manager e um eventual valor em dinheiro somado ├á troca. */
+/** Avalia se um clube CPU aceita uma proposta de troca — considera valor da oferta, superávit na posição, reputação do manager e um eventual valor em dinheiro somado à troca. */
 export function evaluateTradeOffer(
   offeredPlayer: Player,
   requestedPlayer: Player,
@@ -324,8 +324,8 @@ export function evaluateTradeOffer(
   let acceptChance = 0.5 + ovrDelta * 0.04;
   if (surplus) acceptChance += 0.15;
   acceptChance += Math.min(0.2, managerReputation * 0.002);
-  // Dinheiro s├│ empurra a chance pra cima em cima da avalia├º├úo por OVR j├í existente ÔÇö
-  // n├úo substitui (mant├®m TradeProposalScreen coexistindo com o mercado, por decis├úo
+  // Dinheiro só empurra a chance pra cima em cima da avaliação por OVR já existente —
+  // não substitui (mantém TradeProposalScreen coexistindo com o mercado, por decisão
   // registrada em PLANO_CLOUD_MERCADO.md).
   if (cashOffered > 0) {
     const requestedValue = calculateMarketValue(requestedPlayer);
@@ -339,10 +339,10 @@ export function evaluateTradeOffer(
 }
 
 // =============================================================================
-// REPUTA├ç├âO (D-08, D-09)
+// REPUTAÇÃO (D-08, D-09)
 // =============================================================================
 
-/** Delta de reputa├º├úo ao fim de temporada ÔÇö t├¡tulos dominam, posi├º├úo na tabela ajusta a margem. */
+/** Delta de reputação ao fim de temporada — títulos dominam, posição na tabela ajusta a margem. */
 export function computeReputationDelta(input: {
   leagueChampion: boolean;
   cupChampion: boolean;
@@ -361,10 +361,10 @@ export function computeReputationDelta(input: {
 }
 
 // =============================================================================
-// COPA ÔÇö deriva├º├úo do resultado do usu├írio a partir do bracket final
+// COPA — derivação do resultado do usuário a partir do bracket final
 // =============================================================================
 
-/** Deriva o resultado do usu├írio na copa a partir do bracket resolvido ÔÇö s├│ chamado quando cup.stage === 'champion'. */
+/** Deriva o resultado do usuário na copa a partir do bracket resolvido — só chamado quando cup.stage === 'champion'. */
 export function deriveCupResult(cup: BracketState, userTeamId: string): CareerSeasonHistoryEntry['cupResult'] {
   if (cup.stage !== 'champion') return 'not-played';
   if (cup.championId === userTeamId) return 'champion';

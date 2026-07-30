@@ -80,25 +80,3 @@
   .name { font-size: 14px; }
   .desc { font-size: 10px; }
 }
-
-/* Progresso geral e agrupamento por categoria — 15 cards numa lista plana não
-   diziam quanto falta nem onde procurar. */
-.overallBar {
-  height: 6px; border-radius: 3px; background: var(--surface);
-  border: 1px solid var(--border); overflow: hidden; margin: 0 0 4px;
-}
-.overallFill {
-  height: 100%; background: var(--accent); transition: width 0.3s ease;
-}
-.overallLabel {
-  font-size: 11px; color: var(--text-secondary); font-weight: 600;
-  text-align: right; margin-bottom: 14px;
-}
-.categorySection { margin-bottom: 18px; }
-.categoryTitle {
-  display: flex; align-items: baseline; justify-content: space-between;
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.6px; color: var(--text-secondary);
-  margin: 0 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--border);
-}
-.categoryCount { font-family: var(--mono); font-weight: 700; }

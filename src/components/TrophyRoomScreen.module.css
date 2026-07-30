@@ -19,7 +19,7 @@
 .backBtn:hover { background: var(--surface); color: var(--text-primary); }
 
 .empty {
-  text-align: center; font-size: 13px; color: var(--text-secondary); padding: 40px 0;
+  text-align: center; font-size: 13px; opacity: 0.5; padding: 40px 0;
 }
 
 .grid {
@@ -45,7 +45,7 @@
 .cardIcon { font-size: 22px; }
 .cardYear { font-size: 18px; font-weight: 800; font-family: var(--mono); color: var(--text-primary); }
 
-.cardLine { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.cardLine { font-size: 11px; opacity: 0.7; font-weight: 500; }
 
 .motsTag {
   font-size: 10px; font-weight: 800; color: var(--accent-2);
@@ -60,7 +60,7 @@
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
 .detailLabel {
-  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary);
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.5;
 }
 .detailValue {
   font-size: 12px; font-weight: 700; color: var(--text-primary); font-family: var(--mono);
@@ -87,8 +87,8 @@
   display: flex; align-items: center; gap: 6px;
   font-size: 13px; font-weight: 700; color: var(--text-primary);
 }
-.transferRoute { font-size: 11px; color: var(--text-secondary); }
-.transferDate { font-size: 10px; color: var(--text-secondary); font-family: var(--mono); }
+.transferRoute { font-size: 11px; opacity: 0.65; }
+.transferDate { font-size: 10px; opacity: 0.5; font-family: var(--mono); }
 .transferAmount {
   font-size: 13px; font-weight: 800; font-family: var(--mono); flex-shrink: 0;
 }
@@ -97,7 +97,7 @@
   display: flex; flex-direction: column; gap: 8px;
 }
 .repLabel {
-  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary);
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.55;
 }
 .repRow {
   display: flex; flex-wrap: wrap; gap: 6px;
@@ -110,27 +110,4 @@
 @media (max-width: 640px) {
   .screen { padding: 12px 10px 24px; gap: 12px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-}
-
-/* Estado vazio com resumo da temporada em curso */
-.emptyIcon { font-size: 40px; display: block; margin-bottom: 8px; opacity: 0.55; }
-.emptyTitle {
-  font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px;
-}
-.emptyText {
-  font-size: 12px; color: var(--text-secondary); line-height: 1.5;
-  margin: 0 auto 14px; max-width: 340px;
-}
-.emptyStats {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;
-  max-width: 340px; margin: 0 auto;
-}
-.emptyStat {
-  display: flex; flex-direction: column; gap: 2px; padding: 10px 8px;
-  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-}
-.emptyStatValue { font-size: 15px; font-weight: 700; color: var(--text-primary); font-family: var(--mono); }
-.emptyStatLabel {
-  font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--text-secondary); font-weight: 600;
 }
