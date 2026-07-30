@@ -3,6 +3,34 @@ import { Peer, type DataConnection } from 'peerjs';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
 
+/** Traduz tipos de erro do PeerJS (err.type) pra mensagens acionáveis em PT.
+ *  Sem isso, o usuário via "Erro: peer-unavailable" — técnico e em inglês, não
+ *  explicava que a sala não existia. */
+function friendlyPeerError(err: { type?: string; message?: string }): string {
+  switch (err.type) {
+    case 'peer-unavailable':
+      return 'Sala não encontrada. Verifique o código e tente novamente.';
+    case 'network':
+    case 'server-error':
+      return 'Erro de rede. Verifique sua conexão e tente novamente.';
+    case 'unavailable-id':
+    case 'id-taken':
+      return 'Esse código de sala já está em uso. Tente criar novamente.';
+    case 'browser-incompatible':
+      return 'Seu navegador não suporta conexão P2P.';
+    case 'disconnected':
+      return 'Desconectado do servidor de pareamento. Tente novamente.';
+    case 'ssl-unavailable':
+      return 'Conexão segura indisponível. Tente novamente.';
+    case 'socket-error':
+      return 'Erro de comunicação com o servidor. Tente novamente.';
+    case 'socket-closed':
+      return 'Conexão com o servidor encerrada. Tente novamente.';
+    default:
+      return `Erro: ${err.message || err.type || 'Não foi possível conectar'}`;
+  }
+}
+
 export interface UsePeerConnectionReturn {
   state: ConnectionState;
   roomId: string | null;
@@ -100,7 +128,8 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
       conn.on('error', (err) => {
         if (!mountedRef.current) return;
-        setError(`Erro na conexão: ${err.message || err}`);
+        setState('error');
+        setError(friendlyPeerError(err as { type?: string; message?: string }));
       });
     });
 
@@ -113,7 +142,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
     peer.on('error', (err) => {
       if (!mountedRef.current) return;
       setState('error');
-      setError(`Erro: ${err.message || err.type || 'Desconhecido'}`);
+      setError(friendlyPeerError(err as { type?: string; message?: string }));
     });
 
     peer.on('close', () => {
@@ -168,14 +197,14 @@ export function usePeerConnection(): UsePeerConnectionReturn {
       conn.on('error', (err) => {
         if (!mountedRef.current) return;
         setState('error');
-        setError(`Erro na conexão: ${err.message || err}`);
+        setError(friendlyPeerError(err as { type?: string; message?: string }));
       });
     });
 
     peer.on('error', (err) => {
       if (!mountedRef.current) return;
       setState('error');
-      setError(`Erro: ${err.message || err.type || 'Não foi possível conectar'}`);
+      setError(friendlyPeerError(err as { type?: string; message?: string }));
     });
   }, [cleanup]);
 
