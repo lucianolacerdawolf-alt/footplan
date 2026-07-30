@@ -67,20 +67,19 @@ usuário descobre que falhou quando já não dá para reagir.
 **Estado atual.** Sobrou uma referência solta de `getObjectiveProgress` no
 engine; `deriveCupProgress`, o uso na tela, o CSS e os testes foram revertidos.
 
-### 3. Conquistas sem categoria nem dica
+### 3. ~~Conquistas sem categoria nem dica~~ — ✅ FEITO em `cb8f04d`
 
-- [ ] `AchievementCategory` + `ACHIEVEMENT_CATEGORY_LABELS` em `achievements.ts`
-- [ ] Classificar as 15 conquistas (partida / campanha / disciplina / marcos)
-- [ ] Agrupar por categoria na tela, com contador por grupo
-- [ ] Barra de progresso geral (% concluído)
-- [ ] **Trocar `'???'` pelo campo `hint`**, que já existe em todas as 15 e nunca
-      foi usado
-- [ ] CSS de agrupamento
+- [x] `AchievementCategory` + `ACHIEVEMENT_CATEGORY_LABELS` em `achievements.ts`
+- [x] Classificar as 15 conquistas (partida / campanha / disciplina / marcos)
+- [x] Agrupar por categoria na tela, com contador por grupo
+- [x] Barra de progresso geral (% concluído), com `role="progressbar"`
+- [x] **Trocar `'???'` pelo campo `hint`**, que já existia em todas as 15
+- [x] CSS de agrupamento
+- [x] 5 testes, incluindo checagem sobre os dados que impede conquista nova
+      entrar sem categoria ou sem dica
 
-**Problema.** 15 cards numa lista plana, e as bloqueadas mostram `'???'` na
-descrição — não dizem o que fazer. O dado para resolver isso já está no modelo.
-
-**Estado atual.** Revertido por inteiro, inclusive o CSS.
+Verificado no app: 4 categorias, 60% concluído, dicas visíveis nas bloqueadas,
+contraste e alvos de toque da tela seguem zerados.
 
 ---
 
