@@ -1008,7 +1008,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
               </>
             ) : (
               started && phase === 'simulating' && (
-                <button className="simulate-btn" onClick={skipToEnd} style={{ fontSize: 11, opacity: 0.7 }}>
+                <button className="simulate-btn" onClick={skipToEnd} style={pausesRemaining > 0 ? { fontSize: 11, opacity: 0.7 } : undefined}>
                   ⚡ Simular até o fim
                 </button>
               )
