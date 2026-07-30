@@ -7,7 +7,7 @@
 .teamSide { display: flex; flex-direction: column; align-items: center; flex: 1; gap: 4px; min-width: 0; }
 .logo { width: 48px; height: 48px; object-fit: contain; }
 .teamName { color: #e5e7eb; font-size: 13px; font-weight: 700; text-align: center; line-height: 1.2; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.teamAbbr { color: #6b7280; font-size: 11px; font-weight: 500; }
+.teamAbbr { color: var(--text-secondary); font-size: 11px; font-weight: 500; }
 
 .vsCenter { flex-shrink: 0; }
 .vsBadge { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; background: #1f2937; color: #9ca3af; font-size: 11px; font-weight: 800; border: 2px solid #374151; }
@@ -15,7 +15,7 @@
 .matchInfo { display: flex; justify-content: center; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
 .derbyBadge { background: #dc2626; color: #fff; padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
 .contextBadge { background: #1f2937; color: #9ca3af; padding: 3px 10px; border-radius: 99px; font-size: 10px; font-weight: 600; }
-.roundBadge { background: #1f2937; color: #6b7280; padding: 3px 10px; border-radius: 99px; font-size: 10px; }
+.roundBadge { background: #1f2937; color: var(--text-secondary); padding: 3px 10px; border-radius: 99px; font-size: 10px; }
 
 .content { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
 
@@ -35,7 +35,7 @@
 .h2hStats { display: flex; justify-content: space-around; text-align: center; }
 .h2hStat { display: flex; flex-direction: column; gap: 2px; }
 .h2hValue { color: #e5e7eb; font-size: 20px; font-weight: 800; }
-.h2hLabel { color: #6b7280; font-size: 9px; }
+.h2hLabel { color: var(--text-secondary); font-size: 9px; }
 .h2hLog { display: flex; gap: 4px; margin-top: 8px; justify-content: center; flex-wrap: wrap; }
 .h2hResult { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
 .resultWin { background: #065f4633; color: #34d399; }
@@ -48,7 +48,7 @@
 .playerRow { display: flex; align-items: center; gap: 6px; }
 .playerColor { width: 3px; height: 20px; border-radius: 2px; flex-shrink: 0; }
 .playerName { color: #e5e7eb; font-size: 11px; font-weight: 500; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.playerPos { color: #6b7280; font-size: 9px; font-weight: 600; width: 24px; flex-shrink: 0; }
+.playerPos { color: var(--text-secondary); font-size: 9px; font-weight: 600; width: 24px; flex-shrink: 0; }
 .playerOvr { color: #fbbf24; font-size: 12px; font-weight: 700; flex-shrink: 0; }
 
 .tacticalCard { display: flex; align-items: flex-start; gap: 8px; background: #111827; border: 1px solid #1f2937; border-radius: 10px; padding: 12px 14px; }

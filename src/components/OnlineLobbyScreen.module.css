@@ -48,7 +48,7 @@
   font-size: 18px; font-weight: 800; font-family: var(--mono); margin: 0;
 }
 .cardDesc {
-  font-size: 13px; opacity: 0.5; font-weight: 500;
+  font-size: 13px; color: var(--text-secondary); font-weight: 500;
 }
 .joinRow {
   display: flex; gap: 8px;
@@ -76,7 +76,7 @@
 
 .divider {
   display: flex; align-items: center; gap: 14px;
-  opacity: 0.3;
+  color: var(--text-secondary);
 }
 .divider::before, .divider::after {
   content: ''; flex: 1; height: 1px; background: var(--border);
@@ -102,7 +102,7 @@
   background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
   padding: 12px 16px; flex-wrap: wrap;
 }
-.roomLabel { font-size: 12px; font-weight: 700; opacity: 0.5; font-family: var(--mono); }
+.roomLabel { font-size: 12px; font-weight: 700; color: var(--text-secondary); font-family: var(--mono); }
 .roomCode {
   font-size: 32px; font-weight: 900; font-family: var(--mono); color: var(--accent);
   letter-spacing: 6px; user-select: all;
@@ -130,7 +130,7 @@
 }
 .teamSlot.filled { border-color: var(--accent-border); }
 .slotLabel {
-  font-size: 10px; font-weight: 700; opacity: 0.4; text-transform: uppercase;
+  font-size: 10px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;
   font-family: var(--mono); text-align: center;
 }
 .pickedTeam {
@@ -139,8 +139,8 @@
 }
 .teamLogo { width: 40px; height: 40px; object-fit: contain; }
 .teamName { font-size: 15px; font-weight: 800; font-family: var(--mono); color: var(--text-h); }
-.hint { font-size: 11px; opacity: 0.35; font-weight: 500; text-align: center; }
-.vsText { font-size: 18px; font-weight: 900; opacity: 0.2; font-family: var(--mono); }
+.hint { font-size: 11px; color: var(--text-secondary); font-weight: 500; text-align: center; }
+.vsText { font-size: 18px; font-weight: 900; color: var(--text-secondary); font-family: var(--mono); }
 
 .statusBadge {
   font-size: 12px; font-weight: 700; color: #22c55e; font-family: var(--mono);
@@ -160,11 +160,11 @@
 }
 .teamBtn:hover:not(:disabled) { border-color: var(--accent) !important; }
 .teamBtn:disabled { opacity: 0.2; cursor: not-allowed; }
-.teamTaken { opacity: 0.25; }
+.teamTaken { color: var(--text-secondary); }
 .teamLogoSmall { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
 .teamBtnInfo { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .teamBtnName { font-size: 13px; font-weight: 800; color: var(--text-h); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.teamBtnAbbr { font-size: 10px; font-weight: 700; opacity: 0.4; font-family: var(--mono); }
+.teamBtnAbbr { font-size: 10px; font-weight: 700; color: var(--text-secondary); font-family: var(--mono); }
 
 .teamRow {
   display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
@@ -193,11 +193,11 @@
 
 .waitingBox {
   text-align: center; padding: 20px;
-  font-size: 14px; font-weight: 700; opacity: 0.45; font-family: var(--mono);
+  font-size: 14px; font-weight: 700; color: var(--text-secondary); font-family: var(--mono);
 }
 .waitingDots {
   font-size: 28px; text-align: center; margin-top: 16px;
-  opacity: 0.3; letter-spacing: 4px;
+  color: var(--text-secondary); letter-spacing: 4px;
 }
 
 .tacticsPanel {

@@ -15,9 +15,9 @@
 .championCrown { font-size: 40px; }
 .championCrest { width: 72px; height: 72px; object-fit: contain; }
 .championName { font-size: 30px; font-weight: 400; font-family: var(--display); letter-spacing: 0.05em; color: var(--text-primary); }
-.championSub { font-size: 11px; font-weight: 700; opacity: 0.5; text-transform: uppercase; letter-spacing: 1.2px; }
+.championSub { font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1.2px; }
 
-.userResult { text-align: center; font-size: 14px; opacity: 0.7; }
+.userResult { text-align: center; font-size: 14px; color: var(--text-secondary); }
 
 .statsCard {
   display: flex; flex-direction: column; gap: 6px;
@@ -30,7 +30,7 @@
 }
 .statLabel {
   font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
-  opacity: 0.55; font-family: var(--sans);
+  color: var(--text-secondary); font-family: var(--sans);
 }
 .statValue {
   font-size: 14px; font-weight: 800; font-family: var(--heading); color: var(--text-primary);

@@ -248,3 +248,100 @@ feed, pelo mesmo mecanismo do item 15.
 
 `audit-20260729-183623/C4-career-hub.png` está rotulado errado: é a tela de
 seleção de time, não a Central.
+
+---
+
+# Segunda rodada — as seis telas que faltavam
+
+**Data:** 2026-07-30
+
+As telas que a primeira auditoria não alcançou foram auditadas agora. Em vez de
+capturar imagem, medi **estilos computados no app rodando**: razão de contraste
+WCAG (considerando `opacity` acumulada e o fundo real composto) e altura de todo
+elemento interativo. Isso dá número em vez de impressão — e foi assim que a
+primeira rodada me levou a erro em quatro achados.
+
+Cobertas: Central da Carreira, Mercado de Transferências, Sala de Troféus,
+Conquistas, lobby online. Mais a Home, que não estava na lista mas entrou na
+varredura. A tela de fim de temporada continua sem verificação ao vivo — exige
+temporada e copa concluídas; foi corrigida pela varredura de código.
+
+## O que a medição encontrou
+
+| Tela | Falhas de contraste | Alvos < 32px | Pior caso |
+|---|---|---|---|
+| Central da Carreira | 20 | 2 | `⚽ Jogar` a **2.43:1** |
+| Conquistas | 25 | 1 | data do desbloqueio a **1.54:1** |
+| Sala de Troféus | 6 | 0 | rótulos a 2.95:1 |
+| Lobby online | 3 | 0 | `Criar Sala` e `Entrar` a **2.43:1** |
+| Home | 2 | 3 | dificuldade ativa a 2.43:1 |
+| Mercado | 0 | 0 | — |
+
+## Duas causas sistêmicas, não 56 problemas
+
+O número de ocorrências enganava: quase tudo vinha de duas origens.
+
+### Botão primário com texto branco sobre ciano
+
+O `2.43:1` que apareceu na Central, no lobby e na Home é sempre o mesmo padrão:
+`background: var(--accent); color: #fff`. Branco sobre `#06b6d4` dá ~2.4:1 —
+reprova AA no **CTA mais importante de várias telas**.
+
+Corrigido para texto escuro (`#04222a`) sobre o mesmo ciano: ~7:1, sem perder a
+cor da marca. Aplicado em `App.css` e em 6 CSS modules.
+
+### `opacity` em texto, agora dentro dos CSS modules
+
+A primeira rodada corrigiu isso no `App.css`, mas os módulos têm a própria
+paleta e ficaram de fora. Eram **96 regras em 17 arquivos** usando
+`opacity: 0.2–0.7` para esmaecer texto — o que em tema escuro empurra o texto
+para o fundo. A data de desbloqueio das Conquistas, a 1.54:1, era o extremo.
+
+Todas passaram a usar `var(--text-secondary)`. A varredura preserva
+`:disabled`, `::placeholder`, `:hover` e pseudo-elementos decorativos, onde
+esmaecer é o comportamento correto.
+
+Além disso, os CSS modules usavam cinzas hardcoded (`#6b7280` a 3.67:1,
+`#4b5563` a 2.42:1) que nunca viram os tokens — também trocados.
+
+### Alvos de toque
+
+Seis controles abaixo de 32px de altura, o pior sendo "Começar nova carreira"
+com **21px**. Os três botões de dificuldade da Home tinham 24px. Todos subiram
+para 34px.
+
+## Verificação
+
+Reauditadas as mesmas telas após as correções: **0 falhas de contraste e 0 alvos
+abaixo de 32px em todas**.
+
+O único item restante no relatório automático — a aba ativa do Mercado a
+"1.00:1" — é artefato do medidor: o texto é `#06b6d4` e o botão tem
+`background: rgba(6,182,212,0.1)`, que meu caminhador de fundo capturou como se
+fosse opaco. Composto sobre `--bg`, o fundo real é `rgb(6,28,39)` e a razão
+verdadeira fica em ~7:1.
+
+Build verde, lint sem erros, 368 testes passando.
+
+## Melhorias propostas (não implementadas)
+
+Estas são de produto, não de acessibilidade — não mexi sem combinar:
+
+1. **Central da Carreira: o painel de objetivos não mostra progresso.** Cada
+   objetivo aparece como "📌 pendente" até o fim da temporada. Como já existem
+   `leaguePosition` e o estágio da copa, dava para mostrar "Top 4 — atualmente
+   em 6º" e antecipar a cobrança em vez de revelar tudo no último dia.
+
+2. **Conquistas: 15 itens sem agrupamento nem progresso parcial.** Bloqueadas
+   mostram "???" na descrição, o que esconde o que fazer. Agrupar por categoria
+   e mostrar progresso ("3/10 vitórias") daria direção.
+
+3. **Sala de Troféus vazia é um beco.** Com "Nenhuma temporada concluída ainda"
+   e mais nada, a tela não diz o que falta nem oferece ação. Um resumo da
+   temporada em curso resolveria.
+
+4. **Mercado: nenhuma indicação de qual liga está sendo navegada** fora da lista
+   lateral. Ao filtrar por time de outra liga, o contexto se perde.
+
+5. **Lobby online sem estado de erro visível para sala inexistente** — o campo
+   aceita qualquer código e a falha só aparece no console.

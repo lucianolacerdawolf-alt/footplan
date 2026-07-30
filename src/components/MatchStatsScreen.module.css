@@ -21,9 +21,9 @@
   font-size: 42px; font-weight: 900; font-family: var(--mono); line-height: 1;
   display: flex; align-items: center; gap: 4px;
 }
-.scoreSep { color: var(--text); opacity: 0.3; }
-.screenLabel { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; opacity: 0.35; }
-.etLabel { font-size: 10px; font-weight: 600; opacity: 0.6; letter-spacing: 0.2px; }
+.scoreSep { color: var(--text); color: var(--text-secondary); }
+.screenLabel { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-secondary); }
+.etLabel { font-size: 10px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.2px; }
 
 .badge {
   font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
@@ -55,7 +55,7 @@
 }
 .barHome { height: 100%; border-radius: 3px 0 0 3px; transition: width 0.5s ease; opacity: 0.8; }
 .barAway { height: 100%; border-radius: 0 3px 3px 0; transition: width 0.5s ease; opacity: 0.8; }
-.label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.45; }
+.label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); }
 .icon { margin-right: 3px; }
 
 /* Actions */
@@ -70,7 +70,7 @@
 }
 .historySummary {
   font-size: 12px; font-weight: 700; cursor: pointer; padding: 2px 0;
-  display: flex; align-items: center; gap: 6px; opacity: 0.7;
+  display: flex; align-items: center; gap: 6px; color: var(--text-secondary);
   list-style: none;
 }
 .historySummary::-webkit-details-marker { display: none; }
@@ -86,7 +86,7 @@
   border-bottom: 1px solid var(--border); font-size: 11px;
 }
 .historyRow:last-child { border-bottom: none; }
-.historyDate { opacity: 0.4; min-width: 88px; font-size: 10px; }
+.historyDate { color: var(--text-secondary); min-width: 88px; font-size: 10px; }
 .historyMatch {
   display: flex; align-items: center; gap: 5px; flex: 1; justify-content: center;
 }
@@ -94,7 +94,7 @@
 .historyAbbr { font-size: 11px; font-weight: 700; font-family: var(--mono); }
 .historyScore { font-size: 13px; font-weight: 800; font-family: var(--mono); color: var(--text-h); min-width: 32px; text-align: center; }
 .clearBtn {
-  margin-top: 8px; font-size: 10px; color: var(--text); opacity: 0.4; background: none;
+  margin-top: 8px; font-size: 10px; color: var(--text); color: var(--text-secondary); background: none;
   border: none; cursor: pointer; padding: 2px 0; font-family: var(--sans);
 }
 .clearBtn:hover { opacity: 0.7; }
@@ -102,7 +102,7 @@
 /* ── Fase 2: Pós-jogo ──────────────────────────────────────────────── */
 .sectionLabel {
   font-size: 11px; font-weight: 800; text-transform: uppercase;
-  letter-spacing: 0.6px; opacity: 0.55; margin-bottom: 6px;
+  letter-spacing: 0.6px; color: var(--text-secondary); margin-bottom: 6px;
 }
 
 /* Gols */
@@ -116,7 +116,7 @@
   font-family: var(--mono); font-size: 14px;
 }
 .scorerMinute {
-  font-weight: 800; opacity: 0.7; min-width: 36px;
+  font-weight: 800; color: var(--text-secondary); min-width: 36px;
 }
 .scorerCrest { width: 20px; height: 20px; object-fit: contain; }
 .scorerName { font-weight: 800; }
@@ -133,13 +133,13 @@
 .motmCrown { font-size: 22px; color: gold; }
 .motmLabel {
   font-size: 11px; font-weight: 900; text-transform: uppercase;
-  letter-spacing: 0.8px; opacity: 0.7;
+  letter-spacing: 0.8px; color: var(--text-secondary);
 }
 .motmBody { display: flex; align-items: center; gap: 12px; }
 .motmCrest { width: 40px; height: 40px; object-fit: contain; flex-shrink: 0; }
 .motmInfo { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .motmName { font-size: 15px; font-weight: 900; font-family: var(--mono); }
-.motmStats { font-size: 11px; opacity: 0.65; font-weight: 600; }
+.motmStats { font-size: 11px; color: var(--text-secondary); font-weight: 600; }
 .motmRating {
   font-size: 22px; font-weight: 900; font-family: var(--mono);
   color: #fff; padding: 8px 14px; border-radius: 10px;
@@ -165,9 +165,9 @@
   font-size: 13px; padding: 4px 0;
 }
 .ratingCrest { width: 18px; height: 18px; object-fit: contain; }
-.ratingNum { font-family: var(--mono); font-weight: 800; opacity: 0.5; min-width: 28px; font-size: 11px; }
+.ratingNum { font-family: var(--mono); font-weight: 800; color: var(--text-secondary); min-width: 28px; font-size: 11px; }
 .ratingName { flex: 1; font-weight: 700; font-family: var(--mono); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ratingPos { font-size: 10px; font-weight: 800; opacity: 0.5; min-width: 28px; }
+.ratingPos { font-size: 10px; font-weight: 800; color: var(--text-secondary); min-width: 28px; }
 .ratingVal {
   font-size: 13px; font-weight: 900; font-family: var(--mono);
   color: #fff; padding: 3px 8px; border-radius: 6px; min-width: 38px; text-align: center;
@@ -184,7 +184,7 @@
   font-size: 12px; padding: 4px 8px; border-radius: 999px;
   background: rgba(255,255,255,0.03); border: 1px solid;
 }
-.cardMinute { opacity: 0.5; font-family: var(--mono); font-weight: 700; }
+.cardMinute { color: var(--text-secondary); font-family: var(--mono); font-weight: 700; }
 
 .tacticalSection {
   background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
@@ -192,7 +192,7 @@
 }
 .tacticalTitle {
   font-size: 12px; font-weight: 800; font-family: var(--mono);
-  margin-bottom: 10px; opacity: 0.6; text-transform: uppercase; letter-spacing: 0.5px;
+  margin-bottom: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;
 }
 .tacticalGrid { display: flex; gap: 16px; }
 .tacticalTeam { flex: 1; display: flex; flex-direction: column; gap: 4px; }
@@ -201,7 +201,7 @@
   font-size: 10px; font-weight: 600; font-family: var(--mono);
   padding: 2px 7px; border-radius: 5px;
   background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
-  color: var(--text); opacity: 0.7;
+  color: var(--text); color: var(--text-secondary);
 }
 
 /* Highlights */
@@ -220,7 +220,7 @@
 
 /* Confetti celebration */
 @keyframes fpConfetti {
-  0% { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%; opacity: 0.5; }
+  0% { background-position: 0% 0%, 0% 0%, 0% 0%, 0% 0%; color: var(--text-secondary); }
   50% { opacity: 1; }
   100% { background-position: 100% 100%, -100% 100%, 200% 0%, -200% 0%; opacity: 0; }
 }

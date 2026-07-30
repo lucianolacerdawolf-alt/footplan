@@ -12,10 +12,10 @@
   font-size: 28px; font-weight: 400; font-family: var(--display); letter-spacing: 0.05em;
 }
 .progress {
-  font-size: 14px; font-weight: 700; opacity: 0.45; font-family: var(--mono);
+  font-size: 14px; font-weight: 700; color: var(--text-secondary); font-family: var(--mono);
 }
 
-.backBtn {
+.backBtn { min-height: 34px;
   background: transparent; border: 1px solid var(--border); border-radius: 8px;
   padding: 6px 14px; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
   cursor: pointer; font-family: var(--sans);
@@ -43,7 +43,7 @@
 }
 
 .locked {
-  opacity: 0.5;
+  color: var(--text-secondary);
 }
 
 .icon {
@@ -59,11 +59,11 @@
 }
 
 .desc {
-  font-size: 11px; opacity: 0.55; font-weight: 500;
+  font-size: 11px; color: var(--text-secondary); font-weight: 500;
 }
 
 .date {
-  font-size: 10px; opacity: 0.35; font-weight: 600; margin-top: 2px;
+  font-size: 10px; color: var(--text-secondary); font-weight: 600; margin-top: 2px;
   font-family: var(--mono);
 }
 

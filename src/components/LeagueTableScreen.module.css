@@ -9,7 +9,7 @@
 .headerCenter {
   display: flex; flex-direction: column; gap: 1px; flex: 1; align-items: center;
 }
-.leagueTitle { font-size: 11px; font-weight: 700; font-family: var(--heading); opacity: 0.55; text-transform: uppercase; letter-spacing: 1px; }
+.leagueTitle { font-size: 11px; font-weight: 700; font-family: var(--heading); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; }
 .roundLabel { font-size: 22px; font-weight: 400; font-family: var(--display); letter-spacing: 0.04em; }
 
 .standingsScroll {
@@ -27,20 +27,20 @@
 .table th {
   padding: 9px 18px; text-align: center; font-weight: 700;
   background: var(--code-bg); border-bottom: 2px solid var(--border);
-  font-size: 12px; opacity: 0.55; position: sticky; top: 0; z-index: 1;
+  font-size: 12px; color: var(--text-secondary); position: sticky; top: 0; z-index: 1;
   white-space: nowrap;
 }
 .thZone { width: 4px; padding: 0 !important; background: var(--code-bg); }
 .thPos, .thTeam { text-align: left; }
 .thPts { font-size: 12px; opacity: 1 !important; color: var(--accent); }
-.thSg { opacity: 0.45; }
+.thSg { color: var(--text-secondary); }
 .table td { padding: 9px 16px; text-align: center; border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent); }
 .row:last-child td { border-bottom: none; }
 .row:hover td { background: color-mix(in srgb, var(--border) 30%, transparent); }
 .rowUser td { background: color-mix(in srgb, var(--accent) 8%, transparent); font-weight: 700; }
 .rowUser:hover td { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .tdZone { width: 4px; padding: 0 !important; }
-.tdPos { text-align: left; padding-left: 8px; opacity: 0.45; font-size: 13px; }
+.tdPos { text-align: left; padding-left: 8px; color: var(--text-secondary); font-size: 13px; }
 .tdTeam { text-align: left; display: flex; align-items: center; gap: 8px; min-width: 210px; }
 .teamName { font-size: 16px; font-weight: 700; color: var(--text-h); }
 .tableCrest { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
@@ -49,7 +49,7 @@
 .sgNeg { color: #f87171; font-weight: 700; }
 
 /* Form guide */
-.thForm { text-align: center; font-size: 10px; opacity: 0.5; padding: 0 4px; }
+.thForm { text-align: center; font-size: 10px; color: var(--text-secondary); padding: 0 4px; }
 .tdForm { display: flex; gap: 2px; justify-content: center; padding: 0 2px; }
 .formDot {
   width: 16px; height: 16px; border-radius: 3px;
@@ -64,7 +64,7 @@
 /* Zone legend */
 .zoneLegend {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 6px 4px; font-size: 10px; opacity: 0.6; font-family: var(--sans);
+  padding: 6px 4px; font-size: 10px; color: var(--text-secondary); font-family: var(--sans);
 }
 .zoneDot {
   display: inline-block; width: 8px; height: 8px; border-radius: 50%;
