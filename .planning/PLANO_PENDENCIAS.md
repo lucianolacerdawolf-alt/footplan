@@ -44,28 +44,22 @@ interno (`pl-t0`); vazamento entre 1ª e 2ª divisão.
 
 ---
 
-## P1 — Trabalho já feito que se perdeu
+## P1 — ✅ Concluído (era trabalho que se perdeu na colisão)
 
 Os dois itens abaixo **foram implementados, funcionaram e foram revertidos** pela
 sessão concorrente. Reaplicar é refazer, não inventar — o desenho já está
 validado.
 
-### 2. Objetivos da diretoria sem progresso
+### 2. ~~Objetivos da diretoria sem progresso~~ — ✅ FEITO em `88a3266`
 
-- [ ] `getObjectiveProgress()` em `boardObjectives.ts` — status (`atingido` /
-      `no-caminho` / `fora`) + frase curta do estado atual
-- [ ] `deriveCupProgress()` em `career.ts` — fase alcançada **até agora** e se já
-      foi eliminado (`deriveCupResult` só responde com a copa encerrada)
-- [ ] Usar na `CareerHubScreen`: ícone por status e detalhe sob o rótulo
-- [ ] `.objectiveProgress` no CSS module
-- [ ] Testes dos três tipos de meta (posição, copa, orçamento)
+- [x] `getObjectiveProgress()` em `boardObjectives.ts`
+- [x] `deriveCupProgress()` em `career.ts` — fase alcançada até agora + eliminado
+- [x] Usar na `CareerHubScreen`: ícone por status e detalhe sob o rótulo
+- [x] `.objectiveProgress` no CSS module
+- [x] 11 testes (7 de `deriveCupProgress`, 4 de `getObjectiveProgress`)
 
-**Problema.** Todo objetivo aparece como "📌 pendente" até o último dia da
-temporada, mesmo com `leaguePosition` e o estágio da copa já disponíveis. O
-usuário descobre que falhou quando já não dá para reagir.
-
-**Estado atual.** Sobrou uma referência solta de `getObjectiveProgress` no
-engine; `deriveCupProgress`, o uso na tela, o CSS e os testes foram revertidos.
+Verificado no app: "⚠️ 15º — precisa subir 13", "⚠️ Quartas — eliminado abaixo
+da meta", "📌 €33.0M". Contraste e alvos de toque da Central seguem zerados.
 
 ### 3. ~~Conquistas sem categoria nem dica~~ — ✅ FEITO em `cb8f04d`
 
