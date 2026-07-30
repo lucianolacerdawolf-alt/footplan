@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: Sessão pós 04.4 — 6 ligas de acesso + SportAPI7 + refino mobile + mercado (comprar/vender/agentes livres) + remoção limite 3 trocas
-last_updated: 2026-07-25T15:00:00.000Z
+stopped_at: Sessão 2026-07-30 — limpeza de código morto + otimização CSS (will-change/contain) + análise de sugestões
+last_updated: 2026-07-30T15:00:00.000Z
 progress:
   total_phases: 6
   completed_phases: 1
@@ -26,7 +26,19 @@ progress:
 - **Milestone:** M4 — Code Health & Expansion
 - **Status:** Pronto pra próxima sessão
 
-## O que foi feito na última sessão (2026-07-25)
+## O que foi feito na última sessão (2026-07-30)
+
+### Limpeza de código morto
+- Removido `src/engine/penalties.ts` — arquivo sem imports (código morto), com bug (`await` em função não-async `playPenaltyShootout`). A lógica real de pênaltis já está em `matchEngine.ts` (`simularPenaltisInterno`, `resolveKnockoutTiebreak`).
+
+### Otimização CSS (GPU acceleration)
+- Adicionado `will-change: transform` em 7 elementos com animações (`App.css`): `.score-num`, `.simulate-btn`, `.feed-event`, `.sub-toast`, `.screen-fade`, `.lazy-loading::before`, `.penalty-result-flash`/`.penalty-sudden-death`
+- Adicionado `contain: content` no `.commentary-feed` para isolar o layout do feed de scroll
+
+### Análise de sugestões de melhoria
+- Avaliadas 7 sugestões contra o código real — 5 já implementadas (acessibilidade, error boundaries, code splitting, etc.), 1 não se aplica (`advanceMatch()` inexistente), 2 executadas (código morto + CSS)
+
+## O que foi feito na sessão anterior (2026-07-25)
 
 ### 6 Ligas de Acesso (2ª divisão)
 - Championship (24 times), La Liga 2 (22), 2. Bundesliga (18), Serie B (20), Ligue 2 (18), Liga Portugal 2 (18)
