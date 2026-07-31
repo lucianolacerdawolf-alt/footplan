@@ -1,14 +1,14 @@
 # Plano de Funcionalidades — FootPlan v2
 
 > Documento de planejamento para as 5 novas funcionalidades do FootPlan.
-> Data: Julho 2024
+> Data: Julho 2026 · **Status revisado em 2026-07-31** — as 5 estão entregues.
 
 ## Status
 
 | # | Funcionalidade | Status |
 |---|---|---|
-| 1 | Squad Management | ✅ Entregue — `SquadManagementScreen` + `FormationPitch`, clique-a-clique (sem `dnd-kit`) |
-| 2 | Cloud Save (Supabase) | ⬜ Pendente — único item independente que falta |
+| 1 | Squad Management | ✅ Entregue — como aba "Gerenciar Elenco" dentro de `SetupScreen` e `MatchScreen`, clique-a-clique (sem `dnd-kit`). **Correção:** os componentes `SquadManagementScreen` e `FormationPitch` citados aqui nunca existiram; a feature saiu embutida nas telas, não como tela própria |
+| 2 | Cloud Save (Supabase) | ✅ Entregue — `services/cloudSave.ts` + `useCloudSave`, ativo em `useCareerManager` (carrega no mount, salva com debounce). Sem botão no Hub: roda em segundo plano. Ver a ressalva sobre falha silenciosa em `BACKLOG.md` |
 | 3 | Hub + Inbox + Finanças | ✅ Entregue — mercado com dinheiro/CPU-por-valor explicitamente fora de escopo (ver `BACKLOG.md`) |
 | 4 | Condição Física (Stamina) e Cartões | ✅ Entregue — `fitness.ts` + `discipline.ts` |
 | 5 | Histórico e Hall of Fame | ✅ Entregue — `seasonClosure.ts` + `TrophyRoomScreen` (artilheiro de liga/copa e assistência ficaram fora, ver nota no tipo `CareerSeasonHistoryEntry`) |

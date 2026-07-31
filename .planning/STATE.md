@@ -111,7 +111,10 @@ Corrigido, com a cobertura de liga de cada fonte anotada.
 - Time adversário CPU bloqueado na pausa/intervalo
 - Botões JOGAR e SIMULAR em todos os modos
 - Tabs "Táticas" / "Gerenciar Elenco" no setup, pausa e intervalo
-- CloudSave removido do Hub (tabela Supabase nunca foi criada)
+- CloudSave: botão removido do Hub. O sync em segundo plano **continua ativo** no
+  código (`useCareerManager.ts:82` carrega, `:98` salva). A afirmação anterior de
+  que "a tabela Supabase nunca foi criada" contradiz o `BACKLOG.md`, que diz o
+  oposto — não dá pra verificar pelo repositório. Ver a nota em `BACKLOG.md`
 
 ## Pending / Ações
 

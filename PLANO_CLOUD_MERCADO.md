@@ -1,7 +1,13 @@
 # Plano Detalhado: Cloud Save + Mercado com Dinheiro
 
-> Data: Julho 2024
-> Status: ⬜ Pendente
+> Data: Julho 2026
+> **Status: ✅ ENTREGUE** (confirmado em 2026-07-31)
+>
+> As duas partes saíram: Cloud Save em `services/cloudSave.ts` + `useCloudSave`
+> (ativo em `useCareerManager`), e o mercado com dinheiro em
+> `TransferMarketScreen` + `engine/transferMarket.ts` + `engine/freeAgentPool.ts`.
+> O documento fica como registro do planejamento original — o que foi
+> simplificado em relação a ele está no `BACKLOG.md`.
 
 ---
 

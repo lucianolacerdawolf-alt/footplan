@@ -8,13 +8,27 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
-*(vazio)*
+### 🟢 Cloud Save falha em silêncio absoluto
+
+**Por que sobrou:** encontrado na revisão de docs de 2026-07-31, ao investigar uma contradição entre `BACKLOG.md` e `STATE.md` sobre a tabela Supabase.
+
+**O que envolve:** `useCloudSave` já expõe `status` (`'saving' | 'saved' | 'offline'`) e `retry`, mas `useCareerManager.ts:66` só consome `loadFromCloud` e `enqueueCloudSave`. Nenhuma tela lê o status. Se o save na nuvem falhar — tabela ausente, credencial errada, rede caída — o usuário nunca fica sabendo. Basta expor o status em algum canto da Central (ícone discreto já resolve) e ligar o `retry` que já existe.
+
+**Posso retomar quando:** a qualquer momento — o hook já tem tudo pronto, é só consumir.
+
+### 🟡 Elenco ao vivo pode vir com jogador no clube errado (limitação do provedor)
+
+**Por que sobrou:** não é bug nosso. Verificado em 2026-07-31 chamando `fetchCompetitionTeams('pl')` direto e inspecionando a resposta crua: a football-data.org lista Illan Meslier como goleiro do Arsenal antes de qualquer código do FootPlan tocar o dado.
+
+**O que envolve:** mitigar exigiria heurística (ex: "descartar goleiro além de N por time"), com risco de cortar elenco legítimo. Alternativa mais segura seria cruzar com uma segunda fonte antes de aceitar, o que multiplica chamadas e cota.
+
+**Posso retomar quando:** só se virar incômodo real. Os dois defeitos *internos* que existiam já foram corrigidos (`cc0e8ec`, `d14d70b`).
 
 ---
 
 ## 🏗️ Saúde do código
 
-### ✅ Auditoria 2024-07-24 — melhoria contínua (concluída)
+### ✅ Auditoria 2026-07-24 — melhoria contínua (concluída)
 
 Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
 
@@ -26,19 +40,23 @@ Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
 
 ### ✅ Mercado de Transferências com dinheiro — CONCLUÍDO
 
-TransferMarketScreen com 3 abas (Comprar Jogadores, Vender Jogadores, Agentes Livres), avaliação determinística por threshold de valor de mercado, multiplicador via slider, retenção de 20% da diretoria em vendas, histórico de transferências.
+TransferMarketScreen com 4 abas (Comprar Jogadores, Vender Jogadores, Agentes Livres, Propor Troca), avaliação determinística por threshold de valor de mercado, multiplicador via slider, retenção de 20% da diretoria em vendas, histórico de transferências. Busca por nome cobre as 12 ligas; navegação liga → time → jogador com badge da liga corrente no cabeçalho.
 
-### ✅ Cloud Save (Supabase) — CONCLUÍDO
+### ✅ Cloud Save (Supabase) — CONCLUÍDO no código
 
-Cliente Supabase com auth anônimo, save/load automático em segundo plano, cache offline-first com fallback pra localStorage. Tabela `careers` criada no projeto Supabase.
+Cliente Supabase com auth anônimo, save/load automático em segundo plano, cache offline-first com fallback pra localStorage. O código está ativo: `useCareerManager.ts:82` carrega da nuvem no mount e `:98` enfileira save a cada mudança de estado; `services/cloudSave.ts` faz upsert na tabela `careers`.
+
+> ⚠️ **Contradição entre docs, não resolvida.** Este arquivo afirmava "Tabela `careers` criada no projeto Supabase", enquanto `.planning/STATE.md` afirmava "CloudSave removido do Hub (tabela Supabase nunca foi criada)". A parte de "removido do Hub" **é verdadeira** — não existe botão de nuvem na `CareerHubScreen`. Já a existência da tabela é infra externa, impossível de verificar pelo repositório. **Confirmar no painel do Supabase.**
+>
+> **Se a tabela não existir, a falha é 100% silenciosa.** Verificado no código: `useCloudSave.ts:30` captura o erro e seta `status: 'offline'`, mas `useCareerManager.ts:66` só extrai `loadFromCloud` e `enqueueCloudSave` — **nunca lê `status`**, e nunca chama `retry`. Ou seja, nenhum ponto da UI mostra que o backup em nuvem está falhando. O usuário acredita ter save na nuvem e não tem.
 
 ### 🟡 SportAPI7 — Mapeamento pendente (4 ligas)
 
 **Por que sobrou:** cota mensal gratuita da SportAPI7 (RapidAPI) estourou durante desenvolvimento. Faltam os `uniqueTournament` IDs de La Liga 2, 2. Bundesliga, Serie B e Liga Portugal 2.
 
-**O que envolve:** quando a cota resetar (1º de agosto), descobrir os IDs via `GET /category/{N}/scheduled-events/2026-04-26` e preencher `LEAGUE_MAP` em `src/services/sportApi.ts`.
+**O que envolve:** quando a cota resetar (**1º de agosto de 2026**), descobrir os IDs via `GET /category/{N}/scheduled-events/2026-04-26` e preencher `LEAGUE_MAP` em `src/services/sportApi.ts`.
 
-**Posso retomar quando:** 1º de agosto — 10 minutos pra resolver.
+**Posso retomar quando:** a partir de 1º de agosto de 2026 — 10 minutos pra resolver.
 
 ---
 
@@ -80,7 +98,7 @@ Cliente Supabase com auth anônimo, save/load automático em segundo plano, cach
 - Tutorial interativo, H2H detalhado, CPU varia tática por rodada e por liga
 - 346 testes automatizados (motor + sincronização de elenco + componentes UI + Modo Carreira)
 
-### ✅ Melhorias de código (auditoria 2024-07-24) — parte 2
+### ✅ Melhorias de código (auditoria 2026-07-24) — parte 2
 
 - **Path aliases `@/`**: configurado em `tsconfig.app.json`, `vite.config.ts`, `vitest.config.ts`. 40 imports atualizados de `../../../` para `@/`
 - **TacticPresets + TacticEditor integrados**: `MatchScreen.tsx` (-71 linhas), `SetupScreen.tsx` (-53 linhas), `HalftimePanel.tsx` (-48 linhas). Total: -172 linhas de duplicação

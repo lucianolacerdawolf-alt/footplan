@@ -27,6 +27,7 @@
 - Crowd sounds, dramatic pause on goals, momentum system
 - Home advantage (+8% attack), morale system
 - 163 tests covering engine, RNG, achievements, steering, tournaments
+  *(contagem da época — hoje a suíte tem 393 testes; ver README)*
 
 ---
 
@@ -44,6 +45,7 @@
 ### Phase 4.2: Data-Driven Leagues ✅ CONCLUÍDA
 **Goal:** Suportar múltiplas ligas além da Premier League hardcoded.
 - `data/leagues/` com tipos, índice e 5 ligas
+  *(depois expandido pra 12 — ver Fase 4.7)*
 - **5 ligas europeias com elencos reais 2024/25:**
   - Premier League (20 times, via legado `data/premierLeague.ts`)
   - La Liga (20 times, `data/leagues/laLiga.ts`)
@@ -80,16 +82,53 @@ Plans:
 - [x] 04.4-06-PLAN.md — useCareerManager part 2: cup-leg handlers + trades + season advance
 - [x] 04.4-07-PLAN.md — App.tsx wiring: hook call, adapter setters, screen routing, entry flow, overwrite confirmation
 
-### Phase 4.5: Transfer Market Completo 🔴 Backlog
+### Phase 4.5: Transfer Market Completo ✅ CONCLUÍDA
 **Goal:** Mercado de transferências entre temporadas.
-- Pool de agentes livres
-- UI de mercado
-- Orçamento e negociação
+- Pool de agentes livres (`engine/freeAgentPool.ts`)
+- UI de mercado (`TransferMarketScreen.tsx`): abas Comprar / Vender / Agentes
+  Livres / Propor Troca, busca por nome cobrindo as 12 ligas, navegação
+  liga → time → jogador
+- Orçamento e negociação (`engine/transferMarket.ts`): valor de mercado
+  exponencial, avaliação de proposta com markup por escassez de posição,
+  guarda de "último jogador na posição" nos dois lados
+- Janela de transferências por rodada; ofertas da CPU chegam pela inbox
+- Removido o teto de 3 trocas por temporada
 
 ### Phase 4.6: UI Component Tests ✅ CONCLUÍDA
 **Goal:** Testes de componente com @testing-library/react.
 - jsdom environment isolado por arquivo (`// @vitest-environment jsdom`), motor continua em `node`
 - `LeagueScreen`, `MatchStatsScreen`, `BracketScreen` (oitavas, simular outros, fase de campeão) + 3 telas de seleção de time
+
+### Phase 4.7: 12 Ligas + Sincronização ao Vivo ✅ CONCLUÍDA
+**Goal:** Dobrar a cobertura de ligas e trazer elencos reais atualizados.
+- 6 ligas de acesso (Championship, La Liga 2, 2. Bundesliga, Serie B, Ligue 2,
+  Liga Portugal 2), ordenadas lado a lado com a 1ª divisão do mesmo país
+- Três fontes ao vivo atrás do mesmo proxy Cloudflare Worker: football-data.org,
+  SportAPI7 (Sofascore) e API-Football
+- Merge estático × ao vivo casando time por nome com pontuação de confiança
+  (`assignRemoteTeams`), cache validado por versão de schema + ids da liga
+- Fallback offline-first: sem chave, sem rede ou erro → elenco estático intacto
+
+### Phase 4.8: Profundidade do Modo Carreira ✅ CONCLUÍDA
+**Goal:** Dar textura à progressão além de "jogue a temporada".
+- Objetivos da diretoria com recompensa/penalidade de reputação, calibrados pela
+  estatura do clube, e **progresso visível durante a temporada**
+- Patrocínio com tiers e renegociação; finanças com folha, bilheteria e premiação
+- Inbox com mensagens obrigatórias que travam o avanço de rodada
+- Eventos aleatórios de carreira, rivalidades com narração de clássico
+- Tela de Matchday pré-jogo (estádio, clima, H2H, destaques)
+- Sugestões de substituição durante a pausa (fadiga, cartão, tática)
+- Bola parada configurável (escanteio e falta) ligada ao motor
+
+### Phase 4.9: Auditoria de Qualidade ✅ CONCLUÍDA
+**Goal:** Revisar o que foi entregue rápido, com verificação empírica.
+- Auditoria visual em duas rodadas nas 11 telas — contraste e alvos de toque
+  **medidos** (não estimados) e zerados; ver `.planning/ui-reviews/UI-REVIEW.md`
+- Auditoria de fluxo de navegação nos 6 contextos; ver `PLANO_FLUXO_TELAS.md`
+- Correções de "jogador no clube errado" (cache cego + `statistics[0]`)
+- Conquistas agrupadas por categoria com dica no lugar de `'???'`
+- Teste de completeness do `screenMap`
+- 393 testes (era 346)
 
 ### Mobile UX — Split da tela de liga ✅ CONCLUÍDA (ad-hoc, sem plano GSD formal)
 **Goal:** "Ver Liga" misturava classificação + jogo do usuário + outros jogos numa tela só — ~580px de scroll no celular.
