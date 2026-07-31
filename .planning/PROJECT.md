@@ -10,7 +10,7 @@ Simulador tático de futebol browser-based com foco em escolhas estratégicas e 
 |---|---|
 | Frontend | React 19 + TypeScript ~6.0 (strict) |
 | Build | Vite 8 |
-| Testing | Vitest 3 (~30 test files) |
+| Testing | Vitest 3 (45 test files, 393 testes) |
 | Linting | oxlint |
 | Styling | CSS Modules + global CSS |
 | Audio | Web Audio API (procedural, zero files) |
@@ -86,9 +86,11 @@ src/
 │   ├── sponsors.ts
 │   ├── seasonClosure.ts
 │   ├── inbox.ts
-│   ├── boardObjectives.ts
+│   ├── boardObjectives.ts    # Metas da diretoria + progresso durante a temporada
 │   ├── subSuggestions.ts
 │   ├── bracketHelpers.ts
+│   ├── squadUtils.ts         # rebalanceForFormation (usado no merge de elenco)
+│   ├── careerLabels.ts       # CUP_STAGE_LABELS / CUP_RESULT_LABELS (fonte única)
 │   ├── rivalries.ts          # Derby definitions
 │   ├── constants.ts
 │   ├── tacticPresets.ts
@@ -109,11 +111,11 @@ src/
 │   ├── useLiveRoster.ts
 │   ├── useLocalStorage.ts
 │   └── usePersistedState.ts
-├── services/                 # External APIs
-│   ├── apiFootball.ts        # SportAPI7 (Sofascore)
-│   ├── footballApi.ts        # football-data.org
-│   ├── sportApi.ts
-│   ├── rosterSync.ts
+├── services/                 # External APIs (todas via proxy Cloudflare Worker)
+│   ├── footballApi.ts        # football-data.org v4 — 1ªs divisões + Championship
+│   ├── sportApi.ts           # SportAPI7 (Sofascore) — Championship, Ligue 2
+│   ├── apiFootball.ts        # API-Football v3 — 2ªs divisões
+│   ├── rosterSync.ts         # Merge elenco estático × ao vivo + cache validado
 │   ├── cloudSave.ts
 │   └── supabaseClient.ts
 └── utils/
@@ -123,6 +125,7 @@ src/
     ├── formatMoney.ts
     ├── countryFlags.ts
     ├── stadiums.ts
+    ├── fireClick.ts
     └── liveMatchPersistence.ts
 ```
 
@@ -135,4 +138,11 @@ src/
 - **No router**: manual screen state machine in App.tsx
 - **Pure engine**: all match logic is pure functions, testable without React
 - **Cloud save**: Supabase for optional cross-device save/restore
-- **Live roster sync**: football-data.org + SportAPI7 (Sofascore) for real player names, logos, market values
+- **Live roster sync**: três fontes (football-data.org, SportAPI7, API-Football) atrás
+  do mesmo proxy Worker, com fallback offline-first pros elencos estáticos. O cache
+  em localStorage é validado por `version` + `staticIds` da liga — cache divergente
+  é descartado em vez de confiado (ver `rosterSync.ts`)
+- **Limitação conhecida**: os dados de elenco vêm como a fonte informa. Verificado
+  em 2026-07-31 que a football-data.org lista jogador em clube errado em alguns
+  casos (ex: Illan Meslier no Arsenal) — não há correção possível do nosso lado
+  sem heurística arriscada. Ver `.planning/PLANO_PENDENCIAS.md`

@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: ready_to_plan
-stopped_at: Sessão 2026-07-30 — limpeza de código morto + otimização CSS (will-change/contain) + análise de sugestões
-last_updated: 2026-07-30T15:00:00.000Z
+stopped_at: Sessão 2026-07-31 — revisão dos fixes recentes, consolidação de duplicação, docs atualizados
+last_updated: 2026-07-31T00:00:00.000Z
 progress:
   total_phases: 6
   completed_phases: 1
@@ -26,17 +26,55 @@ progress:
 - **Milestone:** M4 — Code Health & Expansion
 - **Status:** Pronto pra próxima sessão
 
-## O que foi feito na última sessão (2026-07-30)
+## O que foi feito na última sessão (2026-07-31)
 
-### Limpeza de código morto
-- Removido `src/engine/penalties.ts` — arquivo sem imports (código morto), com bug (`await` em função não-async `playPenaltyShootout`). A lógica real de pênaltis já está em `matchEngine.ts` (`simularPenaltisInterno`, `resolveKnockoutTiebreak`).
+### Revisão dos fixes recentes
+Revisados os 7 commits desde `385ed78` — os dois de roster, os três de P2
+(mercado/season-end/lobby), o teste de navegação e a limpeza de CSS. Todos
+corretos: verificados por leitura de diff, execução dos testes de regressão, e
+checagem ao vivo no app rodando.
 
-### Otimização CSS (GPU acceleration)
-- Adicionado `will-change: transform` em 7 elementos com animações (`App.css`): `.score-num`, `.simulate-btn`, `.feed-event`, `.sub-toast`, `.screen-fade`, `.lazy-loading::before`, `.penalty-result-flash`/`.penalty-sudden-death`
-- Adicionado `contain: content` no `.commentary-feed` para isolar o layout do feed de scroll
+### Achado: o bug do "jogador no clube errado" tem duas naturezas distintas
+Chamando `fetchCompetitionTeams('pl')` direto no console (bypass de cache e
+merge), confirmei que **Illan Meslier já vem listado como goleiro do Arsenal na
+resposta crua da football-data.org**. Ou seja:
 
-### Análise de sugestões de melhoria
-- Avaliadas 7 sugestões contra o código real — 5 já implementadas (acessibilidade, error boundaries, code splitting, etc.), 1 não se aplica (`advanceMatch()` inexistente), 2 executadas (código morto + CSS)
+- Os dois defeitos **internos** corrigidos são reais e continuam corrigidos:
+  `readCache` cego (`cc0e8ec`) e `apiFootball` usando `statistics[0]` em vez do
+  clube atual (`d14d70b`).
+- Mas a anedota específica que motivou a investigação **não vinha deles** — é
+  dado ruim do provedor. Documentado em `PLANO_PENDENCIAS.md` como limitação
+  conhecida, para não ser reaberto como bug nosso.
+
+### Consolidação de duplicação sobrevivente da colisão entre sessões
+- `goesViaMatchday()` estava exportado em `navigation.ts` e **sem nenhum uso** —
+  `useGameFlow.ts` mantinha a lógica inline duplicada. Consolidado.
+- `CUP_STAGE_LABELS` tinha duas definições idênticas (`engine/careerLabels.ts` e
+  cópia local em `CareerHubScreen.tsx`). Passou a importar a compartilhada.
+
+### Correção de documentação
+`PROJECT.md` rotulava `apiFootball.ts` como "SportAPI7 (Sofascore)" — está
+trocado: `apiFootball.ts` é API-Football v3 e `sportApi.ts` é o SportAPI7.
+Corrigido, com a cobertura de liga de cada fonte anotada.
+
+> Nota: a sessão anterior registrou "removido `src/engine/penalties.ts`", mas
+> esse arquivo nunca existiu em nenhum commit do histórico (`git log --all
+> --follow` vazio). Deve ter sido um arquivo local nunca versionado — sem
+> impacto, mas a entrada anterior estava imprecisa.
+
+## Sessão 2026-07-30 — auditorias e correções
+
+- **Auditoria visual em duas rodadas.** 15 achados na primeira (4 dos quais se
+  revelaram errados na verificação e estão registrados como tal), e as 6 telas
+  que faltavam na segunda. Contraste e alvos de toque **zerados e medidos** em
+  Home, Central, Mercado, Sala de Troféus, Conquistas e lobby.
+- **Correções de fluxo de telas** (ondas 1-4 do `PLANO_FLUXO_TELAS.md`).
+- **Conquistas** agrupadas por categoria, com dica no lugar de `'???'` e barra de
+  progresso.
+- **Objetivos da diretoria** passaram a mostrar progresso durante a temporada
+  (`getObjectiveProgress` + `deriveCupProgress`).
+- **Limpeza CSS**: `will-change` em 7 elementos animados e `contain: content` no
+  feed de comentários.
 
 ## O que foi feito na sessão anterior (2026-07-25)
 
@@ -78,7 +116,9 @@ progress:
 ## Pending / Ações
 
 ### ⚠ SportAPI7 — Mapeamento pendente (4 ligas)
-Quando a cota mensal resetar (1º de agosto), descobrir os `unique-tournament` IDs e `season` IDs para:
+A cota mensal reseta em **1º de agosto de 2026** (amanhã, a partir desta
+atualização). Quando resetar, descobrir os `unique-tournament` IDs e `season`
+IDs para:
 - La Liga 2
 - 2. Bundesliga
 - Serie B
@@ -90,6 +130,15 @@ Quando a cota mensal resetar (1º de agosto), descobrir os `unique-tournament` I
 - Worker `footplan-football-proxy` atualizado com códigos das 2ª divisões no proxy (ELC, BL2, etc.) — deploy feito
 - Os códigos que não funcionam (403) foram removidos do `footballApi.ts`
 
+### Limitação conhecida — qualidade do dado de elenco
+Verificado ao vivo em 2026-07-31: a football-data.org lista jogador em clube
+errado em alguns casos (Illan Meslier aparece como goleiro do Arsenal na
+resposta crua da API). O merge do FootPlan reflete fielmente o que a fonte
+informa; não há correção possível do nosso lado sem uma heurística arriscada
+(ex: "descartar goleiro além de N"), que cortaria elenco legítimo. **Não é bug
+em aberto** — é limitação do tier gratuito do provedor.
+
 ## Blockers/Concerns
 
-Nenhum.
+Nenhum bloqueador. A base está verde: build, lint sem erros, **393 testes, 0
+falhas**.

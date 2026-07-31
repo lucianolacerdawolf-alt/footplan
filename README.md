@@ -28,7 +28,8 @@ Simulador de partidas com foco em **escolhas estratégicas** e **simulação bas
 ### Ligas e Elencos
 - **12 ligas europeias** (6 de 1ª divisão + 6 de acesso) com elencos gerados por OVR do time e atributos calibrados por posição (incluindo subtipos: CB/FB/CDM/CAM/W/ST)
 - **6 ligas de acesso** (Championship, La Liga 2, 2. Bundesliga, Serie B, Ligue 2, Liga Portugal 2) ordenadas lado a lado com a 1ª divisão do mesmo país
-- **Sincronização de elenco ao vivo** via [football-data.org](https://www.football-data.org/) + SportAPI7 (Sofascore): nomes reais, idades, logos e valores de mercado (EUR) dos jogadores. Cache de 7 dias (football-data.org) e 24h (SportAPI7), sempre com fallback offline. Ao iniciar Modo Carreira ou Campeonato, o botão de início fica desabilitado até a sincronização terminar — evita começar com idades/OVRs desatualizados por uma corrida entre o clique e o fetch
+- **Sincronização de elenco ao vivo** via [football-data.org](https://www.football-data.org/), SportAPI7 (Sofascore) e API-Football, todas atrás do mesmo proxy Cloudflare Worker: nomes reais, idades, logos e valores de mercado (EUR) dos jogadores. Cache de 7 dias (football-data.org) e 24h (SportAPI7), validado por versão de schema e pelos ids de time da liga — cache divergente é descartado em vez de confiado. Sempre com fallback offline. Ao iniciar Modo Carreira ou Campeonato, o botão de início fica desabilitado até a sincronização terminar — evita começar com idades/OVRs desatualizados por uma corrida entre o clique e o fetch
+  > Os dados vêm como a fonte informa: em alguns casos a football-data.org lista jogador em clube errado (verificado em 2026-07-31 com Illan Meslier aparecendo no Arsenal). É limitação do tier gratuito do provedor, não do merge.
 - **Cálculo de OVR por subtipo de posição** — o sistema detecta automaticamente se um defensor é zagueiro (CB) ou lateral (FB), se um meia é volante (CDM), central (CM) ou armador (CAM), se um atacante é ponta (W) ou centroavante (ST), aplicando pesos específicos por função. Jogadores de elite (média ponderada > 78) recebem um bônus adicional que cresce com a distância acima desse patamar — separação inspirada na Reputação Internacional do FIFA, sem inflar o meio de tabela
 
 ### Tática e Plantel
@@ -161,7 +162,11 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 | 70'-80' | 1.12× | Acelerando |
 | **80'-90'** | **1.28×** | **Pico: desespero + fadiga** |
 
-> **Calibração**: ~2.2–2.7 gols/jogo em times equiparados. Travada por teste automatizado com 1000 partidas.
+> **Calibração**: ~2.98 gols/jogo em times equiparados (medido em 20.000 partidas).
+> Travada por teste automatizado com 5.000 partidas, faixa 2.0–3.2. A amostra é
+> grande de propósito: com 1.000 jogos o erro padrão (~0.054) era maior que a
+> folga até o teto, e qualquer mudança no motor que deslocasse o fluxo de RNG
+> fazia o teste virar cara ou coroa.
 
 ---
 
@@ -171,7 +176,7 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 |--------|-------|
 | **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Testes** | Vitest 3 (346 testes) + Testing Library (componentes) |
+| **Testes** | Vitest 3 (393 testes) + Testing Library (componentes) |
 | **Estilo** | CSS Modules + App.css/index.css globais |
 | **Renderização** | HTML/CSS (partida é 100% texto); SVG só na escalação visual do Modo Carreira |
 | **Estado** | React Hooks |
@@ -278,7 +283,7 @@ worker/
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # gera dist/
-npm run test     # 346 testes
+npm run test     # 393 testes
 ```
 
 ### Sincronização de elenco ao vivo (opcional)
@@ -294,13 +299,17 @@ cp .env.example .env
 
 ## 🧪 Testes
 
-**346 testes** cobrindo:
+**393 testes** cobrindo:
 - `matchEngine.test.ts` — invariantes, determinismo, cartões/expulsões, OVR
-- `calibration.test.ts` — 1000 partidas: média de gols, dominância OVR, empates, mando de campo
+- `calibration.test.ts` — média de gols (5.000 partidas), dominância OVR, empates, mando de campo
 - `tournament.test.ts` — fadiga, lesões, calendário, chaveamento, classificação
 - `playerRating.test.ts` / `playerOvr.test.ts` — notas, MOTM, cálculo de overall
 - `achievements.test.ts` / `tacticalCommentary.test.ts` / `resolveAttack.test.ts` / `resolveShot.test.ts` / `rng.test.ts`
 - `rosterSync.test.ts` — sincronização de elenco: fallback sem chave, modo proxy, mesclagem, cache, erros de rede/rate-limit, e regressão específica pra colisões de nome (ex: "Barcelona" vs "RCD Espanyol de Barcelona")
+- `repro-roster-cache-blind.test.ts` / `repro-apifootball-stat0.test.ts` — regressões de "jogador no clube errado": cache aceito sem validar a que liga pertence, e jogador transferido atribuído ao clube anterior em vez do atual
+- `boardObjectives.test.ts` / `cupProgress.test.ts` — metas da diretoria, calibração pela estatura do clube, e progresso durante a temporada (fase alcançada até agora × resultado final)
+- `AchievementsScreen.test.tsx` — agrupamento por categoria, dica no lugar de `'???'`, e uma checagem sobre os dados que impede conquista nova entrar sem categoria ou dica
+- `AppScreens.test.ts` — completeness do `screenMap`: toda tela do tipo `Screen` tem renderer, sem órfãos
 - `useMatchSimulation.test.ts` — qual janela de pausa está ativa em cada momento da partida (substituições)
 - `career.test.ts` / `useCareerManager.test.ts` — progressão de jogador, avaliação de troca (RNG determinístico), reputação, avanço de temporada, fadiga/cartões pós-jogo, finanças/inbox (incluindo o bloqueio real de "Avançar Rodada"), fechamento de temporada
 - `squadUtils.test.ts` / `fitness.test.ts` / `discipline.test.ts` / `transferMarket.test.ts` / `inbox.test.ts` / `seasonClosure.test.ts` — lógica pura do Modo Carreira
