@@ -12,6 +12,7 @@ import { allLeagues } from './data/leagues';
 import type { AchievementEvalInput } from './hooks/useAchievements';
 import type { Difficulty } from './engine/matchConfig';
 import { useAppShell } from './hooks/useAppShell';
+import { useAndroidBackButton } from './hooks/useAndroidBackButton';
 import { useLeagueManager } from './hooks/useLeagueManager';
 import { useBracketManager } from './hooks/useBracketManager';
 import { useCareerManager } from './hooks/useCareerManager';
@@ -235,6 +236,8 @@ function App() {
     setBracketState: () => setBracketState(null),
   });
 
+  const closeResumePrompt = useCallback(() => setResumePrompt(null), [setResumePrompt]);
+
   const handleLeagueFromHome = useCallback(() => {
     setTournamentMode('league');
     setReturnScreen('tournament-setup');
@@ -381,6 +384,15 @@ function App() {
   const onElencoScreen = screen === 'setup' && isTournamentEntry;
   const showCareerTabs = isCareerMode && !!careerState && (CAREER_TAB_SCREENS.has(screen) || onElencoScreen);
   const activeCareerTab = onElencoScreen ? 'elenco' : getCareerTabForScreen(screen);
+
+  // Botão físico de voltar do Android. No navegador o hook não registra nada.
+  useAndroidBackButton({
+    screen, setScreen, goHome,
+    isCareerMode, hasCareerState: !!careerState,
+    tournamentMode, matchContext, isTournamentEntry, returnScreen,
+    overlayOpen: !!resumePrompt,
+    onCloseOverlay: closeResumePrompt,
+  });
 
   return (
     <>

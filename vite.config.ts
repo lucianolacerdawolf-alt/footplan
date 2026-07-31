@@ -3,10 +3,16 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+// `--mode native` (build do Capacitor) em vez de env var: funciona igual em
+// cmd.exe e em shell POSIX, sem depender de cross-env. O `.env` normal continua
+// sendo carregado nesse modo, então as VITE_* seguem valendo.
+export default defineConfig(({ mode }) => ({
+  // No build nativo o service worker é dispensável — os assets já vêm dentro do
+  // APK — e é ativamente nocivo: o cache do Workbox sobrevive à atualização do
+  // app e pode servir a versão antiga do bundle. Por isso o PWA só entra no web.
   plugins: [
     react(),
-    VitePWA({
+    mode !== 'native' && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons.svg'],
       manifest: {
@@ -32,9 +38,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
       },
     }),
-  ],
+  ].filter(Boolean),
   base: './',
   resolve: {
     alias: { '@': path.resolve(__dirname, 'src') },
   },
-})
+}))
