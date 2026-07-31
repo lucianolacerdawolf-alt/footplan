@@ -6,6 +6,7 @@ import type { AchievementEvalInput } from './useAchievements';
 import { setMatchDifficulty, type Difficulty } from '../engine/matchConfig';
 
 import type { Screen, MatchContext } from '../types/navigation';
+import { goesViaMatchday } from '../types/navigation';
 
 interface UseGameFlowParams {
   setScreen: (s: Screen) => void;
@@ -74,8 +75,7 @@ export function useGameFlow({
       return;
     }
     setHomeTeam(home); setAwayTeam(away);
-    const goViaMatchday = matchContext === 'league' || matchContext === 'bracket';
-    setScreen(goViaMatchday ? 'matchday' : 'match');
+    setScreen(goesViaMatchday(matchContext) ? 'matchday' : 'match');
   }, [isTournamentEntry, isCareerMode, matchContext, leagueState, bracketState, setLeagueState, setBracketState, setIsTournamentEntry, setScreen, setHomeTeam, setAwayTeam, difficulty, homeTeam]);
 
   const handleViewStats = useCallback((result: MatchResult) => {

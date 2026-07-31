@@ -8,6 +8,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import type { LeagueFixture } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
+import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import { playerOvr } from '../utils/playerOvr';
 import InboxPanel from './InboxPanel';
 import styles from './CareerHubScreen.module.css';
@@ -32,14 +33,6 @@ interface Props {
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
   blockAdvanceReason?: string;
 }
-
-const CUP_STAGE_LABELS: Record<string, string> = {
-  roundOf16: 'Oitavas',
-  quarterfinals: 'Quartas',
-  semifinals: 'Semis',
-  final: 'Final',
-  champion: 'Campeão',
-};
 
 type NextMatch =
   | { type: 'league'; fixture: LeagueFixture; homeName: string; awayName: string; round: number }

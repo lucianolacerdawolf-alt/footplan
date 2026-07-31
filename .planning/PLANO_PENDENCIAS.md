@@ -48,6 +48,21 @@ times estáticos da liga — cache divergente/antigo é descartado (bump de
 > Por que P0: o jogo se vende por "elencos reais". Com jogador no time errado,
 > nada mais na tela tem credibilidade — nem OVR, nem destaque, nem transferência.
 
+**Ressalva verificada ao vivo em 2026-07-31.** Os dois fixes acima corrigem
+defeitos internos reais e testados — mas a anedota original que motivou a
+investigação (Illan Meslier "no Arsenal") **não** era causada por eles. Com
+cache limpo e recém-sincronizado (`version: 2`, `staticIds` batendo), chamei
+`fetchCompetitionTeams('pl')` direto no console e conferi a resposta **crua**
+da football-data.org antes de qualquer merge do FootPlan: Arsenal FC já vem de
+lá com 4 goleiros — Raya, Kepa, Setford **e Meslier**. Ou seja, o dado chega
+errado (ou desatualizado) da própria API; `mergeTeamRoster` só reflete
+fielmente o que a fonte informa. Não há como corrigir isso no código do
+FootPlan sem inventar uma heurística de "descartar goleiro demais", que tem
+risco de cortar clube que legitimamente carrega elenco largo. Registrado como
+limitação conhecida do tier gratuito da football-data.org, não como bug em
+aberto — os dois defeitos internos que existiam (H1, H2) estão corrigidos e
+testados independentemente disso.
+
 ---
 
 ## P1 — ✅ Concluído (era trabalho que se perdeu na colisão)
@@ -174,7 +189,25 @@ Preferir edição pontual. Verificado agora: não há mojibake remanescente.
 
 ## Situação da base
 
-`f1dceae` · build verde · lint sem erros · **369 testes, 0 falhas**
+`5a98204` (+ 2 limpezas de revisão) · build verde · lint sem erros ·
+**393 testes, 0 falhas**
 
 Contraste e alvos de toque estão **zerados e medidos** em Home, Central da
 Carreira, Mercado, Sala de Troféus, Conquistas e lobby online.
+
+## Revisão de 2026-07-31 — pequenas limpezas
+
+Duas duplicações sobreviventes da colisão entre sessões, sem risco mas sem
+motivo pra manter:
+
+- **`goesViaMatchday()`** existia exportado em `navigation.ts` mas
+  `useGameFlow.ts` seguia com a lógica inline duplicada (a extração tinha sido
+  revertida numa colisão anterior e nunca refeita). Consolidado — o hook agora
+  importa e usa a função.
+- **`CUP_STAGE_LABELS`** tinha duas definições idênticas: a exportada em
+  `engine/careerLabels.ts` (usada por `AppScreens.tsx`) e uma cópia local
+  dentro de `CareerHubScreen.tsx`. `CareerHubScreen` agora importa a
+  compartilhada.
+
+Ambas verificadas: build, lint, 393 testes e navegação até o Matchday
+conferida ao vivo depois da mudança.
