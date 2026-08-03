@@ -16,6 +16,7 @@ import { useTransferManager } from './career/useTransferManager';
 import { useCareerSeason } from './career/useCareerSeason';
 import { useCareerInbox } from './career/useCareerInbox';
 import { useCareerJobMarket } from './career/useCareerJobMarket';
+import { useCareerConversations } from './career/useCareerConversations';
 import type { Screen } from '../types/navigation';
 
 // Timestamp (ms) do último save local da carreira — usado pra reconciliar com o
@@ -140,9 +141,11 @@ export function useCareerManager({
     setScreen('career-hub');
   }, [setCareerState, setIsCareerMode, setScreen]);
 
+  const conversations = useCareerConversations({ careerState, setCareerState, setToastMsg });
   const matchFlow = useCareerMatchFlow({
     careerState, setCareerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     recordH2H, setToastMsg,
+    generateConversation: conversations.handleMaybeGenerateConversation,
   });
   const transfers = useTransferManager({ careerState, setCareerState, setToastMsg });
   const season = useCareerSeason({ careerState, setCareerState, setScreen, setToastMsg });
@@ -157,5 +160,6 @@ export function useCareerManager({
     ...season,
     ...inbox,
     ...jobMarket,
+    ...conversations,
   };
 }

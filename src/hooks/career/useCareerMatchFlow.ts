@@ -24,6 +24,7 @@ import { saveLiveMatchMeta } from '@/utils/liveMatchPersistence';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult, extractScorers } from '../shared/matchHandlers';
 import { maybeGetCareerEvent } from '@/engine/careerEvents';
 import { getFinances, getInbox, isTransferWindowOpen, getTransferList, type CareerState, type InboxMessage } from '@/engine/career';
+import type { ConversationContext } from '@/engine/playerConversations';
 import type { Screen } from '@/types/navigation';
 
 interface UseCareerMatchFlowParams {
@@ -37,11 +38,13 @@ interface UseCareerMatchFlowParams {
   setIsTournamentEntry: (v: boolean) => void;
   recordH2H: (homeId: string, awayId: string, homeScore: number, awayScore: number) => void;
   setToastMsg: (msg: string | null) => void;
+  /** Fase 4 — tenta gerar 0-1 conversa com atleta no contexto dado. */
+  generateConversation?: (ctx: ConversationContext) => void;
 }
 
 export function useCareerMatchFlow({
   careerState, setCareerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
-  recordH2H, setToastMsg,
+  recordH2H, setToastMsg, generateConversation,
 }: UseCareerMatchFlowParams) {
   const [pendingCareerLeagueFixture, setPendingCareerLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
   const [pendingCareerBracketStage, setPendingCareerBracketStage] = useState<PlayableStage | null>(null);
@@ -230,7 +233,12 @@ export function useCareerMatchFlow({
         inbox: newMessages.length > 0 ? [...getInbox(prev), ...newMessages] : prev.inbox,
       };
     });
-  }, [careerState, setCareerState, setToastMsg]);
+    // Fase 4 — sinais estruturais no avanço de rodada (banco/lista/contrato): o motor
+    // garante 0-1 por rodada e não duplica com a conversa pós-jogo do mesmo round.
+    if (generateConversation) {
+      generateConversation({ seasonYear: careerState.currentSeasonYear, round: next });
+    }
+  }, [careerState, setCareerState, setToastMsg, generateConversation]);
 
   const handleCareerLeagueMatchResult = useCallback((result: MatchResult) => {
     if (!careerState || !pendingCareerLeagueFixture) return;
@@ -270,8 +278,16 @@ export function useCareerMatchFlow({
         inbox: newInjuryMessages.length > 0 ? [...getInbox(prev), ...newInjuryMessages] : prev.inbox,
       };
     });
+    // Fase 4 — conversa pós-jogo: derrota pesada/dérbi → 'form', vitória → 'praise'.
+    if (generateConversation) {
+      generateConversation({
+        seasonYear: careerState.currentSeasonYear,
+        round: leg.currentRound,
+        lastResult: { userScore, oppScore, opponentId: userIsHome ? fixture.awayTeamId : fixture.homeTeamId },
+      });
+    }
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
-  }, [careerState, pendingCareerLeagueFixture, recordH2H, setToastMsg, setCareerState]);
+  }, [careerState, pendingCareerLeagueFixture, recordH2H, setToastMsg, setCareerState, generateConversation]);
 
   const handleEditCareerBracketTactics = useCallback(() => {
     if (!careerState) return;

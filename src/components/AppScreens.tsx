@@ -169,6 +169,7 @@ export interface AppScreensProps {
   handleRenewContract: (playerId: string, years: number) => void;
   handleAcceptJobOffer: (offerId: string) => void;
   handleDeclineJobOffer: (offerId: string) => void;
+  handleRespondConversation: (convId: string, choiceIdx: number) => void;
   handleAdvanceSeason: () => void;
   handleMarkInboxRead: (id: string) => void;
   handleRenegotiateSponsor: () => void;
@@ -521,6 +522,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onRenewContract={(playerId) => p.handleRenewContract(playerId, 1)}
         onOpenJobMarket={() => p.setScreen('career-job-market')}
         jobOfferCount={getJobOffers(p.careerState).length}
+        onRespondConversation={p.handleRespondConversation}
         blockAdvanceReason={hubBlockAdvanceReason}
       />
     );

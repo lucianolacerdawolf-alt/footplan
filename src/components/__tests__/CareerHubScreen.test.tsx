@@ -25,7 +25,7 @@ function makeCareerState(overrides: Partial<CareerState> = {}): CareerState {
   };
 }
 
-function renderHub(state: CareerState, onMarkInboxRead = vi.fn()) {
+function renderHub(state: CareerState, onMarkInboxRead = vi.fn(), onRespondConversation = vi.fn()) {
   return render(
     <CareerHubScreen
       state={state}
@@ -38,6 +38,7 @@ function renderHub(state: CareerState, onMarkInboxRead = vi.fn()) {
       onMarkInboxRead={onMarkInboxRead}
       onAcceptTransferOffer={vi.fn()}
       onRejectTransferOffer={vi.fn()}
+      onRespondConversation={onRespondConversation}
     />
   );
 }
@@ -72,5 +73,45 @@ describe('CareerHubScreen — inbox', () => {
     const state = makeCareerState({ inbox: undefined });
     renderHub(state);
     expect(screen.getByText('Nenhuma mensagem por enquanto.')).toBeInTheDocument();
+  });
+});
+
+describe('CareerHubScreen — conversas com atletas', () => {
+  it('mostra conversa pendente e responde aplicando a escolha', () => {
+    const onRespondConversation = vi.fn();
+    const state = makeCareerState({
+      playerConversations: [{
+        id: 'c1', playerId: 'p1', playerName: 'Atacante', topic: 'praise',
+        message: 'Que fase, treinador!', seasonYear: 1, round: 0, responded: false,
+      }],
+    });
+    renderHub(state, vi.fn(), onRespondConversation);
+
+    expect(screen.getByText('💬 Conversas com Atletas')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Atacante'));
+    expect(screen.getByText(/Que fase, treinador!/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/Continue assim/));
+    expect(onRespondConversation).toHaveBeenCalledWith('c1', 0);
+  });
+
+  it('conversa respondida não oferece botões', () => {
+    const onRespondConversation = vi.fn();
+    const state = makeCareerState({
+      playerConversations: [{
+        id: 'c1', playerId: 'p1', playerName: 'Atacante', topic: 'form',
+        message: 'Má fase.', seasonYear: 1, round: 0, responded: true,
+      }],
+    });
+    renderHub(state, vi.fn(), onRespondConversation);
+
+    fireEvent.click(screen.getByText('Atacante'));
+    expect(screen.getByText('✓ Conversa encerrada')).toBeInTheDocument();
+    expect(screen.queryByText(/Continue assim/)).not.toBeInTheDocument();
+  });
+
+  it('sem conversas mostra estado vazio', () => {
+    renderHub(makeCareerState());
+    expect(screen.getByText('Nenhuma conversa por enquanto.')).toBeInTheDocument();
   });
 });

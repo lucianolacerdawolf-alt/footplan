@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress, getContractSeasonsLeft } from '../engine/career';
+import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress, getContractSeasonsLeft, getPlayerConversations } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
@@ -12,6 +12,7 @@ import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import { playerOvr } from '../utils/playerOvr';
 import { getStarterCount } from '../engine/squadUtils';
 import InboxPanel from './InboxPanel';
+import ConversationsPanel from './ConversationsPanel';
 import styles from './CareerHubScreen.module.css';
 
 interface Props {
@@ -35,6 +36,8 @@ interface Props {
   onOpenJobMarket: () => void;
   /** Nº de ofertas de emprego em aberto (pra badge na Central). */
   jobOfferCount: number;
+  /** Fase 4 — responde uma conversa com atleta (aplica moral no time). */
+  onRespondConversation?: (convId: string, choiceIdx: number) => void;
   /** Abre o Escritório (tela da liga) — usado quando ainda faltam jogos da rodada. */
   onViewLeague: () => void;
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
@@ -91,7 +94,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onRenewContract, onOpenJobMarket, jobOfferCount, blockAdvanceReason }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onRenewContract, onOpenJobMarket, jobOfferCount, onRespondConversation, blockAdvanceReason }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -328,6 +331,13 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
         </span>
         <span className={styles.jobMarketChevron}>→</span>
       </button>
+
+      {onRespondConversation && (
+        <ConversationsPanel
+          conversations={getPlayerConversations(state)}
+          onRespond={onRespondConversation}
+        />
+      )}
 
       <InboxPanel
         messages={inbox}

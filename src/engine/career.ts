@@ -91,6 +91,26 @@ export interface JobOffer {
   offeredSeasonYear: number;
 }
 
+/** Assunto de uma conversa com atleta (Fase 4). */
+export type ConversationTopic =
+  | 'bench'    // titular alto-OVR fora do XI
+  | 'form'     // pós-derrota pesada ou dérbi perdido
+  | 'praise'   // pós-vitória importante
+  | 'transfer-listed'
+  | 'contract'; // contrato ≤1 temporada
+
+/** Conversa de um atleta com o treinador — ao responder, afeta a moral do time. */
+export interface PlayerConversation {
+  id: string;
+  playerId: string;
+  playerName: string;
+  topic: ConversationTopic;
+  message: string;
+  seasonYear: number;
+  round: number;
+  responded: boolean;
+}
+
 export interface CareerState {
   version: 1;
   leagueId: string;
@@ -123,6 +143,9 @@ export interface CareerState {
   // Ofertas de emprego do mercado de treinador (Fase 2) — geradas no fechamento de
   // temporada, decidíveis durante a temporada seguinte. Aceitar troca de clube.
   jobOffers?: JobOffer[];
+  // Conversas com atletas (Fase 4) — 0-1 por rodada, respondíveis a qualquer momento;
+  // responder aplica moraleDelta na moral do time.
+  playerConversations?: PlayerConversation[];
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };
@@ -141,6 +164,10 @@ export function getTransferList(state: CareerState): string[] {
 
 export function getJobOffers(state: CareerState): JobOffer[] {
   return state.jobOffers ?? [];
+}
+
+export function getPlayerConversations(state: CareerState): PlayerConversation[] {
+  return state.playerConversations ?? [];
 }
 
 /** Janela de transferências: rounds 1-5 e 19-24 (0-indexed: <=4 e 18-23). Fonte única —

@@ -11,12 +11,12 @@
 | 5 | Painel "Minha Carreira" (retrospectiva) | ✅ **Concluída** (`824ffe7`) |
 | 1 | Contratos & Renovações | ✅ **Concluída** |
 | 2 | Mercado de Treinador (trocar de clube) | ✅ **Concluída** |
-| 4 | Conversas com atletas | ⏳ pendente |
+| 4 | Conversas com atletas | ✅ **Concluída** |
 | 3 | Imersão pré-jogo (treino + coletiva + feed) | ⏳ pendente |
 
 **Ordem de execução recomendada** (risco crescente, cada fase entregável sozinha):
 Fase 5 → Fase 1 → **Fase 4** → Fase 3 → Fase 2. (A numeração é temática; a próxima
-a executar é a **Fase 4 — Conversas com atletas**.)
+a executar é a **Fase 3 — Imersão pré-jogo**.)
 
 **Objetivo geral:** dar profundidade de gestão (contratos), longevidade/ambição
 (trocar de clube), imersão (rituais pré-jogo + conversas) e retrospectiva (painel de
@@ -115,36 +115,45 @@ Retrospectiva agregada da jornada, **derivada read-only** de `history` +
 
 ---
 
-## Fase 4 — Conversas com atletas (diálogos afetando moral)
+## Fase 4 — Conversas com atletas (diálogos afetando moral) ✅ CONCLUÍDA
 
-Nota: a moral hoje é **do time** (`Team.morale`, -10..+10), não por jogador. As
+A moral hoje é **do time** (`Team.morale`, -10..+10), não por jogador. As
 conversas usam essa moral de time, integrada ao efeito moral→ataque do motor.
 
-**Modelo de dados**
-- `CareerState.playerConversations?: PlayerConversation[]`;
-  `PlayerConversation { id, playerId, playerName, topic, message, seasonYear, round,
-  responded }`. `topic`: `'bench'`, `'form'`, `'praise'`, `'transfer-listed'`,
-  `'contract'`. Getter `getPlayerConversations(state)` com backfill `[]`.
+**Entregue:**
+- **Modelo:** `CareerState.playerConversations?: PlayerConversation[]` (opcional —
+  compat com saves antigos); `PlayerConversation { id, playerId, playerName, topic,
+  message, seasonYear, round, responded }`. `topic`: `'bench'`, `'form'`,
+  `'praise'`, `'transfer-listed'`, `'contract'`. Getter `getPlayerConversations`
+  com backfill `[]` (`src/engine/career.ts`).
+- **Engine** (`src/engine/playerConversations.ts`):
+  - `maybeGenerateConversation(state, ctx, rng)` — 0–1 conversa/rodada. Prioridade:
+    resultado recente (dérbi perdido → `form`; derrota por ≥2 → `form`; vitória por
+    ≥2 → `praise`) e, na falta, sinais estruturais (titular ≥78 OVR fora do XI →
+    `bench`; na `transferListPlayerIds` → `transfer-listed`; contrato ≤1 →
+    `contract`) com 45% de chance. Nunca gera em rodada que já tem conversa não
+    respondida. `getDerbyName` dispara o tom de dérbi.
+  - `CONVERSATION_RESPONSES` — por tópico, 3 respostas com `moraleDelta` (apoiar +2,
+    honesto 0, duro −2). `respondToConversation(conv, choiceIdx)` retorna a escolha.
+- **Hooks** (`src/hooks/career/useCareerConversations.ts`):
+  - `handleMaybeGenerateConversation(ctx)` — usado pelo `useCareerMatchFlow` em
+    `handleCareerLeagueMatchResult` (pós-jogo) e `handleNextCareerLeagueRound`
+    (sinais estruturais da rodada seguinte). `≤1/rodada` garantido no motor.
+  - `handleRespondConversation(convId, choiceIdx)` — aplica `moraleDelta` via
+    `applyMoraleToTeam` nos 3 espelhos (rosters + league + cup), marca `responded` e
+    dá toast.
+- **UI:** painel **"Conversas com Atletas"** (`ConversationsPanel.tsx` + módulo CSS)
+  na `CareerHubScreen` (acima da inbox), reusando o visual do `InboxPanel`: jogador +
+  badge de não-respondidas; ao abrir, fala + 3 respostas → toast de moral.
+- Testes: `src/engine/__tests__/playerConversations.test.ts` (13) + casos em
+  `useCareerManager.test.ts` (7) e `CareerHubScreen.test.tsx` (3). Suíte: **477**.
 
-**Engine** (novo `src/engine/playerConversations.ts`)
-- `maybeGenerateConversation(state, ctx, rng)`: 0–1 conversa/rodada a partir de sinais
-  que já existem — titular alto-OVR fora do XI (`getStarters` vs elenco), jogador em
-  `transferListPlayerIds`, contrato ≤1 temporada (Fase 1), ou pós-derrota pesada/derby
-  (`getDerbyName`). Escolhe `topic`+`message` de um pool por contexto.
-- `respondToConversation(conv, choiceIdx)`: cada tópico tem 2–3 respostas com
-  `moraleDelta` (apoiar +2, honesto 0, duro −2). Retorna o delta p/ `applyMoraleToTeam`.
-
-**Hooks** (em `useCareerInbox` ou novo `useCareerConversations`)
-- Gerar em `handleNextCareerLeagueRound`/`handleCareerLeagueMatchResult`.
-- `handleRespondConversation(convId, choiceIdx)`: aplica `moraleDelta`, marca
-  `responded`, toast.
-
-**UI** — painel **"Conversas com Atletas"** ao lado do inbox no `CareerHubScreen`
-(reusar visual de `InboxPanel`): jogador + trecho; ao abrir, fala + 2–3 respostas →
-toast de moral. Badge de não-lidas.
-
-**Testes** — geração pelos gatilhos certos (banco/listado/contrato/derrota), ≤1/rodada;
-resposta aplica `moraleDelta` com clamp; save sem o campo não quebra.
+**Desvios do plano original (registrados):**
+- Conversa de `bench` exige OVR ≥78 no banco (não "titular no banco" absoluto — o
+  motor não rastreia titularidade individual, só o XI por posição).
+- `handleRespondConversation` vive em hook novo (`useCareerConversations`), não no
+  `useCareerInbox` — a geração também é exposta ali e injetada no
+  `useCareerMatchFlow` via prop (sem acoplar o match flow ao hook).
 
 ---
 

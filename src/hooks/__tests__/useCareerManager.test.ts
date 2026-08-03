@@ -6,7 +6,7 @@ import { makeTeam } from '@/components/__tests__/testFixtures';
 import { getLeague } from '@/data/leagues';
 import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue, renewalCost } from '@/engine/transferMarket';
 import { computeStandings } from '@/engine/tournament';
-import { deriveCupResult, getFinances, getFreeAgentPool, getJobOffers } from '@/engine/career';
+import { deriveCupResult, getFinances, getFreeAgentPool, getJobOffers, getPlayerConversations } from '@/engine/career';
 import type { MatchResult, MatchEvent, Team, Player } from '@/engine/types';
 import * as careerEvents from '@/engine/careerEvents';
 
@@ -1309,5 +1309,124 @@ describe('Mercado de Treinador (Fase 2)', () => {
     expect(result.current.careerState!.leagueId).toBe('pl');
     expect(params.setToastMsg).toHaveBeenCalled();
     expect(params.setScreen).not.toHaveBeenCalled();
+  });
+});
+
+describe('Conversas com Atletas (Fase 4)', () => {
+  it('responder conversa aplica moraleDelta no time (3 espelhos) e marca como respondida', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    act(() => { result.current.setCareerState(prev => prev && ({
+      ...prev,
+      playerConversations: [{
+        id: 'c1', playerId: 'user-fwd1', playerName: 'Atacante', topic: 'praise',
+        message: 'Que fase!', seasonYear: 1, round: 0, responded: false,
+      }],
+    })); });
+
+    const moraleBefore = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.morale ?? 0;
+
+    act(() => { result.current.handleRespondConversation('c1', 0); }); // apoiar → +2
+
+    const after = result.current.careerState!;
+    const rosterTeam = after.rosters[leagueId].find(t => t.id === userTeamId)!;
+    expect(rosterTeam.morale).toBe(moraleBefore + 2);
+    // Espelhos: liga e copa também recebem o delta.
+    expect(after.season.league.teams.find(t => t.id === userTeamId)!.morale).toBe(moraleBefore + 2);
+    expect(after.season.cup.teams.find(t => t.id === userTeamId)!.morale).toBe(moraleBefore + 2);
+    expect(getPlayerConversations(after).find(c => c.id === 'c1')!.responded).toBe(true);
+    expect(params.setToastMsg).toHaveBeenCalled();
+  });
+
+  it('responder com resposta dura (idx 2) aplica -2', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    act(() => { result.current.setCareerState(prev => prev && ({
+      ...prev,
+      playerConversations: [{
+        id: 'c2', playerId: 'user-fwd1', playerName: 'Atacante', topic: 'form',
+        message: 'Má fase', seasonYear: 1, round: 0, responded: false,
+      }],
+    })); });
+
+    act(() => { result.current.handleRespondConversation('c2', 2); });
+
+    const after = result.current.careerState!;
+    const rosterTeam = after.rosters[leagueId].find(t => t.id === userTeamId)!;
+    expect(rosterTeam.morale).toBe(-2);
+    expect(getPlayerConversations(after).find(c => c.id === 'c2')!.responded).toBe(true);
+  });
+
+  it('conversa já respondida é no-op (não reaplica moral)', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    act(() => { result.current.setCareerState(prev => prev && ({
+      ...prev,
+      playerConversations: [{
+        id: 'c3', playerId: 'user-fwd1', playerName: 'Atacante', topic: 'praise',
+        message: 'Que fase!', seasonYear: 1, round: 0, responded: true,
+      }],
+    })); });
+    const moraleBefore = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.morale ?? 0;
+
+    act(() => { result.current.handleRespondConversation('c3', 0); });
+
+    const rosterTeam = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!;
+    expect(rosterTeam.morale ?? 0).toBe(moraleBefore);
+    expect(params.setToastMsg).not.toHaveBeenCalled();
+  });
+
+  it('conversa inexistente é no-op', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    startPlCareer(result);
+
+    act(() => { result.current.handleRespondConversation('nao-existe', 0); });
+
+    expect(params.setToastMsg).not.toHaveBeenCalled();
+  });
+
+  it('save sem o campo playerConversations não quebra (getter backfill)', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    // Remove o campo pra simular save antigo.
+    act(() => { result.current.setCareerState(prev => prev && ({
+      ...prev,
+      playerConversations: undefined,
+    })); });
+    expect(getPlayerConversations(result.current.careerState!)).toEqual([]);
+  });
+
+  it('avanço de rodada pode gerar conversa de contrato (contrato ≤1 no elenco)', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const player = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad[0];
+    setContractFor(result, player.id, 1);
+
+    // Math.random baixa: passa o gate de 45% e escolhe o sinal estrutural.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
+    act(() => { result.current.handleNextCareerLeagueRound(); });
+    randomSpy.mockRestore();
+
+    const convs = getPlayerConversations(result.current.careerState!);
+    expect(convs.length).toBe(1);
+    expect(convs[0].topic).toBe('contract');
+    // O atleta escolhido tem contrato ≤1 no elenco (pode ser o GK setado ou outro).
+    const convPlayer = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad.find(p => p.id === convs[0].playerId);
+    expect(convPlayer).toBeDefined();
+    expect(convPlayer!.contractSeasonsLeft ?? 2).toBeLessThanOrEqual(1);
+  });
+
+  it('avanço de rodada sem sinal estrutural e com Math.random alta não gera conversa', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.9);
+    act(() => { result.current.handleNextCareerLeagueRound(); });
+    randomSpy.mockRestore();
+
+    expect(getPlayerConversations(result.current.careerState!)).toEqual([]);
   });
 });
