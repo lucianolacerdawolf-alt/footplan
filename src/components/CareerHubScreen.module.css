@@ -181,35 +181,6 @@
   font-size: 10px; color: #f87171; text-align: center; font-weight: 600;
 }
 
-/* ── Contratos a expirar (Fase 1) ─────────────────────────── */
-.expiringCard {
-  padding: 12px 14px; border-radius: 10px;
-  border: 1.5px solid #7c2d12; background: rgba(154,52,18,0.08);
-  display: flex; flex-direction: column; gap: 6px;
-}
-.expiringTitle {
-  font-size: 11px; font-weight: 700; color: #fdba74; text-transform: uppercase; letter-spacing: 0.5px;
-}
-.expiringRow {
-  display: flex; align-items: center; gap: 8px;
-  padding: 4px 8px; border-radius: 6px;
-  background: #111827; font-size: 11px; flex-wrap: wrap;
-}
-.expiringName { color: #d1d5db; flex: 1; min-width: 0; }
-.expiringPos { font-size: 9px; font-weight: 700; }
-.expiringOvr { font-size: 10px; color: var(--accent); font-weight: 700; }
-.expiringCount { font-size: 10px; color: #fdba74; font-weight: 600; white-space: nowrap; }
-.expiringBtn {
-  min-height: 36px; border: 1px solid #b45309; background: rgba(180,83,9,0.15);
-  color: #fdba74; border-radius: 6px; padding: 4px 10px;
-  font-size: 10px; font-weight: 700; cursor: pointer; font-family: var(--sans);
-  transition: background 0.15s;
-}
-.expiringBtn:hover { background: rgba(180,83,9,0.35); }
-.expiringHint {
-  font-size: 10px; color: var(--text-secondary); text-align: center; font-style: italic;
-}
-
 /* ── Mercado de Treinador (Fase 2) ───────────────────────── */
 .jobMarketCard {
   display: flex; align-items: center; gap: 10px;

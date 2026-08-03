@@ -527,7 +527,6 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onRenegotiateSponsor={p.handleRenegotiateSponsor}
         onNextRound={p.handleNextCareerLeagueRound}
         onViewLeague={() => p.setScreen('career-league')}
-        onRenewContract={(playerId) => p.handleRenewContract(playerId, 1)}
         onOpenJobMarket={() => p.setScreen('career-job-market')}
         jobOfferCount={getJobOffers(p.careerState).length}
         onRespondConversation={p.handleRespondConversation}
@@ -590,6 +589,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         transfers={getTransferHistory(cs)}
         currentSeason={currentSeason}
         reputation={cs.manager.reputation}
+        userSquad={cs.rosters[cs.leagueId]?.find(t => t.id === lg.userTeamId)?.squad}
+        onRenewContract={(playerId) => p.handleRenewContract(playerId, 1)}
       />
     );
   },

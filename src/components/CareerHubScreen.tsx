@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress, getContractSeasonsLeft, getPlayerConversations, getPreMatchDoneRound, getTransferHistory } from '../engine/career';
+import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
@@ -37,8 +37,6 @@ interface Props {
   onRenegotiateSponsor: () => void;
   /** Avança a rodada da liga direto da Central, sem passar pelo Escritório. */
   onNextRound: () => void;
-  /** Fase 1 — renova contrato por 1 temporada a partir do card "Contratos a expirar". */
-  onRenewContract?: (playerId: string) => void;
   /** Fase 2 — abre o mercado de treinador (trocar de clube). */
   onOpenJobMarket: () => void;
   /** Nº de ofertas de emprego em aberto (pra badge na Central). */
@@ -116,7 +114,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onRenewContract, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -154,11 +152,8 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
     return Math.round(starters.reduce((s, p) => s + playerOvr(p), 0) / starters.length);
   }, [userTeam]);
 
-  // Fase 1 — elenco com contrato vencendo (≤1 temporada) pra renovação rápida.
-  const expiringContracts = useMemo(() => {
-    if (!userTeam) return [];
-    return userTeam.squad.filter(p => getContractSeasonsLeft(p) <= 1);
-  }, [userTeam]);
+  // Fase 1 — contratos a expirar agora vivem na aba "Meu Clube" (gestão do clube),
+  // junto de finanças/transferências; a Central ficou enxuta e focada no jogo.
 
   const totalRounds = state.season.league.fixtures.length;
   const currentRound = state.season.league.currentRound;
@@ -364,30 +359,6 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
               ⚠️ {boardObj.streakBad >= 3 ? 'Última chance: ' : ''}Diretoria insatisfeita ({boardObj.streakBad} temporada{boardObj.streakBad > 1 ? 's' : ''} consecutiva{boardObj.streakBad > 1 ? 's' : ''} abaixo do esperado)
             </div>
           )}
-        </div>
-      )}
-
-      {expiringContracts.length > 0 && (
-        <div className={styles.expiringCard}>
-          <div className={styles.expiringTitle}>📋 Contratos a expirar</div>
-          {expiringContracts.map(p => (
-            <div key={p.id} className={styles.expiringRow}>
-              <span className={styles.expiringName}>{p.name}</span>
-              <span className={`${styles.expiringPos} pos-${p.position.toLowerCase()}`}>{p.position}</span>
-              <span className={styles.expiringOvr}>{playerOvr(p)} OVR</span>
-              <span className={styles.expiringCount}>{getContractSeasonsLeft(p)} temp.</span>
-              {onRenewContract && (
-                <button
-                  className={styles.expiringBtn}
-                  onClick={() => onRenewContract(p.id)}
-                  title={`Renovar contrato de ${p.name} por 1 temporada`}
-                >
-                  Renovar
-                </button>
-              )}
-            </div>
-          ))}
-          <div className={styles.expiringHint}>Contratos vencem ao fim da temporada.</div>
         </div>
       )}
 

@@ -3,6 +3,9 @@ import type { CareerSeasonHistoryEntry, ClubFinances, TransferRecord, TransferRe
 import { CUP_RESULT_LABELS } from '../engine/careerLabels';
 import { computeCareerSummary, careerHighlights } from '../engine/careerStats';
 import { formatMoney } from '../utils/formatMoney';
+import { playerOvr } from '../utils/playerOvr';
+import { getContractSeasonsLeft } from '../engine/career';
+import type { Player } from '../engine/types';
 import FinancePanel from './FinancePanel';
 import CareerSummaryPanel from './CareerSummaryPanel';
 import styles from './TrophyRoomScreen.module.css';
@@ -15,6 +18,10 @@ interface Props {
   transfers?: TransferRecord[];
   /** Reputação atual do técnico — alimenta o tile de reputação do painel Minha Carreira. */
   reputation?: number;
+  /** Elenco atual do usuário — usado pra listar contratos a expirar na gestão do clube. */
+  userSquad?: Player[];
+  /** Fase 1 — renova contrato por 1 temporada a partir da Central de Comandos. */
+  onRenewContract?: (playerId: string) => void;
   /** Resumo da temporada em curso — só usado no estado vazio, pra tela não virar
    *  um beco quando ainda não há nenhuma temporada concluída. */
   currentSeason?: {
@@ -52,13 +59,17 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: '#ef4444' };
 }
 
-export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation }: Props) {
+export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
   const transfersRecent = transfers ? [...transfers].reverse() : [];
   // Painel "Minha Carreira" — só faz sentido com ao menos 1 temporada concluída.
   const summary = ordered.length > 0 ? computeCareerSummary(history, reputation ?? 0) : null;
   const highlights = ordered.length > 0 ? careerHighlights(history, transfers ?? []) : null;
+  // Fase 1 — contrato vencendo (≤1 temporada) pra renovação rápida na gestão do clube.
+  const expiringContracts = userSquad
+    ? userSquad.filter(p => getContractSeasonsLeft(p) <= 1)
+    : [];
 
   return (
     <div className={`${styles.screen} app-screen`}>
@@ -69,6 +80,39 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
       {summary && highlights && <CareerSummaryPanel summary={summary} highlights={highlights} />}
 
       {finances && <FinancePanel finances={finances} />}
+
+      {userSquad && (
+        <div className={styles.contractSection}>
+          <div className={styles.repLabel}>📋 Gestão de Contratos</div>
+          {expiringContracts.length > 0 ? (
+            <div className={styles.contractCard}>
+              <div className={styles.contractTitle}>Contratos a expirar</div>
+              {expiringContracts.map(p => (
+                <div key={p.id} className={styles.contractRow}>
+                  <span className={styles.contractName}>{p.name}</span>
+                  <span className={`${styles.contractPos} pos-${p.position.toLowerCase()}`}>{p.position}</span>
+                  <span className={styles.contractOvr}>{playerOvr(p)} OVR</span>
+                  <span className={styles.contractCount}>{getContractSeasonsLeft(p)} temp.</span>
+                  {onRenewContract && (
+                    <button
+                      className={styles.contractBtn}
+                      onClick={() => onRenewContract(p.id)}
+                      title={`Renovar contrato de ${p.name} por 1 temporada`}
+                    >
+                      Renovar
+                    </button>
+                  )}
+                </div>
+              ))}
+              <div className={styles.repLabel}>Contratos vencem ao fim da temporada.</div>
+            </div>
+          ) : (
+            <div className={styles.contractEmpty}>
+              Nenhum contrato vencendo — elenco seguro nesta temporada.
+            </div>
+          )}
+        </div>
+      )}
 
       {transfersRecent.length > 0 && (
         <div className={styles.transferSection}>

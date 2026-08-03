@@ -107,6 +107,36 @@
   font-size: 11px; font-weight: 800; font-family: var(--mono);
 }
 
+/* ── Contratos a expirar (gestão do clube) ───────────────────────── */
+.contractSection {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.contractCard {
+  padding: 12px 14px; border-radius: 10px;
+  border: 1.5px solid #7c2d12; background: rgba(154,52,18,0.08);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.contractTitle {
+  font-size: 11px; font-weight: 700; color: #fdba74; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.contractRow {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 8px; border-radius: 6px;
+  background: #111827; font-size: 11px; flex-wrap: wrap;
+}
+.contractName { color: #d1d5db; flex: 1; min-width: 0; }
+.contractPos { font-size: 9px; font-weight: 700; }
+.contractOvr { font-size: 10px; color: var(--accent); font-weight: 700; }
+.contractCount { font-size: 10px; color: #fdba74; font-weight: 600; white-space: nowrap; }
+.contractBtn {
+  min-height: 36px; border: 1px solid #b45309; background: rgba(180,83,9,0.15);
+  color: #fdba74; border-radius: 6px; padding: 4px 10px;
+  font-size: 10px; font-weight: 700; cursor: pointer; font-family: var(--sans);
+  transition: background 0.15s;
+}
+.contractBtn:hover { background: rgba(180,83,9,0.35); }
+.contractEmpty { font-size: 12px; color: var(--text-secondary); padding: 2px 0; }
+
 @media (max-width: 640px) {
   .screen { padding: 12px 10px 24px; gap: 12px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }

@@ -1,9 +1,12 @@
 // @vitest-environment jsdom
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import TrophyRoomScreen from '../TrophyRoomScreen';
 import type { CareerSeasonHistoryEntry, TransferRecord } from '@/engine/career';
+import type { Player } from '@/engine/types';
+
+type SquadPlayer = Player;
 
 function makeTransfer(overrides: Partial<TransferRecord> = {}): TransferRecord {
   return {
@@ -155,5 +158,38 @@ describe('TrophyRoomScreen', () => {
     );
     const names = screen.getAllByText(/Jogador$/).map(el => el.textContent);
     expect(names).toEqual(['Segundo Jogador', 'Primeiro Jogador']);
+  });
+
+  it('lista contratos a expirar e renova ao clicar', () => {
+    const onRenewContract = vi.fn();
+    const userSquad = [
+      { id: 'p1', name: 'Zagueiro X', number: 4, position: 'DEF', currentFatigue: 0, contractSeasonsLeft: 1,
+        attributes: { speed: 60, stamina: 60, passing: 60, finishing: 60, tackling: 60, dribbling: 60, vision: 60, positioning: 60 } },
+      { id: 'p2', name: 'Atacante Y', number: 9, position: 'FWD', currentFatigue: 0, contractSeasonsLeft: 2,
+        attributes: { speed: 80, stamina: 80, passing: 80, finishing: 80, tackling: 80, dribbling: 80, vision: 80, positioning: 80 } },
+    ] as SquadPlayer[];
+    render(<TrophyRoomScreen history={[]} transfers={[]} userSquad={userSquad} onRenewContract={onRenewContract} />);
+
+    expect(screen.getByText('📋 Gestão de Contratos')).toBeInTheDocument();
+    // Só o jogador com contrato ≤1 aparece na lista de vencimento.
+    expect(screen.getByText('Zagueiro X')).toBeInTheDocument();
+    expect(screen.queryByText('Atacante Y')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Renovar'));
+    expect(onRenewContract).toHaveBeenCalledWith('p1');
+  });
+
+  it('mostra mensagem quando nenhum contrato vence', () => {
+    const userSquad = [
+      { id: 'p1', name: 'Zagueiro X', number: 4, position: 'DEF', currentFatigue: 0, contractSeasonsLeft: 3,
+        attributes: { speed: 60, stamina: 60, passing: 60, finishing: 60, tackling: 60, dribbling: 60, vision: 60, positioning: 60 } },
+    ] as SquadPlayer[];
+    render(<TrophyRoomScreen history={[]} transfers={[]} userSquad={userSquad} />);
+    expect(screen.getByText(/Nenhum contrato vencendo/)).toBeInTheDocument();
+  });
+
+  it('sem elenco (userSquad ausente) não renderiza a seção de contratos', () => {
+    render(<TrophyRoomScreen history={[]} transfers={[]} />);
+    expect(screen.queryByText('📋 Gestão de Contratos')).not.toBeInTheDocument();
   });
 });
