@@ -34,19 +34,22 @@ const SPONSOR_POOLS: Record<string, string[]> = {
   portugal:  ['Super Bock', 'Sagres', 'MEO', 'Caixa Geral', 'Galp', 'NOS', 'Millennium', 'Placard', 'Betano', 'Vitalis'],
 };
 
+// Chaves precisam bater com os LeagueDefinition.id reais (serieA, serieB,
+// ligaPortugal, ligaPortugal2) — antes as chaves erradas faziam Serie A e
+// Liga Portugal caírem no pool inglês e no tier 'local'.
 const COUNTRY_BY_LEAGUE: Record<string, string> = {
   pl: 'england', championship: 'england',
   laliga: 'spain', laliga2: 'spain',
   bundesliga: 'germany', bundesliga2: 'germany',
-  seriea: 'italy', serieb: 'italy',
+  serieA: 'italy', serieB: 'italy',
   ligue1: 'france', ligue2: 'france',
-  portugal: 'portugal', portugal2: 'portugal',
+  ligaPortugal: 'portugal', ligaPortugal2: 'portugal',
 };
 
 const LEAGUE_STARTING_TIER: Record<string, SponsorTier> = {
-  pl: 'global', laliga: 'global', bundesliga: 'global', seriea: 'global', ligue1: 'global',
-  portugal: 'regional', championship: 'regional',
-  laliga2: 'local', bundesliga2: 'local', serieb: 'local', ligue2: 'local', portugal2: 'local',
+  pl: 'global', laliga: 'global', bundesliga: 'global', serieA: 'global', ligue1: 'global',
+  ligaPortugal: 'regional', championship: 'regional',
+  laliga2: 'local', bundesliga2: 'local', serieB: 'local', ligue2: 'local', ligaPortugal2: 'local',
 };
 
 export function getStartingTier(leagueId: string): SponsorTier {

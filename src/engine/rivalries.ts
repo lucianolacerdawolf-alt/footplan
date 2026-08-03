@@ -12,34 +12,36 @@ function register(a: string, b: string, name?: string): void {
   }
 }
 
+// IDs precisam bater com os ids reais dos times nos arquivos de dados (antes
+// usavam placeholders 'pl-t0'/etc. que não existiam — o derby nunca disparava).
 // Premier League
-register('pl-t0', 'pl-mu', 'Arsenal × United');
-register('pl-mu', 'pl-t1', 'North-West Derby');
-register('pl-t0', 'pl-ch', 'London Derby');
-register('pl-ch', 'pl-t1', 'Chelsea × Liverpool');
-register('pl-mu', 'pl-t3', 'Manchester Derby');
-register('pl-t1', 'pl-ev', 'Merseyside Derby');
-register('pl-t0', 'pl-th', 'North London Derby');
+register('arsenal', 'man-utd', 'Arsenal × United');
+register('man-utd', 'liverpool', 'North-West Derby');
+register('arsenal', 'chelsea', 'London Derby');
+register('chelsea', 'liverpool', 'Chelsea × Liverpool');
+register('man-utd', 'man-city', 'Manchester Derby');
+register('liverpool', 'everton', 'Merseyside Derby');
+register('arsenal', 'tottenham', 'North London Derby');
 
 // La Liga
-register('laliga-t0', 'laliga-t1', 'El Clásico');
-register('laliga-t2', 'laliga-t1', 'Atlético × Barça');
-register('laliga-t0', 'laliga-t2', 'Derbi Madrileño');
+register('rma', 'fcb', 'El Clásico');
+register('atm', 'fcb', 'Atlético × Barça');
+register('rma', 'atm', 'Derbi Madrileño');
 
 // Bundesliga
-register('bundesliga-t0', 'bundesliga-t1', 'Der Klassiker');
+register('bay', 'bvb', 'Der Klassiker');
 
 // Serie A
-register('seriea-t0', 'seriea-t1', 'Derby d\'Italia');
-register('seriea-t0', 'seriea-t3', 'Derby del Made in Italy');
-register('seriea-t1', 'seriea-t3', 'Derby della Madonnina');
+register('juv', 'int', 'Derby d\'Italia');
+register('juv', 'acm', 'Derby del Made in Italy');
+register('int', 'acm', 'Derby della Madonnina');
 
 // Ligue 1
-register('ligue1-t0', 'ligue1-t2', 'Le Classique');
+register('psg', 'om', 'Le Classique');
 
 // Portugal
-register('portugal-t0', 'portugal-t1', 'O Clássico');
-register('portugal-t0', 'portugal-t2', 'Derby de Lisboa');
+register('slb', 'fcp', 'O Clássico');
+register('slb', 'scp', 'Derby de Lisboa');
 
 export function isDerby(teamA: string, teamB: string): boolean {
   return RIVALRY_MAP.get(teamA)?.has(teamB) ?? false;
@@ -47,8 +49,4 @@ export function isDerby(teamA: string, teamB: string): boolean {
 
 export function getDerbyName(teamA: string, teamB: string): string | null {
   return DERBY_NAMES.get(`${teamA}:${teamB}`) ?? null;
-}
-
-export function getDerbyEffect(): { intensityBonus: number; cardMultiplier: number } {
-  return { intensityBonus: 1.20, cardMultiplier: 1.5 };
 }
