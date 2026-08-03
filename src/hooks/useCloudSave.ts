@@ -9,7 +9,7 @@ const DEBOUNCE_MS = 2000;
 
 interface UseCloudSaveResult {
   status: CloudStatus;
-  loadFromCloud: () => Promise<CareerState | null>;
+  loadFromCloud: () => Promise<{ state: CareerState; updatedAt: string } | null>;
   enqueueCloudSave: (state: CareerState) => void;
   retry: () => void;
 }
@@ -43,7 +43,7 @@ export function useCloudSave(): UseCloudSaveResult {
     }, DEBOUNCE_MS);
   }, [hasEnv, performSave]);
 
-  const loadFromCloud = useCallback(async (): Promise<CareerState | null> => {
+  const loadFromCloud = useCallback(async (): Promise<{ state: CareerState; updatedAt: string } | null> => {
     if (!hasEnv) {
       setStatus('idle');
       return null;

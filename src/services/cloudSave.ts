@@ -1,18 +1,19 @@
 import type { CareerState } from '../engine/career';
 import { ensureAuth } from './supabaseClient';
 
-export async function loadCareer(): Promise<CareerState | null> {
+export async function loadCareer(): Promise<{ state: CareerState; updatedAt: string } | null> {
   const sb = await ensureAuth();
   const { data, error } = await sb
     .from('careers')
-    .select('career_state')
+    .select('career_state, updated_at')
     .single();
 
   if (error) {
     if (error.code === 'PGRST116') return null;
     throw error;
   }
-  return (data as { career_state: CareerState }).career_state;
+  const row = data as { career_state: CareerState; updated_at: string };
+  return { state: row.career_state, updatedAt: row.updated_at };
 }
 
 export async function saveCareer(state: CareerState): Promise<void> {

@@ -1,0 +1,178 @@
+import { useCallback } from 'react';
+import type { Team } from '@/engine/types';
+import { computeStandings } from '@/engine/tournament';
+import { assignMarketValues, computeWageBill, computeWeeklyIncome, getLeaguePrizeMoney, getCupPrizeMoney } from '@/engine/transferMarket';
+import { generateBoardObjectives, evaluateBoardObjectives, createBoardObjectivesInboxMessage, createBoardObjectivesResultMessage } from '@/engine/boardObjectives';
+import { refreshFreeAgentPool } from '@/engine/freeAgentPool';
+import { getLeague } from '@/data/leagues';
+import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/engine/seasonClosure';
+import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, computeMerchRevenue } from '@/engine/sponsors';
+import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, getFinances, getFreeAgentPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
+import type { Screen } from '@/types/navigation';
+
+interface UseCareerSeasonParams {
+  careerState: CareerState | null;
+  setCareerState: React.Dispatch<React.SetStateAction<CareerState | null>>;
+  setScreen: (s: Screen) => void;
+  setToastMsg: (msg: string | null) => void;
+}
+
+export function useCareerSeason({ careerState, setCareerState, setScreen, setToastMsg }: UseCareerSeasonParams) {
+  const handleAdvanceSeason = useCallback(() => {
+    if (!careerState) return;
+    if (careerState.season.league.phase !== 'done' || careerState.season.cup.stage !== 'champion') return;
+
+    try {
+      const standings = computeStandings(careerState.season.league.teams, careerState.season.league.fixtures);
+      const leaguePosition = standings.findIndex(s => s.teamId === careerState.season.league.userTeamId) + 1;
+      const totalTeams = careerState.season.league.teams.length;
+      const leagueChampion = leaguePosition === 1;
+      const cupChampion = careerState.season.cup.championId === careerState.season.league.userTeamId;
+      const cupResult = deriveCupResult(careerState.season.cup, careerState.season.league.userTeamId);
+      const reputationDelta = computeReputationDelta({ leagueChampion, cupChampion, leaguePosition, totalTeams });
+      let newReputation = Math.max(0, Math.min(100, careerState.manager.reputation + reputationDelta));
+
+      const record = computeUserSeasonRecord(careerState.season.league);
+      const finances = getFinances(careerState);
+
+      // ── Board objectives evaluation ──
+      // Saves anteriores à feature não têm objetivos gravados — reconstrói os da
+      // temporada que acabou para poder avaliá-la.
+      const currentObj = careerState.boardObjectives
+        ?? generateBoardObjectives(careerState.season.league, careerState.manager.reputation, careerState.currentSeasonYear);
+      const objEval = evaluateBoardObjectives(
+        currentObj, leaguePosition, cupResult, finances.budget, currentObj.streakBad,
+      );
+      newReputation = Math.max(0, Math.min(100, newReputation + objEval.totalRepDelta));
+      const objectiveMessages: InboxMessage[] = [createBoardObjectivesResultMessage(objEval.results, objEval.totalRepDelta, objEval.warnings)];
+      const budgetAtStart = careerState.season.budgetAtSeasonStart ?? finances.budget;
+      const leaguePrize = getLeaguePrizeMoney(careerState.leagueId, leaguePosition);
+      const cupPrize = getCupPrizeMoney(careerState.leagueId, cupResult);
+
+      const entry: CareerSeasonHistoryEntry = {
+        year: careerState.currentSeasonYear,
+        leagueId: careerState.leagueId,
+        leagueChampionId: standings[0].teamId,
+        userLeaguePosition: leaguePosition,
+        cupResult,
+        tradesUsed: 0,
+        reputationDelta,
+        userTopScorer: deriveTopScorer(careerState.season.userGoalScorers ?? {}),
+        userWins: record.wins,
+        userDraws: record.draws,
+        userLosses: record.losses,
+        userGoalsFor: record.goalsFor,
+        userGoalsAgainst: record.goalsAgainst,
+        managerOfSeason: isManagerOfSeason(leaguePosition, cupResult),
+        budgetDelta: finances.budget - budgetAtStart,
+      };
+
+      const evolvedRosters = progressAllLeagues(careerState.rosters);
+      const leagueDef = getLeague(careerState.leagueId);
+      if (!leagueDef) {
+        setToastMsg('Erro ao avançar temporada: liga não encontrada. Recarregue a página.');
+        return;
+      }
+      evolvedRosters[careerState.leagueId] = evolvedRosters[careerState.leagueId].map(assignMarketValues);
+      const evolvedUserTeam = evolvedRosters[careerState.leagueId].find(t => t.id === careerState.season.league.userTeamId);
+      if (!evolvedUserTeam) {
+        setToastMsg('Erro ao avançar temporada: time do usuário não encontrado.');
+        return;
+      }
+      const { league: nextLeague, cup: nextCup } = createCareerSeason(evolvedUserTeam, evolvedRosters[careerState.leagueId], leagueDef);
+
+      // Sponsor upgrade/downgrade baseado na reputação final da temporada
+      let nextSponsorTier: SponsorTier = (getSponsorTier(careerState) as SponsorTier);
+      let nextSponsorName = getSponsorName(careerState);
+      const currentTierMin = getSponsorMinReputation(nextSponsorTier);
+      const nextTierUp = getNextTierUp(nextSponsorTier);
+      const nextTierDown = getNextTierDown(nextSponsorTier);
+
+      if (nextTierDown && newReputation < currentTierMin) {
+        nextSponsorTier = nextTierDown;
+        const downgrade = generateSponsor(careerState.leagueId, careerState.season.league.userTeamId + '-down', nextSponsorTier);
+        nextSponsorName = downgrade.name;
+        setToastMsg(`📉 Patrocinador rebaixado para ${getSponsorLabel(nextSponsorTier)}: ${nextSponsorName}`);
+      } else if (nextTierUp && newReputation >= getSponsorMinReputation(nextTierUp)) {
+        nextSponsorTier = nextTierUp;
+        const upgrade = generateSponsor(careerState.leagueId, careerState.season.league.userTeamId + '-up', nextSponsorTier);
+        nextSponsorName = upgrade.name;
+        setToastMsg(`📈 Novo patrocinador ${getSponsorLabel(nextSponsorTier)}: ${nextSponsorName}!`);
+      }
+
+      // Recalcula weeklyIncome com o multiplicador do novo tier
+      const baseIncome = computeWeeklyIncome(careerState.leagueId);
+      const sponsoredIncome = Math.round(baseIncome * getSponsorMultiplier(nextSponsorTier));
+      const merch = computeMerchRevenue(newReputation);
+
+      // Generate objectives for the new season
+      const nextBoardObj = generateBoardObjectives(nextLeague, newReputation, careerState.currentSeasonYear + 1, leaguePosition);
+      objectiveMessages.push(createBoardObjectivesInboxMessage(nextBoardObj));
+
+      setCareerState({
+        ...careerState,
+        manager: { ...careerState.manager, reputation: newReputation },
+        currentSeasonYear: careerState.currentSeasonYear + 1,
+        season: {
+          league: nextLeague, cup: nextCup, tradesUsedThisSeason: 0,
+          budgetAtSeasonStart: finances.budget, userGoalScorers: {},
+        },
+        rosters: evolvedRosters,
+        history: [...careerState.history, entry],
+        finances: { budget: finances.budget + leaguePrize + cupPrize, wageBill: computeWageBill(evolvedUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
+        inbox: [...(careerState.inbox ?? []), ...objectiveMessages],
+        freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(careerState), careerState.currentSeasonYear + 1),
+        sponsorTier: nextSponsorTier,
+        sponsorName: nextSponsorName,
+        boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },
+      });
+      setScreen('season-end');
+    } catch (err) {
+      console.error('handleAdvanceSeason crashed:', err);
+      setToastMsg('Erro inesperado ao avançar temporada. Tente recarregar a página.');
+    }
+  }, [careerState, setCareerState, setScreen, setToastMsg]);
+
+  const handleRenegotiateSponsor = useCallback(() => {
+    if (!careerState) return;
+    const current = getSponsorTier(careerState) as SponsorTier;
+    const next = getNextTierUp(current);
+    if (!next) {
+      setToastMsg('Seu patrocínio já é Global — o nível máximo!');
+      return;
+    }
+    const minRep = getSponsorMinReputation(next);
+    if (careerState.manager.reputation < minRep) {
+      setToastMsg(`Precisa de reputação ${minRep} para patrocínio ${getSponsorLabel(next)}. Atual: ${careerState.manager.reputation}`);
+      return;
+    }
+    const newSponsor = generateSponsor(careerState.leagueId, careerState.season.league.userTeamId + '-neg', next);
+    setCareerState(prev => {
+      if (!prev) return prev;
+      const baseIncome = computeWeeklyIncome(prev.leagueId);
+      const sponsoredIncome = Math.round(baseIncome * getSponsorMultiplier(next));
+      return {
+        ...prev,
+        sponsorTier: next,
+        sponsorName: newSponsor.name,
+        finances: prev.finances ? { ...prev.finances, weeklyIncome: sponsoredIncome } : prev.finances,
+      };
+    });
+    setToastMsg(`📈 Patrocínio renegociado! Novo tier: ${getSponsorLabel(next)} — ${newSponsor.name}`);
+  }, [careerState, setCareerState, setToastMsg]);
+
+  // Só a liga da carreira ativa sincroniza automaticamente (D-04, respeita o rate limit
+  // das APIs). Ao navegar pra outra liga no Mercado, TransferMarketScreen sincroniza essa
+  // liga sob demanda (uma vez, com cache de 7 dias) e persiste o resultado aqui — sem
+  // isso, nome/idade/nacionalidade reais só apareciam pros jogadores da própria liga do
+
+  const handleMarketRosterSynced = useCallback((leagueId: string, teams: Team[]) => {
+    setCareerState(prev => prev ? { ...prev, rosters: { ...prev.rosters, [leagueId]: teams } } : prev);
+  }, [setCareerState]);
+
+  // Exposed for F5 restore — restores pending fixture info from a LiveMatchSnapshot so
+
+  return {
+    handleAdvanceSeason, handleRenegotiateSponsor, handleMarketRosterSynced,
+  };
+}
