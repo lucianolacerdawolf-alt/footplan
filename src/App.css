@@ -323,7 +323,23 @@
 .setup-layout {
   display: flex; align-items: flex-start; justify-content: center; gap: 8px; padding: 6px 8px;
 }
-@media (max-width: 1100px) { .setup-layout { flex-direction: column; align-items: center; } }
+@media (max-width: 1100px) {
+  /* Empilha os cards e os ESTICA até uma largura confortável, centralizados.
+     Antes ficava align-items:center sem largura → como flex:1 só atua no eixo
+     vertical (coluna), as colunas encolhiam para a largura do conteúdo (card
+     ~259px num tela de 430px, flutuando com sobra dos lados). */
+  .setup-layout {
+    flex-direction: column;
+    align-items: stretch;
+    /* width:100% + max-width:480 + margin auto: preenche a largura disponível,
+       com um teto confortável de 480 e centralizado em telas largas (tablet).
+       align-items:stretch acima faz as colunas/cards acompanharem essa largura. */
+    width: 100%;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
 .setup-layout-solo { justify-content: center; }
 .setup-layout-solo .setup-left { max-width: 680px; flex: unset; }
 @media (max-width: 600px) { .setup-left, .setup-right { flex-direction: column; } }
@@ -849,7 +865,7 @@
   .h2h-strip { flex-wrap: wrap; gap: 8px; padding: 8px 10px; font-size: 12px; }
   .squad-panel { flex-direction: column !important; min-width: 0; }
   .bench-section { border-left: none; border-top: 1px dashed var(--border); padding-left: 0; padding-top: 10px; margin-left: 0; margin-top: 8px; }
-  .setup-team-card { width: 100%; max-width: 340px; }
+  .setup-team-card { width: 100%; max-width: none; }
   /* O `flex-wrap: wrap` fazia "FCU vs BAY" quebrar em três linhas empilhadas,
    * colidindo com as formações e com os controles de velocidade na mesma faixa.
    * Sem wrap e com o título encolhendo, tudo cabe numa linha; as formações já
