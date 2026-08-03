@@ -6,6 +6,8 @@ import CareerHubScreen from '../CareerHubScreen';
 import { createCareerSeason } from '@/engine/career';
 import type { CareerState } from '@/engine/career';
 import { getLeague } from '@/data/leagues';
+import type { Team } from '@/engine/types';
+import type { PressConferenceQuestion } from '@/engine/pressConference';
 
 function makeCareerState(overrides: Partial<CareerState> = {}): CareerState {
   const leagueDef = getLeague('pl')!;
@@ -25,7 +27,19 @@ function makeCareerState(overrides: Partial<CareerState> = {}): CareerState {
   };
 }
 
-function renderHub(state: CareerState, onMarkInboxRead = vi.fn(), onRespondConversation = vi.fn()) {
+function renderHub(
+  state: CareerState,
+  onMarkInboxRead = vi.fn(),
+  onRespondConversation = vi.fn(),
+  f3: {
+    onApplyTraining?: (c: 'intense' | 'light' | 'rest') => void;
+    onOpenPressConference?: (t: Team) => void;
+    onAnswerPressConference?: (i: number) => void;
+    onClosePressConference?: () => void;
+    pressQuestion?: PressConferenceQuestion | null;
+    pressDone?: boolean;
+  } = {},
+) {
   return render(
     <CareerHubScreen
       state={state}
@@ -39,6 +53,12 @@ function renderHub(state: CareerState, onMarkInboxRead = vi.fn(), onRespondConve
       onAcceptTransferOffer={vi.fn()}
       onRejectTransferOffer={vi.fn()}
       onRespondConversation={onRespondConversation}
+      onApplyTraining={f3.onApplyTraining ?? vi.fn()}
+      onOpenPressConference={f3.onOpenPressConference ?? vi.fn()}
+      onAnswerPressConference={f3.onAnswerPressConference ?? vi.fn()}
+      onClosePressConference={f3.onClosePressConference ?? vi.fn()}
+      pressQuestion={f3.pressQuestion}
+      pressDone={f3.pressDone}
     />
   );
 }
@@ -113,5 +133,59 @@ describe('CareerHubScreen — conversas com atletas', () => {
   it('sem conversas mostra estado vazio', () => {
     renderHub(makeCareerState());
     expect(screen.getByText('Nenhuma conversa por enquanto.')).toBeInTheDocument();
+  });
+});
+
+describe('CareerHubScreen — preparação pré-jogo (Fase 3)', () => {
+  it('mostra opções de treino e chama onApplyTraining ao escolher', () => {
+    const onApplyTraining = vi.fn();
+    renderHub(makeCareerState(), vi.fn(), vi.fn(), { onApplyTraining });
+
+    expect(screen.getByText('🎙️ Preparação Pré-Jogo')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Treino Intenso'));
+    expect(onApplyTraining).toHaveBeenCalledWith('intense');
+    fireEvent.click(screen.getByText('Descanso'));
+    expect(onApplyTraining).toHaveBeenCalledWith('rest');
+  });
+
+  it('treino já feito desabilita os botões', () => {
+    const onApplyTraining = vi.fn();
+    renderHub(makeCareerState({ preMatchDoneRound: 0 }), vi.fn(), vi.fn(), { onApplyTraining });
+
+    const btn = screen.getByText('Treino Intenso');
+    expect(btn.closest('button')).toBeDisabled();
+  });
+
+  it('abre a coletiva com a pergunta e responde chamando onAnswerPressConference', () => {
+    const onOpenPressConference = vi.fn();
+    const onAnswerPressConference = vi.fn();
+    const onClosePressConference = vi.fn();
+    const pressQuestion: PressConferenceQuestion = {
+      id: 'press-1', context: 'neutral', question: 'Como o elenco chega?',
+      responses: [
+        { label: 'Confiante', moraleDelta: 2 },
+        { label: 'Focado', moraleDelta: 0 },
+        { label: 'Com dúvidas', moraleDelta: -2 },
+      ],
+    };
+    renderHub(makeCareerState(), vi.fn(), vi.fn(), {
+      onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion,
+    });
+
+    expect(screen.getByText('🎤 Conceder Coletiva →')).toBeInTheDocument();
+    // A pergunta ativa é renderizada no modal.
+    expect(screen.getByText('Como o elenco chega?')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Confiante'));
+    expect(onAnswerPressConference).toHaveBeenCalledWith(0);
+  });
+
+  it('coletiva já feita desabilita o botão', () => {
+    const onOpenPressConference = vi.fn();
+    renderHub(makeCareerState({ pressDoneRound: 0 }), vi.fn(), vi.fn(), {
+      onOpenPressConference, pressDone: true,
+    });
+
+    const btn = screen.getByText(/Conceder Coletiva/);
+    expect(btn).toBeDisabled();
   });
 });

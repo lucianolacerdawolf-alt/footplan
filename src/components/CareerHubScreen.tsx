@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress, getContractSeasonsLeft, getPlayerConversations } from '../engine/career';
+import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress, getContractSeasonsLeft, getPlayerConversations, getPreMatchDoneRound, getTransferHistory } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
@@ -11,8 +11,15 @@ import { getStageMatches } from '../engine/bracketHelpers';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import { playerOvr } from '../utils/playerOvr';
 import { getStarterCount } from '../engine/squadUtils';
+import { generateSocialFeed } from '../engine/socialFeed';
+import type { TrainingChoice } from '../engine/training';
+import { isTrainingDone } from '../engine/training';
+import type { PressConferenceQuestion } from '../engine/pressConference';
+import type { Team } from '../engine/types';
 import InboxPanel from './InboxPanel';
 import ConversationsPanel from './ConversationsPanel';
+import PreMatchPrepCard from './PreMatchPrepCard';
+import SocialFeedCard from './SocialFeedCard';
 import styles from './CareerHubScreen.module.css';
 
 interface Props {
@@ -38,6 +45,18 @@ interface Props {
   jobOfferCount: number;
   /** Fase 4 — responde uma conversa com atleta (aplica moral no time). */
   onRespondConversation?: (convId: string, choiceIdx: number) => void;
+  /** Fase 3a — aplica o treino pré-jogo escolhido. */
+  onApplyTraining?: (choice: TrainingChoice) => void;
+  /** Fase 3b — abre a coletiva de imprensa com o adversário. */
+  onOpenPressConference?: (opponentTeam: Team) => void;
+  /** Fase 3b — responde a pergunta da coletiva. */
+  onAnswerPressConference?: (choiceIdx: number) => void;
+  /** Fase 3b — fecha a coletiva sem responder. */
+  onClosePressConference?: () => void;
+  /** Fase 3b — pergunta ativa da coletiva (null = fechada). */
+  pressQuestion?: PressConferenceQuestion | null;
+  /** Fase 3b — coletiva já feita na rodada atual. */
+  pressDone?: boolean;
   /** Abre o Escritório (tela da liga) — usado quando ainda faltam jogos da rodada. */
   onViewLeague: () => void;
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
@@ -45,8 +64,8 @@ interface Props {
 }
 
 type NextMatch =
-  | { type: 'league'; fixture: LeagueFixture; homeName: string; awayName: string; round: number }
-  | { type: 'cup'; homeName: string; awayName: string; stage: string; stageLabel: string }
+  | { type: 'league'; fixture: LeagueFixture; homeName: string; awayName: string; round: number; opponentTeamId: string }
+  | { type: 'cup'; homeName: string; awayName: string; stage: string; stageLabel: string; opponentTeamId: string }
   | null;
 
 function determineNextMatch(state: CareerState): NextMatch {
@@ -63,12 +82,14 @@ function determineNextMatch(state: CareerState): NextMatch {
     if (userMatch) {
       const homeTeam = cup.teams.find(t => t.id === userMatch.homeTeamId);
       const awayTeam = cup.teams.find(t => t.id === userMatch.awayTeamId);
+      const opponentTeamId = userMatch.homeTeamId === userId ? userMatch.awayTeamId! : userMatch.homeTeamId!;
       return {
         type: 'cup',
         homeName: homeTeam?.name ?? '???',
         awayName: awayTeam?.name ?? '???',
         stage: cup.stage,
         stageLabel: CUP_STAGE_LABELS[cup.stage] ?? cup.stage,
+        opponentTeamId,
       };
     }
   }
@@ -87,6 +108,7 @@ function determineNextMatch(state: CareerState): NextMatch {
         homeName: home?.name ?? '???',
         awayName: away?.name ?? '???',
         round: league.currentRound,
+        opponentTeamId: fixture.homeTeamId === userId ? fixture.awayTeamId : fixture.homeTeamId,
       };
     }
   }
@@ -94,7 +116,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onRenewContract, onOpenJobMarket, jobOfferCount, onRespondConversation, blockAdvanceReason }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onRenewContract, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -103,6 +125,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
   const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
   const nextMatch = determineNextMatch(state);
+  const trainingDone = isTrainingDone(getPreMatchDoneRound(state), state.season.league.currentRound);
 
   // Sem próxima partida e sem temporada encerrada, a Central ficava sem nenhuma
   // ação: o "Avançar Rodada" só existia no Escritório. Acontece toda rodada, assim
@@ -148,6 +171,51 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
     if (entries.length === 0) return null;
     return entries.reduce((best, cur) => cur[1] > best[1] ? cur : best);
   }, [state.season.userGoalScorers]);
+
+  // Fase 3c — feed social (FC Hub): resultado do último jogo do usuário, posição,
+  // contratação de destaque e adversário — tudo derivado read-only do estado.
+  const lastUserResult = useMemo(() => {
+    const userId = state.season.league.userTeamId;
+    for (let r = state.season.league.fixtures.length - 1; r >= 0; r--) {
+      const round = state.season.league.fixtures[r];
+      const played = round.find(f => f.played && (f.homeTeamId === userId || f.awayTeamId === userId));
+      if (played && played.homeScore != null && played.awayScore != null) {
+        const userHome = played.homeTeamId === userId;
+        return {
+          userScore: userHome ? played.homeScore : played.awayScore,
+          oppScore: userHome ? played.awayScore : played.homeScore,
+        };
+      }
+    }
+    return undefined;
+  }, [state.season.league.fixtures, state.season.league.userTeamId]);
+
+  const marqueeSigning = useMemo(() => {
+    const transfers = getTransferHistory(state);
+    const buys = transfers.filter(t => t.type === 'BUY' && t.seasonYear === state.currentSeasonYear);
+    if (buys.length === 0) return undefined;
+    return buys.sort((a, b) => b.amount - a.amount)[0].playerName;
+  }, [state]);
+
+  const opponentTeam = useMemo(() => {
+    if (!nextMatch) return null;
+    return state.season.league.teams.find(t => t.id === nextMatch.opponentTeamId)
+      ?? state.season.cup.teams.find(t => t.id === nextMatch.opponentTeamId)
+      ?? null;
+  }, [nextMatch, state.season.league.teams, state.season.cup.teams]);
+
+  const socialPosts = useMemo(() => {
+    if (!userTeam) return [];
+    return generateSocialFeed({
+      userTeam,
+      opponentName: opponentTeam?.name ?? 'adversário',
+      userPosition,
+      totalTeams: state.season.league.teams.length,
+      lastResult: lastUserResult,
+      marqueeSigning,
+      seasonYear: state.currentSeasonYear,
+    });
+  }, [userTeam, opponentTeam, userPosition, state.season.league.teams.length, lastUserResult, marqueeSigning, state.currentSeasonYear]);
 
   return (
     <div className={`${styles.screen} app-screen`}>
@@ -345,6 +413,21 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
         onAcceptTransferOffer={onAcceptTransferOffer}
         onRejectTransferOffer={onRejectTransferOffer}
       />
+
+      {nextMatch && !seasonReady && opponentTeam && onApplyTraining && onOpenPressConference && (
+        <PreMatchPrepCard
+          trainingDone={trainingDone}
+          pressDone={!!pressDone}
+          opponentName={opponentTeam.name}
+          onTraining={onApplyTraining}
+          onOpenPress={() => onOpenPressConference!(opponentTeam)}
+          pressQuestion={pressQuestion ?? null}
+          onAnswerPress={onAnswerPressConference ?? (() => {})}
+          onClosePress={onClosePressConference ?? (() => {})}
+        />
+      )}
+
+      {socialPosts.length > 0 && <SocialFeedCard posts={socialPosts} />}
 
       {nextMatch && !seasonReady && (
         <div className={styles.nextMatchCard}>

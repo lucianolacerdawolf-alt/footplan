@@ -6,8 +6,7 @@ import { makeTeam } from '@/components/__tests__/testFixtures';
 import { getLeague } from '@/data/leagues';
 import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue, renewalCost } from '@/engine/transferMarket';
 import { computeStandings } from '@/engine/tournament';
-import { deriveCupResult, getFinances, getFreeAgentPool, getJobOffers, getPlayerConversations } from '@/engine/career';
-import type { MatchResult, MatchEvent, Team, Player } from '@/engine/types';
+import { deriveCupResult, getFinances, getFreeAgentPool, getJobOffers, getPlayerConversations } from '@/engine/career';import type { MatchResult, MatchEvent, Team, Player } from '@/engine/types';
 import * as careerEvents from '@/engine/careerEvents';
 
 // Node 22+'s built-in global `localStorage` shadows jsdom's window.localStorage
@@ -1428,5 +1427,110 @@ describe('Conversas com Atletas (Fase 4)', () => {
     randomSpy.mockRestore();
 
     expect(getPlayerConversations(result.current.careerState!)).toEqual([]);
+  });
+});
+
+describe('Imersão pré-jogo (Fase 3)', () => {
+  function getRosterTeam(result: { current: ReturnType<typeof useCareerManager> }) {
+    const st = result.current.careerState!;
+    return st.rosters[st.leagueId].find(t => t.id === st.season.league.userTeamId)!;
+  }
+
+  it('treino Intenso: moral +3 e fadiga +25 nos 3 espelhos, marca rodada', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    startPlCareer(result);
+
+    const before = getRosterTeam(result);
+    const beforeMorale = before.morale ?? 0;
+    const beforeFatigue = before.squad[0].currentFatigue;
+
+    act(() => { result.current.handleApplyTraining('intense'); });
+
+    const after = result.current.careerState!;
+    const leagueId = after.leagueId;
+    const userTeamId = after.season.league.userTeamId;
+    const roster = after.rosters[leagueId].find(t => t.id === userTeamId)!;
+    expect(roster.morale).toBe(beforeMorale + 3);
+    expect(roster.squad[0].currentFatigue).toBe(beforeFatigue + 25);
+    // Espelhos: liga e copa recebem o mesmo treino.
+    expect(after.season.league.teams.find(t => t.id === userTeamId)!.morale).toBe(beforeMorale + 3);
+    expect(after.season.cup.teams.find(t => t.id === userTeamId)!.squad[0].currentFatigue).toBe(beforeFatigue + 25);
+    expect(after.preMatchDoneRound).toBe(after.season.league.currentRound);
+    expect(params.setToastMsg).toHaveBeenCalled();
+  });
+
+  it('treino Descanso reduz fadiga sem cair abaixo de 0', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+
+    act(() => { result.current.handleApplyTraining('rest'); });
+
+    const after = getRosterTeam(result);
+    expect(after.squad.every(p => p.currentFatigue >= 0)).toBe(true);
+  });
+
+  it('coletiva: abrir gera pergunta e responder aplica moraleDelta + marca rodada', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { leagueId, userTeamId } = startPlCareer(result);
+
+    const opp = result.current.careerState!.rosters[leagueId].find(t => t.id !== userTeamId)!;
+    act(() => { result.current.handleOpenPressConference(opp); });
+
+    expect(result.current.pressQuestion).not.toBeNull();
+    expect(result.current.pressQuestion!.responses.length).toBeGreaterThanOrEqual(2);
+
+    const moraleBefore = getRosterTeam(result).morale ?? 0;
+    act(() => { result.current.handleRespondPressConference(0); }); // +2
+
+    const after = result.current.careerState!;
+    const userTeam = after.rosters[leagueId].find(t => t.id === userTeamId)!;
+    expect(userTeam.morale).toBe(moraleBefore + 2);
+    expect(after.pressDoneRound).toBe(after.season.league.currentRound);
+    expect(result.current.pressQuestion).toBeNull();
+    expect(result.current.pressDone).toBe(true);
+    expect(params.setToastMsg).toHaveBeenCalled();
+  });
+
+  it('responder com resposta dura (idx 2) aplica -2', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const opp = result.current.careerState!.rosters[leagueId].find(t => t.id !== userTeamId)!;
+    act(() => { result.current.handleOpenPressConference(opp); });
+    act(() => { result.current.handleRespondPressConference(2); });
+
+    const userTeam = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!;
+    expect(userTeam.morale).toBe(-2);
+  });
+
+  it('coletiva fechada sem responder é no-op (sem moral, sem flag)', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const opp = result.current.careerState!.rosters[leagueId].find(t => t.id !== userTeamId)!;
+    act(() => { result.current.handleOpenPressConference(opp); });
+    const moraleBefore = getRosterTeam(result).morale ?? 0;
+
+    act(() => { result.current.handleClosePressConference(); });
+
+    expect(result.current.pressQuestion).toBeNull();
+    expect(getRosterTeam(result).morale ?? 0).toBe(moraleBefore);
+    expect(result.current.pressDone).toBe(false);
+    expect(params.setToastMsg).not.toHaveBeenCalled();
+  });
+
+  it('avanço de temporada reseta os flags pré-jogo', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    act(() => { result.current.setCareerState(prev => prev && ({
+      ...prev, preMatchDoneRound: 5, pressDoneRound: 5,
+    })); });
+
+    forceTerminalSeason(result);
+    act(() => { result.current.handleAdvanceSeason(); });
+
+    expect(result.current.careerState!.preMatchDoneRound).toBeUndefined();
+    expect(result.current.careerState!.pressDoneRound).toBeUndefined();
   });
 });

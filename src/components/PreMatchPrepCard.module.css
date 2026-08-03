@@ -1,0 +1,194 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--code-bg);
+}
+
+.title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fbbf24;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.trainRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.trainBtn {
+  min-height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: background 0.15s, border-color 0.15s;
+}
+.trainBtn:hover:not(:disabled) {
+  background: #1f2937;
+  border-color: var(--accent);
+}
+.trainBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.trainLabel {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.trainEffect {
+  font-size: 9px;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.pressBtn {
+  min-height: 40px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--sans);
+  text-align: left;
+  transition: background 0.15s, border-color 0.15s;
+}
+.pressBtn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.24);
+  border-color: var(--accent);
+}
+.pressBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ── Modal (reusa o padrão visual do tutorial overlay) ──────────── */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+  animation: fpScreenFade 200ms ease-out;
+}
+
+.modal {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 420px;
+  width: 100%;
+  padding: 28px 24px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.closeBtn {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  font-weight: 700;
+}
+.closeBtn:hover { opacity: 0.8; }
+
+.modalIcon { font-size: 48px; line-height: 1; }
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: 900;
+  font-family: var(--mono);
+  color: var(--accent);
+}
+
+.modalQuestion {
+  font-size: 14px;
+  line-height: 1.5;
+  opacity: 0.9;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.modalOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.modalOption {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #111827;
+  border: 1px solid #1f2937;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--sans);
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.modalOption:hover {
+  background: #1f2937;
+  border-color: var(--accent);
+}
+
+.modalDelta {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .trainRow { grid-template-columns: 1fr; }
+}

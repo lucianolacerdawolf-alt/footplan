@@ -12,11 +12,11 @@
 | 1 | Contratos & Renovações | ✅ **Concluída** |
 | 2 | Mercado de Treinador (trocar de clube) | ✅ **Concluída** |
 | 4 | Conversas com atletas | ✅ **Concluída** |
-| 3 | Imersão pré-jogo (treino + coletiva + feed) | ⏳ pendente |
+| 3 | Imersão pré-jogo (treino + coletiva + feed) | ✅ **Concluída** |
 
 **Ordem de execução recomendada** (risco crescente, cada fase entregável sozinha):
-Fase 5 → Fase 1 → **Fase 4** → Fase 3 → Fase 2. (A numeração é temática; a próxima
-a executar é a **Fase 3 — Imersão pré-jogo**.)
+Fase 5 → Fase 1 → **Fase 4** → Fase 3 → Fase 2. (A numeração é temática; todas as
+5 lacunas mapeadas já foram entregues.)
 
 **Objetivo geral:** dar profundidade de gestão (contratos), longevidade/ambição
 (trocar de clube), imersão (rituais pré-jogo + conversas) e retrospectiva (painel de
@@ -157,27 +157,48 @@ conversas usam essa moral de time, integrada ao efeito moral→ataque do motor.
 
 ---
 
-## Fase 3 — Imersão pré-jogo (treino + coletiva + feed)
+## Fase 3 — Imersão pré-jogo (treino + coletiva + feed) ✅ CONCLUÍDA
 
 Três subpartes modulares; (a) e (b) tocam moral/fadiga (valor real de sim), (c) é
-tempero. Entregar (a)+(b); (c) opcional.
+tempero. As três foram entregues.
 
-**(a) Treino pré-jogo** — antes da partida (a partir da Central): escolha que troca
-fadiga↔moral (*Intenso*, *Leve*, *Descanso*). Aplicar via `recoverFatigue`/
-`applyMoraleToTeam` antes do `handlePlayCareerLeagueMatch`. Flag `preMatchDoneRound?`
-opcional pra não repetir. UI: card/modal no fluxo de dia de jogo.
+**(a) Treino pré-jogo** — `src/engine/training.ts`: `TrainingChoice = 'intense' |
+'light' | 'rest'`; `TRAINING_PRESETS` com `moraleDelta`/`fatigueDelta` (Intenso +3
+moral/+25 fadiga, Leve +1/−10, Descanso −2/−30, clamps [-10,10] e [0,100]);
+`applyTrainingChoice(team, choice)` aplica nos 3 espelhos; `isTrainingDone`.
+Estado: `preMatchDoneRound?: number` (getter `getPreMatchDoneRound`) — evita repetir
+na mesma rodada. UI: card **"Preparação Pré-Jogo"** na `CareerHubScreen` (visível
+quando há próxima partida) com os 3 botões de treino + coletiva.
 
-**(b) Coletiva de imprensa** — novo `src/engine/pressConference.ts`: pool de perguntas
-por contexto (derby via `getDerbyName`, favorito/azarão via OVR médio). 1 pergunta, 2–3
-respostas, cada uma com `moraleDelta` (`applyMoraleToTeam`). UI: modal (reusar padrão
-de `TutorialOverlay`) → toast de moral.
+**(b) Coletiva de imprensa** — `src/engine/pressConference.ts`: `getPressContext`
+(dérbi via `getDerbyName` > favorito/azarão via `getAvgOvr` > neutro);
+`generatePressConferenceQuestion(userTeam, opponentTeam, rng)` → 1 pergunta por
+contexto com 2-3 respostas (`PressResponse { label, moraleDelta }`);
+`respondToPressConference(q, choiceIdx)`. Estado: `pressDoneRound?: number`.
+UI: modal na `PreMatchPrepCard` (padrão de `TutorialOverlay`) → toast de moral.
 
-**(c) Feed social (FC Hub)** — opcional. Novo `src/engine/socialFeed.ts`: posts de
-tempero a partir do contexto (último resultado, classificação, `transferHistory`,
-derby). UI: card rolável no `CareerHubScreen`. Sem efeito de jogo.
+**(c) Feed social (FC Hub)** — `src/engine/socialFeed.ts`:
+`generateSocialFeed(input)` → 3-4 posts de tempero (último resultado, posição na
+tabela, contratação de destaque, adversário) — sem efeito de jogo. UI: card rolável
+**"📱 FC Hub"** na `CareerHubScreen`. Derivado read-only do estado (sem persistência).
 
-**Testes** — treino aplica delta certo com clamp; coletiva escolhe pergunta por
-contexto e aplica `moraleDelta`; (se feito) feed gera posts com estado mínimo.
+**Hooks** (`src/hooks/career/useCareerPreMatch.ts`): `handleApplyTraining(choice)`,
+`handleOpenPressConference(opponentTeam)`, `handleRespondPressConference(choiceIdx)`,
+`handleClosePressConference()`. Aplicam fadiga/moral nos 3 espelhos
+(rosters + league + cup). `handleAdvanceSeason` reseta os flags pré-jogo (as rodadas
+zeram no novo calendário).
+
+Testes: `src/engine/__tests__/preMatch.test.ts` (15) + casos em
+`useCareerManager.test.ts` (6) e `CareerHubScreen.test.tsx` (4). Suíte: **502**.
+
+**Desvios do plano original (registrados):**
+- Treino é aplicado imediatamente ao escolher no card da Central (antes de apertar
+  Jogar), em vez de dentro do `handlePlayCareerLeagueMatch` — mais simples e o flag
+  `preMatchDoneRound` já impede repetição na mesma rodada.
+- Coletiva tem 2 perguntas por contexto (não 1), escolhidas por rng — mantém o
+  "1 pergunta por abertura" do plano, só amplia a variedade.
+- Feed gera posts com dados determinísticos do estado (sem rng) — estável entre
+  renders, sem estado novo.
 
 ---
 

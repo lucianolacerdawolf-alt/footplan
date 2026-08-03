@@ -17,6 +17,7 @@ import { useCareerSeason } from './career/useCareerSeason';
 import { useCareerInbox } from './career/useCareerInbox';
 import { useCareerJobMarket } from './career/useCareerJobMarket';
 import { useCareerConversations } from './career/useCareerConversations';
+import { useCareerPreMatch } from './career/useCareerPreMatch';
 import type { Screen } from '../types/navigation';
 
 // Timestamp (ms) do último save local da carreira — usado pra reconciliar com o
@@ -142,6 +143,7 @@ export function useCareerManager({
   }, [setCareerState, setIsCareerMode, setScreen]);
 
   const conversations = useCareerConversations({ careerState, setCareerState, setToastMsg });
+  const preMatch = useCareerPreMatch({ careerState, setCareerState, setToastMsg });
   const matchFlow = useCareerMatchFlow({
     careerState, setCareerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
     recordH2H, setToastMsg,
@@ -161,5 +163,6 @@ export function useCareerManager({
     ...inbox,
     ...jobMarket,
     ...conversations,
+    ...preMatch,
   };
 }

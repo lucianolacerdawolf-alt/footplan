@@ -146,6 +146,10 @@ export interface CareerState {
   // Conversas com atletas (Fase 4) — 0-1 por rodada, respondíveis a qualquer momento;
   // responder aplica moraleDelta na moral do time.
   playerConversations?: PlayerConversation[];
+  // Fase 3a — treino pré-jogo já feito nesta rodada (evita repetir no mesmo round).
+  preMatchDoneRound?: number;
+  // Fase 3b — coletiva de imprensa já feita nesta rodada.
+  pressDoneRound?: number;
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };
@@ -168,6 +172,14 @@ export function getJobOffers(state: CareerState): JobOffer[] {
 
 export function getPlayerConversations(state: CareerState): PlayerConversation[] {
   return state.playerConversations ?? [];
+}
+
+export function getPreMatchDoneRound(state: CareerState): number | undefined {
+  return state.preMatchDoneRound;
+}
+
+export function getPressDoneRound(state: CareerState): number | undefined {
+  return state.pressDoneRound;
 }
 
 /** Janela de transferências: rounds 1-5 e 19-24 (0-indexed: <=4 e 18-23). Fonte única —

@@ -15,6 +15,8 @@ import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
+import type { TrainingChoice } from '../engine/training';
+import type { PressConferenceQuestion } from '../engine/pressConference';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
 
@@ -170,6 +172,12 @@ export interface AppScreensProps {
   handleAcceptJobOffer: (offerId: string) => void;
   handleDeclineJobOffer: (offerId: string) => void;
   handleRespondConversation: (convId: string, choiceIdx: number) => void;
+  handleApplyTraining: (choice: TrainingChoice) => void;
+  handleOpenPressConference: (opponentTeam: Team) => void;
+  handleRespondPressConference: (choiceIdx: number) => void;
+  handleClosePressConference: () => void;
+  pressQuestion: PressConferenceQuestion | null;
+  pressDone: boolean;
   handleAdvanceSeason: () => void;
   handleMarkInboxRead: (id: string) => void;
   handleRenegotiateSponsor: () => void;
@@ -523,6 +531,12 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onOpenJobMarket={() => p.setScreen('career-job-market')}
         jobOfferCount={getJobOffers(p.careerState).length}
         onRespondConversation={p.handleRespondConversation}
+        onApplyTraining={p.handleApplyTraining}
+        onOpenPressConference={p.handleOpenPressConference}
+        onAnswerPressConference={p.handleRespondPressConference}
+        onClosePressConference={p.handleClosePressConference}
+        pressQuestion={p.pressQuestion}
+        pressDone={p.pressDone}
         blockAdvanceReason={hubBlockAdvanceReason}
       />
     );

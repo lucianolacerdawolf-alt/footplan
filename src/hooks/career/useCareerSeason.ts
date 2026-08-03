@@ -153,6 +153,11 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         sponsorName: nextSponsorName,
         boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },
         jobOffers,
+        // Fase 3 — as rodadas zeram no novo calendário; os flags pré-jogo (treino/
+        // coletiva) devem recomeçar, senão a rodada 0 da temporada nova herdaria o
+        // "já feito" da temporada anterior.
+        preMatchDoneRound: undefined,
+        pressDoneRound: undefined,
       });
       setScreen('season-end');
     } catch (err) {
