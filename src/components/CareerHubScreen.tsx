@@ -1,7 +1,6 @@
 import { useMemo } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory } from '../engine/career';
-import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
+import { getInbox, getSponsorName, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory } from '../engine/career';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -34,7 +33,6 @@ interface Props {
   onMarkInboxRead: (id: string) => void;
   onAcceptTransferOffer: (id: string) => void;
   onRejectTransferOffer: (id: string) => void;
-  onRenegotiateSponsor: () => void;
   /** Avança a rodada da liga direto da Central, sem passar pelo Escritório. */
   onNextRound: () => void;
   /** Fase 2 — abre o mercado de treinador (trocar de clube). */
@@ -114,7 +112,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -131,10 +129,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
   const currentRoundFixtures = state.season.league.fixtures[state.season.league.currentRound];
   const roundComplete = currentRoundFixtures?.every(f => f.played) ?? false;
   const awaitingRound = !nextMatch && !seasonReady && state.season.league.phase !== 'done';
-  const isWindowOpen = isTransferWindowOpen(state.season.league.currentRound);
-  const sponsorTier = getSponsorTier(state) as SponsorTier;
   const sponsorName = getSponsorName(state);
-  const nextTier = getNextTierUp(sponsorTier);
   const boardObj = getObjectives(state);
   const cupProgress = deriveCupProgress(state.season.cup, state.season.league.userTeamId);
 
@@ -288,36 +283,9 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
         </div>
       )}
 
-      {/* Finances Mini */}
-      <div className={styles.financeStrip}>
-        <div className={styles.financeItem}>
-          <span className={styles.financeLabel}>Orçamento</span>
-          <span className={styles.financeValue}>€{(finances.budget / 1_000_000).toFixed(1)}M</span>
-        </div>
-        <div className={styles.financeItem}>
-          <span className={styles.financeLabel}>Folha</span>
-          <span className={styles.financeValue}>€{(finances.wageBill / 1_000_000).toFixed(1)}M</span>
-        </div>
-        <div className={styles.financeItem}>
-          <span className={styles.financeLabel}>Renda sem.</span>
-          <span className={styles.financeValue}>€{(finances.weeklyIncome / 1_000_000).toFixed(1)}M</span>
-        </div>
-        <div className={styles.financeItem}>
-          <span className={styles.financeLabel}>Janela</span>
-          <span className={styles.financeValue} style={{ color: isWindowOpen ? '#22c55e' : '#ef4444' }}>
-            {isWindowOpen ? 'Aberta' : 'Fechada'}
-          </span>
-        </div>
-      </div>
-
       {/* Competition Status */}
       <div className={styles.compRow}>
         <span>🏆 {league.cupName}: <strong>{cupStageLabel}</strong></span>
-        {nextTier && (
-          <button className={styles.sponsorBtn} onClick={onRenegotiateSponsor} disabled={!nextTier}>
-            📋 {nextTier ? `Patrocínio → ${getSponsorLabel(nextTier)}` : 'Global'}
-          </button>
-        )}
       </div>
 
       {boardObj && boardObj.objectives.length > 0 && (

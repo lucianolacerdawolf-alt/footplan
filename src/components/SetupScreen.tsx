@@ -210,8 +210,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                 {p.injuredRounds ? <span className="sq-injury">🤕 {p.injuredRounds}j</span> : null}
                 <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
                 <span className="sq-ovr">{playerOvr(p)}</span>
-                <span className={`sq-contract${getContractSeasonsLeft(p) <= 1 ? ' expiring' : ''}`} title="Temporadas restantes de contrato">
-                  📋 {getContractSeasonsLeft(p)} temp.
+                <span className={`sq-contract${getContractSeasonsLeft(p) <= 1 ? ' expiring' : ''}`} title={getContractSeasonsLeft(p) <= 1 ? `Contrato vence ao fim da temporada — renove!` : 'Temporadas restantes de contrato'}>
+                  {getContractSeasonsLeft(p) <= 1 ? '⏳' : '📋'} {getContractSeasonsLeft(p)} temp.
                 </span>
                 {onRenewContract && (
                   <button
@@ -255,8 +255,8 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                   {p.isSuspended ? <span className="sq-injury">🚫 {p.suspendedRounds ?? 1}j</span> : null}
                   <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
                   <span className="sq-ovr">{playerOvr(p)}</span>
-                  <span className={`sq-contract${getContractSeasonsLeft(p) <= 1 ? ' expiring' : ''}`} title="Temporadas restantes de contrato">
-                    📋 {getContractSeasonsLeft(p)} temp.
+                  <span className={`sq-contract${getContractSeasonsLeft(p) <= 1 ? ' expiring' : ''}`} title={getContractSeasonsLeft(p) <= 1 ? `Contrato vence ao fim da temporada — renove!` : 'Temporadas restantes de contrato'}>
+                    {getContractSeasonsLeft(p) <= 1 ? '⏳' : '📋'} {getContractSeasonsLeft(p)} temp.
                   </span>
                   {onRenewContract && (
                     <button

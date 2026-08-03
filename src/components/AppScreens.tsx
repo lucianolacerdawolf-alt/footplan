@@ -10,7 +10,8 @@ import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { Difficulty } from '../engine/matchConfig';
 import type { CareerState } from '../engine/career';
-import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers } from '../engine/career';
+import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers, getSponsorTier, getSponsorName } from '../engine/career';
+import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
 import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
@@ -524,7 +525,6 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onMarkInboxRead={p.handleMarkInboxRead}
         onAcceptTransferOffer={p.handleAcceptTransferOffer}
         onRejectTransferOffer={p.handleRejectTransferOffer}
-        onRenegotiateSponsor={p.handleRenegotiateSponsor}
         onNextRound={p.handleNextCareerLeagueRound}
         onViewLeague={() => p.setScreen('career-league')}
         onOpenJobMarket={() => p.setScreen('career-job-market')}
@@ -590,6 +590,16 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         currentSeason={currentSeason}
         reputation={cs.manager.reputation}
         userSquad={cs.rosters[cs.leagueId]?.find(t => t.id === lg.userTeamId)?.squad}
+        userTeamName={lg.teams.find(t => t.id === lg.userTeamId)?.name}
+        userTeamLogo={lg.teams.find(t => t.id === lg.userTeamId)?.logoUrl}
+        stadium={lg.teams.find(t => t.id === lg.userTeamId)?.stadium}
+        leagueName={getLeague(cs.leagueId)?.name ?? ''}
+        leagueFlag={getLeague(cs.leagueId)?.flag ?? ''}
+        seasonYear={cs.currentSeasonYear}
+        sponsorLabel={getSponsorLabel(getSponsorTier(cs) as SponsorTier)}
+        sponsorName={getSponsorName(cs)}
+        nextSponsorTier={getNextTierUp(getSponsorTier(cs) as SponsorTier)}
+        onRenegotiateSponsor={p.handleRenegotiateSponsor}
         onRenewContract={(playerId) => p.handleRenewContract(playerId, 1)}
       />
     );

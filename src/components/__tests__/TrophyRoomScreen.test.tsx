@@ -192,4 +192,46 @@ describe('TrophyRoomScreen', () => {
     render(<TrophyRoomScreen history={[]} transfers={[]} />);
     expect(screen.queryByText('📋 Gestão de Contratos')).not.toBeInTheDocument();
   });
+
+  it('mostra identidade do clube no hero (nome, liga, temporada e estádio)', () => {
+    render(
+      <TrophyRoomScreen
+        history={[]}
+        userTeamName="Palmeiras"
+        userTeamLogo="logo.png"
+        leagueName="Serie A"
+        leagueFlag="🇧🇷"
+        seasonYear={3}
+        stadium="Allianz Parque"
+      />
+    );
+    expect(screen.getByText('Palmeiras')).toBeInTheDocument();
+    expect(screen.getByText(/Serie A/)).toBeInTheDocument();
+    expect(screen.getByText(/Temporada 3/)).toBeInTheDocument();
+    expect(screen.getByText(/Allianz Parque/)).toBeInTheDocument();
+  });
+
+  it('sem identidade (sala usada fora do modo carreira) não mostra hero', () => {
+    render(<TrophyRoomScreen history={[]} />);
+    expect(screen.queryByText(/Temporada/)).not.toBeInTheDocument();
+  });
+
+  it('botão de negociar patrocínio chama onRenegotiateSponsor', () => {
+    const onRenegotiateSponsor = vi.fn();
+    render(
+      <TrophyRoomScreen
+        history={[]}
+        sponsorName="Banco X"
+        nextSponsorTier="global"
+        onRenegotiateSponsor={onRenegotiateSponsor}
+      />
+    );
+    fireEvent.click(screen.getByText(/Negociar patrocínio/));
+    expect(onRenegotiateSponsor).toHaveBeenCalled();
+  });
+
+  it('sem patrocínio elegível não mostra botão de negociação', () => {
+    render(<TrophyRoomScreen history={[]} sponsorLabel="Global" nextSponsorTier={null} onRenegotiateSponsor={vi.fn()} />);
+    expect(screen.queryByText(/Negociar patrocínio/)).not.toBeInTheDocument();
+  });
 });

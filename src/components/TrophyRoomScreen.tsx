@@ -22,6 +22,18 @@ interface Props {
   userSquad?: Player[];
   /** Fase 1 — renova contrato por 1 temporada a partir da Central de Comandos. */
   onRenewContract?: (playerId: string) => void;
+  // Identidade do clube (hero no topo da aba Meu Clube)
+  userTeamName?: string;
+  userTeamLogo?: string;
+  stadium?: string;
+  leagueName?: string;
+  leagueFlag?: string;
+  seasonYear?: number;
+  // Patrocínio (gestão do clube — movido da Central)
+  sponsorLabel?: string;
+  sponsorName?: string;
+  nextSponsorTier?: string | null;
+  onRenegotiateSponsor?: () => void;
   /** Resumo da temporada em curso — só usado no estado vazio, pra tela não virar
    *  um beco quando ainda não há nenhuma temporada concluída. */
   currentSeason?: {
@@ -59,7 +71,7 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: '#ef4444' };
 }
 
-export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract }: Props) {
+export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, nextSponsorTier, onRenegotiateSponsor }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
   const transfersRecent = transfers ? [...transfers].reverse() : [];
@@ -77,9 +89,35 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
         <h1 className={styles.title}>🏆 Sala de Troféus</h1>
       </div>
 
+      {/* Identidade do clube */}
+      {userTeamName && (
+        <div className={styles.clubHero}>
+          {userTeamLogo && <img src={userTeamLogo} alt="" className={styles.crest} />}
+          <div className={styles.clubInfo}>
+            <h2 className={styles.clubName}>{userTeamName}</h2>
+            <div className={styles.clubMeta}>
+              {leagueFlag && <span>{leagueFlag}</span>}
+              {leagueName && <span>{leagueName}</span>}
+              {seasonYear != null && <span>· Temporada {seasonYear}</span>}
+              {stadium && <span>· 🏟️ {stadium}</span>}
+            </div>
+          </div>
+        </div>
+      )}
+
       {summary && highlights && <CareerSummaryPanel summary={summary} highlights={highlights} />}
 
-      {finances && <FinancePanel finances={finances} />}
+      {finances && <FinancePanel
+        finances={finances}
+        sponsorLabel={sponsorLabel}
+        sponsorName={sponsorName}
+      />}
+
+      {onRenegotiateSponsor && nextSponsorTier && (
+        <button className={styles.sponsorBtn} onClick={onRenegotiateSponsor}>
+          📋 Negociar patrocínio → novo tier
+        </button>
+      )}
 
       {userSquad && (
         <div className={styles.contractSection}>
