@@ -1,4 +1,5 @@
-import type { Team, Position } from '@/engine/types';
+import type { Team, Position, Formation } from '@/engine/types';
+import { FORMATION_COUNTS } from '@/engine/constants';
 import { generatePlayerWithSubtype, generateRandomName } from './generateTeam';
 
 function starOvr(teamOvr: number, slot: number): number {
@@ -79,9 +80,22 @@ const BENCH_SLOTS: SlotDef[] = [
   ['DEF',16,'FB'],['MID',17,'CAM'],['FWD',18,'W'],
 ];
 
-const FORMATIONS = ['4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '5-3-2', '3-4-3', '4-1-4-1', '4-4-1-1', '3-4-2-1', '4-3-1-2', '5-4-1'];
+// Guarda de consistência: os slots por formação precisam bater com FORMATION_COUNTS
+// (engine/constants.ts) — sem isso, uma formação nova num lugar mas não no outro
+// cairia no fallback silencioso `?? STARTER_SLOTS['4-4-2']` em makeSecondDivisionTeam.
+for (const [formation, slots] of Object.entries(STARTER_SLOTS)) {
+  const counts = FORMATION_COUNTS[formation as Formation];
+  const tally = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
+  for (const [pos] of slots) tally[pos]++;
+  if (!counts || counts.GK !== tally.GK || counts.DEF !== tally.DEF || counts.MID !== tally.MID || counts.FWD !== tally.FWD) {
+    throw new Error(`STARTER_SLOTS divergente de FORMATION_COUNTS para a formação ${formation}`);
+  }
+}
 
-function pickFormation(teamId: string): string {
+// Derivado de STARTER_SLOTS (mesma ordem de declaração) — não é uma lista paralela.
+const FORMATIONS = Object.keys(STARTER_SLOTS) as Formation[];
+
+function pickFormation(teamId: string): Formation {
   const idx = teamId.split('').reduce((s, c) => s + c.charCodeAt(0), 0);
   return FORMATIONS[idx % FORMATIONS.length];
 }
@@ -101,6 +115,6 @@ export function makeSecondDivisionTeam(
     id, name, abbreviation: abbr, color, secondaryColor: secondary,
     logoUrl: '',
     squad: [...xi, ...bench],
-    strategy: { formation: formation as Team['strategy']['formation'], mentality: 'counter-attack', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
+    strategy: { formation, mentality: 'counter-attack', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
   };
 }

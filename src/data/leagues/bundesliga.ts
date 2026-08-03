@@ -1,27 +1,12 @@
 import type { LeagueDefinition } from './types';
-import type { Team, Player } from '@/engine/types';
+import type { Player } from '@/engine/types';
+import { p, makeFullTeam } from './teamFactory';
 
 // ---------------------------------------------------------------------------
 // BUNDESLIGA 2024/25 — 18 times com elencos realistas
 // Escala 1-99: 90+ elite, 85-89 craque, 80-84 muito bom, 75-79 bom, 70-74 médio
 // ---------------------------------------------------------------------------
 
-function p(
-  id: string, name: string, number: number, pos: Player['position'],
-  speed: number, stamina: number, passing: number, finishing: number,
-  tackling: number, dribbling: number, vision: number, positioning: number
-): Player {
-  return { id, name, number, position: pos, attributes: { speed, stamina, passing, finishing, tackling, dribbling, vision, positioning }, currentFatigue: 0 };
-}
-
-function makeFullTeam(id: string, name: string, abbr: string, color: string, secondary: string, logoUrl: string, xi: Player[], bench: Player[]): Team {
-  return {
-    id, name, abbreviation: abbr, color, secondaryColor: secondary,
-    logoUrl,
-    squad: [...xi, ...bench],
-    strategy: { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
-  };
-}
 
 // =========================================================================
 // BAYERN MÜNCHEN (OVR 87)
