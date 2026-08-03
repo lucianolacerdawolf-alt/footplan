@@ -62,18 +62,21 @@ export function useCareerManager({
   useEffect(() => {
     loadFromCloud().then(cloud => {
       if (!cloud || !isValidCareerState(cloud.state)) return;
-      const localState = careerState;
-      const localValid = localState !== null && isValidCareerState(localState);
-      if (!localValid) {
-        setCareerState(cloud.state);
-        return;
-      }
-      let localSavedAt = 0;
-      try { localSavedAt = Number(localStorage.getItem(CAREER_SAVED_AT_KEY)) || 0; } catch { /* noop */ }
       const cloudUpdatedAt = new Date(cloud.updatedAt).getTime();
-      if (Number.isFinite(cloudUpdatedAt) && cloudUpdatedAt > localSavedAt) {
-        setCareerState(cloud.state);
-      }
+      // Decide contra o estado local MAIS RECENTE (o `prev` do updater), nunca o
+      // capturado no fecho do mount. Entre loadFromCloud() disparar e resolver
+      // (rede, lento) o usuário pode ter criado/jogado uma carreira nova; usar o
+      // careerState do mount (stale = null numa carreira recém-criada) caía no
+      // ramo "!localValid" e um cloud antigo sobrescrevia esse progresso — era o
+      // "joguei o 1º jogo da carreira e sumiu como se eu não tivesse jogado".
+      setCareerState(prev => {
+        const localValid = prev !== null && isValidCareerState(prev);
+        if (!localValid) return cloud.state;
+        let localSavedAt = 0;
+        try { localSavedAt = Number(localStorage.getItem(CAREER_SAVED_AT_KEY)) || 0; } catch { /* noop */ }
+        // Só sobrescreve quando o cloud é estritamente mais novo que o save local.
+        return (Number.isFinite(cloudUpdatedAt) && cloudUpdatedAt > localSavedAt) ? cloud.state : prev;
+      });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -109,4 +109,35 @@ describe('reconciliação cloud × local (mount)', () => {
     const { result } = renderHook(() => useCareerManager(mockParams()));
     await waitFor(() => expect(result.current.careerState?.manager.name).toBe('Cloud'));
   });
+
+  // Regressão: "joguei o 1º jogo da carreira e apareceu como se eu não tivesse jogado".
+  // App monta SEM save local (careerState=null); o usuário cria uma carreira nova e
+  // joga ANTES do loadFromCloud() resolver. Um cloud antigo (de sessão anterior) que
+  // resolve depois não pode sobrescrever esse progresso recém-criado.
+  it('carreira criada após o mount não é sobrescrita por um cloud antigo que resolve depois', async () => {
+    let resolveCloud!: (v: { state: CareerState; updatedAt: string }) => void;
+    const deferred = new Promise<{ state: CareerState; updatedAt: string }>(res => { resolveCloud = res; });
+    vi.mocked(loadCareer).mockReturnValue(deferred);
+
+    // localStorage limpo (beforeEach) → careerState = null no mount.
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    expect(result.current.careerState).toBeNull();
+
+    // Usuário cria uma carreira nova e ela é salva localmente — tudo antes do cloud resolver.
+    const leagueDef = getLeague('pl')!;
+    const userTeam = makeTeam(leagueDef.teams[0].id, 'Novo', 'NEW');
+    act(() => {
+      result.current.handleStartCareer(userTeam, leagueDef, 'NovaCarreira');
+    });
+    expect(result.current.careerState?.manager.name).toBe('NovaCarreira');
+
+    // Agora o cloud antigo resolve (1h atrás).
+    const oldCloud: CareerState = { ...result.current.careerState!, manager: { name: 'CloudAntigo', reputation: 0 } };
+    await act(async () => {
+      resolveCloud({ state: oldCloud, updatedAt: new Date(Date.now() - 3_600_000).toISOString() });
+      await deferred;
+    });
+
+    expect(result.current.careerState?.manager.name).toBe('NovaCarreira');
+  });
 });
