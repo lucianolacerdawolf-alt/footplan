@@ -1,4 +1,5 @@
 import type { MatchResult, MatchEvent, Player, Team } from './types';
+import { getStarterCount } from './squadUtils';
 
 export interface PlayerMatchRating {
   player: Player;
@@ -11,8 +12,8 @@ export interface PlayerMatchRating {
 }
 
 function playersInMatch(team: Team): Player[] {
-  // titulares = primeiros 11 (substituições já refletem swap in-place no time mutado)
-  return team.squad.slice(0, 11);
+  // titulares = primeiros N da formação (substituições já refletem swap in-place no time mutado)
+  return team.squad.slice(0, getStarterCount(team.strategy.formation));
 }
 
 function findPlayerByName(players: Player[], name: string | undefined): Player | null {

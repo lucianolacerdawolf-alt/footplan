@@ -37,7 +37,7 @@ export const makeRng = (random: RandomFn) => (min: number, max: number) => min +
  * Retorna os titulares de um time conforme a formação,
  * filtrando jogadores expulsos (cards.get(id) === 'red').
  */
-export function getStarters(team: Team, cards?: Map<string, 'yellow' | 'red'>, injured?: Set<string>): Player[] {
+export function getActiveStarters(team: Team, cards?: Map<string, 'yellow' | 'red'>, injured?: Set<string>): Player[] {
   const counts = FORMATION_COUNTS[team.strategy.formation] ?? { DEF: 4, MID: 3, FWD: 3 };
   const starters: Player[] = [];
   const active = (p: Player) => (!cards || cards.get(p.id) !== 'red') && (!injured || !injured.has(p.id));
@@ -67,7 +67,7 @@ export function computeStats(events: MatchEvent[], teamId: string, opponentId: s
 export function applyFatigue(team: Team, fatigueMap: Map<string, number>, cards: Map<string, 'yellow' | 'red'>): void {
   const baseFatigue = INTENSITY_FATIGUE[team.strategy.intensity];
   const mod = MENTALITY_MODIFIERS[team.strategy.mentality];
-  for (const player of getStarters(team, cards)) {
+  for (const player of getActiveStarters(team, cards)) {
     if (player.position === 'GK') continue;
     const fatigueGain = baseFatigue * mod.staminaLossMultiplier * (1 - player.attributes.stamina / 200);
     const current = fatigueMap.get(player.id) ?? 0;

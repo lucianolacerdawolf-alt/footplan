@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getSubSuggestions } from '../subSuggestions';
-import { getStarters } from '../matchHelpers';
+import { getActiveStarters } from '../matchHelpers';
 import type { Team, Player } from '../types';
 
 function player(id: string, position: Player['position'], overrides: Partial<Player> = {}): Player {
@@ -37,7 +37,7 @@ describe('getSubSuggestions — banco', () => {
     // Todo mundo cansado para provocar o máximo de sugestões possível
     team.squad.forEach(p => { p.currentFatigue = 90; });
 
-    const starterIds = new Set(getStarters(team).map(p => p.id));
+    const starterIds = new Set(getActiveStarters(team).map(p => p.id));
     const suggestions = getSubSuggestions(team, 0, 0);
 
     expect(suggestions.length).toBeGreaterThan(0);
@@ -52,7 +52,7 @@ describe('getSubSuggestions — banco', () => {
   it('ignora reservas lesionados, suspensos ou expulsos', () => {
     const team = makeSquadTeam();
     team.squad.forEach(p => { p.currentFatigue = 90; });
-    const starterIds = new Set(getStarters(team).map(p => p.id));
+    const starterIds = new Set(getActiveStarters(team).map(p => p.id));
     const benchIds = team.squad.filter(p => !starterIds.has(p.id)).map(p => p.id);
 
     // Deixa todo o banco indisponível de três formas diferentes
@@ -76,7 +76,7 @@ describe('getSubSuggestions — risco de cartão', () => {
 
   it('sugere só quem está pendurado com amarelo', () => {
     const team = makeSquadTeam();
-    const starters = getStarters(team);
+    const starters = getActiveStarters(team);
     const pendurado = starters.find(p => p.position === 'DEF')!;
     const cards = new Map<string, 'yellow' | 'red'>([[pendurado.id, 'yellow']]);
 
@@ -90,7 +90,7 @@ describe('getSubSuggestions — risco de cartão', () => {
 
   it('não sugere trocar quem já foi expulso — ele nem está mais em campo', () => {
     const team = makeSquadTeam();
-    const expulso = getStarters(team).find(p => p.position === 'MID')!;
+    const expulso = getActiveStarters(team).find(p => p.position === 'MID')!;
     const cards = new Map<string, 'yellow' | 'red'>([[expulso.id, 'red']]);
 
     const suggestions = getSubSuggestions(team, 0, 0, { cards });
@@ -101,7 +101,7 @@ describe('getSubSuggestions — risco de cartão', () => {
 describe('getSubSuggestions — fadiga', () => {
   it('usa a fadiga ao vivo da partida em vez da fadiga de temporada', () => {
     const team = makeSquadTeam(); // todos com currentFatigue 0
-    const alvo = getStarters(team).find(p => p.position === 'MID')!;
+    const alvo = getActiveStarters(team).find(p => p.position === 'MID')!;
 
     expect(getSubSuggestions(team, 0, 0).filter(s => s.type === 'fatigue')).toEqual([]);
 
@@ -131,7 +131,7 @@ describe('getSubSuggestions — tática', () => {
   it('não repete o mesmo jogador em duas sugestões', () => {
     const team = makeSquadTeam();
     team.squad.forEach(p => { p.currentFatigue = 95; });
-    const starters = getStarters(team);
+    const starters = getActiveStarters(team);
     const cards = new Map<string, 'yellow' | 'red'>(
       starters.filter(p => p.position !== 'GK').map(p => [p.id, 'yellow' as const])
     );

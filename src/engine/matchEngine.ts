@@ -39,7 +39,7 @@ import {
   CORNER_TACTIC_MOD, FREEKICK_TACTIC_MOD, FREEKICK_DIFFICULTY,
 } from './matchConfig';
 import {
-  effective, getPlayersByPosition, getGoalkeeper, pickRandom, getStarters,
+  effective, getPlayersByPosition, getGoalkeeper, pickRandom, getActiveStarters,
   makeRng, computeStats, applyFatigue,
 } from './matchHelpers';
 import { calculatePossession } from './calculatePossession';
@@ -72,8 +72,8 @@ export interface MatchState {
 export function createMatchState(home: Team, away: Team): MatchState {
   const fatigueHome = new Map<string, number>();
   const fatigueAway = new Map<string, number>();
-  getStarters(home).forEach(p => fatigueHome.set(p.id, p.currentFatigue));
-  getStarters(away).forEach(p => fatigueAway.set(p.id, p.currentFatigue));
+  getActiveStarters(home).forEach(p => fatigueHome.set(p.id, p.currentFatigue));
+  getActiveStarters(away).forEach(p => fatigueAway.set(p.id, p.currentFatigue));
   return {
     fatigueHome, fatigueAway,
     homeScore: 0, awayScore: 0,
@@ -136,8 +136,8 @@ function resolveCyclePossession(
 
   // Passe
   if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.6) {
-    const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'MID'),
-                      ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
+    const eligible = [...getPlayersByPosition(getActiveStarters(possTeam, state.cards, state.injured), 'MID'),
+                      ...getPlayersByPosition(getActiveStarters(possTeam, state.cards, state.injured), 'FWD')];
     if (eligible.length >= 2) {
       const [a, b] = pickRandom(eligible, 2, random);
       state.events.push({ minute, type: 'pass', description: generatePass(possTeam.name, a, b), teamId: possTeam.id, passerId: a.id, receiverId: b.id });
@@ -149,8 +149,8 @@ function resolveCyclePossession(
   // (antes o desarme era só narrativo e o ataque seguinte ainda era resolvido a favor do
   // time original, dando a impressão de "passou pro adversário e voltou")
   if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.45) {
-    const eligible = [...getPlayersByPosition(getStarters(defTeam, state.cards, state.injured), 'DEF'),
-                      ...getPlayersByPosition(getStarters(defTeam, state.cards, state.injured), 'MID')];
+    const eligible = [...getPlayersByPosition(getActiveStarters(defTeam, state.cards, state.injured), 'DEF'),
+                      ...getPlayersByPosition(getActiveStarters(defTeam, state.cards, state.injured), 'MID')];
     if (eligible.length > 0) {
       const tackler = pickRandom(eligible, 1, random)[0];
       state.events.push({ minute, type: 'tackle', description: generateTackle(defTeam.name, tackler), teamId: defTeam.id });
@@ -267,9 +267,9 @@ function resolveCycleCorner(
   cycleEvents++;
 
   // Corner → goal: chance dinâmica 5–15% baseada em poder aéreo relativo (positioning)
-  const eligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'DEF'),
-                    ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
-  const defCornerEligible = getPlayersByPosition(getStarters(defTeam, state.cards, state.injured), 'DEF');
+  const eligible = [...getPlayersByPosition(getActiveStarters(possTeam, state.cards, state.injured), 'DEF'),
+                    ...getPlayersByPosition(getActiveStarters(possTeam, state.cards, state.injured), 'FWD')];
+  const defCornerEligible = getPlayersByPosition(getActiveStarters(defTeam, state.cards, state.injured), 'DEF');
   const atkAerialPwr = eligible.reduce((s, p) => s + p.attributes.positioning, 0) / Math.max(1, eligible.length);
   const defAerialPwr = defCornerEligible.reduce((s, p) => s + p.attributes.positioning, 0) / Math.max(1, defCornerEligible.length);
   const cornerGoalChance = 0.05 + 0.10 * (atkAerialPwr / (atkAerialPwr + defAerialPwr));
@@ -281,12 +281,12 @@ function resolveCycleCorner(
   const shortRoute = random() < 0.25 * cMod.shortPassBonus;
 
   if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < cornerGoalChance) {
-    const shortEligible = [...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'MID'),
-                           ...getPlayersByPosition(getStarters(possTeam, state.cards, state.injured), 'FWD')];
+    const shortEligible = [...getPlayersByPosition(getActiveStarters(possTeam, state.cards, state.injured), 'MID'),
+                           ...getPlayersByPosition(getActiveStarters(possTeam, state.cards, state.injured), 'FWD')];
     const takers = shortRoute ? shortEligible : eligible;
     if (takers.length > 0) {
       const finisher = pickRandom(takers, 1, random)[0];
-      const gk = getGoalkeeper(getStarters(defTeam, state.cards, state.injured));
+      const gk = getGoalkeeper(getActiveStarters(defTeam, state.cards, state.injured));
       if (gk) {
         const fatigue = atkFatigue.get(finisher.id) ?? 0;
         const power = shortRoute
@@ -294,8 +294,8 @@ function resolveCycleCorner(
              effective(finisher.attributes.finishing, fatigue) * 0.9) * cMod.shortPassBonus
           : (effective(finisher.attributes.positioning, fatigue) * 1.2 +
              effective(finisher.attributes.finishing, fatigue) * 0.5) * cMod.headerBonus;
-        const gkPower = effective(gk.attributes.positioning, defFatigue.get(gk.id) ?? 0) * rngFallback(random, 0.8, 1.2);
-        if (power * rngFallback(random, 0.7, 1.3) > gkPower && random() < goalTimingMultiplier(minute)) {
+        const gkPower = effective(gk.attributes.positioning, defFatigue.get(gk.id) ?? 0) * makeRng(random)(0.8, 1.2);
+        if (power * makeRng(random)(0.7, 1.3) > gkPower && random() < goalTimingMultiplier(minute)) {
           const newScore = `${state.homeScore}-${state.awayScore}`;
           const description = shortRoute
             ? generateShortCornerGoal(possTeam.name, finisher, newScore)
@@ -328,11 +328,11 @@ function resolveFreeKick(
   const fMod = FREEKICK_TACTIC_MOD[atkTeam.strategy.freeKickTactic ?? 'cross'];
   const directRoute = random() < fMod.shotBonus / (fMod.shotBonus + fMod.headerBonus);
 
-  const atkStarters = getStarters(atkTeam, state.cards, state.injured);
+  const atkStarters = getActiveStarters(atkTeam, state.cards, state.injured);
   const pool = directRoute
     ? [...getPlayersByPosition(atkStarters, 'MID'), ...getPlayersByPosition(atkStarters, 'FWD')]
     : [...getPlayersByPosition(atkStarters, 'DEF'), ...getPlayersByPosition(atkStarters, 'FWD')];
-  const gk = getGoalkeeper(getStarters(defTeam, state.cards, state.injured));
+  const gk = getGoalkeeper(getActiveStarters(defTeam, state.cards, state.injured));
   if (pool.length === 0 || !gk) return cycleEvents;
 
   // Cobrador: melhor finalizador na rota direta, melhor no jogo aéreo no cruzamento
@@ -350,9 +350,9 @@ function resolveFreeKick(
   const power = (directRoute
     ? effective(taker.attributes.finishing, fatigue) * fMod.shotBonus
     : effective(taker.attributes.positioning, fatigue) * fMod.headerBonus) * FREEKICK_DIFFICULTY;
-  const gkPower = effective(gk.attributes.positioning, defFatigue.get(gk.id) ?? 0) * rngFallback(random, 0.9, 1.4);
+  const gkPower = effective(gk.attributes.positioning, defFatigue.get(gk.id) ?? 0) * makeRng(random)(0.9, 1.4);
 
-  if (power * rngFallback(random, 0.7, 1.3) > gkPower && random() < goalTimingMultiplier(minute)) {
+  if (power * makeRng(random)(0.7, 1.3) > gkPower && random() < goalTimingMultiplier(minute)) {
     const newScore = `${state.homeScore}-${state.awayScore}`;
     state.events.push({
       minute, type: 'goal',
@@ -390,7 +390,7 @@ function resolveCycleFoulsAndCards(
   const otherTeam  = foulerTeam.id === home.id ? away : home;
   // Intensity affects foul frequency
   const foulMult = INTENSITY_FOUL_MULT[foulerTeam.strategy.intensity];
-  const eligible = getPlayersByPosition(getStarters(foulerTeam, state.cards, state.injured), 'DEF');
+  const eligible = getPlayersByPosition(getActiveStarters(foulerTeam, state.cards, state.injured), 'DEF');
   if (eligible.length === 0) {
     return { cycleEvents, foulerTeam: null, otherTeam: null };
   }
@@ -401,15 +401,15 @@ function resolveCycleFoulsAndCards(
 
   // Foul → penalty chance (3%)
   if (cycleEvents < MAX_EVENTS_PER_CYCLE && random() < 0.03) {
-    const penaltyTakers = [...getPlayersByPosition(getStarters(otherTeam, state.cards, state.injured), 'FWD'),
-                            ...getPlayersByPosition(getStarters(otherTeam, state.cards, state.injured), 'MID')]
+    const penaltyTakers = [...getPlayersByPosition(getActiveStarters(otherTeam, state.cards, state.injured), 'FWD'),
+                            ...getPlayersByPosition(getActiveStarters(otherTeam, state.cards, state.injured), 'MID')]
       .sort((a, b) => (b.attributes.finishing + b.attributes.positioning) - (a.attributes.finishing + a.attributes.positioning));
     if (penaltyTakers.length > 0) {
       const taker = penaltyTakers[0];
-      const gk = getGoalkeeper(getStarters(foulerTeam, state.cards, state.injured));
+      const gk = getGoalkeeper(getActiveStarters(foulerTeam, state.cards, state.injured));
       if (gk) {
-        const shotPwr = effective(taker.attributes.finishing, state.fatigueHome.get(taker.id) ?? state.fatigueAway.get(taker.id) ?? 0) * rngFallback(random, 0.7, 1.3);
-        const savePwr = effective(gk.attributes.positioning, state.fatigueHome.get(gk.id) ?? state.fatigueAway.get(gk.id) ?? 0) * rngFallback(random, 0.8, 1.2);
+        const shotPwr = effective(taker.attributes.finishing, state.fatigueHome.get(taker.id) ?? state.fatigueAway.get(taker.id) ?? 0) * makeRng(random)(0.7, 1.3);
+        const savePwr = effective(gk.attributes.positioning, state.fatigueHome.get(gk.id) ?? state.fatigueAway.get(gk.id) ?? 0) * makeRng(random)(0.8, 1.2);
         const scored = shotPwr * 1.35 > savePwr;
         if (scored && random() < goalTimingMultiplier(minute)) {
           // Pênalti convertido é um GOL: com type 'penalty' ele não entrava na
@@ -467,7 +467,7 @@ function resolveCycleInjuries(
   // 1º tempo com estamina verde: risco ~0.6%; 2º tempo com estamina vermelha: risco ~18%
   if (foulerTeam && otherTeam && cycleEvents < MAX_EVENTS_PER_CYCLE) {
     const vicTeam = foulerTeam.id === home.id ? away : home;
-    const victims = getStarters(vicTeam, state.cards, state.injured).filter(p => p.position !== 'GK');
+    const victims = getActiveStarters(vicTeam, state.cards, state.injured).filter(p => p.position !== 'GK');
     if (victims.length > 0) {
       const victim = victims[Math.floor(random() * victims.length)];
       const vicFatigueMap = vicTeam.id === home.id ? state.fatigueHome : state.fatigueAway;
@@ -487,7 +487,7 @@ function resolveCycleInjuries(
     const unlucky = random() < 0.5 ? home : away;
     const unluckyMult = INTENSITY_INJURY_MULT[unlucky.strategy.intensity];
     if (random() > unluckyMult * 0.8) return cycleEvents;
-    const victims = getStarters(unlucky, state.cards, state.injured).filter(p => p.position !== 'GK');
+    const victims = getActiveStarters(unlucky, state.cards, state.injured).filter(p => p.position !== 'GK');
     if (victims.length > 0) {
       const victim = victims[Math.floor(random() * victims.length)];
       state.injured.add(victim.id);
@@ -613,10 +613,6 @@ function simularBloco(
   }
 }
 
-function rngFallback(random: RandomFn, min: number, max: number): number {
-  return min + random() * (max - min);
-}
-
 // Recuperação parcial de fadiga no intervalo — sem isso a fadiga acumulada no 1º tempo
 // nunca é aliviada, fazendo o 2º tempo começar já perto do teto em intensidades altas.
 // Valor deliberadamente modesto: como só o atacante (nunca o goleiro) sofre a penalidade
@@ -625,11 +621,11 @@ function rngFallback(random: RandomFn, min: number, max: number): number {
 const HALFTIME_FATIGUE_RECOVERY = 6;
 
 function recoverHalftimeFatigue(home: Team, away: Team, state: MatchState): void {
-  for (const player of getStarters(home)) {
+  for (const player of getActiveStarters(home)) {
     const current = state.fatigueHome.get(player.id) ?? 0;
     state.fatigueHome.set(player.id, Math.max(0, current - HALFTIME_FATIGUE_RECOVERY));
   }
-  for (const player of getStarters(away)) {
+  for (const player of getActiveStarters(away)) {
     const current = state.fatigueAway.get(player.id) ?? 0;
     state.fatigueAway.set(player.id, Math.max(0, current - HALFTIME_FATIGUE_RECOVERY));
   }
@@ -739,15 +735,11 @@ export function simularPartida(home: Team, away: Team, random: RandomFn = Math.r
 // ---------------------------------------------------------------------------
 function simularPenaltisInterno(home: Team, away: Team, cards: Map<string, 'yellow' | 'red'>, injured: Set<string>, random: RandomFn): PenaltyResult {
   const rng = makeRng(random);
-  const getShooters = (team: Team): Player[] =>
-    [...getStarters(team, cards, injured)]
-      .filter(p => p.position !== 'GK')
-      .sort((a, b) => b.attributes.finishing - a.attributes.finishing);
 
-  const homeShooters = getShooters(home);
-  const awayShooters = getShooters(away);
-  const homeGK = getGoalkeeper(getStarters(home, cards, injured));
-  const awayGK = getGoalkeeper(getStarters(away, cards, injured));
+  const homeShooters = getShooters(home, cards, injured);
+  const awayShooters = getShooters(away, cards, injured);
+  const homeGK = getGoalkeeper(getActiveStarters(home, cards, injured));
+  const awayGK = getGoalkeeper(getActiveStarters(away, cards, injured));
 
   const kicks: Array<{ teamId: string; scored: boolean }> = [];
   let homeScore = 0, awayScore = 0;
@@ -815,7 +807,6 @@ export function resolveKnockoutTiebreak(
 
   const penaltyResult = simularPenaltisInterno(home, away, state.cards, state.injured, random);
   const winner = penaltyResult.winner === 'home' ? home : away;
-  const loser = penaltyResult.winner === 'home' ? away : home;
   state.events.push({
     minute: 120, type: 'penaltyWin',
     description: generatePenaltyWin(winner.name, penaltyResult.homeScore, penaltyResult.awayScore),
@@ -823,9 +814,7 @@ export function resolveKnockoutTiebreak(
   });
   penaltyResult.kicks.forEach((kick, idx) => {
     const teamObj = kick.teamId === home.id ? home : away;
-    const shooters = [...getStarters(teamObj, state.cards, state.injured)]
-      .filter(p => p.position !== 'GK')
-      .sort((a, b) => b.attributes.finishing - a.attributes.finishing);
+    const shooters = getShooters(teamObj, state.cards, state.injured);
     const shooter = shooters[Math.floor(idx / 2) % shooters.length];
     if (shooter) {
       state.events.push({
@@ -835,7 +824,6 @@ export function resolveKnockoutTiebreak(
       });
     }
   });
-  void loser;
   return { wentToExtraTime: true, extraTimeHomeScore, extraTimeAwayScore, penaltyResult };
 }
 
@@ -861,7 +849,7 @@ export function resolveKnockoutExtraTime(
 
 // Helper: obtém lista ordenada de cobradores de pênalti (mesma lógica do engine)
 export function getShooters(team: Team, cards: Map<string, 'yellow' | 'red'>, injured: Set<string>): Player[] {
-  return [...getStarters(team, cards, injured)]
+  return [...getActiveStarters(team, cards, injured)]
     .filter(p => p.position !== 'GK')
     .sort((a, b) => b.attributes.finishing - a.attributes.finishing);
 }

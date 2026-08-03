@@ -1,6 +1,6 @@
 import type { Team, Player } from './types';
 import { playerOvr } from '../utils/playerOvr';
-import { getStarters } from './matchHelpers';
+import { getActiveStarters } from './matchHelpers';
 
 export interface SubSuggestion {
   type: 'fatigue' | 'card_risk' | 'tactical';
@@ -33,9 +33,9 @@ export function getSubSuggestions(
   const { fatigueMap, cards } = ctx;
   const injured = new Set(ctx.injuredIds ?? []);
 
-  // getStarters seleciona por posição segundo a formação — não são os 11 primeiros
+  // getActiveStarters seleciona por posição segundo a formação — não são os 11 primeiros
   // do elenco. O banco é o complemento por id, nunca um slice do array.
-  const starters = getStarters(team, cards, injured);
+  const starters = getActiveStarters(team, cards, injured);
   const starterIds = new Set(starters.map(p => p.id));
   const bench = team.squad.filter(p => !starterIds.has(p.id) && isAvailable(p, injured));
 

@@ -1,7 +1,7 @@
 import type { Team, Player, Mentality, RandomFn } from './types';
 import { MENTALITY_MODIFIERS, BASE_GK, SHOT_CONVERSION } from './matchConfig';
 import {
-  effective, getGoalkeeper, getStarters,
+  effective, getGoalkeeper, getActiveStarters,
   makeRng, compressAttr,
 } from './matchHelpers';
 
@@ -14,7 +14,7 @@ export function resolveShot(
 ): { result: 'goal' | 'post' | 'save' | 'miss'; scorer: Player; goalkeeper: Player } {
   const rng = makeRng(random);
   const modAtk = MENTALITY_MODIFIERS[attackingStrategy];
-  const gk = getGoalkeeper(getStarters(defendingTeam, cards));
+  const gk = getGoalkeeper(getActiveStarters(defendingTeam, cards));
   if (!gk) return { result: 'goal', scorer: attacker, goalkeeper: attacker };
   const gkFatigue = fatigueDef.get(gk.id) ?? 0;
   const atkFatigue = fatigueAtk.get(attacker.id) ?? 0;

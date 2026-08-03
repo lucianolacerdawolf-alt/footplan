@@ -10,7 +10,7 @@ import {
   getDifficultyAttackMultiplier, getDifficultyDefenseMultiplier,
 } from './matchConfig';
 import {
-  effective, getPlayersByPosition, getStarters,
+  effective, getPlayersByPosition, getActiveStarters,
   pickRandom, makeRng, compressAttr,
 } from './matchHelpers';
 
@@ -44,10 +44,10 @@ export function resolveAttack(
     defendingTeam.strategy.mentality, defendingTeam.strategy.defensiveLine,
   );
 
-  const fwds = getPlayersByPosition(getStarters(attackingTeam, cards, injured), 'FWD');
-  const mids = getPlayersByPosition(getStarters(attackingTeam, cards, injured), 'MID');
+  const fwds = getPlayersByPosition(getActiveStarters(attackingTeam, cards, injured), 'FWD');
+  const mids = getPlayersByPosition(getActiveStarters(attackingTeam, cards, injured), 'MID');
   const attackers = pickRandom([...fwds, ...mids], 3, random);
-  const defenders = getPlayersByPosition(getStarters(defendingTeam, cards, injured), 'DEF');
+  const defenders = getPlayersByPosition(getActiveStarters(defendingTeam, cards, injured), 'DEF');
   const chosenDef = pickRandom(defenders, 3, random);
 
   // Attack power: attributes × mentality × formation × width × momentum × hard counter × RNG

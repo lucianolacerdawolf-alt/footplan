@@ -6,7 +6,7 @@ import {
   FORMATION_BONUS,
 } from './matchConfig';
 import {
-  effective, getPlayersByPosition, getStarters,
+  effective, getPlayersByPosition, getActiveStarters,
   makeRng,
 } from './matchHelpers';
 
@@ -16,8 +16,8 @@ export function calculatePossession(
   cards: Map<string, 'yellow' | 'red'>, random: RandomFn
 ): 'A' | 'B' {
   const rng = makeRng(random);
-  const midsA = getPlayersByPosition(getStarters(teamA, cards), 'MID');
-  const midsB = getPlayersByPosition(getStarters(teamB, cards), 'MID');
+  const midsA = getPlayersByPosition(getActiveStarters(teamA, cards), 'MID');
+  const midsB = getPlayersByPosition(getActiveStarters(teamB, cards), 'MID');
   const modA = MENTALITY_MODIFIERS[teamA.strategy.mentality];
   const modB = MENTALITY_MODIFIERS[teamB.strategy.mentality];
   const countA = FORMATION_COUNTS[teamA.strategy.formation]?.MID ?? 3;

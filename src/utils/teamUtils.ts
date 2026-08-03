@@ -1,5 +1,6 @@
 import type { Team } from '../engine/types';
 import { playerOvr } from './playerOvr';
+import { getStarterCount } from '../engine/squadUtils';
 
 /** Cópia profunda de um time */
 export function cloneTeam(team: Team, preserveFatigue = false): Team {
@@ -14,6 +15,6 @@ export function cloneTeam(team: Team, preserveFatigue = false): Team {
 }
 
 export function getAvgOvr(team: Team): number {
-  const starters = team.squad.slice(0, 11);
+  const starters = team.squad.slice(0, getStarterCount(team.strategy.formation));
   return Math.round(starters.reduce((acc, p) => acc + playerOvr(p), 0) / starters.length);
 }

@@ -2,6 +2,7 @@ import type { Team } from './types';
 import type { CpuProfile } from '../data/leagues/types';
 import { simularPartidaRapida, simularKnockout } from './matchEngine';
 import { cloneTeam } from '../utils/teamUtils';
+import { getStarterCount } from './squadUtils';
 import { shuffle } from './rng';
 
 // =============================================================================
@@ -347,7 +348,7 @@ export interface InjuryReport {
 
 export function applyPostMatchInjuries(team: Team, chance = 0.15, rng: () => number = Math.random): { team: Team; injuries: InjuryReport[] } {
   if (rng() >= chance) return { team, injuries: [] };
-  const starters = team.squad.slice(0, 11).filter(p => !p.injuredRounds);
+  const starters = team.squad.slice(0, getStarterCount(team.strategy.formation)).filter(p => !p.injuredRounds);
   if (starters.length === 0) return { team, injuries: [] };
   const victim = starters[Math.floor(rng() * starters.length)];
   const rounds = 1 + Math.floor(rng() * 3); // 1-3
@@ -373,7 +374,6 @@ export function simularFixtureAuto(fixture: LeagueFixture, teams: Team[]): Leagu
 }
 
 export function isUserEliminated(state: BracketState): boolean {
-  if (state.stage === 'champion' && state.championId === state.userTeamId) return false;
   if (state.championId === state.userTeamId) return false;
 
   const userId = state.userTeamId;
