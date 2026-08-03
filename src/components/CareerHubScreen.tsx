@@ -10,6 +10,7 @@ import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import { playerOvr } from '../utils/playerOvr';
+import { getStarterCount } from '../engine/squadUtils';
 import InboxPanel from './InboxPanel';
 import styles from './CareerHubScreen.module.css';
 
@@ -117,7 +118,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
 
   const avgOvr = useMemo(() => {
     if (!userTeam) return 0;
-    const starters = userTeam.squad.slice(0, 11);
+    const starters = userTeam.squad.slice(0, getStarterCount(userTeam.strategy.formation));
     return Math.round(starters.reduce((s, p) => s + playerOvr(p), 0) / starters.length);
   }, [userTeam]);
 

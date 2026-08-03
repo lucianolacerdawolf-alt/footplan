@@ -3,7 +3,7 @@ import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Wi
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
-import { isPlayerUnavailable, rebalanceForFormation } from '../engine/squadUtils';
+import { isPlayerUnavailable, rebalanceForFormation, getStarterCount } from '../engine/squadUtils';
 import { FORMATION_BONUS, getTacticalHardCounter } from '../engine/matchConfig';
 import TacticLabel from './TacticLabel';
 import TacticPresets from './shared/TacticPresets';
@@ -237,9 +237,13 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   };
 
   const countByPos = (team: Team, pos: string) => {
-    const counts = FORMATION_COUNTS[team.strategy.formation];
-    const starterCount = 1 + counts.DEF + counts.MID + counts.FWD;
+    const starterCount = getStarterCount(team.strategy.formation);
     return team.squad.slice(0, starterCount).filter(p => p.position === pos).length;
+  };
+
+  const avgOvr = (team: Team) => {
+    const starters = team.squad.slice(0, getStarterCount(team.strategy.formation));
+    return Math.round(starters.reduce((s, p) => s + playerOvr(p), 0) / starters.length);
   };
 
   const renderCard = (team: Team, onStrategy: (s: Strategy) => void, side: 'home' | 'away', disabled = false) => (
@@ -250,7 +254,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         </div>
         <div style={{ flex: 1 }}>
           <h2>{team.name}</h2>
-          <span className="setup-team-sub">{team.strategy.formation} · {Math.round(team.squad.slice(0, 11).reduce((s, p) => s + playerOvr(p), 0) / 11)} OVR {disabled ? '🔒 CPU' : ''}</span>
+          <span className="setup-team-sub">{team.strategy.formation} · {avgOvr(team)} OVR {disabled ? '🔒 CPU' : ''}</span>
         </div>
       </div>
 
