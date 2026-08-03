@@ -242,19 +242,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     />
   ),
 
-  'home': (p) => (
-    <HomeScreen
-      onSingleMatch={() => { p.setReturnScreen('select'); p.setScreen('league-select'); }}
-      onQuickPlay={p.handleQuickPlay}
-      onLeague={p.handleLeagueFromHome}
-      onCareer={p.handleCareerFromHome}
-      onCup={p.handleCupFromHome}
-      onAchievements={() => p.setScreen('achievements')}
-      onOnline={() => p.setScreen('online-lobby')}
-      difficulty={p.difficulty}
-      onSetDifficulty={p.setDifficulty}
-    />
-  ),
+  'home': (p) => renderHome(p),
 
   'select': (p) => (
     <TeamSelectionScreen
@@ -476,6 +464,13 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       && (p.isCareerMode
         ? p.careerState?.season.cup.userTeamId === p.lastResult.winner.id
         : p.bracketState?.userTeamId === p.lastResult.winner.id);
+    // Time do usuário para o badge Vitória/Derrota/Empate — sem isso, o badge
+    // assumia o time da casa, invertendo o resultado em jogos fora de casa.
+    const userTeamId = p.matchContext === 'league'
+      ? (p.isCareerMode ? p.careerState?.season.league.userTeamId : p.leagueState?.userTeamId)
+      : p.matchContext === 'bracket'
+        ? (p.isCareerMode ? p.careerState?.season.cup.userTeamId : p.bracketState?.userTeamId)
+        : undefined;
     return (
       <MatchStatsScreen
         result={p.lastResult}
@@ -485,6 +480,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onContinue={isTournament ? p.handleContinueTournament : p.matchContext === 'online' ? () => p.setScreen('online-lobby') : undefined}
         continueLabel={p.matchContext === 'online' ? 'Voltar ao Lobby' : p.matchContext === 'league' ? (p.selectedLeague ? `Continuar ${p.selectedLeague.name}` : 'Continuar Liga') : p.matchContext === 'bracket' ? `Continuar ${p.bracketState?.cupName ?? 'Copa'}` : undefined}
         isTitleWin={isTitleWin}
+        userTeamId={userTeamId}
       />
     );
   },
@@ -659,7 +655,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 };
 
-function renderHomeFallback(props: AppScreensProps): React.ReactNode {
+function renderHome(props: AppScreensProps): React.ReactNode {
   return (
     <HomeScreen
       onSingleMatch={() => { props.setReturnScreen('select'); props.setScreen('league-select'); }}
@@ -677,6 +673,6 @@ function renderHomeFallback(props: AppScreensProps): React.ReactNode {
 
 export function renderScreen(screen: Screen, props: AppScreensProps): React.ReactNode {
   const result = screenMap[screen](props);
-  if (result == null) return renderHomeFallback(props);
+  if (result == null) return renderHome(props);
   return result;
 }

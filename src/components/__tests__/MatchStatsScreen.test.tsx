@@ -93,4 +93,48 @@ describe('MatchStatsScreen', () => {
     fireEvent.click(screen.getByText('Limpar histórico'));
     expect(onClearHistory).toHaveBeenCalledTimes(1);
   });
+
+  it('vitória fora de casa mostra Vitória quando userTeamId é o visitante', () => {
+    render(
+      <MatchStatsScreen
+        result={makeResult({ homeScore: 1, awayScore: 3 })}
+        history={[]} onMenu={vi.fn()} onClearHistory={vi.fn()}
+        userTeamId={away.id}
+      />
+    );
+    expect(screen.getByText('Vitória')).toBeInTheDocument();
+    expect(screen.queryByText('Derrota')).not.toBeInTheDocument();
+  });
+
+  it('empate fora de casa mostra Empate quando userTeamId é o visitante', () => {
+    render(
+      <MatchStatsScreen
+        result={makeResult({ homeScore: 2, awayScore: 2 })}
+        history={[]} onMenu={vi.fn()} onClearHistory={vi.fn()}
+        userTeamId={away.id}
+      />
+    );
+    expect(screen.getByText('Empate')).toBeInTheDocument();
+  });
+
+  it('derrota fora de casa mostra Derrota quando userTeamId é o visitante', () => {
+    render(
+      <MatchStatsScreen
+        result={makeResult({ homeScore: 3, awayScore: 0 })}
+        history={[]} onMenu={vi.fn()} onClearHistory={vi.fn()}
+        userTeamId={away.id}
+      />
+    );
+    expect(screen.getByText('Derrota')).toBeInTheDocument();
+  });
+
+  it('sem userTeamId, mantém o comportamento legado com o time da casa como referência', () => {
+    render(
+      <MatchStatsScreen
+        result={makeResult({ homeScore: 1, awayScore: 3 })}
+        history={[]} onMenu={vi.fn()} onClearHistory={vi.fn()}
+      />
+    );
+    expect(screen.getByText('Derrota')).toBeInTheDocument();
+  });
 });

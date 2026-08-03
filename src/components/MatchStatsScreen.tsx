@@ -15,6 +15,9 @@ interface Props {
   continueLabel?: string;
   /** Se true, mostra celebração de título (confetes). Usado em finais de copa / decisão de liga. */
   isTitleWin?: boolean;
+  /** Id do time do usuário. Quando presente, o badge Vitória/Derrota/Empate é
+   *  calculado em relação a esse time (essencial em jogos fora de casa, ex: carreira). */
+  userTeamId?: string;
 }
 
 interface StatRowProps {
@@ -60,15 +63,22 @@ function PossRow({ home, away, homeColor, awayColor }: { home: number; away: num
   );
 }
 
-function ResultBadge({ result }: { result: MatchResult }) {
+function ResultBadge({ result, userTeamId }: { result: MatchResult; userTeamId?: string }) {
+  // Sem userTeamId (ex: partida única), usa o time da casa como referência —
+  // comportamento histórico preservado.
+  const referenceId = userTeamId ?? result.homeTeam.id;
+  const userIsHome = result.homeTeam.id === referenceId;
+  const userScore = userIsHome ? result.homeScore : result.awayScore;
+  const oppScore = userIsHome ? result.awayScore : result.homeScore;
+
   if (result.winner) {
-    const won = result.winner.id === result.homeTeam.id;
+    const won = result.winner.id === referenceId;
     return <span className={`${styles.badge} ${won ? styles.badgeWin : styles.badgeLoss}`}>
       {result.wentToExtraTime ? (result.penaltyResult ? 'Pênaltis' : 'Prorrogação') : (won ? 'Vitória' : 'Derrota')}
     </span>;
   }
-  if (result.homeScore > result.awayScore) return <span className={`${styles.badge} ${styles.badgeWin}`}>Vitória</span>;
-  if (result.awayScore > result.homeScore) return <span className={`${styles.badge} ${styles.badgeLoss}`}>Derrota</span>;
+  if (userScore > oppScore) return <span className={`${styles.badge} ${styles.badgeWin}`}>Vitória</span>;
+  if (oppScore > userScore) return <span className={`${styles.badge} ${styles.badgeLoss}`}>Derrota</span>;
   return <span className={`${styles.badge} ${styles.badgeDraw}`}>Empate</span>;
 }
 
@@ -101,7 +111,7 @@ function ratingColor(r: number): string {
   return '#ef4444';
 }
 
-export default function MatchStatsScreen({ result, history, onMenu, onClearHistory, onContinue, continueLabel, isTitleWin }: Props) {
+export default function MatchStatsScreen({ result, history, onMenu, onClearHistory, onContinue, continueLabel, isTitleWin, userTeamId }: Props) {
   const { homeTeam, awayTeam, homeScore, awayScore, homePossession, awayPossession, homeStats, awayStats, events } = result;
   const ratings = useMemo(() => calculateRatings(result), [result]);
   const motm = useMemo(() => manOfTheMatch(ratings), [ratings]);
@@ -151,7 +161,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
                 : 'após prorrogação'}
             </span>
           )}
-          <ResultBadge result={result} />
+          <ResultBadge result={result} userTeamId={userTeamId} />
           <span className={styles.screenLabel}>Estatísticas</span>
         </div>
         <div className={styles.team}>
