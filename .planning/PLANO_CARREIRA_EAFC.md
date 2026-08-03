@@ -9,14 +9,14 @@
 | Fase | Feature | Status |
 |------|---------|--------|
 | 5 | Painel "Minha Carreira" (retrospectiva) | ✅ **Concluída** (`824ffe7`) |
-| 1 | Contratos & Renovações | ⏳ pendente |
+| 1 | Contratos & Renovações | ✅ **Concluída** |
 | 4 | Conversas com atletas | ⏳ pendente |
 | 3 | Imersão pré-jogo (treino + coletiva + feed) | ⏳ pendente |
 | 2 | Mercado de Treinador (trocar de clube) | ⏳ pendente |
 
 **Ordem de execução recomendada** (risco crescente, cada fase entregável sozinha):
-Fase 5 → **Fase 1** → Fase 4 → Fase 3 → Fase 2. (A numeração é temática; a próxima
-a executar é a **Fase 1 — Contratos**.)
+Fase 5 → Fase 1 → **Fase 4** → Fase 3 → Fase 2. (A numeração é temática; a próxima
+a executar é a **Fase 4 — Conversas com atletas**.)
 
 **Objetivo geral:** dar profundidade de gestão (contratos), longevidade/ambição
 (trocar de clube), imersão (rituais pré-jogo + conversas) e retrospectiva (painel de
@@ -76,45 +76,42 @@ Retrospectiva agregada da jornada, **derivada read-only** de `history` +
 
 ---
 
-## Fase 1 — Contratos & Renovações  ⏳ PRÓXIMA
+## Fase 1 — Contratos & Renovações ✅ CONCLUÍDA
 
-**Modelo de dados**
-- `Player.contractSeasonsLeft?: number` (novo campo opcional, só populado na carreira).
-- Backfill: novo `assignInitialContracts(teams, rng)` em career.ts (espelha
-  `assignInitialAges`) — 1–4 temporadas com peso (mais massa em 2–3). Chamado no
-  `handleStartCareer` (useCareerManager.ts) junto de `assignInitialAges`/
-  `assignMarketValues`, pelo menos no elenco do usuário. Para saves antigos, um getter
-  `getContractSeasonsLeft(player)` retorna default (ex.: 2) e o backfill grava de vez
-  na primeira temporada avançada.
+**Entregue:**
+- `Player.contractSeasonsLeft?: number` (opcional, só populado na carreira) + getter
+  `getContractSeasonsLeft` com backfill (`DEFAULT_CONTRACT_SEASONS = 2`).
+- `assignInitialContracts` (career.ts) — 1–4 temporadas com peso em 2–3, idempotente,
+  aplicado nas 12 ligas no `handleStartCareer` (junto de `assignInitialAges`).
+- `expireContracts(userTeam)` (career.ts) — no fechamento da temporada decrementa o
+  contrato de todo o elenco do usuário; quem chega a 0 sai do elenco (sem contrato,
+  valores recalculados) e entra no mercado. `renewPlayerContract(player, years)` — helper
+  puro que estende + recalcula salário pelo valor atual, usado pelo hook e pelo UI.
+- `renewalCost(player, years)` (transferMarket.ts) — `round(marketValue × 0.10 × years)`,
+  clampado a ≥0; renovações a qualquer momento (decisão: gestão interna, não transferência).
+- `refreshFreeAgentPool` ganhou `newEntrants` (as saídas entram no pool sem re-envelhecer —
+  já evoluíram junto do elenco) e **nunca corta os recém-chegados** (um jogador real não
+  pode sumir só porque o pool estava cheio).
+- `handleRenewContract(playerId, years)` (useTransferManager) — valida orçamento, debita o
+  custo, estende contrato e recomputa a folha nos 3 espelhos do elenco (rosters + league +
+  cup). `handleAdvanceSeason` (useCareerSeason) integra `expireContracts` antes do
+  `createCareerSeason` e emite 2 mensagens (`BOARD_UPDATE` não-obrigatórias): **Contratos
+  encerrados** (saídas) e **Contratos a expirar** (≤1 temporada do novo elenco).
+- UI: badge `📋 N temp.` + destaque ⏳ (≤1) e botão **Renovar** na visão **Gerenciar Elenco**
+  (`SetupScreen.renderSquad`, prop `onRenewContract` só no modo elenco da carreira — nunca na
+  preparação de partida), com sync do clone local via `renewPlayerContract`. Card **"Contratos
+  a expirar"** na `CareerHubScreen` com renovação direta.
+- Testes: `src/engine/__tests__/contracts.test.ts` (11) + casos em `transferMarket.test.ts`
+  (3), `inbox.test.ts` (3) e `useCareerManager.test.ts` (5). Suíte: **444** (422 + 22).
 
-**Engine**
-- `expireContracts(userTeam, freeAgentPool, rng)` em career.ts: no fechamento de
-  temporada, decrementa `contractSeasonsLeft` de todos do elenco do usuário; quem
-  chega a 0 sai do elenco e entra no `freeAgentPool` (via `progressPlayer` +
-  `calculateMarketValue`/`calculateWeeklyWage`, reaproveitando a forma do
-  `refreshFreeAgentPool`). Retorna `{ squad, pool, departures }`.
-- `renewalCost(player, years)` em transferMarket.ts: custo de renovação derivado de
-  `calculateMarketValue` × fator de anos; e novo salário via `calculateWeeklyWage`.
-
-**Hooks**
-- `useCareerSeason.handleAdvanceSeason`: após `progressAllLeagues`, chamar
-  `expireContracts` no elenco do usuário, mesclar saídas no `freeAgentPool` e incluir
-  as saídas na mensagem de fim de temporada (inbox `BOARD_UPDATE`).
-- `useTransferManager.handleRenewContract(playerId, years)` (novo): valida orçamento
-  (`getFinances`), debita `renewalCost`, seta `contractSeasonsLeft += years` e atualiza
-  `weeklyWage`; recomputa `wageBill` com `computeWageBill`. Espelha a validação de
-  "último na posição"/orçamento já usada em compra/venda.
-- Aviso "expirando em breve" (≤1 temporada) como `InboxMessage` não-obrigatória no
-  início da temporada (novo criador em inbox.ts, tipo reutiliza `BOARD_UPDATE`).
-
-**UI**
-- Na visão **Gerenciar Elenco** do `SetupScreen` (renderSquad): badge "Contrato: N
-  temp." e destaque **⏳ expira** para ≤1; botão **Renovar** → `handleRenewContract`.
-- Card opcional "Contratos a expirar" no `CareerHubScreen`.
-
-**Testes** — init dentro de 1–4; decremento por temporada; expiração remove do elenco
-e alimenta o pool; renovação debita custo + estende + recomputa folha; save antigo sem
-o campo não quebra (`getContractSeasonsLeft` default).
+**Desvios do plano original (registrados):**
+- `expireContracts` retorna `{ squad, departures }` (não `{ squad, pool, departures }`) — a
+  montagem do pool fica no caller via `refreshFreeAgentPool(..., departures)`: evita
+  re-envelhecer as saídas e evita o ciclo de import career.ts↔freeAgentPool.ts.
+- `progressPlayer` agora **preserva `contractSeasonsLeft`** (achado crítico: ele reconstruía
+  o jogador com campos fixos — sem isso o contrato sumiria a cada avanço de temporada).
+- Renovar é **+1 ano por toque** (decisão aprovada); o card do hub e o botão do elenco usam
+  o mesmo `handleRenewContract(playerId, 1)`.
 
 ---
 

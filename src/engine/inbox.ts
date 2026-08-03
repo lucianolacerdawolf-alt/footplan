@@ -88,6 +88,30 @@ export function createDerbyPreviewMessage(opponentName: string, derbyName: strin
   });
 }
 
+function formatNameList(names: string[]): string {
+  const head = names.slice(0, 4).join(', ');
+  const more = names.length > 4 ? ` e mais ${names.length - 4}` : '';
+  return `${head}${more}`;
+}
+
+/** Aviso não-obrigatório de início de temporada — elenco com contrato vencendo (≤1 temporada). */
+export function createContractExpiringMessage(playerNames: string[], date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: 'Contratos a expirar',
+    body: `${formatNameList(playerNames)} ${playerNames.length > 1 ? 'têm' : 'tem'} contrato vencendo ao fim desta temporada. Renove antes que ${playerNames.length > 1 ? 'deixem' : 'deixe'} o clube.`,
+  });
+}
+
+/** Comunica o fim de temporada — jogadores cujo contrato venceu saíram para o mercado. */
+export function createContractDepartureMessage(playerNames: string[], date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: 'Contratos encerrados',
+    body: `${formatNameList(playerNames)} ${playerNames.length > 1 ? 'deixaram o clube e entraram' : 'deixou o clube e entrou'} no mercado de agentes livres ao fim do contrato.`,
+  });
+}
+
 export function hasMandatoryUnread(inbox: InboxMessage[]): boolean {
   return inbox.some(m => m.isMandatory && !m.isRead);
 }

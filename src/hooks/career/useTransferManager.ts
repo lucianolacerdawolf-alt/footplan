@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
-import type { Team } from '@/engine/types';
+import type { Player, Team } from '@/engine/types';
 import { computeWageBill, evaluateCashTransfer, netSellRevenue } from '@/engine/transferMarket';
 import { createTransferAcceptedMessage, createTransferOutCompletedMessage, createTransferRejectedMessage } from '@/engine/inbox';
-import { getFinances, getInbox, getTransferList, getTransferHistory, isTransferWindowOpen, evaluateTradeOffer, getFreeAgentPool, type CareerState, type InboxMessage, type TransferRecord } from '@/engine/career';
+import { getFinances, getInbox, getTransferList, getTransferHistory, isTransferWindowOpen, evaluateTradeOffer, getFreeAgentPool, renewPlayerContract, type CareerState, type InboxMessage, type TransferRecord } from '@/engine/career';
 
 interface UseTransferManagerParams {
   careerState: CareerState | null;
@@ -319,8 +319,47 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
     setCareerState(prev => prev ? { ...prev, inbox: [...getInbox(prev).filter(m => m.id !== messageId), ...rejectionMsg] } : prev);
   }, [careerState, setCareerState]);
 
+  // Fase 1 — Renovar contrato. Gestão interna do elenco: permitido a qualquer momento
+  // (não depende da janela de transferências). Debitamos renewalCost do orçamento,
+  // estendemos contractSeasonsLeft e recalculamos o salário pelo valor de mercado atual.
+  const handleRenewContract = useCallback((playerId: string, years: number) => {
+    if (!careerState) return;
+    if (!Number.isInteger(years) || years < 1) return;
+
+    const userTeam = careerState.rosters[careerState.leagueId].find(t => t.id === careerState.season.league.userTeamId);
+    if (!userTeam) return;
+    const player = userTeam.squad.find(p => p.id === playerId);
+    if (!player) return;
+
+    const finances = getFinances(careerState);
+    const { player: renewed, cost } = renewPlayerContract(player, years);
+    if (cost > finances.budget) {
+      setToastMsg(`⚠️ Sem orçamento para renovar ${player.name}: custa €${(cost / 1_000_000).toFixed(1)}M.`);
+      return;
+    }
+
+    const replacePlayer = (squad: Player[]): Player[] => squad.map(p => p.id === playerId ? renewed : p);
+    const applyToTeam = (teams: Team[]): Team[] => teams.map(t => t.id === userTeam.id ? { ...t, squad: replacePlayer(t.squad) } : t);
+    const newWageBill = computeWageBill({ ...userTeam, squad: replacePlayer(userTeam.squad) });
+
+    setCareerState(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rosters: { ...prev.rosters, [prev.leagueId]: applyToTeam(prev.rosters[prev.leagueId]) },
+        season: {
+          ...prev.season,
+          league: { ...prev.season.league, teams: applyToTeam(prev.season.league.teams) },
+          cup: { ...prev.season.cup, teams: applyToTeam(prev.season.cup.teams) },
+        },
+        finances: { ...finances, budget: finances.budget - cost, wageBill: newWageBill },
+      };
+    });
+    setToastMsg(`📝 ${player.name} renovado por ${years} temporada${years > 1 ? 's' : ''} · €${(cost / 1_000_000).toFixed(1)}M`);
+  }, [careerState, setCareerState, setToastMsg]);
+
   return {
     handleProposeTrade, handleBuyPlayer, handleSignFreeAgent, handleListPlayerForSale, handleUnlistPlayerForSale,
-    handleAcceptTransferOffer, handleRejectTransferOffer,
+    handleAcceptTransferOffer, handleRejectTransferOffer, handleRenewContract,
   };
 }

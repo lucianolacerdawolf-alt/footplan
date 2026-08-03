@@ -7,7 +7,7 @@ import type { BoardObjectivesState } from './boardObjectives';
 import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
-import { calculateMarketValue, computeWageBill } from './transferMarket';
+import { calculateMarketValue, calculateWeeklyWage, computeWageBill, renewalCost } from './transferMarket';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
 import { getStartingTier, generateSponsor } from './sponsors';
@@ -202,6 +202,78 @@ export function assignInitialAges(teams: Team[], rng: () => number = Math.random
   }));
 }
 
+// =============================================================================
+// CONTRATOS — Fase 1 (Contratos & Renovações)
+// =============================================================================
+
+/** Fallback pra saves antigos e jogadores sem contrato registrado (ex: recém-contratados). */
+export const DEFAULT_CONTRACT_SEASONS = 2;
+
+/** Lê temporadas restantes de contrato com backfill — nunca acessar o campo direto. */
+export function getContractSeasonsLeft(player: Player): number {
+  return player.contractSeasonsLeft ?? DEFAULT_CONTRACT_SEASONS;
+}
+
+/** Atribui contrato inicial (1-4 temporadas, com peso em 2-3) a quem não tem — idempotente,
+ *  espelha assignInitialAges. */
+export function assignInitialContracts(teams: Team[], rng: () => number = Math.random): Team[] {
+  return teams.map(team => ({
+    ...team,
+    squad: team.squad.map(player => {
+      if (player.contractSeasonsLeft != null) return player;
+      const roll = rng();
+      const contractSeasonsLeft = roll < 0.15 ? 1 : roll < 0.7 ? 2 : roll < 0.95 ? 3 : 4;
+      return { ...player, contractSeasonsLeft };
+    }),
+  }));
+}
+
+/** Estende o contrato e recalcula o salário pelo valor de mercado atual. Retorna o jogador
+ *  atualizado + o custo (renewalCost) — usado pelo hook (grava na carreira) e pelo SetupScreen
+ *  (sincroniza o clone local), sem duplicar lógica. */
+export function renewPlayerContract(player: Player, years: number): { player: Player; cost: number } {
+  const marketValue = calculateMarketValue(player);
+  const cost = renewalCost(player, years);
+  const weeklyWage = calculateWeeklyWage(marketValue);
+  return {
+    player: {
+      ...player,
+      contractSeasonsLeft: getContractSeasonsLeft(player) + years,
+      weeklyWage,
+    },
+    cost,
+  };
+}
+
+/**
+ * Fechamento de temporada: decrementa `contractSeasonsLeft` de todo o elenco do usuário; quem
+ * chega a 0 sai do elenco e vira agente livre. O time já deve estar evoluído (progressAllLeagues)
+ * — os que saem não são envelhecidos de novo aqui. Saem sem contrato (undefined → o getter dá o
+ * default se forem contratados de novo) e com marketValue/weeklyWage recalculados. O pool final é
+ * montado pelo caller via refreshFreeAgentPool(..., departures).
+ */
+export function expireContracts(
+  userTeam: Team,
+): { squad: Player[]; departures: Player[] } {
+  const squad: Player[] = [];
+  const departures: Player[] = [];
+  for (const player of userTeam.squad) {
+    const left = getContractSeasonsLeft(player) - 1;
+    if (left <= 0) {
+      const marketValue = calculateMarketValue(player);
+      departures.push({
+        ...player,
+        contractSeasonsLeft: undefined,
+        marketValue,
+        weeklyWage: calculateWeeklyWage(marketValue),
+      });
+    } else {
+      squad.push({ ...player, contractSeasonsLeft: left });
+    }
+  }
+  return { squad, departures };
+}
+
 /**
  * Evolui um jogador uma temporada: recalcula OVR alvo com base na curva de idade
  * + variação de "desempenho recente" (-2..+2), escala os atributos existentes
@@ -232,6 +304,10 @@ export function progressPlayer(player: Player, rng: () => number = Math.random):
       positioning: scaleAttr(player.attributes.positioning),
     },
     age: age + 1,
+    // Campos opcionais que representam identidade/gestão da carreira precisam
+    // sobreviver à evolução — senão contractSeasonsLeft sumiria a cada temporada
+    // (marketValue/weeklyWage são re-aplicados depois por assignMarketValues).
+    contractSeasonsLeft: player.contractSeasonsLeft,
   };
 }
 

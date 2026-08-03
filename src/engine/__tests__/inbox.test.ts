@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   createInjuryMessage, createMatchPreviewMessage, createTransferWindowMessage, createWelcomeMessage,
   createTransferOfferMessage, createTransferAcceptedMessage, createTransferRejectedMessage, createTransferOutCompletedMessage,
+  createContractExpiringMessage, createContractDepartureMessage,
   hasMandatoryUnread, countUnread,
 } from '../inbox';
 
@@ -51,6 +52,32 @@ describe('mensagens do mercado de transferências', () => {
       expect(m.meta).toBeUndefined();
       expect(m.body).toContain('Fulano');
     }
+  });
+});
+
+describe('mensagens de contrato (Fase 1)', () => {
+  it('aviso de contrato a expirar é BOARD_UPDATE não-obrigatório e lista os nomes', () => {
+    const m = createContractExpiringMessage(['Fulano', 'Ciclano'], 'Temporada 2');
+    expect(m.type).toBe('BOARD_UPDATE');
+    expect(m.isMandatory).toBe(false);
+    expect(m.isRead).toBe(false);
+    expect(m.body).toContain('Fulano');
+    expect(m.body).toContain('Ciclano');
+  });
+
+  it('aviso não estoura o corpo com listas longas (limita a 4 nomes)', () => {
+    const names = ['A', 'B', 'C', 'D', 'E', 'F'];
+    const m = createContractExpiringMessage(names, 'Temporada 2');
+    expect(m.body).toContain('e mais 2');
+    expect(m.body.indexOf('E')).toBe(-1);
+  });
+
+  it('mensagem de saída informa que os jogadores foram pro mercado de agentes livres', () => {
+    const m = createContractDepartureMessage(['Fulano'], 'Temporada 1');
+    expect(m.type).toBe('BOARD_UPDATE');
+    expect(m.isMandatory).toBe(false);
+    expect(m.body).toContain('Fulano');
+    expect(m.body).toContain('agentes livres');
   });
 });
 

@@ -65,6 +65,7 @@ export interface Player {
   suspendedRounds?: number;       // jogos restantes de suspensão
   marketValue?: number;           // valor de mercado calculado (Modo Carreira)
   weeklyWage?: number;            // salário semanal (Modo Carreira)
+  contractSeasonsLeft?: number;   // temporadas restantes de contrato (Modo Carreira)
 }
 
 // =============================================================================

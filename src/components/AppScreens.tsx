@@ -165,6 +165,7 @@ export interface AppScreensProps {
   handleSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
   handleAcceptTransferOffer: (messageId: string) => void;
   handleRejectTransferOffer: (messageId: string) => void;
+  handleRenewContract: (playerId: string, years: number) => void;
   handleAdvanceSeason: () => void;
   handleMarkInboxRead: (id: string) => void;
   handleRenegotiateSponsor: () => void;
@@ -364,6 +365,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         lockAway={p.matchContext !== 'regular' || p.gameMode === 'cpu'}
         userIsHome={userIsHome}
         goesToPreview={p.matchContext === 'league' || p.matchContext === 'bracket'}
+        onRenewContract={p.isCareerMode && p.isTournamentEntry ? (playerId) => p.handleRenewContract(playerId, 1) : undefined}
       />
     );
   },
@@ -513,6 +515,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onRenegotiateSponsor={p.handleRenegotiateSponsor}
         onNextRound={p.handleNextCareerLeagueRound}
         onViewLeague={() => p.setScreen('career-league')}
+        onRenewContract={(playerId) => p.handleRenewContract(playerId, 1)}
         blockAdvanceReason={hubBlockAdvanceReason}
       />
     );

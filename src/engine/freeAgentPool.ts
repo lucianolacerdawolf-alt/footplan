@@ -31,11 +31,14 @@ export function generateFreeAgentPool(rng: () => number = Math.random): Player[]
  * não a cada abertura de janela, senão o pool envelheceria duas vezes na mesma
  * temporada. Envelhece/evolui os sobreviventes, aposenta pelo mesmo critério de
  * shouldRetire, e completa até o tamanho alvo respeitando o déficit por posição.
+ * `newEntrants` (ex: contratos encerrados vindos de expireContracts) entra direto no
+ * pool SEM ser envelhecido de novo — já foi evoluído junto com o elenco.
  */
 export function refreshFreeAgentPool(
   existing: Player[],
   currentSeasonYear: number,
   rng: () => number = Math.random,
+  newEntrants: Player[] = [],
 ): Player[] {
   const survivors = existing
     .map(p => progressPlayer(p, rng))
@@ -45,18 +48,22 @@ export function refreshFreeAgentPool(
       return { ...p, marketValue, weeklyWage: calculateWeeklyWage(marketValue) };
     });
 
-  if (survivors.length >= TARGET_POOL_SIZE) return survivors.slice(0, TARGET_POOL_SIZE);
+  // Cap aplicado SÓ aos sobreviventes — newEntrants (contratos encerrados) nunca são
+  // descartados aqui, senão um jogador real poderia sumir só porque o pool estava cheio.
+  const capped = survivors.length >= TARGET_POOL_SIZE ? survivors.slice(0, TARGET_POOL_SIZE) : survivors;
+  const all = [...capped, ...newEntrants];
+  if (all.length >= TARGET_POOL_SIZE) return all;
 
-  const need = TARGET_POOL_SIZE - survivors.length;
+  const need = TARGET_POOL_SIZE - all.length;
   const topUp: Player[] = [];
   let n = 0;
   for (const [pos, quota] of Object.entries(POSITION_QUOTAS) as [Position, number][]) {
-    const have = survivors.filter(p => p.position === pos).length;
+    const have = all.filter(p => p.position === pos).length;
     const deficit = Math.max(0, quota - have);
     for (let i = 0; i < deficit && topUp.length < need; i++) {
       topUp.push(makeFreeAgent(`s${currentSeasonYear}-${n++}`, pos, rng));
     }
   }
   while (topUp.length < need) topUp.push(makeFreeAgent(`s${currentSeasonYear}-${n++}`, 'MID', rng));
-  return [...survivors, ...topUp];
+  return [...all, ...topUp];
 }

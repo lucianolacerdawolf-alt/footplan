@@ -10,7 +10,7 @@ import { allLeagues } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { generateSponsor, getStartingTier } from '../engine/sponsors';
-import { isValidCareerState, assignInitialAges, createCareerSeason, type CareerState } from '../engine/career';
+import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
 import { useTransferManager } from './career/useTransferManager';
 import { useCareerSeason } from './career/useCareerSeason';
@@ -104,16 +104,15 @@ export function useCareerManager({
         // é o que TournamentSetupScreen passa depois de sincronizar com football-data.org;
         // usar l.teams aqui jogava fora a sincronização pros outros 19 times da liga do
         // usuário (só o time escolhido pelo próprio usuário vinha atualizado).
-        rosters[l.id] = assignInitialAges(leagueDef.teams.map(t => t.id === userTeam.id ? cloneTeam(userTeam) : cloneTeam(t)))
-          .map(assignMarketValues);
+        rosters[l.id] = assignInitialContracts(assignInitialAges(leagueDef.teams.map(t => t.id === userTeam.id ? cloneTeam(userTeam) : cloneTeam(t))).map(assignMarketValues));
       } else {
-        rosters[l.id] = assignInitialAges(l.teams.map(t => cloneTeam(t)));
+        rosters[l.id] = assignInitialContracts(assignInitialAges(l.teams.map(t => cloneTeam(t))));
       }
     }
     // Tolerante ao mesmo jeito que o resto desta função é: se o time do usuário não
     // bater com nenhum id estático da liga (ex: fixture de teste), ainda assim
     // segue — só não fica "achatado" com os valores de mercado dos outros times.
-    const userTeamWithValues = rosters[leagueDef.id].find(t => t.id === userTeam.id) ?? assignMarketValues(cloneTeam(userTeam));
+    const userTeamWithValues = rosters[leagueDef.id].find(t => t.id === userTeam.id) ?? assignInitialContracts([assignMarketValues(cloneTeam(userTeam))])[0];
     const { league, cup } = createCareerSeason(userTeamWithValues, rosters[leagueDef.id], leagueDef);
     const budget = initialBudget(leagueDef.id);
     const trimmedName = managerName.trim().slice(0, 24) || 'Técnico';

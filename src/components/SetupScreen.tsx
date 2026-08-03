@@ -65,6 +65,9 @@ interface Props {
   isTacticsOnly?: boolean;
   mode?: 'single' | 'league' | 'cup' | 'career' | 'online';
   goesToPreview?: boolean;
+  /** Fase 1 — renova contrato na carreira (passado só no Modo Carreira, modo "Gerenciar
+   *  Elenco"). Sem ele, as linhas ficam read-only (ex: preparação de partida). */
+  onRenewContract?: (playerId: string, years: number) => void;
 }
 
 /** Move lesionados/suspensos pro banco e promove substitutos disponíveis da mesma posicao */
@@ -84,8 +87,9 @@ function autoBenchUnavailable(team: Team): Team {
 
 import { playerOvr } from '../utils/playerOvr';
 import { fireClick } from '../utils/fireClick';
+import { getContractSeasonsLeft, renewPlayerContract } from '../engine/career';
 
-export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview }: Props) {
+export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview, onRenewContract }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
@@ -144,6 +148,18 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
     setAwaySelected(null);
   };
 
+  // Fase 1 — renova no state da carreira E no clone local (senão o badge não atualizava
+  // enquanto o jogador estivesse na tela; ambos usam renewPlayerContract → mesmo resultado).
+  const renewContract = (playerId: string) => {
+    if (!onRenewContract) return;
+    const updater = mySide === 'away' ? setAwayTeam : setHomeTeam;
+    updater(prev => ({
+      ...prev,
+      squad: prev.squad.map(p => p.id === playerId ? renewPlayerContract(p, 1).player : p),
+    }));
+    onRenewContract(playerId, 1);
+  };
+
   const renderSquad = (
     team: Team,
     selected: string | null,
@@ -194,6 +210,18 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                 {p.injuredRounds ? <span className="sq-injury">🤕 {p.injuredRounds}j</span> : null}
                 <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
                 <span className="sq-ovr">{playerOvr(p)}</span>
+                <span className={`sq-contract${getContractSeasonsLeft(p) <= 1 ? ' expiring' : ''}`} title="Temporadas restantes de contrato">
+                  📋 {getContractSeasonsLeft(p)} temp.
+                </span>
+                {onRenewContract && (
+                  <button
+                    className="sq-renew"
+                    onClick={(e) => { e.stopPropagation(); renewContract(p.id); }}
+                    title={`Renovar contrato de ${p.name} por 1 temporada`}
+                  >
+                    Renovar
+                  </button>
+                )}
               </div>
             );
           })}
@@ -227,6 +255,18 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                   {p.isSuspended ? <span className="sq-injury">🚫 {p.suspendedRounds ?? 1}j</span> : null}
                   <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
                   <span className="sq-ovr">{playerOvr(p)}</span>
+                  <span className={`sq-contract${getContractSeasonsLeft(p) <= 1 ? ' expiring' : ''}`} title="Temporadas restantes de contrato">
+                    📋 {getContractSeasonsLeft(p)} temp.
+                  </span>
+                  {onRenewContract && (
+                    <button
+                      className="sq-renew"
+                      onClick={(e) => { e.stopPropagation(); renewContract(p.id); }}
+                      title={`Renovar contrato de ${p.name} por 1 temporada`}
+                    >
+                      Renovar
+                    </button>
+                  )}
                 </div>
               );
             })}

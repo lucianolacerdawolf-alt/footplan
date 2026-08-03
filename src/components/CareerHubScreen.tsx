@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress } from '../engine/career';
+import { getInbox, isTransferWindowOpen, getSponsorTier, getSponsorName, getFinances, deriveCupProgress, getContractSeasonsLeft } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
@@ -29,6 +29,8 @@ interface Props {
   onRenegotiateSponsor: () => void;
   /** Avança a rodada da liga direto da Central, sem passar pelo Escritório. */
   onNextRound: () => void;
+  /** Fase 1 — renova contrato por 1 temporada a partir do card "Contratos a expirar". */
+  onRenewContract?: (playerId: string) => void;
   /** Abre o Escritório (tela da liga) — usado quando ainda faltam jogos da rodada. */
   onViewLeague: () => void;
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
@@ -85,7 +87,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, blockAdvanceReason }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onRenewContract, blockAdvanceReason }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -120,6 +122,12 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
     if (!userTeam) return 0;
     const starters = userTeam.squad.slice(0, getStarterCount(userTeam.strategy.formation));
     return Math.round(starters.reduce((s, p) => s + playerOvr(p), 0) / starters.length);
+  }, [userTeam]);
+
+  // Fase 1 — elenco com contrato vencendo (≤1 temporada) pra renovação rápida.
+  const expiringContracts = useMemo(() => {
+    if (!userTeam) return [];
+    return userTeam.squad.filter(p => getContractSeasonsLeft(p) <= 1);
   }, [userTeam]);
 
   const totalRounds = state.season.league.fixtures.length;
@@ -281,6 +289,30 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
               ⚠️ {boardObj.streakBad >= 3 ? 'Última chance: ' : ''}Diretoria insatisfeita ({boardObj.streakBad} temporada{boardObj.streakBad > 1 ? 's' : ''} consecutiva{boardObj.streakBad > 1 ? 's' : ''} abaixo do esperado)
             </div>
           )}
+        </div>
+      )}
+
+      {expiringContracts.length > 0 && (
+        <div className={styles.expiringCard}>
+          <div className={styles.expiringTitle}>📋 Contratos a expirar</div>
+          {expiringContracts.map(p => (
+            <div key={p.id} className={styles.expiringRow}>
+              <span className={styles.expiringName}>{p.name}</span>
+              <span className={`${styles.expiringPos} pos-${p.position.toLowerCase()}`}>{p.position}</span>
+              <span className={styles.expiringOvr}>{playerOvr(p)} OVR</span>
+              <span className={styles.expiringCount}>{getContractSeasonsLeft(p)} temp.</span>
+              {onRenewContract && (
+                <button
+                  className={styles.expiringBtn}
+                  onClick={() => onRenewContract(p.id)}
+                  title={`Renovar contrato de ${p.name} por 1 temporada`}
+                >
+                  Renovar
+                </button>
+              )}
+            </div>
+          ))}
+          <div className={styles.expiringHint}>Contratos vencem ao fim da temporada.</div>
         </div>
       )}
 

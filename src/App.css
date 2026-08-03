@@ -319,6 +319,21 @@
 .sq-pos { font-size: 12px; font-weight: 700; padding: 2px 5px; border-radius: 3px; min-width: 30px; text-align: center; }
 .sq-ovr { font-size: 13px; font-weight: 700; color: var(--accent); }
 
+/* Fase 1 — contrato (badge + botão renovar) nas linhas de elenco */
+.sq-contract {
+  font-size: 10px; font-weight: 600; color: var(--text-secondary);
+  background: var(--code-bg); border: 1px solid var(--border);
+  padding: 2px 6px; border-radius: 99px; white-space: nowrap;
+}
+.sq-contract.expiring { color: #fdba74; border-color: #b45309; background: rgba(180,83,9,0.15); }
+.sq-renew {
+  min-height: 28px; border: 1px solid #b45309; background: rgba(180,83,9,0.15);
+  color: #fdba74; border-radius: 6px; padding: 2px 10px;
+  font-size: 10px; font-weight: 700; cursor: pointer; font-family: var(--sans);
+  white-space: nowrap; transition: background 0.15s;
+}
+.sq-renew:hover { background: rgba(180,83,9,0.35); }
+
 /* Setup layout columns */
 .setup-layout {
   display: flex; align-items: flex-start; justify-content: center; gap: 8px; padding: 6px 8px;

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import type { Team, Player } from '@/engine/types';
 import {
   calculateMarketValue, calculateWeeklyWage, assignMarketValues, computeWageBill, initialBudget, computeWeeklyIncome, evaluateCashTransfer,
-  netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue,
+  netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue, renewalCost,
 } from '../transferMarket';
 
 function makePlayer(overrides: Partial<Player> = {}): Player {
@@ -56,6 +56,31 @@ describe('calculateWeeklyWage', () => {
   it('escala com o valor de mercado e nunca é negativo', () => {
     expect(calculateWeeklyWage(0)).toBe(0);
     expect(calculateWeeklyWage(10_000_000)).toBeGreaterThan(calculateWeeklyWage(1_000_000));
+  });
+});
+
+describe('renewalCost (Fase 1)', () => {
+  it('cresce com o valor de mercado e com os anos de extensão', () => {
+    const player = makePlayer();
+    const one = renewalCost(player, 1);
+    expect(one).toBeGreaterThan(0);
+    expect(renewalCost(player, 2)).toBeGreaterThan(one);
+    expect(renewalCost(player, 3)).toBeGreaterThan(renewalCost(player, 2));
+  });
+
+  it('jogador mais valioso custa mais caro pra renovar', () => {
+    const star = makePlayer({
+      attributes: { speed: 95, stamina: 95, passing: 95, finishing: 95, tackling: 95, dribbling: 95, vision: 95, positioning: 95 },
+    });
+    const role = makePlayer({
+      attributes: { speed: 60, stamina: 60, passing: 60, finishing: 60, tackling: 60, dribbling: 60, vision: 60, positioning: 60 },
+    });
+    expect(renewalCost(star, 1)).toBeGreaterThan(renewalCost(role, 1));
+  });
+
+  it('renovar por 0 ou valor negativo não gera custo', () => {
+    expect(renewalCost(makePlayer(), 0)).toBe(0);
+    expect(renewalCost(makePlayer(), -2)).toBe(0);
   });
 });
 

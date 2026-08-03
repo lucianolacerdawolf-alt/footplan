@@ -28,6 +28,16 @@ export function calculateWeeklyWage(marketValue: number): number {
   return Math.round((marketValue * 0.002) / 100) * 100;
 }
 
+/**
+ * Custo de renovação de contrato: fração do valor de mercado por ano de extensão
+ * (≈0.10×/ano — análogo à anualização do salário semanal 0.002×52 ≈ 0.104). Quanto mais
+ * valioso (e mais anos), mais caro renovar.
+ */
+export function renewalCost(player: Player, years: number): number {
+  const yearsClamped = Math.max(0, Math.floor(years));
+  return Math.round(calculateMarketValue(player) * 0.1 * yearsClamped);
+}
+
 /** Preenche marketValue/weeklyWage em todo o elenco — chamado uma vez ao iniciar a carreira. */
 export function assignMarketValues(team: Team): Team {
   return {
