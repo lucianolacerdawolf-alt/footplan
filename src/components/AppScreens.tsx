@@ -565,6 +565,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         finances={getFinances(cs)}
         transfers={getTransferHistory(cs)}
         currentSeason={currentSeason}
+        reputation={cs.manager.reputation}
       />
     );
   },

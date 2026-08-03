@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { CareerSeasonHistoryEntry, ClubFinances, TransferRecord, TransferRecordType } from '../engine/career';
 import { CUP_RESULT_LABELS } from '../engine/careerLabels';
+import { computeCareerSummary, careerHighlights } from '../engine/careerStats';
 import { formatMoney } from '../utils/formatMoney';
 import FinancePanel from './FinancePanel';
+import CareerSummaryPanel from './CareerSummaryPanel';
 import styles from './TrophyRoomScreen.module.css';
 
 interface Props {
@@ -11,6 +13,8 @@ interface Props {
   finances?: ClubFinances;
   /** Idem — extrato de compras/vendas/trocas/agentes livres da carreira inteira. */
   transfers?: TransferRecord[];
+  /** Reputação atual do técnico — alimenta o tile de reputação do painel Minha Carreira. */
+  reputation?: number;
   /** Resumo da temporada em curso — só usado no estado vazio, pra tela não virar
    *  um beco quando ainda não há nenhuma temporada concluída. */
   currentSeason?: {
@@ -48,16 +52,21 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: '#ef4444' };
 }
 
-export default function TrophyRoomScreen({ history, finances, transfers, currentSeason }: Props) {
+export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
   const transfersRecent = transfers ? [...transfers].reverse() : [];
+  // Painel "Minha Carreira" — só faz sentido com ao menos 1 temporada concluída.
+  const summary = ordered.length > 0 ? computeCareerSummary(history, reputation ?? 0) : null;
+  const highlights = ordered.length > 0 ? careerHighlights(history, transfers ?? []) : null;
 
   return (
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
         <h1 className={styles.title}>🏆 Sala de Troféus</h1>
       </div>
+
+      {summary && highlights && <CareerSummaryPanel summary={summary} highlights={highlights} />}
 
       {finances && <FinancePanel finances={finances} />}
 

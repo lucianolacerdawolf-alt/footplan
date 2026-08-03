@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import TrophyRoomScreen from '../TrophyRoomScreen';
 import type { CareerSeasonHistoryEntry, TransferRecord } from '@/engine/career';
 
@@ -54,7 +54,10 @@ describe('TrophyRoomScreen', () => {
 
   it('renderiza um card por temporada, em ordem crescente de ano', () => {
     render(<TrophyRoomScreen history={[makeEntry({ year: 2 }), makeEntry({ year: 1 })]} />);
-    const years = screen.getAllByText(/^[12]$/).map(el => el.textContent);
+    // Escopa aos cards (botões) — o painel Minha Carreira no topo também tem números
+    // soltos (ex.: "Temporadas: 2") que uma busca no documento inteiro capturaria.
+    const cards = screen.getAllByRole('button');
+    const years = cards.map(btn => within(btn).getByText(/^[12]$/).textContent);
     expect(years).toEqual(['1', '2']);
   });
 
@@ -67,13 +70,16 @@ describe('TrophyRoomScreen', () => {
     });
     render(<TrophyRoomScreen history={[entry]} />);
 
-    expect(screen.queryByText('Fulano (12)')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('5º na liga').closest('button')!);
+    // Escopado ao card: os mesmos números aparecem no painel Minha Carreira (agregado
+    // de 1 temporada = igual à própria temporada), então a asserção precisa olhar só o card.
+    const card = screen.getByText('5º na liga').closest('button')!;
+    expect(within(card).queryByText('Fulano (12)')).not.toBeInTheDocument();
+    fireEvent.click(card);
 
-    expect(screen.getByText('Fulano (12)')).toBeInTheDocument();
-    expect(screen.getByText('10V 5E 3D')).toBeInTheDocument();
-    expect(screen.getByText('30 pró · 20 contra')).toBeInTheDocument();
-    expect(screen.getByText('+€2.5M')).toBeInTheDocument();
+    expect(within(card).getByText('Fulano (12)')).toBeInTheDocument();
+    expect(within(card).getByText('10V 5E 3D')).toBeInTheDocument();
+    expect(within(card).getByText('30 pró · 20 contra')).toBeInTheDocument();
+    expect(within(card).getByText('+€2.5M')).toBeInTheDocument();
   });
 
   it('mostra o selo de Técnico da Temporada quando managerOfSeason é true', () => {
