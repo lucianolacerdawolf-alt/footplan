@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import type { Team, Strategy, MatchEvent } from '@/engine/types';
 import type { GameMode } from '../TeamSelectionScreen';
 import type { SubWindow } from '@/utils/liveMatchPersistence';
-import { playerOvr } from '@/utils/playerOvr';
-import { fireClick } from '@/utils/fireClick';
 import TacticPresets from '../shared/TacticPresets';
 import TacticEditor from '../shared/TacticEditor';
+import SquadSwapPanel from './SquadSwapPanel';
 
 const SUB_WINDOW_LABELS: Record<SubWindow, string> = { firstHalfPause: '1ºT', halftime: 'Intervalo', secondHalfPause: '2ºT' };
 function formatSubWindows(w: Record<SubWindow, number>): string {
@@ -172,82 +171,19 @@ export default function HalftimePanel({
                     ['home', home, setHome, htHomePick, setHtHomePick, true],
                     ['away', away, setAway, htAwayPick, setHtAwayPick, gameMode !== 'cpu'],
                   ] as const
-              ).map(([side, team, setTeam, pick, setPick, canEdit]) => {
-                const benchPlayers = team.squad.slice(11);
-                const starters = team.squad.slice(0, 11);
-                const pickIdx = team.squad.findIndex(sp => sp.id === pick);
-                const pickIsBench = pickIdx >= 11;
-                const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
-                return (
-                  <div key={side} className="ht-squad-col">
-                    <strong style={{ color: side === 'home' ? home.color : away.color, fontSize: 11 }}>
-                      {side === 'home' ? home.abbreviation : away.abbreviation} {!canEdit ? '(adversário)' : ''}
-                    </strong>
-                    <div className="ht-sub-group-label">Titulares</div>
-                    {starters.map((p, i) => {
-                      const isPicked = p.id === pick;
-                      const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
-                      const fatigue = fatigueMap?.[p.id] ?? p.currentFatigue;
-                      const effOvr = Math.round(playerOvr(p) * (1 - fatigue / 200));
-                      const fatigueColor = fatigue > 70 ? '#ef4444' : fatigue > 45 ? '#f59e0b' : '#22c55e';
-                      return (
-                        <div key={p.id}
-                          className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap && canEdit ? 'clickable' : ''}`}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            if (!canEdit) return;
-                            if (pick && pickIsBench && team.squad[pickIdx].position === p.position) {
-                              swapSquad(team, setTeam, pickIdx, i, side);
-                              setPick(null);
-                            } else {
-                              setPick(isPicked ? null : p.id);
-                            }
-                          }}
-                          onKeyDown={e => fireClick(e)}>
-                          <span className="sq-num">#{p.number}</span>
-                          <span className="sq-name">{p.name}</span>
-                          <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                          <span className="sq-ovr">
-                            {playerOvr(p)}
-                            {fatigue > 20 && <span style={{ color: fatigueColor, fontSize: 9, marginLeft: 3 }}>▶{effOvr}</span>}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    <div className="ht-sub-group-label">Reservas</div>
-                    {benchPlayers.map((p) => {
-                      const isPicked = p.id === pick;
-                      const bi = team.squad.findIndex(sp => sp.id === p.id);
-                      const benchFatigue = p.currentFatigue;
-                      const benchEffOvr = Math.round(playerOvr(p) * (1 - benchFatigue / 200));
-                      return (
-                        <div key={p.id}
-                          className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
-                              swapSquad(team, setTeam, pickIdx, bi, side);
-                              setPick(null);
-                            } else {
-                              setPick(isPicked ? null : p.id);
-                            }
-                          }}
-                          onKeyDown={e => fireClick(e)}>
-                          <span className="sq-num">#{p.number}</span>
-                          <span className="sq-name">{p.name}</span>
-                          <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                          <span className="sq-ovr">
-                            {playerOvr(p)}
-                            {benchFatigue > 20 && <span style={{ color: '#22c55e', fontSize: 9, marginLeft: 3 }}>▶{benchEffOvr}</span>}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+              ).map(([side, team, setTeam, pick, setPick, canEdit]) => (
+                <SquadSwapPanel
+                  key={side}
+                  team={team}
+                  accentColor={side === 'home' ? home.color : away.color}
+                  title={`${side === 'home' ? home.abbreviation : away.abbreviation}${!canEdit ? ' (adversário)' : ''}`}
+                  pick={pick}
+                  setPick={setPick}
+                  onSwap={(bi, si) => swapSquad(team, setTeam, bi, si, side)}
+                  disabled={!canEdit}
+                  fatigueMap={fatigueMap}
+                />
+              ))}
             </div>
           </>
         )}

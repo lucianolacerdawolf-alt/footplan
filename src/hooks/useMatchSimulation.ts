@@ -448,6 +448,8 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     const away = liveAwayRef.current;
     if (!home || !away) return;
     const matchResult = buildMatchResult(home, away, engineStateRef.current);
+    hScoreRef.current = matchResult.homeScore;
+    aScoreRef.current = matchResult.awayScore;
     setResult(matchResult);
     setSimulating(false);
     setPhase('done');

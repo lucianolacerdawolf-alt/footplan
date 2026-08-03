@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { Team, Strategy, MatchResult, RandomFn, Player, PenaltyResult } from '../engine/types';
+import type { Team, Strategy, MatchResult, RandomFn, PenaltyResult } from '../engine/types';
 import type { GameMode } from './TeamSelectionScreen';
 import { cloneTeam } from '../utils/teamUtils';
+import { getStarterCount } from '../engine/squadUtils';
 import TacticPresets from './shared/TacticPresets';
 import TacticEditor from './shared/TacticEditor';
 import type { SubWindow, LiveMatchSnapshot } from '../utils/liveMatchPersistence';
@@ -15,38 +16,23 @@ import { generateStadium } from '../utils/stadiums';
 // (pausa no 1º tempo, intervalo, pausa no 2º tempo), então o limite de "até 3 pausas" já
 // é garantido pela própria contagem de janelas disponíveis; o que rastreamos aqui é só
 // quantas das 5 substituições totais foram usadas em cada uma, pra exibir ao usuário.
-const ZERO_SUB_WINDOWS: Record<SubWindow, number> = { firstHalfPause: 0, halftime: 0, secondHalfPause: 0 };
 const SUB_WINDOW_LABELS: Record<SubWindow, string> = { firstHalfPause: '1ºT', halftime: 'Intervalo', secondHalfPause: '2ºT' };
 function formatSubWindows(w: Record<SubWindow, number>): string {
   return (['firstHalfPause', 'halftime', 'secondHalfPause'] as SubWindow[])
     .map(k => `${SUB_WINDOW_LABELS[k]} ${w[k]}`).join(' · ');
 }
 
-interface OnlineProps {
-  isHost: boolean;
-  send: (data: unknown) => void;
-  setOnData: (handler: ((data: unknown) => void) | null) => void;
-  peerConnected: boolean;
-}
-
-type MatchSyncMsg =
-  | { type: 'strategy-update'; side: 'home' | 'away'; strategy: Strategy }
-  | { type: 'squad-update'; side: 'home' | 'away'; squad: Player[]; subsUsed: number }
-  | { type: 'ready-halftime' }
-  | { type: 'pause-game' }
-  | { type: 'ready-resume' }
-  | { type: 'start-simulate' };
-
 import { resolveKnockoutExtraTime, getShooters, buildMatchResult, type MatchState, simularPartida, simularPrimeiroTempo, simularSegundoTempo, resolveKnockoutTiebreak } from '../engine/matchEngine';
 import { useMatchSimulation, getSubWindow } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
+import { useMatchOnlineSync, type OnlineProps, ZERO_SUB_WINDOWS } from '../hooks/useMatchOnlineSync';
 import { getSubSuggestions } from '../engine/subSuggestions';
 import CommentaryFeed from './CommentaryFeed';
 import { playerOvr } from '../utils/playerOvr';
-import { fireClick } from '../utils/fireClick';
 import TopBar from './MatchScreen/TopBar';
 import HalftimePanel from './MatchScreen/HalftimePanel';
 import PenaltyShootoutOverlay from './MatchScreen/PenaltyShootoutOverlay';
+import SquadSwapPanel from './MatchScreen/SquadSwapPanel';
 
 interface Props {
   homeTeam: Team;
@@ -89,15 +75,18 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [subsAway, setSubsAway] = useState(() => resumeSnapshot?.subsAway ?? 0);
   const [subWindowsHome, setSubWindowsHome] = useState<Record<SubWindow, number>>(() => resumeSnapshot?.subWindowsHome ?? ZERO_SUB_WINDOWS);
   const [subWindowsAway, setSubWindowsAway] = useState<Record<SubWindow, number>>(() => resumeSnapshot?.subWindowsAway ?? ZERO_SUB_WINDOWS);
+
+  const knockoutResolvedRef = useRef(false);
+  const [knockoutResult, setKnockoutResult] = useState<MatchResult | null>(null);
+  const [showPenaltyShootout, setShowPenaltyShootout] = useState(false);
+  const penaltyStateRef = useRef<{
+    home: Team; away: Team; state: MatchState | null; result: MatchResult | null;
+  }>({ home: initialHome, away: initialAway, state: null, result: null });
   const MAX_SUBS = 5;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
   const [pauseTab, setPauseTab] = useState<'tactics' | 'squad'>('tactics');
   const [showSuggestions, setShowSuggestions] = useState(true);
-
-  // Online coordination state
-  const [hostReady, setHostReady] = useState(false);
-  const [guestReady, setGuestReady] = useState(false);
 
   const [speed, setSpeed] = useState<number>(() => {
     try { return Number(localStorage.getItem('fp:replaySpeed')) || 1; } catch { return 1; }
@@ -201,95 +190,12 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     return () => setInjuryCallback(null);
   }, [setInjuryCallback, handleInjury]);
 
-  // ── Online sync helpers ──────────────────────────────────────────────────
-  const syncStrategy = useCallback((side: 'home' | 'away', strategy: Strategy) => {
-    online?.send({ type: 'strategy-update', side, strategy } satisfies MatchSyncMsg);
-  }, [online]);
-
-  const syncSquad = useCallback((side: 'home' | 'away', squad: Player[], subsUsed: number) => {
-    online?.send({ type: 'squad-update', side, squad, subsUsed } satisfies MatchSyncMsg);
-  }, [online]);
-
-  const sendReadyHalftime = useCallback(() => {
-    if (online?.isHost) setHostReady(true);
-    else setGuestReady(true);
-    online?.send({ type: 'ready-halftime' } satisfies MatchSyncMsg);
-  }, [online]);
-
-  const sendPauseGame = useCallback(() => {
-    online?.send({ type: 'pause-game' } satisfies MatchSyncMsg);
-  }, [online]);
-
-  const sendReadyResume = useCallback(() => {
-    if (online?.isHost) setHostReady(true);
-    else setGuestReady(true);
-    online?.send({ type: 'ready-resume' } satisfies MatchSyncMsg);
-  }, [online]);
-
-  // Handle incoming peer data during match
-  useEffect(() => {
-    if (!online) return;
-    const handler = (data: unknown) => {
-      const msg = data as MatchSyncMsg;
-      if (!msg || typeof msg !== 'object') return;
-
-      if (msg.type === 'strategy-update') {
-        if (msg.side === 'home') setHome(prev => ({ ...prev, strategy: msg.strategy }));
-        else setAway(prev => ({ ...prev, strategy: msg.strategy }));
-      }
-      if (msg.type === 'squad-update') {
-        if (msg.side === 'home') { setHome(prev => ({ ...prev, squad: msg.squad })); setSubsHome(msg.subsUsed); }
-        else { setAway(prev => ({ ...prev, squad: msg.squad })); setSubsAway(msg.subsUsed); }
-      }
-      if (msg.type === 'ready-halftime') {
-        if (online.isHost) { setGuestReady(true); }
-        else { setHostReady(true); }
-      }
-      if (msg.type === 'pause-game') {
-        setHostReady(false);
-        setGuestReady(false);
-        pauseReplay();
-      }
-      if (msg.type === 'ready-resume') {
-        if (online.isHost) { setGuestReady(true); }
-        else { setHostReady(true); }
-      }
-      if (msg.type === 'start-simulate' && !online.isHost) {
-        knockoutResolvedRef.current = false;
-        setKnockoutResult(null);
-        setSubsHome(0); setSubsAway(0); setSubWindowsHome(ZERO_SUB_WINDOWS); setSubWindowsAway(ZERO_SUB_WINDOWS); setInjuredIds([]);
-        runFirstHalf(home, away);
-      }
-    };
-    online.setOnData(handler);
-    return () => online.setOnData(null);
-  }, [online, pauseReplay, home, away, runFirstHalf]);
-
-  // Reset ready states when entering halftime
-  useEffect(() => {
-    if (phase === 'halftime') {
-      setHostReady(false);
-      setGuestReady(false);
-    }
-  }, [phase]);
-
-  // Auto-start second half when both ready in online mode
-  useEffect(() => {
-    if (!online || phase !== 'halftime') return;
-    if ((online.isHost && hostReady && guestReady) || (!online.isHost && hostReady && guestReady)) {
-      runSecondHalf(home, away);
-    }
-  }, [online, phase, hostReady, guestReady, home, away, runSecondHalf]);
-
-  // Auto-resume when both ready in online pause
-  useEffect(() => {
-    if (!online || !paused) return;
-    if ((online.isHost && hostReady && guestReady) || (!online.isHost && hostReady && guestReady)) {
-      setHostReady(false);
-      setGuestReady(false);
-      resumeReplay();
-    }
-  }, [online, paused, hostReady, guestReady, resumeReplay]);
+  // ── Online sync helpers (protocolo WebRTC extraído em useMatchOnlineSync) ──
+  const { hostReady, guestReady, syncStrategy, syncSquad, sendReadyHalftime, sendPauseGame, sendReadyResume } = useMatchOnlineSync({
+    online, setHome, setAway, setSubsHome, setSubsAway, setSubWindowsHome, setSubWindowsAway,
+    setInjuredIds, setKnockoutResult, knockoutResolvedRef, pauseReplay, resumeReplay,
+    runFirstHalf, runSecondHalf, home, away, phase, paused,
+  });
 
   const handleFastSim = useCallback(() => {
     const h = cloneTeam(home);
@@ -395,13 +301,6 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   };
 
   useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
-
-  const knockoutResolvedRef = useRef(false);
-  const [knockoutResult, setKnockoutResult] = useState<MatchResult | null>(null);
-  const [showPenaltyShootout, setShowPenaltyShootout] = useState(false);
-  const penaltyStateRef = useRef<{
-    home: Team; away: Team; state: MatchState | null; result: MatchResult | null;
-  }>({ home: initialHome, away: initialAway, state: null, result: null });
 
   // Refs pra capturar estado atual sem disparar o effect quando mudam
   const homeRef = useRef(home);
@@ -675,81 +574,16 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                       <span className="sub-window-breakdown"> ({formatSubWindows(subWindowsHome)} / {formatSubWindows(subWindowsAway)})</span>
                     </div>
                     <div className="ht-squad-grid">
-                      {(() => {
-                        const side = online.isHost ? 'home' : 'away';
-                        const team = online.isHost ? home : away;
-                        const setTeam = online.isHost ? setHome : setAway;
-                        const pick = online.isHost ? htHomePick : htAwayPick;
-                        const setPick = online.isHost ? setHtHomePick : setHtAwayPick;
-                        const benchPlayers = team.squad.slice(11);
-                        const starters = team.squad.slice(0, 11);
-                        const pickIdx = team.squad.findIndex(sp => sp.id === pick);
-                        const pickIsBench = pickIdx >= 11;
-                        const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
-                        return (
-                          <div className="ht-squad-col">
-                            <strong style={{ color: online.isHost ? home.color : away.color, fontSize: 11 }}>
-                              Seu Time ({online.isHost ? home.abbreviation : away.abbreviation})
-                            </strong>
-                            <div className="ht-sub-group-label">Titulares</div>
-                            {starters.map((p, i) => {
-                              const isPicked = p.id === pick;
-                              const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
-                              const isInjured = injuredIds.includes(p.id);
-                              return (
-                                <div key={p.id}
-                                  className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
-                                  style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={() => {
-                                    if (isInjured && pick && pickIsBench && team.squad[pickIdx].position === p.position) {
-                                      swapSquad(team, setTeam, pickIdx, i, side);
-                                      setPick(null);
-                                      setInjuredIds(prev => prev.filter(id => id !== p.id));
-                                    } else if (pick && pickIsBench && team.squad[pickIdx].position === p.position && !isInjured) {
-                                      swapSquad(team, setTeam, pickIdx, i, side);
-                                      setPick(null);
-                                    } else {
-                                      setPick(isPicked ? null : p.id);
-                                    }
-                                  }}
-                                  onKeyDown={e => fireClick(e)}>
-                                  <span className="sq-num">#{p.number}</span>
-                                  <span className="sq-name">{p.name}</span>
-                                  <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                  <span className="sq-ovr">{playerOvr(p)}</span>
-                                </div>
-                              );
-                            })}
-                            <div className="ht-sub-group-label">Reservas</div>
-                            {benchPlayers.map((p) => {
-                              const isPicked = p.id === pick;
-                              const bi = team.squad.findIndex(sp => sp.id === p.id);
-                              return (
-                                <div key={p.id}
-                                  className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={() => {
-                                    if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
-                                      swapSquad(team, setTeam, pickIdx, bi, side);
-                                      setPick(null);
-                                    } else {
-                                      setPick(isPicked ? null : p.id);
-                                    }
-                                  }}
-                                  onKeyDown={e => fireClick(e)}>
-                                  <span className="sq-num">#{p.number}</span>
-                                  <span className="sq-name">{p.name}</span>
-                                  <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                  <span className="sq-ovr">{playerOvr(p)}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
+                      <SquadSwapPanel
+                        team={online.isHost ? home : away}
+                        accentColor={online.isHost ? home.color : away.color}
+                        title={`Seu Time (${online.isHost ? home.abbreviation : away.abbreviation})`}
+                        pick={online.isHost ? htHomePick : htAwayPick}
+                        setPick={online.isHost ? setHtHomePick : setHtAwayPick}
+                        onSwap={(bi, si) => swapSquad(online.isHost ? home : away, online.isHost ? setHome : setAway, bi, si, online.isHost ? 'home' : 'away')}
+                        injuredIds={injuredIds}
+                        setInjuredIds={setInjuredIds}
+                      />
                     </div>
 
                     {subToast && (
@@ -851,92 +685,17 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                           <span className="sub-window-breakdown"> ({formatSubWindows(showOpponent ? subWindowsAway : subWindowsHome)})</span>
                         </div>
                         <div className="ht-squad-grid" style={{ maxHeight: '50dvh', overflowY: 'auto' }}>
-                          {(() => {
-                            const side = showOpponent ? 'away' : 'home';
-                            const team = showOpponent ? away : home;
-                            const setTeam = showOpponent ? setAway : setHome;
-                            const pick = showOpponent ? htAwayPick : htHomePick;
-                            const setPick = showOpponent ? setHtAwayPick : setHtHomePick;
-                            const benchPlayers = team.squad.slice(11);
-                            const starters = team.squad.slice(0, 11);
-                            const pickIdx = team.squad.findIndex(sp => sp.id === pick);
-                            const pickIsBench = pickIdx >= 11;
-                            const pickPlayer = pickIdx >= 0 ? team.squad[pickIdx] : null;
-                            return (
-                              <div className="ht-squad-col">
-                                <strong style={{ color: showOpponent ? away.color : home.color, fontSize: 11 }}>
-                                  {showOpponent ? away.abbreviation : home.abbreviation}
-                                </strong>
-                                <div className="ht-sub-group-label">Titulares</div>
-                                {starters.map((p, i) => {
-                                  const isPicked = p.id === pick;
-                                  const canSwap = pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position && pickIdx !== i;
-                                  const isInjured = injuredIds.includes(p.id);
-                                  const fatigue = fatigueMap?.[p.id] ?? p.currentFatigue;
-                                  const effOvr = Math.round(playerOvr(p) * (1 - fatigue / 200));
-                                  const fatigueColor = fatigue > 70 ? '#ef4444' : fatigue > 45 ? '#f59e0b' : '#22c55e';
-                                  return (
-                                    <div key={p.id}
-                                      className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
-                                      style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={() => {
-                                        if (isInjured && pick && pickIsBench && team.squad[pickIdx].position === p.position) {
-                                          swapSquad(team, setTeam, pickIdx, i, side);
-                                          setPick(null);
-                                          setInjuredIds(prev => prev.filter(id => id !== p.id));
-                                        } else if (pick && pickIsBench && team.squad[pickIdx].position === p.position && !isInjured) {
-                                          swapSquad(team, setTeam, pickIdx, i, side);
-                                          setPick(null);
-                                        } else {
-                                          setPick(isPicked ? null : p.id);
-                                        }
-                                      }}
-                                      onKeyDown={e => fireClick(e)}>
-                                      <span className="sq-num">#{p.number}</span>
-                                      <span className="sq-name">{p.name}</span>
-                                      <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                      <span className="sq-ovr">
-                                        {playerOvr(p)}
-                                        {fatigue > 20 && <span style={{ color: fatigueColor, fontSize: 9, marginLeft: 3 }}>▶{effOvr}</span>}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                                <div className="ht-sub-group-label">Reservas</div>
-                                {benchPlayers.map((p) => {
-                                  const isPicked = p.id === pick;
-                                  const bi = team.squad.findIndex(sp => sp.id === p.id);
-                                  const benchFatigue = p.currentFatigue;
-                                  const benchEffOvr = Math.round(playerOvr(p) * (1 - benchFatigue / 200));
-                                  return (
-                                    <div key={p.id}
-                                      className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={() => {
-                                        if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
-                                          swapSquad(team, setTeam, pickIdx, bi, side);
-                                          setPick(null);
-                                        } else {
-                                          setPick(isPicked ? null : p.id);
-                                        }
-                                      }}
-                                      onKeyDown={e => fireClick(e)}>
-                                      <span className="sq-num">#{p.number}</span>
-                                      <span className="sq-name">{p.name}</span>
-                                      <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
-                                      <span className="sq-ovr">
-                                        {playerOvr(p)}
-                                        {benchFatigue > 20 && <span style={{ color: '#22c55e', fontSize: 9, marginLeft: 3 }}>▶{benchEffOvr}</span>}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            );
-                          })()}
+                          <SquadSwapPanel
+                            team={showOpponent ? away : home}
+                            accentColor={showOpponent ? away.color : home.color}
+                            title={showOpponent ? away.abbreviation : home.abbreviation}
+                            pick={showOpponent ? htAwayPick : htHomePick}
+                            setPick={showOpponent ? setHtAwayPick : setHtHomePick}
+                            onSwap={(bi, si) => swapSquad(showOpponent ? away : home, showOpponent ? setAway : setHome, bi, si, showOpponent ? 'away' : 'home')}
+                            injuredIds={injuredIds}
+                            setInjuredIds={setInjuredIds}
+                            fatigueMap={fatigueMap}
+                          />
                         </div>
                       </>
                     )}
@@ -944,10 +703,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     {() => {
                       const side: 'home' | 'away' = (userSide ?? 'home') as 'home' | 'away';
                       const team = side === 'home' ? home : away;
-                      const starters = team.squad.slice(0, 11);
+                      const starterCount = getStarterCount(team.strategy.formation);
+                      const starters = team.squad.slice(0, starterCount);
                       const mostTired = starters.filter(p => (p.currentFatigue ?? 0) > 70 && p.position !== 'GK').sort((a, b) => (b.currentFatigue ?? 0) - (a.currentFatigue ?? 0))[0];
                       if (!mostTired) return null;
-                      const benchSamePos = team.squad.slice(11).filter(p => p.position === mostTired.position && (p.currentFatigue ?? 0) < 50);
+                      const benchSamePos = team.squad.slice(starterCount).filter(p => p.position === mostTired.position && (p.currentFatigue ?? 0) < 50);
                       const bestBench = benchSamePos.sort((a, b) => playerOvr(b) - playerOvr(a))[0];
                       if (!bestBench) return null;
                       return (
