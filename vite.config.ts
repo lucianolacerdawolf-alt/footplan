@@ -43,4 +43,20 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: { '@': path.resolve(__dirname, 'src') },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Separa as libs de node_modules em chunks próprios. Reduz o chunk
+        // principal (que passava de 900 kB) e melhora o cache do navegador entre
+        // deploys — libs que não mudam ficam num arquivo estável.
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('react')) return 'vendor-react';
+          if (id.includes('@supabase')) return 'vendor-supabase';
+          if (id.includes('peerjs')) return 'vendor-peer';
+          return 'vendor';
+        },
+      },
+    },
+  },
 }))
