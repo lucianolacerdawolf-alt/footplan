@@ -32,3 +32,6 @@ coverage
 *.sln
 *.sw?
 .claude/worktrees/
+
+# Continue extension (config local do editor)
+.continue/
