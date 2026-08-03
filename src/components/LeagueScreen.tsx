@@ -30,6 +30,10 @@ interface Props {
   blockAdvanceReason?: string;
   /** Só passado no Modo Carreira — abre a copa nacional correspondente (aba "Escritório"). */
   onViewCup?: () => void;
+  /** Fase 2 — abre o mercado de treinador (trocar de clube), só no Modo Carreira. */
+  onOpenJobMarket?: () => void;
+  /** Nº de ofertas em aberto — botão só aparece quando > 0. */
+  jobMarketOffers?: number;
   /** Só true no Modo Carreira — a barra de abas fixa já cobre "voltar pra Central" e
    *  "editar táticas" (aba Elenco), então esses botões de topo ficam redundantes. */
   hideTopNav?: boolean;
@@ -39,7 +43,7 @@ function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
 }
 
-export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason, onViewCup, hideTopNav }: Props) {
+export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason, onViewCup, onOpenJobMarket, jobMarketOffers, hideTopNav }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
   const [simulating, setSimulating] = useState(false);
   const runSim = (fn: () => void) => {
@@ -148,6 +152,11 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
         <button className={styles.viewTableLink} onClick={onViewTable}>📊 Ver Classificação →</button>
         {onViewCup && (
           <button className={styles.viewTableLink} onClick={onViewCup}>🏆 Ver Copa →</button>
+        )}
+        {onOpenJobMarket && (jobMarketOffers ?? 0) > 0 && (
+          <button className={styles.viewTableLink} onClick={onOpenJobMarket}>
+            💼 {jobMarketOffers} Oferta{jobMarketOffers! > 1 ? 's' : ''} de Emprego →
+          </button>
         )}
       </div>
 

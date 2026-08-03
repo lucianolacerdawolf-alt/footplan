@@ -60,6 +60,7 @@ export const backTargets: Record<Screen, (c: BackNavContext) => BackTarget> = {
   'transfer-market': () => 'career-hub',
   'trade-propose': () => 'transfer-market',
   'season-end': () => 'career-hub',
+  'career-job-market': () => 'career-hub',
 };
 
 interface Params extends BackNavContext {

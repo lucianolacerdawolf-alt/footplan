@@ -10,9 +10,9 @@
 |------|---------|--------|
 | 5 | Painel "Minha Carreira" (retrospectiva) | ✅ **Concluída** (`824ffe7`) |
 | 1 | Contratos & Renovações | ✅ **Concluída** |
+| 2 | Mercado de Treinador (trocar de clube) | ✅ **Concluída** |
 | 4 | Conversas com atletas | ⏳ pendente |
 | 3 | Imersão pré-jogo (treino + coletiva + feed) | ⏳ pendente |
-| 2 | Mercado de Treinador (trocar de clube) | ⏳ pendente |
 
 **Ordem de execução recomendada** (risco crescente, cada fase entregável sozinha):
 Fase 5 → Fase 1 → **Fase 4** → Fase 3 → Fase 2. (A numeração é temática; a próxima

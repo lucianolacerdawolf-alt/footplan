@@ -15,6 +15,7 @@ import { useCareerMatchFlow } from './career/useCareerMatchFlow';
 import { useTransferManager } from './career/useTransferManager';
 import { useCareerSeason } from './career/useCareerSeason';
 import { useCareerInbox } from './career/useCareerInbox';
+import { useCareerJobMarket } from './career/useCareerJobMarket';
 import type { Screen } from '../types/navigation';
 
 // Timestamp (ms) do último save local da carreira — usado pra reconciliar com o
@@ -146,6 +147,7 @@ export function useCareerManager({
   const transfers = useTransferManager({ careerState, setCareerState, setToastMsg });
   const season = useCareerSeason({ careerState, setCareerState, setScreen, setToastMsg });
   const inbox = useCareerInbox({ setCareerState });
+  const jobMarket = useCareerJobMarket({ careerState, setCareerState, setScreen, setToastMsg });
 
   return {
     careerState, setCareerState,
@@ -154,5 +156,6 @@ export function useCareerManager({
     ...transfers,
     ...season,
     ...inbox,
+    ...jobMarket,
   };
 }

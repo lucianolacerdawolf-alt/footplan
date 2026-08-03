@@ -10,7 +10,7 @@ import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { Difficulty } from '../engine/matchConfig';
 import type { CareerState } from '../engine/career';
-import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen } from '../engine/career';
+import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers } from '../engine/career';
 import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
@@ -33,6 +33,7 @@ import TradeProposalScreen from './TradeProposalScreen';
 import SeasonEndScreen from './SeasonEndScreen';
 import TrophyRoomScreen from './TrophyRoomScreen';
 import TransferMarketScreen from './TransferMarketScreen';
+import JobMarketScreen from './JobMarketScreen';
 import MatchdayScreen from './MatchdayScreen';
 import { getLeague } from '../data/leagues';
 
@@ -166,6 +167,8 @@ export interface AppScreensProps {
   handleAcceptTransferOffer: (messageId: string) => void;
   handleRejectTransferOffer: (messageId: string) => void;
   handleRenewContract: (playerId: string, years: number) => void;
+  handleAcceptJobOffer: (offerId: string) => void;
+  handleDeclineJobOffer: (offerId: string) => void;
   handleAdvanceSeason: () => void;
   handleMarkInboxRead: (id: string) => void;
   handleRenegotiateSponsor: () => void;
@@ -516,6 +519,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onNextRound={p.handleNextCareerLeagueRound}
         onViewLeague={() => p.setScreen('career-league')}
         onRenewContract={(playerId) => p.handleRenewContract(playerId, 1)}
+        onOpenJobMarket={() => p.setScreen('career-job-market')}
+        jobOfferCount={getJobOffers(p.careerState).length}
         blockAdvanceReason={hubBlockAdvanceReason}
       />
     );
@@ -590,6 +595,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onViewTable={() => p.setScreen('career-league-table')}
         onViewCup={() => p.setScreen('career-bracket')}
         onBack={() => p.setScreen('career-hub')}
+        onOpenJobMarket={() => p.setScreen('career-job-market')}
+        jobMarketOffers={getJobOffers(p.careerState).length}
         blockAdvanceReason={blockAdvanceReason}
         hideTopNav
       />
@@ -640,6 +647,23 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         budget={getFinances(p.careerState).budget}
         onBack={() => p.setScreen('transfer-market')}
         onPropose={p.handleProposeTrade}
+      />
+    );
+  },
+
+  'career-job-market': (p) => {
+    if (!p.careerState) return null;
+    const userTeam = p.careerState.rosters[p.careerState.leagueId]
+      .find(t => t.id === p.careerState!.season.league.userTeamId);
+    return (
+      <JobMarketScreen
+        offers={getJobOffers(p.careerState)}
+        reputation={p.careerState.manager.reputation}
+        currentClubName={userTeam?.name ?? 'Seu clube'}
+        rosters={p.careerState.rosters}
+        onAccept={p.handleAcceptJobOffer}
+        onDecline={p.handleDeclineJobOffer}
+        onBack={() => p.setScreen('career-hub')}
       />
     );
   },

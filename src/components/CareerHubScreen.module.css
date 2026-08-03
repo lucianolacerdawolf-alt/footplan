@@ -210,6 +210,23 @@
   font-size: 10px; color: var(--text-secondary); text-align: center; font-style: italic;
 }
 
+/* ── Mercado de Treinador (Fase 2) ───────────────────────── */
+.jobMarketCard {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 10px 14px; border-radius: 10px;
+  border: 1.5px solid var(--accent); background: rgba(59,130,246,0.08);
+  cursor: pointer; font-family: var(--sans); color: var(--text-primary);
+  transition: background 0.15s;
+}
+.jobMarketCard:hover { background: rgba(59,130,246,0.16); }
+.jobMarketIcon { font-size: 18px; flex-shrink: 0; }
+.jobMarketLabel { flex: 1; text-align: left; font-size: 12px; font-weight: 700; }
+.jobMarketBadge {
+  margin-left: 8px; font-size: 10px; font-weight: 700; color: #04222a;
+  background: var(--accent); padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+}
+.jobMarketChevron { color: var(--accent); font-weight: 700; }
+
 @media (max-width: 640px) {
   .screen { padding: 10px 8px 24px; gap: 10px; }
   .clubName { font-size: 17px; }

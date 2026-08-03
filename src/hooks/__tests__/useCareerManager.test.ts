@@ -6,7 +6,7 @@ import { makeTeam } from '@/components/__tests__/testFixtures';
 import { getLeague } from '@/data/leagues';
 import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue, renewalCost } from '@/engine/transferMarket';
 import { computeStandings } from '@/engine/tournament';
-import { deriveCupResult, getFinances, getFreeAgentPool } from '@/engine/career';
+import { deriveCupResult, getFinances, getFreeAgentPool, getJobOffers } from '@/engine/career';
 import type { MatchResult, MatchEvent, Team, Player } from '@/engine/types';
 import * as careerEvents from '@/engine/careerEvents';
 
@@ -1243,5 +1243,71 @@ describe('handleAdvanceSeason expira contratos (Fase 1)', () => {
     const expiringMsg = after.inbox!.find(m => m.subject === 'Contratos a expirar');
     expect(expiringMsg).toBeDefined();
     expect(expiringMsg!.body).toContain(player.name);
+  });
+});
+
+describe('Mercado de Treinador (Fase 2)', () => {
+  it('aceitar oferta troca de clube/liga, preserva manager+histórico e limpa as ofertas', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { userTeamId } = startPlCareer(result);
+    const before = result.current.careerState!;
+    expect(before.season.league.userTeamId).toBe(userTeamId);
+
+    const targetClub = before.rosters['laliga'][0];
+    const offer = {
+      id: 'job-1', clubId: targetClub.id, leagueId: 'laliga', clubName: targetClub.name,
+      reputationRequired: 0, offeredSeasonYear: before.currentSeasonYear,
+    };
+    act(() => { result.current.setCareerState(prev => prev && ({ ...prev, jobOffers: [offer] })); });
+
+    params.setScreen.mockClear();
+    act(() => { result.current.handleAcceptJobOffer('job-1'); });
+
+    const after = result.current.careerState!;
+    expect(after.leagueId).toBe('laliga');
+    expect(after.season.league.userTeamId).toBe(targetClub.id);
+    expect(after.manager.name).toBe('Alex');
+    expect(after.currentSeasonYear).toBe(before.currentSeasonYear);
+    expect(after.history).toEqual(before.history);
+    expect(getJobOffers(after)).toEqual([]);
+    expect(params.setScreen).toHaveBeenCalledWith('career-hub');
+    expect(params.setToastMsg).toHaveBeenCalled();
+  });
+
+  it('recusar oferta remove apenas ela, sem mexer no resto', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+    const before = result.current.careerState!;
+    const targetClub = before.rosters['serieA'][0];
+    const offer = {
+      id: 'job-1', clubId: targetClub.id, leagueId: 'serieA', clubName: targetClub.name,
+      reputationRequired: 0, offeredSeasonYear: before.currentSeasonYear,
+    };
+    act(() => { result.current.setCareerState(prev => prev && ({ ...prev, jobOffers: [offer] })); });
+
+    act(() => { result.current.handleDeclineJobOffer('job-1'); });
+
+    expect(getJobOffers(result.current.careerState!)).toEqual([]);
+    expect(result.current.careerState!.leagueId).toBe(before.leagueId);
+    expect(result.current.careerState!.season.league.userTeamId).toBe(userTeamId);
+  });
+
+  it('aceitar oferta inválida não derruba e avisa via toast', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    startPlCareer(result);
+    // handleStartCareer já navega pra career-hub — limpa pra isolar o aceite.
+    params.setScreen.mockClear();
+    act(() => { result.current.setCareerState(prev => prev && ({
+      ...prev,
+      jobOffers: [{ id: 'job-x', clubId: 'nao-existe', leagueId: 'pl', clubName: 'X', reputationRequired: 0, offeredSeasonYear: 1 }],
+    })); });
+
+    act(() => { result.current.handleAcceptJobOffer('job-x'); });
+
+    expect(result.current.careerState!.leagueId).toBe('pl');
+    expect(params.setToastMsg).toHaveBeenCalled();
+    expect(params.setScreen).not.toHaveBeenCalled();
   });
 });

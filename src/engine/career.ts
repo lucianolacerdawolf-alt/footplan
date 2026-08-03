@@ -80,6 +80,17 @@ export interface TransferRecord {
   amount: number;   // parte em dinheiro; 0 numa TRADE sem compensação
 }
 
+/** Oferta de emprego de outro clube (Fase 2 — Mercado de Treinador). */
+export interface JobOffer {
+  id: string;
+  clubId: string;
+  leagueId: string;
+  clubName: string;
+  /** Reputação mínima do manager pra ser sondado. */
+  reputationRequired: number;
+  offeredSeasonYear: number;
+}
+
 export interface CareerState {
   version: 1;
   leagueId: string;
@@ -109,6 +120,9 @@ export interface CareerState {
   sponsorTier?: string;   // 'local' | 'regional' | 'national' | 'global'
   sponsorName?: string;   // nome da marca na camisa
   boardObjectives?: BoardObjectivesState;
+  // Ofertas de emprego do mercado de treinador (Fase 2) — geradas no fechamento de
+  // temporada, decidíveis durante a temporada seguinte. Aceitar troca de clube.
+  jobOffers?: JobOffer[];
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };
@@ -123,6 +137,10 @@ export function getTransferHistory(state: CareerState): TransferRecord[] {
 
 export function getTransferList(state: CareerState): string[] {
   return state.transferListPlayerIds ?? [];
+}
+
+export function getJobOffers(state: CareerState): JobOffer[] {
+  return state.jobOffers ?? [];
 }
 
 /** Janela de transferências: rounds 1-5 e 19-24 (0-indexed: <=4 e 18-23). Fonte única —

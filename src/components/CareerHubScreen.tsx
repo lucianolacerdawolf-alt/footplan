@@ -31,6 +31,10 @@ interface Props {
   onNextRound: () => void;
   /** Fase 1 — renova contrato por 1 temporada a partir do card "Contratos a expirar". */
   onRenewContract?: (playerId: string) => void;
+  /** Fase 2 — abre o mercado de treinador (trocar de clube). */
+  onOpenJobMarket: () => void;
+  /** Nº de ofertas de emprego em aberto (pra badge na Central). */
+  jobOfferCount: number;
   /** Abre o Escritório (tela da liga) — usado quando ainda faltam jogos da rodada. */
   onViewLeague: () => void;
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
@@ -87,7 +91,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onRenewContract, blockAdvanceReason }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onRenegotiateSponsor, onNextRound, onViewLeague, onRenewContract, onOpenJobMarket, jobOfferCount, blockAdvanceReason }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -315,6 +319,15 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
           <div className={styles.expiringHint}>Contratos vencem ao fim da temporada.</div>
         </div>
       )}
+
+      <button className={styles.jobMarketCard} onClick={onOpenJobMarket}>
+        <span className={styles.jobMarketIcon} aria-hidden="true">💼</span>
+        <span className={styles.jobMarketLabel}>
+          Mercado de Treinador
+          {jobOfferCount > 0 && <span className={styles.jobMarketBadge}>{jobOfferCount} oferta{jobOfferCount > 1 ? 's' : ''}</span>}
+        </span>
+        <span className={styles.jobMarketChevron}>→</span>
+      </button>
 
       <InboxPanel
         messages={inbox}

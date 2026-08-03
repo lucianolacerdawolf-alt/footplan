@@ -9,6 +9,7 @@ import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/e
 import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, computeMerchRevenue } from '@/engine/sponsors';
 import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, expireContracts, getContractSeasonsLeft, getFinances, getFreeAgentPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
 import { createContractExpiringMessage, createContractDepartureMessage } from '@/engine/inbox';
+import { generateJobOffers } from '@/engine/jobMarket';
 import type { Screen } from '@/types/navigation';
 
 interface UseCareerSeasonParams {
@@ -127,6 +128,14 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         objectiveMessages.push(createContractExpiringMessage(expiringSoon.map(p => p.name), `Temporada ${careerState.currentSeasonYear + 1}`));
       }
 
+      // Fase 2 — Mercado de Treinador: sondagens pro novo ciclo, com a reputação final.
+      const jobOffers = generateJobOffers({
+        rosters: evolvedRosters,
+        currentClubId: evolvedUserTeam.id,
+        reputation: newReputation,
+        currentSeasonYear: careerState.currentSeasonYear + 1,
+      });
+
       setCareerState({
         ...careerState,
         manager: { ...careerState.manager, reputation: newReputation },
@@ -143,6 +152,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         sponsorTier: nextSponsorTier,
         sponsorName: nextSponsorName,
         boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },
+        jobOffers,
       });
       setScreen('season-end');
     } catch (err) {
