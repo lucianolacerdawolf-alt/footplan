@@ -101,7 +101,7 @@
   font-size: 13px;
   font-family: var(--sans);
 }
-.searchInput:focus { outline: none; border-color: var(--accent); }
+.searchInput:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
 
 .searchHitSource {
   font-size: 11px;

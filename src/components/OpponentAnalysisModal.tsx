@@ -6,6 +6,7 @@ import { FORMATION_BONUS, getTacticalHardCounter } from '../engine/matchConfig';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { playerOvr } from '../utils/playerOvr';
 import { isPlayerUnavailable } from '../engine/squadUtils';
+import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './OpponentAnalysisModal.module.css';
 
 interface Props {
@@ -33,6 +34,7 @@ function avgOvr(team: Team): number {
 
 export default function OpponentAnalysisModal({ opponent, userTeam, h2h, onClose }: Props) {
   const [tab, setTab] = useState<'visao-geral' | 'elenco' | 'tatica'>('visao-geral');
+  const modalRef = useModalFocus<HTMLDivElement>(true, onClose);
   const ovr = avgOvr(opponent);
   const tier = getOvrTier(ovr);
 
@@ -56,12 +58,12 @@ export default function OpponentAnalysisModal({ opponent, userTeam, h2h, onClose
 
   return (
     <div className={styles.overlay} onClick={onClose} role="presentation">
-      <div className={styles.card} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+      <div ref={modalRef} className={styles.card} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="opp-analysis-title">
         <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar">✕</button>
 
         <div className={styles.header}>
           <img src={opponent.logoUrl} alt="" className={styles.crest} />
-          <div>
+          <div id="opp-analysis-title">
             <div className={styles.teamName} style={{ color: opponent.color }}>{opponent.name}</div>
             <div className={styles.teamOvr}>
               OVR médio <span className={tier.cls}>{ovr}</span> · {tier.label}

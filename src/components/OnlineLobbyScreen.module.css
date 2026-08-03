@@ -56,9 +56,8 @@
 .joinInput {
   flex: 1; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px;
   padding: 10px 14px; font-size: 15px; font-family: var(--mono); color: var(--text-h);
-  outline: none;
 }
-.joinInput:focus { border-color: var(--accent); }
+.joinInput:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
 .joinInput::placeholder { opacity: 0.4; }
 
 .primaryBtn {

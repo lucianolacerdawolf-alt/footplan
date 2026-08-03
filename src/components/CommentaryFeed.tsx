@@ -44,7 +44,7 @@ export default function CommentaryFeed({ events, homeTeamId }: Props) {
   return (
     <div className="commentary-feed" ref={feedRef}>
       <h3>📻 Cronologia da Partida</h3>
-      <div className="feed-list">
+      <div className="feed-list" role="log" aria-live="polite" aria-atomic="false">
         {visibleEvents.map((event, i) => {
           const isHome = event.teamId === homeTeamId;
           const side = event.teamId === null ? 'neutral' : isHome ? 'home' : 'away';

@@ -1,6 +1,7 @@
 import type { TrainingChoice } from '../engine/training';
 import { TRAINING_PRESETS } from '../engine/training';
 import type { PressConferenceQuestion } from '../engine/pressConference';
+import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './PreMatchPrepCard.module.css';
 
 interface Props {
@@ -20,6 +21,8 @@ export default function PreMatchPrepCard({
   trainingDone, pressDone, opponentName,
   onTraining, onOpenPress, pressQuestion, onAnswerPress, onClosePress,
 }: Props) {
+  const pressModalRef = useModalFocus<HTMLDivElement>(!!pressQuestion, onClosePress);
+
   return (
     <div className={styles.card}>
       <div className={styles.title}>🎙️ Preparação Pré-Jogo</div>
@@ -62,7 +65,7 @@ export default function PreMatchPrepCard({
 
       {pressQuestion && (
         <div className={styles.overlay} onClick={onClosePress} role="presentation">
-          <div className={styles.modal} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="press-title">
+          <div ref={pressModalRef} className={styles.modal} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="press-title">
             <button className={styles.closeBtn} onClick={onClosePress} aria-label="Fechar coletiva">Pular ✕</button>
             <div className={styles.modalIcon} aria-hidden="true">🎤</div>
             <div className={styles.modalTitle} id="press-title">Coletiva de Imprensa</div>

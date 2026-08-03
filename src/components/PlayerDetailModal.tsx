@@ -3,6 +3,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { calculateMarketValue, calculateWeeklyWage } from '../engine/transferMarket';
 import { formatMoney } from '../utils/formatMoney';
 import { countryFlagEmoji } from '../utils/countryFlags';
+import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './PlayerDetailModal.module.css';
 
 interface Props {
@@ -41,10 +42,11 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
   const ovr = playerOvr(player);
   const marketValue = player.marketValue ?? calculateMarketValue(player);
   const weeklyWage = player.weeklyWage ?? calculateWeeklyWage(marketValue);
+  const modalRef = useModalFocus<HTMLDivElement>(true, onClose);
 
   return (
     <div className={styles.overlay} onClick={onClose} role="presentation">
-      <div className={styles.card} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="player-modal-name">
+      <div ref={modalRef} className={styles.card} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="player-modal-name">
         <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar">✕</button>
 
         <div className={styles.header}>

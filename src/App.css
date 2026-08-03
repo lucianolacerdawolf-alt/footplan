@@ -134,9 +134,10 @@
 .setup-select { display: flex; flex-direction: column; gap: 1px; }
 .setup-select label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); }
 .setup-select select {
-  padding: 5px 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
-  color: var(--text-h); font-size: 12px; font-family: var(--sans); cursor: pointer; outline: none; transition: border-color 0.2s;
+  padding: 6px 8px; min-height: 38px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg);
+  color: var(--text-h); font-size: 12px; font-family: var(--sans); cursor: pointer; transition: border-color 0.2s;
 }
+.setup-select select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
 .setup-select label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-secondary); }
 
 .setup-players { margin-top: 4px; }
@@ -327,8 +328,8 @@
 }
 .sq-contract.expiring { color: #fdba74; border-color: #b45309; background: rgba(180,83,9,0.15); }
 .sq-renew {
-  min-height: 28px; border: 1px solid #b45309; background: rgba(180,83,9,0.15);
-  color: #fdba74; border-radius: 6px; padding: 2px 10px;
+  min-height: 36px; border: 1px solid #b45309; background: rgba(180,83,9,0.15);
+  color: #fdba74; border-radius: 6px; padding: 4px 10px;
   font-size: 10px; font-weight: 700; cursor: pointer; font-family: var(--sans);
   white-space: nowrap; transition: background 0.15s;
 }
@@ -366,8 +367,8 @@
 /* Uniform toggle */
 .uniform-toggle { display: flex; gap: 3px; margin-top: 6px; }
 .uni-btn {
-  padding: 2px 7px; font-size: 9px; font-weight: 700; letter-spacing: 0.3px;
-  border: 1px solid var(--border); border-radius: 3px; cursor: pointer;
+  padding: 4px 10px; min-height: 32px; font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+  border: 1px solid var(--border); border-radius: 4px; cursor: pointer;
   background: transparent; color: var(--text); font-family: var(--sans);
   transition: all 0.15s;
 }
@@ -572,14 +573,14 @@
   font-family: var(--sans); cursor: pointer; outline: none; transition: border-color 0.2s;
   min-height: 38px;
 }
-.tactic-card select.setup-select:focus { border-color: var(--accent); }
+.tactic-card select.setup-select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
 .tactic-card select.setup-select:disabled { opacity: 0.6; cursor: not-allowed; }
 .halftime-team select {
   padding: 4px 6px; border: 1px solid var(--border); border-radius: 4px;
   background: var(--bg); color: var(--text-h); font-size: 11px;
-  font-family: var(--sans); cursor: pointer; outline: none;
+  font-family: var(--sans); cursor: pointer;
 }
-.halftime-team select:focus { border-color: var(--accent); }
+.halftime-team select:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; border-color: var(--accent); }
 .halftime-vs { font-size: 11px; font-weight: 600; color: var(--text-tertiary); padding-top: 16px; }
 
 /* Halftime/Pause tab buttons */

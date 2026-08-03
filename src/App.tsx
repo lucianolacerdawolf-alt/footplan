@@ -26,8 +26,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
 function App() {
-  const [homeTeam, setHomeTeam] = useState<Team | null>(null);
-  const [awayTeam, setAwayTeam] = useState<Team | null>(null);
+  const screenWrapperRef = React.useRef<HTMLDivElement>(null);
+  const [homeTeam, setHomeTeam] = useState<Team | null>(null);  const [awayTeam, setAwayTeam] = useState<Team | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>('cpu');
   const [lastResult, setLastResult] = useState<MatchResult | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -414,12 +414,22 @@ function App() {
     onCloseOverlay: closeResumePrompt,
   });
 
+  // Acessibilidade de navegação por teclado (WCAG 2.4.3): ao trocar de tela num SPA,
+  // move o foco para o topo do novo conteúdo (container tabindex=-1). Isso garante
+  // que leitores de tela e usuários de teclado comecem do início da tela, em vez de
+  // ficarem presos num elemento que já não existe. Não interfere com toque (a
+  // navegação por gesto desloca o foco naturalmente para o elemento tocado).
+  useEffect(() => {
+    screenWrapperRef.current?.focus();
+  }, [screen]);
+
   return (
     <>
+      <a href="#main-content" className="skip-link">Pular para o conteúdo</a>
       <div style={showCareerTabs ? { paddingBottom: 64 } : undefined}>
         <React.Suspense fallback={<div className="lazy-loading">Carregando…</div>}>
           <ErrorBoundary>
-            <div className="screen-fade" key={screen}>{content}</div>
+            <div ref={screenWrapperRef} tabIndex={-1} id="main-content" className="screen-fade" key={screen}>{content}</div>
           </ErrorBoundary>
         </React.Suspense>
       </div>
