@@ -36,8 +36,10 @@
   min-width: 0;
 }
 
-.leagueBadgeFlag {
-  font-size: 14px;
+.leagueBadgeLogo {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
   flex-shrink: 0;
 }
 
@@ -161,7 +163,7 @@
 }
 .leagueCard:hover { border-color: var(--accent-border); background: var(--social-bg); }
 
-.leagueFlag { font-size: 18px; }
+.leagueLogo { width: 36px; height: 36px; object-fit: contain; }
 .leagueName { font-size: 12px; font-weight: 700; color: var(--text-h); }
 .leagueMeta { font-size: 10px; color: var(--text-secondary); }
 

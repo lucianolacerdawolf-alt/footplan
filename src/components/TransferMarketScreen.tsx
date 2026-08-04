@@ -101,7 +101,7 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
     const leagueToSync = { ...meta, teams: rostersRef.current[buyLeagueId] ?? meta.teams };
     syncLeagueRoster(leagueToSync)
       .then(result => {
-        if (result.source === 'live' || result.source === 'cache') {
+        if (result.source === 'live' || result.source === 'cache' || result.source === 'cloud') {
           onRosterSynced?.(buyLeagueId, result.league.teams);
         }
       })
@@ -228,7 +228,7 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
         <h1 className={styles.title}>🛒 Mercado</h1>
         {activeTab === 'buy' && buyLeagueId && leagueMeta(buyLeagueId) && (
           <span className={styles.leagueBadge} aria-label={`Navegando em ${leagueMeta(buyLeagueId)!.name}`}>
-            <span className={styles.leagueBadgeFlag}>{leagueMeta(buyLeagueId)!.flag}</span>
+            <img src={leagueMeta(buyLeagueId)!.logo} alt="" className={styles.leagueBadgeLogo} />
             <span className={styles.leagueBadgeName}>{leagueMeta(buyLeagueId)!.name}</span>
           </span>
         )}
@@ -331,7 +331,7 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
                 <div className={styles.leagueGrid}>
                   {allLeagues.map(l => (
                     <button key={l.id} className={styles.leagueCard} onClick={() => setBuyLeagueId(l.id)}>
-                      <span className={styles.leagueFlag}>{l.flag}</span>
+                      <img src={l.logo} alt={l.name} className={styles.leagueLogo} />
                       <span className={styles.leagueName}>{l.name}{l.id === userLeagueId ? ' (sua liga)' : ''}</span>
                       <span className={styles.leagueMeta}>{(rosters[l.id] ?? l.teams).length} times</span>
                     </button>
