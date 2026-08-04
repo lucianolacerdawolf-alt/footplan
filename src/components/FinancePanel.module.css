@@ -26,6 +26,12 @@
   display: flex; flex-direction: column; gap: 4px;
 }
 
+.sectionLabel {
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--text-secondary); font-family: var(--mono);
+  opacity: 0.75; margin-bottom: 2px;
+}
+
 .row {
   display: flex; align-items: center; justify-content: space-between;
 }

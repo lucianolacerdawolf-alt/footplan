@@ -10,7 +10,7 @@ import { allLeagues } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { syncAllLeagueRosters, getRosterSyncInfo } from '../services/rosterSync';
-import { generateSponsor, getStartingTier } from '../engine/sponsors';
+import { generateSponsor, getStartingTier, getSponsorMultiplier } from '../engine/sponsors';
 import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
 import { useTransferManager } from './career/useTransferManager';
@@ -122,6 +122,11 @@ export function useCareerManager({
     const trimmedName = managerName.trim().slice(0, 24) || 'Técnico';
     const startingTier = getStartingTier(leagueDef.id);
     const sponsor = generateSponsor(leagueDef.id, userTeam.id, startingTier);
+    // O tier inicial (ex.: Global na PL) precisa refletir no patrocínio já na 1ª
+    // temporada. Fim de temporada (useCareerSeason) e renegociação já aplicam o
+    // multiplicador; a criação da carreira não aplicava, então um patrocínio Global
+    // pagava como Local (base sem multiplicador). Agora bate com o resto do jogo.
+    const weeklyIncome = Math.round(computeWeeklyIncome(leagueDef.id) * getSponsorMultiplier(startingTier));
     const boardObj = generateBoardObjectives(league, 0, 1);
     const newState: CareerState = {
       version: 1,
@@ -131,7 +136,7 @@ export function useCareerManager({
       season: { league, cup, tradesUsedThisSeason: 0, budgetAtSeasonStart: budget, userGoalScorers: {} },
       rosters,
       history: [],
-      finances: { budget, wageBill: computeWageBill(userTeamWithValues), weeklyIncome: computeWeeklyIncome(leagueDef.id) },
+      finances: { budget, wageBill: computeWageBill(userTeamWithValues), weeklyIncome },
       inbox: [createWelcomeMessage(trimmedName, budget, 'Temporada 1'), createBoardObjectivesInboxMessage(boardObj)],
       freeAgentPool: generateFreeAgentPool(),
       sponsorTier: startingTier,

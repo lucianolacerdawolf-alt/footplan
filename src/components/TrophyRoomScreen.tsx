@@ -3,6 +3,7 @@ import type { CareerSeasonHistoryEntry, ClubFinances, TransferRecord, TransferRe
 import { getContractSeasonsLeft, canRenewContract } from '../engine/career';
 import type { ContractRenewalOptions } from '../engine/career';
 import { CUP_RESULT_LABELS } from '../engine/careerLabels';
+import { getSponsorLabel, type SponsorTier } from '../engine/sponsors';
 import { computeCareerSummary, careerHighlights } from '../engine/careerStats';
 import { formatMoney } from '../utils/formatMoney';
 import { playerOvr } from '../utils/playerOvr';
@@ -37,6 +38,14 @@ interface Props {
   /** Renda de bilheteria por jogo em casa (valor fixo da liga) — exibida no painel de finanças. */
   ticketRevenue?: number;
   nextSponsorTier?: string | null;
+  /** Multiplicador do tier de patrocínio atual (Local 1.0 … Global 2.5). */
+  sponsorMultiplier?: number;
+  /** Reputação necessária pro próximo tier de patrocínio (null se já é máximo). */
+  nextTierReputation?: number | null;
+  /** Capacidade do estádio do clube (hero). */
+  capacity?: number;
+  /** Moral atual do elenco (-10 a +10) — exibida no hero. */
+  morale?: number;
   onRenegotiateSponsor?: () => void;
   /** Resumo da temporada em curso — só usado no estado vazio, pra tela não virar
    *  um beco quando ainda não há nenhuma temporada concluída. */
@@ -50,6 +59,15 @@ interface Props {
     losses: number;
     cupStageLabel: string;
   };
+}
+
+/** Moral do elenco (-10 a +10) → rótulo curto + emoji pro chip do clube. */
+function moraleDisplay(m: number): { emoji: string; text: string } {
+  if (m >= 5) return { emoji: '😄', text: 'Alta' };
+  if (m >= 1) return { emoji: '🙂', text: 'Boa' };
+  if (m <= -5) return { emoji: '😠', text: 'Baixa' };
+  if (m <= -1) return { emoji: '😕', text: 'Abalada' };
+  return { emoji: '😐', text: 'Neutra' };
 }
 
 function trophyIcon(entry: CareerSeasonHistoryEntry): string {
@@ -75,7 +93,7 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: '#ef4444' };
 }
 
-export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, onRenegotiateSponsor }: Props) {
+export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const [renewingPlayer, setRenewingPlayer] = useState<Player | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
@@ -87,6 +105,21 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
   const expiringContracts = userSquad
     ? userSquad.filter(p => getContractSeasonsLeft(p) <= 1)
     : [];
+
+  // Patrimônio e composição do elenco — alimentam o bloco "Elenco" do painel de finanças.
+  const squadStats = userSquad && userSquad.length > 0
+    ? {
+        size: userSquad.length,
+        value: userSquad.reduce((s, p) => s + (p.marketValue ?? 0), 0),
+        avgOvr: Math.round(userSquad.reduce((s, p) => s + playerOvr(p), 0) / userSquad.length),
+        avgAge: (() => {
+          const withAge = userSquad.filter(p => p.age != null);
+          return withAge.length ? Math.round(withAge.reduce((s, p) => s + (p.age ?? 0), 0) / withAge.length) : undefined;
+        })(),
+      }
+    : null;
+  const mood = morale != null ? moraleDisplay(morale) : null;
+  const nextTierLabel = nextSponsorTier ? getSponsorLabel(nextSponsorTier as SponsorTier) : null;
 
   return (
     <div className={`${styles.screen} app-screen`}>
@@ -104,8 +137,44 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
               {leagueFlag && <span>{leagueFlag}</span>}
               {leagueName && <span>{leagueName}</span>}
               {seasonYear != null && <span>· Temporada {seasonYear}</span>}
-              {stadium && <span>· 🏟️ {stadium}</span>}
+              {stadium && (
+                <span>· 🏟️ {stadium}{capacity ? ` (${capacity.toLocaleString('pt-BR')} lug.)` : ''}</span>
+              )}
             </div>
+            {(currentSeason || squadStats || mood) && (
+              <div className={styles.clubStats}>
+                {currentSeason && currentSeason.position > 0 && (
+                  <div className={styles.clubStat}>
+                    <span className={styles.clubStatValue}>{currentSeason.position}º</span>
+                    <span className={styles.clubStatLabel}>na liga</span>
+                  </div>
+                )}
+                {currentSeason && (
+                  <div className={styles.clubStat}>
+                    <span className={styles.clubStatValue}>{currentSeason.wins}V {currentSeason.draws}E {currentSeason.losses}D</span>
+                    <span className={styles.clubStatLabel}>campanha</span>
+                  </div>
+                )}
+                {currentSeason && (
+                  <div className={styles.clubStat}>
+                    <span className={styles.clubStatValue}>{currentSeason.cupStageLabel}</span>
+                    <span className={styles.clubStatLabel}>na copa</span>
+                  </div>
+                )}
+                {squadStats && (
+                  <div className={styles.clubStat}>
+                    <span className={styles.clubStatValue}>{squadStats.avgOvr}</span>
+                    <span className={styles.clubStatLabel}>OVR médio</span>
+                  </div>
+                )}
+                {mood && (
+                  <div className={styles.clubStat}>
+                    <span className={styles.clubStatValue}>{mood.emoji} {mood.text}</span>
+                    <span className={styles.clubStatLabel}>moral</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -117,6 +186,14 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
         sponsorLabel={sponsorLabel}
         sponsorName={sponsorName}
         ticketRevenue={ticketRevenue}
+        sponsorMultiplier={sponsorMultiplier}
+        nextTierLabel={nextTierLabel}
+        nextTierReputation={nextTierReputation ?? null}
+        currentReputation={reputation}
+        squadValue={squadStats?.value}
+        squadSize={squadStats?.size}
+        avgOvr={squadStats?.avgOvr}
+        avgAge={squadStats?.avgAge}
       />}
 
       {onRenegotiateSponsor && nextSponsorTier && (

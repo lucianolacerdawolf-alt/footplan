@@ -11,7 +11,7 @@ import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { Difficulty } from '../engine/matchConfig';
 import type { CareerState, ContractRenewalOptions } from '../engine/career';
 import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers, getSponsorTier, getSponsorName } from '../engine/career';
-import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
+import { getSponsorLabel, getNextTierUp, getSponsorMultiplier, getSponsorMinReputation, type SponsorTier } from '../engine/sponsors';
 import { getTicketRevenue } from '../engine/transferMarket';
 import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
@@ -591,6 +591,9 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       losses: record.losses,
       cupStageLabel: CUP_STAGE_LABELS[cs.season.cup.stage] ?? cs.season.cup.stage,
     };
+    const sponsorTier = getSponsorTier(cs) as SponsorTier;
+    const nextTier = getNextTierUp(sponsorTier);
+    const userTeam = lg.teams.find(t => t.id === lg.userTeamId);
     return (
       <TrophyRoomScreen
         history={cs.history}
@@ -605,10 +608,14 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         leagueName={getLeague(cs.leagueId)?.name ?? ''}
         leagueFlag={getLeague(cs.leagueId)?.flag ?? ''}
         seasonYear={cs.currentSeasonYear}
-        sponsorLabel={getSponsorLabel(getSponsorTier(cs) as SponsorTier)}
+        sponsorLabel={getSponsorLabel(sponsorTier)}
         sponsorName={getSponsorName(cs)}
         ticketRevenue={getTicketRevenue(cs.leagueId)}
-        nextSponsorTier={getNextTierUp(getSponsorTier(cs) as SponsorTier)}
+        nextSponsorTier={nextTier}
+        sponsorMultiplier={getSponsorMultiplier(sponsorTier)}
+        nextTierReputation={nextTier ? getSponsorMinReputation(nextTier) : null}
+        capacity={userTeam?.capacity}
+        morale={userTeam?.morale}
         onRenegotiateSponsor={p.handleRenegotiateSponsor}
         onRenewContract={(playerId, options) => p.handleRenewContract(playerId, options)}
       />

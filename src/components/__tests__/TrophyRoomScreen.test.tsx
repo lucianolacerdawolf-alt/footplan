@@ -119,8 +119,10 @@ describe('TrophyRoomScreen', () => {
         ticketRevenue={800_000}
       />
     );
-    expect(screen.getByText(/Bilheteria/)).toBeInTheDocument();
-    expect(screen.getByText(/\+€800K\/jogo em casa/)).toBeInTheDocument();
+    // Estimativa semanal no saldo (800K / 2 = 400K) + valor cheio no bloco "Por jogo em casa".
+    expect(screen.getByText(/Bilheteria \(est\.\)/)).toBeInTheDocument();
+    expect(screen.getByText('+€400K')).toBeInTheDocument();
+    expect(screen.getByText('+€800K')).toBeInTheDocument();
   });
 
   it('não mostra a bilheteria quando ticketRevenue não é passado', () => {

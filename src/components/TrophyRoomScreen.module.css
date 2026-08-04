@@ -24,6 +24,19 @@
   display: flex; gap: 6px; flex-wrap: wrap;
   font-size: 11px; color: #9ca3af; font-weight: 500;
 }
+.clubStats {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+}
+.clubStat {
+  display: flex; flex-direction: column; gap: 1px; align-items: flex-start;
+  padding: 4px 9px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid #1f2937;
+}
+.clubStatValue { font-size: 13px; font-weight: 800; color: #f1f5f9; font-family: var(--mono); line-height: 1.2; }
+.clubStatLabel {
+  font-size: 8px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.4px; color: #9ca3af;
+}
 .sponsorBtn {
   min-height: 40px; border: 1px solid #b45309; background: rgba(180,83,9,0.15);
   color: #fdba74; border-radius: 8px; padding: 6px 14px;
