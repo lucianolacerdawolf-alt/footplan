@@ -7,8 +7,8 @@ import { refreshFreeAgentPool } from '@/engine/freeAgentPool';
 import { getLeague } from '@/data/leagues';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/engine/seasonClosure';
 import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, computeMerchRevenue } from '@/engine/sponsors';
-import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, expireContracts, getContractSeasonsLeft, getFinances, getFreeAgentPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
-import { createContractExpiringMessage, createContractDepartureMessage } from '@/engine/inbox';
+import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
+import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage } from '@/engine/inbox';
 import { generateJobOffers } from '@/engine/jobMarket';
 import type { Screen } from '@/types/navigation';
 
@@ -83,8 +83,16 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       }
       // Fase 1 — Contratos: quem chegou ao fim do vínculo sai pro mercado de agentes
       // livres; o contrato (decrementado) é gravado de volta no elenco evolvido.
-      const { squad: contractSquad, departures } = expireContracts(evolvedUserTeam);
-      const nextUserTeam = { ...evolvedUserTeam, squad: contractSquad };
+      // Antes disso, avalia as cláusulas de performance da safra que terminou: quem
+      // atingiu a meta de gols (liga + copa) recebe o bônus; a cláusula é sempre limpa.
+      const { squad: goalSquad, payments: goalPayments } = evaluateContractGoals(
+        evolvedUserTeam,
+        careerState.season.userGoalScorers ?? {},
+      );
+      const goalBonuses = goalPayments.reduce((s, p) => s + p.bonus, 0);
+      const evolvedWithGoals = { ...evolvedUserTeam, squad: goalSquad };
+      const { squad: contractSquad, departures } = expireContracts(evolvedWithGoals);
+      const nextUserTeam = { ...evolvedWithGoals, squad: contractSquad };
       evolvedRosters[careerState.leagueId] = evolvedRosters[careerState.leagueId].map(t =>
         t.id === evolvedUserTeam.id ? nextUserTeam : t
       );
@@ -123,6 +131,9 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       if (departures.length > 0) {
         objectiveMessages.push(createContractDepartureMessage(departures.map(d => d.name), `Temporada ${careerState.currentSeasonYear}`));
       }
+      if (goalPayments.length > 0) {
+        objectiveMessages.push(createContractGoalBonusMessage(goalPayments, `Temporada ${careerState.currentSeasonYear}`));
+      }
       const expiringSoon = nextUserTeam.squad.filter(p => getContractSeasonsLeft(p) <= 1);
       if (expiringSoon.length > 0) {
         objectiveMessages.push(createContractExpiringMessage(expiringSoon.map(p => p.name), `Temporada ${careerState.currentSeasonYear + 1}`));
@@ -146,7 +157,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         },
         rosters: evolvedRosters,
         history: [...careerState.history, entry],
-        finances: { budget: finances.budget + leaguePrize + cupPrize, wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
+        finances: { budget: finances.budget + leaguePrize + cupPrize + goalBonuses, wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
         inbox: [...(careerState.inbox ?? []), ...objectiveMessages],
         freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(careerState), careerState.currentSeasonYear + 1, Math.random, departures),
         sponsorTier: nextSponsorTier,

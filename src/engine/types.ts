@@ -66,6 +66,16 @@ export interface Player {
   marketValue?: number;           // valor de mercado calculado (Modo Carreira)
   weeklyWage?: number;            // salário semanal (Modo Carreira)
   contractSeasonsLeft?: number;   // temporadas restantes de contrato (Modo Carreira)
+  lastRenewedSeasonYear?: number; // temporada em que renovou pela última vez (cooldown de renovação)
+  contractGoal?: ContractGoal;    // cláusula de performance assinada na renovação (meta + bônus)
+}
+
+/** Meta de contrato (cláusula de performance): atingir `target` gols na temporada
+ *  (liga + copa, via userGoalScorers) paga `bonus` no fechamento da safra. */
+export interface ContractGoal {
+  type: 'goals';
+  target: number;
+  bonus: number;
 }
 
 // =============================================================================

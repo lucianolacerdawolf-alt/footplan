@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCareerManager } from '../useCareerManager';
 import { makeTeam } from '@/components/__tests__/testFixtures';
 import { getLeague } from '@/data/leagues';
-import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue, renewalCost } from '@/engine/transferMarket';
+import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue, renewalCost, calculateMarketValue } from '@/engine/transferMarket';
 import { computeStandings } from '@/engine/tournament';
 import { deriveCupResult, getFinances, getFreeAgentPool, getJobOffers, getPlayerConversations } from '@/engine/career';import type { MatchResult, MatchEvent, Team, Player } from '@/engine/types';
 import * as careerEvents from '@/engine/careerEvents';
@@ -1154,26 +1154,82 @@ function setContractFor(result: { current: ReturnType<typeof useCareerManager> }
 }
 
 describe('handleRenewContract (Fase 1)', () => {
-  it('renova +1 temporada: estende o contrato, debita o custo e atualiza os 3 espelhos', () => {
+  // Oferta que satisfaz o pedido do jogador — salário que cobre a demanda anual.
+  function acceptableOffer(player: Player, years = 1): { years: number; weeklyWage: number } {
+    const marketValue = player.marketValue ?? calculateMarketValue(player);
+    const weeklyWage = Math.ceil((marketValue * 0.11 * 1.15) / 52 / 100) * 100;
+    return { years, weeklyWage };
+  }
+
+  it('renova: estende o contrato, debita o custo e atualiza os 3 espelhos', () => {
     const { result } = renderHook(() => useCareerManager(mockParams()));
     const { leagueId, userTeamId } = startPlCareer(result);
     const playerId = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad[0].id;
     setContractFor(result, playerId, 1);
 
     const beforePlayer = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad.find(p => p.id === playerId)!;
-    const cost = renewalCost(beforePlayer, 1);
+    const options = acceptableOffer(beforePlayer, 2);
+    const cost = renewalCost(beforePlayer, 2);
     const budgetBefore = getFinances(result.current.careerState!).budget;
 
-    act(() => { result.current.handleRenewContract(playerId, 1); });
+    act(() => { result.current.handleRenewContract(playerId, options); });
 
     const after = result.current.careerState!;
     const afterPlayer = after.rosters[leagueId].find(t => t.id === userTeamId)!.squad.find(p => p.id === playerId)!;
-    expect(afterPlayer.contractSeasonsLeft).toBe(2);
+    expect(afterPlayer.contractSeasonsLeft).toBe(3);
+    expect(afterPlayer.lastRenewedSeasonYear).toBe(after.currentSeasonYear);
     expect(getFinances(after).budget).toBe(budgetBefore - cost);
     for (const mirror of [after.season.league.teams, after.season.cup.teams]) {
       const mirrored = mirror.find(t => t.id === userTeamId)!.squad.find(p => p.id === playerId)!;
-      expect(mirrored.contractSeasonsLeft).toBe(2);
+      expect(mirrored.contractSeasonsLeft).toBe(3);
     }
+  });
+
+  it('bloqueia renovar na mesma temporada da última renovação (1 safra de espera)', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const playerId = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad[0].id;
+    setContractFor(result, playerId, 3);
+    // Simula renovação na safra atual.
+    act(() => {
+      result.current.setCareerState(prev => {
+        if (!prev) return prev;
+        const patchSquad = (squad: Player[]) => squad.map(p => p.id === playerId ? { ...p, lastRenewedSeasonYear: prev.currentSeasonYear } : p);
+        const patchTeam = (t: Team): Team => t.id === prev.season.league.userTeamId ? { ...t, squad: patchSquad(t.squad) } : t;
+        return {
+          ...prev,
+          rosters: { ...prev.rosters, [prev.leagueId]: prev.rosters[prev.leagueId].map(patchTeam) },
+          season: {
+            ...prev.season,
+            league: { ...prev.season.league, teams: prev.season.league.teams.map(patchTeam) },
+            cup: { ...prev.season.cup, teams: prev.season.cup.teams.map(patchTeam) },
+          },
+        };
+      });
+    });
+    const beforePlayer = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad.find(p => p.id === playerId)!;
+    const options = acceptableOffer(beforePlayer);
+    const budgetBefore = getFinances(result.current.careerState!).budget;
+
+    act(() => { result.current.handleRenewContract(playerId, options); });
+
+    expect(getFinances(result.current.careerState!).budget).toBe(budgetBefore);
+    expect(params.setToastMsg).toHaveBeenCalled();
+  });
+
+  it('recusa quando a proposta não satisfaz o jogador (negociação)', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const playerId = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad[0].id;
+    setContractFor(result, playerId, 1);
+
+    act(() => { result.current.handleRenewContract(playerId, { years: 1, weeklyWage: 100 }); });
+
+    const player = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad.find(p => p.id === playerId)!;
+    expect(player.contractSeasonsLeft).toBe(1);
+    expect(params.setToastMsg).toHaveBeenCalled();
   });
 
   it('sem orçamento, não renova e avisa via toast', () => {
@@ -1185,8 +1241,10 @@ describe('handleRenewContract (Fase 1)', () => {
     act(() => {
       result.current.setCareerState(prev => prev && ({ ...prev, finances: { ...getFinances(prev), budget: 0 } }));
     });
+    const beforePlayer = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad.find(p => p.id === playerId)!;
+    const options = acceptableOffer(beforePlayer);
 
-    act(() => { result.current.handleRenewContract(playerId, 1); });
+    act(() => { result.current.handleRenewContract(playerId, options); });
 
     const player = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad.find(p => p.id === playerId)!;
     expect(player.contractSeasonsLeft).toBe(1);
@@ -1199,7 +1257,7 @@ describe('handleRenewContract (Fase 1)', () => {
     const { leagueId, userTeamId } = startPlCareer(result);
     const budgetBefore = getFinances(result.current.careerState!).budget;
 
-    act(() => { result.current.handleRenewContract('nao-existe', 1); });
+    act(() => { result.current.handleRenewContract('nao-existe', { years: 1, weeklyWage: 1_000 }); });
 
     expect(getFinances(result.current.careerState!).budget).toBe(budgetBefore);
     expect(result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!.squad.length).toBeGreaterThan(0);

@@ -112,6 +112,17 @@ export function createContractDepartureMessage(playerNames: string[], date: stri
   });
 }
 
+/** Aviso de fim de temporada — jogadores que atingiram a meta de gols da cláusula
+ *  contratual receberam o bônus de performance. */
+export function createContractGoalBonusMessage(payments: { playerName: string; bonus: number }[], date: string): InboxMessage {
+  const total = payments.reduce((s, p) => s + p.bonus, 0);
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: 'Bônus de metas de contrato',
+    body: `${formatNameList(payments.map(p => p.playerName))} ${payments.length > 1 ? 'atingiram' : 'atingiu'} a meta de gols do contrato — bônus de €${(total / 1_000_000).toFixed(1)}M pago ao clube.`,
+  });
+}
+
 export function hasMandatoryUnread(inbox: InboxMessage[]): boolean {
   return inbox.some(m => m.isMandatory && !m.isRead);
 }

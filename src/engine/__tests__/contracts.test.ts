@@ -6,6 +6,10 @@ import {
   expireContracts,
   renewPlayerContract,
   progressPlayer,
+  canRenewContract,
+  evaluateRenewalOffer,
+  evaluateContractGoals,
+  computeContractDemand,
   type Player,
   type Team,
 } from '../career';
@@ -104,6 +108,12 @@ describe('expireContracts', () => {
     expect(departures[0].weeklyWage).toBeTypeOf('number');
   });
 
+  it('quem sai por contrato não leva a cláusula de meta (cláusula é do clube, por temporada)', () => {
+    const team = makeTeam([{ ...makePlayer('exp', 'FWD', 9, 1), contractGoal: { type: 'goals', target: 10, bonus: 100_000 } }]);
+    const { departures } = expireContracts(team);
+    expect(departures[0].contractGoal).toBeUndefined();
+  });
+
   it('faz backfill do default em jogadores sem o campo (saves antigos)', () => {
     const team = makeTeam([makePlayer('legacy', 'MID', 6)]);
     const { squad, departures } = expireContracts(team);
@@ -137,6 +147,109 @@ describe('renewPlayerContract', () => {
     const two = renewalCost(cheap, 2);
     expect(two).toBe(one * 2);
     expect(renewalCost(star, 1)).toBeGreaterThan(one);
+  });
+
+  it('aplica salário negociado, bônus de assinatura e cláusula de meta', () => {
+    const player = makePlayer('a', 'FWD', 9, 1);
+    const { player: renewed, cost } = renewPlayerContract(player, 2, {
+      weeklyWage: 30_000,
+      signingBonus: 500_000,
+      contractGoal: { type: 'goals', target: 15, bonus: 1_000_000 },
+    });
+    expect(renewed.weeklyWage).toBe(30_000);
+    expect(renewed.contractGoal).toEqual({ type: 'goals', target: 15, bonus: 1_000_000 });
+    expect(cost).toBe(renewalCost(player, 2) + 500_000);
+  });
+});
+
+describe('canRenewContract', () => {
+  it('permite renovar quem nunca renovou ou renovou em temporada anterior', () => {
+    expect(canRenewContract(makePlayer('a', 'MID', 5), 3)).toBe(true);
+    expect(canRenewContract(makePlayer('a', 'MID', 5, 2), 3)).toBe(true);
+    expect(canRenewContract({ ...makePlayer('a', 'MID', 5, 2), lastRenewedSeasonYear: 2 }, 3)).toBe(true);
+  });
+
+  it('bloqueia renovar na mesma temporada da última renovação (1 safra de espera)', () => {
+    const player = { ...makePlayer('a', 'MID', 5, 2), lastRenewedSeasonYear: 3 };
+    expect(canRenewContract(player, 3)).toBe(false);
+  });
+});
+
+describe('evaluateRenewalOffer', () => {
+  it('aceita quando o pacote anual cobre o pedido', () => {
+    const player = makePlayer('s', 'FWD', 9, 1);
+    const demand = computeContractDemand(player);
+    // Salário semanal que cobre o pedido (por cima, com folga).
+    const weeklyWage = Math.ceil(demand.annualDemand / 52 / 100) * 100 + 1000;
+    const result = evaluateRenewalOffer(player, { years: demand.minYears, weeklyWage, signingBonus: 0 });
+    expect(result.accepted).toBe(true);
+    expect(result.reaction).toBe('accept');
+  });
+
+  it('devolve contraproposta com valores concretos quando o pacote está entre 85% e o pedido', () => {
+    const player = makePlayer('s', 'FWD', 9, 1);
+    const demand = computeContractDemand(player);
+    const weeklyWage = Math.max(1, Math.ceil(demand.annualDemand * 0.9 / 52 / 100) * 100);
+    const result = evaluateRenewalOffer(player, { years: 1, weeklyWage, signingBonus: 0 });
+    expect(result.accepted).toBe(false);
+    expect(result.reaction).toBe('counter');
+    expect(result.counter).toBeDefined();
+    // Aceitar a contraproposta fecha o acordo.
+    if (result.counter) {
+      const accepted = evaluateRenewalOffer(player, result.counter);
+      expect(accepted.accepted).toBe(true);
+    }
+  });
+
+  it('recusa quando o pacote fica abaixo de 85% do pedido', () => {
+    const player = makePlayer('s', 'FWD', 9, 1);
+    const demand = computeContractDemand(player);
+    const weeklyWage = Math.max(1, Math.ceil(demand.annualDemand * 0.5 / 52 / 100) * 100);
+    const result = evaluateRenewalOffer(player, { years: 1, weeklyWage, signingBonus: 0 });
+    expect(result.accepted).toBe(false);
+    expect(result.reaction).toBe('reject');
+    expect(result.counter).toBeUndefined();
+  });
+
+  it('meta de gols entra no pacote e ajuda a fechar o acordo', () => {
+    const player = makePlayer('s', 'FWD', 9, 1);
+    const demand = computeContractDemand(player);
+    // Sem a meta, o pacote fica abaixo do pedido → recusa.
+    const lowWage = Math.max(1, Math.ceil(demand.annualDemand * 0.7 / 52 / 100) * 100);
+    const withoutGoal = evaluateRenewalOffer(player, { years: 1, weeklyWage: lowWage, signingBonus: 0 });
+    expect(withoutGoal.accepted).toBe(false);
+    // Com a meta, o pacote sobe (bônus pesa 0.5) e cobre o pedido → aceita.
+    const withGoal = evaluateRenewalOffer(player, {
+      years: 1, weeklyWage: lowWage, signingBonus: 0,
+      contractGoal: { type: 'goals', target: 15, bonus: demand.annualDemand * 2 },
+    });
+    expect(withGoal.accepted).toBe(true);
+  });
+});
+
+describe('evaluateContractGoals', () => {
+  function playerWithGoal(id: string, target: number, bonus: number): Player {
+    return { ...makePlayer(id, 'FWD', 9, 2), contractGoal: { type: 'goals', target, bonus } };
+  }
+
+  it('paga o bônus de quem atingiu a meta e limpa a cláusula de todos', () => {
+    const hit = playerWithGoal('hit', 10, 500_000);
+    const miss = playerWithGoal('miss', 10, 500_000);
+    const noGoal = makePlayer('plain', 'MID', 7, 3);
+    const team = makeTeam([hit, miss, noGoal]);
+    const { squad, payments } = evaluateContractGoals(team, { 'P-hit': 14, 'P-miss': 6 });
+    expect(payments).toEqual([{ playerName: 'P-hit', bonus: 500_000 }]);
+    for (const p of squad) {
+      expect(p.contractGoal).toBeUndefined();
+    }
+    expect(squad.find(p => p.id === 'hit')!.contractGoal).toBeUndefined();
+  });
+
+  it('sem metas no elenco, não há pagamento', () => {
+    const team = makeTeam([makePlayer('a', 'DEF', 2, 2)]);
+    const { squad, payments } = evaluateContractGoals(team, { 'P-a': 20 });
+    expect(payments).toEqual([]);
+    expect(squad.length).toBe(1);
   });
 });
 

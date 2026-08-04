@@ -1,4 +1,4 @@
-import type { Player, Position, Team } from './types';
+import type { Player, Position, Team, ContractGoal } from './types';
 import type { LeagueState, BracketState, BracketMatch } from './tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
 // type-only: boardObjectives importa CareerState de volta, mas imports de tipo
@@ -8,6 +8,7 @@ import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { calculateMarketValue, calculateWeeklyWage, computeWageBill, renewalCost } from './transferMarket';
+import { formatMoney } from '../utils/formatMoney';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
 import { getStartingTier, generateSponsor } from './sponsors';
@@ -285,21 +286,126 @@ export function assignInitialContracts(teams: Team[], rng: () => number = Math.r
   }));
 }
 
-/** Estende o contrato e recalcula o salário pelo valor de mercado atual. Retorna o jogador
- *  atualizado + o custo (renewalCost) — usado pelo hook (grava na carreira) e pelo SetupScreen
- *  (sincroniza o clone local), sem duplicar lógica. */
-export function renewPlayerContract(player: Player, years: number): { player: Player; cost: number } {
+/** Opções negociadas na renovação: anos, salário semanal, bônus de assinatura (à vista,
+ *  entra no custo) e cláusula de performance (meta de gols + bônus pago no fim da safra). */
+export interface ContractRenewalOptions {
+  years: number;
+  weeklyWage: number;
+  signingBonus?: number;
+  contractGoal?: ContractGoal;
+}
+
+/** Estende o contrato com os termos negociados. Retorna o jogador atualizado + o custo
+ *  (renewalCost + bônus de assinatura) — usado pelo hook (grava na carreira) e pelo
+ *  SetupScreen (sincroniza o clone local), sem duplicar lógica. Retrocompatível: se
+ *  `options` for omitido, mantém o comportamento antigo (recalcula salário pelo valor
+ *  de mercado, sem bônus/cláusula). */
+export function renewPlayerContract(player: Player, years: number, options?: Omit<ContractRenewalOptions, 'years'>): { player: Player; cost: number } {
   const marketValue = calculateMarketValue(player);
-  const cost = renewalCost(player, years);
-  const weeklyWage = calculateWeeklyWage(marketValue);
+  const cost = renewalCost(player, years) + (options?.signingBonus ?? 0);
+  const weeklyWage = options?.weeklyWage ?? calculateWeeklyWage(marketValue);
   return {
     player: {
       ...player,
       contractSeasonsLeft: getContractSeasonsLeft(player) + years,
       weeklyWage,
+      contractGoal: options?.contractGoal,
     },
     cost,
   };
+}
+
+/** Regra de cooldown: quem renovou na temporada N não pode renovar de novo até a N+1. */
+export function canRenewContract(player: Player, currentSeasonYear: number): boolean {
+  return player.lastRenewedSeasonYear == null || player.lastRenewedSeasonYear < currentSeasonYear;
+}
+
+export interface ContractDemand {
+  annualDemand: number;
+  minYears: number;
+}
+
+/** Pedido do jogador numa renovação — demanda anual (pacote completo: salário + assinatura
+ *  diluída + metade do bônus de meta) e anos mínimos. Estrelas, jovens promessas e quem tem
+ *  contrato longo pedem mais; quem está perto de vencer aceita um pouco menos. */
+export function computeContractDemand(player: Player): ContractDemand {
+  const marketValue = player.marketValue ?? calculateMarketValue(player);
+  const ovr = playerOvr(player);
+  const age = player.age ?? 26;
+  let multiplier = 1;
+  if (ovr >= 85) multiplier = 1.15;
+  else if (ovr >= 78) multiplier = 1.05;
+  if (age <= 22 && ovr >= 80) multiplier += 0.1;
+  const left = getContractSeasonsLeft(player);
+  if (left <= 1) multiplier *= 0.95;
+  else if (left >= 4) multiplier *= 1.05;
+  const annualDemand = Math.round(marketValue * 0.11 * multiplier);
+  const minYears = age <= 25 ? 3 : age <= 30 ? 2 : 1;
+  return { annualDemand, minYears };
+}
+
+export interface RenewalEvaluation {
+  accepted: boolean;
+  reaction: 'accept' | 'counter' | 'reject';
+  /** Contraproposta concreta do jogador (preenche a oferta para fechar o acordo). */
+  counter?: ContractRenewalOptions;
+  message: string;
+}
+
+/** Avalia a proposta de renovação contra o pedido do jogador — determinístico.
+ *  O pacote anual = salário × 52 + (assinatura ÷ anos) + (bônus de meta × 0.5, porque é
+ *  condicional). Acima do pedido → aceita; entre 85% e o pedido → contraproposta; abaixo → recusa. */
+export function evaluateRenewalOffer(player: Player, offer: ContractRenewalOptions): RenewalEvaluation {
+  const demand = computeContractDemand(player);
+  const annualPackage = offer.weeklyWage * 52
+    + (offer.signingBonus ?? 0) / offer.years
+    + (offer.contractGoal?.bonus ?? 0) * 0.5;
+
+  if (annualPackage >= demand.annualDemand) {
+    return { accepted: true, reaction: 'accept', message: `${player.name} aceita o acordo.` };
+  }
+
+  if (annualPackage >= demand.annualDemand * 0.85) {
+    const minYears = Math.max(offer.years, demand.minYears);
+    const counterWage = Math.max(0, Math.ceil(
+      (demand.annualDemand - (offer.signingBonus ?? 0) / minYears - (offer.contractGoal?.bonus ?? 0) * 0.5) / 52,
+    ));
+    return {
+      accepted: false,
+      reaction: 'counter',
+      counter: { years: minYears, weeklyWage: counterWage, signingBonus: offer.signingBonus, contractGoal: offer.contractGoal },
+      message: `${player.name} contra-propõe: ${formatMoney(counterWage)}/sem e ${minYears} ano${minYears > 1 ? 's' : ''}.`,
+    };
+  }
+
+  return {
+    accepted: false,
+    reaction: 'reject',
+    message: `${player.name} recusa — proposta muito abaixo do que ele vale.`,
+  };
+}
+
+export interface ContractGoalPayment {
+  playerName: string;
+  bonus: number;
+}
+
+/** Avalia as cláusulas de performance no fechamento da temporada: quem atingiu a meta
+ *  de gols (liga + copa, via userGoalScorers) recebe o bônus; a cláusula é válida por
+ *  uma temporada e é sempre limpa após a avaliação. */
+export function evaluateContractGoals(
+  userTeam: Team,
+  goalScorers: Record<string, number>,
+): { squad: Player[]; payments: ContractGoalPayment[] } {
+  const payments: ContractGoalPayment[] = [];
+  const squad = userTeam.squad.map(p => {
+    if (!p.contractGoal) return p;
+    if ((goalScorers[p.name] ?? 0) >= p.contractGoal.target) {
+      payments.push({ playerName: p.name, bonus: p.contractGoal.bonus });
+    }
+    return { ...p, contractGoal: undefined };
+  });
+  return { squad, payments };
 }
 
 /**
@@ -321,6 +427,7 @@ export function expireContracts(
       departures.push({
         ...player,
         contractSeasonsLeft: undefined,
+        contractGoal: undefined,
         marketValue,
         weeklyWage: calculateWeeklyWage(marketValue),
       });

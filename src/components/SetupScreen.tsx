@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { Team, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width } from '../engine/types';
+import type { Team, Player, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
@@ -67,7 +67,12 @@ interface Props {
   goesToPreview?: boolean;
   /** Fase 1 — renova contrato na carreira (passado só no Modo Carreira, modo "Gerenciar
    *  Elenco"). Sem ele, as linhas ficam read-only (ex: preparação de partida). */
-  onRenewContract?: (playerId: string, years: number) => void;
+  onRenewContract?: (playerId: string, options: ContractRenewalOptions) => void;
+  /** Temporada atual — usada pra aplicar o cooldown de renovação (quem renovou na safra
+   *  atual não renova de novo). Só relevante no Modo Carreira. */
+  currentSeasonYear?: number;
+  /** Orçamento disponível — alimenta o modal de renovação (cheque de custo). */
+  budget?: number;
 }
 
 /** Move lesionados/suspensos pro banco e promove substitutos disponíveis da mesma posicao */
@@ -87,9 +92,10 @@ function autoBenchUnavailable(team: Team): Team {
 
 import { playerOvr } from '../utils/playerOvr';
 import { fireClick } from '../utils/fireClick';
-import { getContractSeasonsLeft, renewPlayerContract } from '../engine/career';
+import { getContractSeasonsLeft, renewPlayerContract, canRenewContract, type ContractRenewalOptions } from '../engine/career';
+import ContractRenewalModal from './ContractRenewalModal';
 
-export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview, onRenewContract }: Props) {
+export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview, onRenewContract, currentSeasonYear, budget }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
@@ -150,14 +156,24 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
   // Fase 1 — renova no state da carreira E no clone local (senão o badge não atualizava
   // enquanto o jogador estivesse na tela; ambos usam renewPlayerContract → mesmo resultado).
-  const renewContract = (playerId: string) => {
+  const [renewingPlayer, setRenewingPlayer] = useState<Player | null>(null);
+
+  const openRenewal = (playerId: string) => {
+    if (!onRenewContract) return;
+    const team = mySide === 'away' ? awayTeam : homeTeam;
+    const player = team.squad.find(p => p.id === playerId);
+    if (player) setRenewingPlayer(player);
+  };
+
+  const confirmRenewal = (playerId: string, options: ContractRenewalOptions) => {
     if (!onRenewContract) return;
     const updater = mySide === 'away' ? setAwayTeam : setHomeTeam;
     updater(prev => ({
       ...prev,
-      squad: prev.squad.map(p => p.id === playerId ? renewPlayerContract(p, 1).player : p),
+      squad: prev.squad.map(p => p.id === playerId ? renewPlayerContract(p, options.years, options).player : p),
     }));
-    onRenewContract(playerId, 1);
+    onRenewContract(playerId, options);
+    setRenewingPlayer(null);
   };
 
   const renderSquad = (
@@ -216,8 +232,11 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                 {onRenewContract && (
                   <button
                     className="sq-renew"
-                    onClick={(e) => { e.stopPropagation(); renewContract(p.id); }}
-                    title={`Renovar contrato de ${p.name} por 1 temporada`}
+                    onClick={(e) => { e.stopPropagation(); openRenewal(p.id); }}
+                    disabled={currentSeasonYear != null && !canRenewContract(p, currentSeasonYear)}
+                    title={currentSeasonYear != null && !canRenewContract(p, currentSeasonYear)
+                      ? `${p.name} renovou recentemente — só pode renovar de novo na próxima temporada`
+                      : `Renovar contrato de ${p.name}`}
                   >
                     Renovar
                   </button>
@@ -261,8 +280,11 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                   {onRenewContract && (
                     <button
                       className="sq-renew"
-                      onClick={(e) => { e.stopPropagation(); renewContract(p.id); }}
-                      title={`Renovar contrato de ${p.name} por 1 temporada`}
+                      onClick={(e) => { e.stopPropagation(); openRenewal(p.id); }}
+                      disabled={currentSeasonYear != null && !canRenewContract(p, currentSeasonYear)}
+                      title={currentSeasonYear != null && !canRenewContract(p, currentSeasonYear)
+                        ? `${p.name} renovou recentemente — só pode renovar de novo na próxima temporada`
+                        : `Renovar contrato de ${p.name}`}
                     >
                       Renovar
                     </button>
@@ -474,6 +496,16 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
           userTeam={lockAway ? myTeam : homeTeam}
           h2h={getH2H(myTeam.id, (lockAway ? theirTeam : awayTeam).id)}
           onClose={() => setShowOpponentAnalysis(false)}
+        />
+      )}
+
+      {renewingPlayer && onRenewContract && (
+        <ContractRenewalModal
+          player={renewingPlayer}
+          budget={budget ?? 0}
+          currentSeasonYear={currentSeasonYear ?? 0}
+          onConfirm={(options) => confirmRenewal(renewingPlayer.id, options)}
+          onClose={() => setRenewingPlayer(null)}
         />
       )}
     </div>
