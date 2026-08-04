@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import type { CareerSeasonHistoryEntry, ClubFinances, TransferRecord, TransferRecordType } from '../engine/career';
+import { getContractSeasonsLeft, canRenewContract } from '../engine/career';
+import type { ContractRenewalOptions } from '../engine/career';
 import { CUP_RESULT_LABELS } from '../engine/careerLabels';
 import { computeCareerSummary, careerHighlights } from '../engine/careerStats';
 import { formatMoney } from '../utils/formatMoney';
 import { playerOvr } from '../utils/playerOvr';
-import { getContractSeasonsLeft } from '../engine/career';
 import type { Player } from '../engine/types';
 import FinancePanel from './FinancePanel';
 import CareerSummaryPanel from './CareerSummaryPanel';
+import ContractRenewalModal from './ContractRenewalModal';
 import styles from './TrophyRoomScreen.module.css';
 
 interface Props {
@@ -21,7 +23,7 @@ interface Props {
   /** Elenco atual do usuário — usado pra listar contratos a expirar na gestão do clube. */
   userSquad?: Player[];
   /** Fase 1 — renova contrato por 1 temporada a partir da Central de Comandos. */
-  onRenewContract?: (playerId: string) => void;
+  onRenewContract?: (playerId: string, options: ContractRenewalOptions) => void;
   // Identidade do clube (hero no topo da aba Meu Clube)
   userTeamName?: string;
   userTeamLogo?: string;
@@ -32,6 +34,8 @@ interface Props {
   // Patrocínio (gestão do clube — movido da Central)
   sponsorLabel?: string;
   sponsorName?: string;
+  /** Renda de bilheteria por jogo em casa (valor fixo da liga) — exibida no painel de finanças. */
+  ticketRevenue?: number;
   nextSponsorTier?: string | null;
   onRenegotiateSponsor?: () => void;
   /** Resumo da temporada em curso — só usado no estado vazio, pra tela não virar
@@ -71,8 +75,9 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: '#ef4444' };
 }
 
-export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, nextSponsorTier, onRenegotiateSponsor }: Props) {
+export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, onRenegotiateSponsor }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
+  const [renewingPlayer, setRenewingPlayer] = useState<Player | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
   const transfersRecent = transfers ? [...transfers].reverse() : [];
   // Painel "Minha Carreira" — só faz sentido com ao menos 1 temporada concluída.
@@ -111,6 +116,7 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
         finances={finances}
         sponsorLabel={sponsorLabel}
         sponsorName={sponsorName}
+        ticketRevenue={ticketRevenue}
       />}
 
       {onRenegotiateSponsor && nextSponsorTier && (
@@ -134,8 +140,11 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
                   {onRenewContract && (
                     <button
                       className={styles.contractBtn}
-                      onClick={() => onRenewContract(p.id)}
-                      title={`Renovar contrato de ${p.name} por 1 temporada`}
+                      onClick={() => setRenewingPlayer(p)}
+                      disabled={seasonYear != null && !canRenewContract(p, seasonYear)}
+                      title={seasonYear != null && !canRenewContract(p, seasonYear)
+                        ? `${p.name} renovou recentemente — só pode renovar de novo na próxima temporada`
+                        : `Renovar contrato de ${p.name}`}
                     >
                       Renovar
                     </button>
@@ -297,6 +306,16 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
             </div>
           </div>
         </>
+      )}
+
+      {renewingPlayer && onRenewContract && (
+        <ContractRenewalModal
+          player={renewingPlayer}
+          budget={finances?.budget ?? 0}
+          currentSeasonYear={seasonYear ?? 0}
+          onConfirm={(options) => onRenewContract(renewingPlayer.id, options)}
+          onClose={() => setRenewingPlayer(null)}
+        />
       )}
     </div>
   );

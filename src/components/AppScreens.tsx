@@ -9,9 +9,10 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { Difficulty } from '../engine/matchConfig';
-import type { CareerState } from '../engine/career';
+import type { CareerState, ContractRenewalOptions } from '../engine/career';
 import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers, getSponsorTier, getSponsorName } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, type SponsorTier } from '../engine/sponsors';
+import { getTicketRevenue } from '../engine/transferMarket';
 import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
@@ -169,7 +170,7 @@ export interface AppScreensProps {
   handleSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
   handleAcceptTransferOffer: (messageId: string) => void;
   handleRejectTransferOffer: (messageId: string) => void;
-  handleRenewContract: (playerId: string, years: number) => void;
+  handleRenewContract: (playerId: string, options: ContractRenewalOptions) => void;
   handleAcceptJobOffer: (offerId: string) => void;
   handleDeclineJobOffer: (offerId: string) => void;
   handleRespondConversation: (convId: string, choiceIdx: number) => void;
@@ -183,6 +184,9 @@ export interface AppScreensProps {
   handleMarkInboxRead: (id: string) => void;
   handleRenegotiateSponsor: () => void;
   handleMarkAllInboxRead: () => void;
+  handleSyncRosters: () => void;
+  rosterSyncing: boolean;
+  rosterLastUpdatedAt: string | null;
 
   // ── Misc ──
   clearHistory: () => void;
@@ -378,7 +382,9 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         lockAway={p.matchContext !== 'regular' || p.gameMode === 'cpu'}
         userIsHome={userIsHome}
         goesToPreview={p.matchContext === 'league' || p.matchContext === 'bracket'}
-        onRenewContract={p.isCareerMode && p.isTournamentEntry ? (playerId) => p.handleRenewContract(playerId, 1) : undefined}
+        onRenewContract={p.isCareerMode && p.isTournamentEntry ? (playerId, options) => p.handleRenewContract(playerId, options) : undefined}
+        currentSeasonYear={p.careerState?.currentSeasonYear}
+        budget={p.careerState ? getFinances(p.careerState).budget : undefined}
       />
     );
   },
@@ -537,6 +543,9 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         pressQuestion={p.pressQuestion}
         pressDone={p.pressDone}
         blockAdvanceReason={hubBlockAdvanceReason}
+        onSyncRosters={p.handleSyncRosters}
+        rosterSyncing={p.rosterSyncing}
+        rosterLastUpdatedAt={p.rosterLastUpdatedAt}
       />
     );
   },
@@ -598,9 +607,10 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         seasonYear={cs.currentSeasonYear}
         sponsorLabel={getSponsorLabel(getSponsorTier(cs) as SponsorTier)}
         sponsorName={getSponsorName(cs)}
+        ticketRevenue={getTicketRevenue(cs.leagueId)}
         nextSponsorTier={getNextTierUp(getSponsorTier(cs) as SponsorTier)}
         onRenegotiateSponsor={p.handleRenegotiateSponsor}
-        onRenewContract={(playerId) => p.handleRenewContract(playerId, 1)}
+        onRenewContract={(playerId, options) => p.handleRenewContract(playerId, options)}
       />
     );
   },

@@ -111,6 +111,28 @@ describe('TrophyRoomScreen', () => {
     expect(screen.queryByText('💰 Orçamento')).not.toBeInTheDocument();
   });
 
+  it('mostra a renda de bilheteria por jogo em casa quando ticketRevenue é passado', () => {
+    render(
+      <TrophyRoomScreen
+        history={[]}
+        finances={{ budget: 20_000_000, wageBill: 500_000, weeklyIncome: 450_000 }}
+        ticketRevenue={800_000}
+      />
+    );
+    expect(screen.getByText(/Bilheteria/)).toBeInTheDocument();
+    expect(screen.getByText(/\+€800K\/jogo em casa/)).toBeInTheDocument();
+  });
+
+  it('não mostra a bilheteria quando ticketRevenue não é passado', () => {
+    render(
+      <TrophyRoomScreen
+        history={[]}
+        finances={{ budget: 20_000_000, wageBill: 500_000, weeklyIncome: 450_000 }}
+      />
+    );
+    expect(screen.queryByText(/Bilheteria/)).not.toBeInTheDocument();
+  });
+
   it('não mostra a seção de transferências quando não há registros', () => {
     render(<TrophyRoomScreen history={[]} transfers={[]} />);
     expect(screen.queryByText(/Histórico de Transferências/)).not.toBeInTheDocument();
@@ -160,7 +182,7 @@ describe('TrophyRoomScreen', () => {
     expect(names).toEqual(['Segundo Jogador', 'Primeiro Jogador']);
   });
 
-  it('lista contratos a expirar e renova ao clicar', () => {
+  it('lista contratos a expirar e renova ao confirmar no modal', () => {
     const onRenewContract = vi.fn();
     const userSquad = [
       { id: 'p1', name: 'Zagueiro X', number: 4, position: 'DEF', currentFatigue: 0, contractSeasonsLeft: 1,
@@ -168,7 +190,15 @@ describe('TrophyRoomScreen', () => {
       { id: 'p2', name: 'Atacante Y', number: 9, position: 'FWD', currentFatigue: 0, contractSeasonsLeft: 2,
         attributes: { speed: 80, stamina: 80, passing: 80, finishing: 80, tackling: 80, dribbling: 80, vision: 80, positioning: 80 } },
     ] as SquadPlayer[];
-    render(<TrophyRoomScreen history={[]} transfers={[]} userSquad={userSquad} onRenewContract={onRenewContract} />);
+    render(
+      <TrophyRoomScreen
+        history={[]}
+        transfers={[]}
+        userSquad={userSquad}
+        onRenewContract={onRenewContract}
+        finances={{ budget: 20_000_000, wageBill: 0, weeklyIncome: 0 }}
+      />
+    );
 
     expect(screen.getByText('📋 Gestão de Contratos')).toBeInTheDocument();
     // Só o jogador com contrato ≤1 aparece na lista de vencimento.
@@ -176,7 +206,27 @@ describe('TrophyRoomScreen', () => {
     expect(screen.queryByText('Atacante Y')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Renovar'));
-    expect(onRenewContract).toHaveBeenCalledWith('p1');
+    // Modal de renovação abriu.
+    expect(screen.getByText('Anos de contrato')).toBeInTheDocument();
+    // "+50%" garante que a proposta satisfaz o pedido do jogador (independente do OVR).
+    fireEvent.click(screen.getByText('+50%'));
+    fireEvent.click(screen.getByText('Confirmar Renovação'));
+    expect(onRenewContract).toHaveBeenCalledWith('p1', expect.objectContaining({ years: 1 }));
+  });
+
+  it('não abre o modal para jogador que renovou na safra atual (cooldown)', () => {
+    const onRenewContract = vi.fn();
+    const userSquad = [
+      { id: 'p1', name: 'Zagueiro X', number: 4, position: 'DEF', currentFatigue: 0, contractSeasonsLeft: 1, lastRenewedSeasonYear: 2,
+        attributes: { speed: 60, stamina: 60, passing: 60, finishing: 60, tackling: 60, dribbling: 60, vision: 60, positioning: 60 } },
+    ] as SquadPlayer[];
+    render(<TrophyRoomScreen history={[]} transfers={[]} userSquad={userSquad} onRenewContract={onRenewContract} seasonYear={2} />);
+
+    const renewBtn = screen.getByText('Renovar');
+    expect(renewBtn).toBeDisabled();
+    fireEvent.click(renewBtn);
+    expect(screen.queryByText('Anos de contrato')).not.toBeInTheDocument();
+    expect(onRenewContract).not.toHaveBeenCalled();
   });
 
   it('mostra mensagem quando nenhum contrato vence', () => {

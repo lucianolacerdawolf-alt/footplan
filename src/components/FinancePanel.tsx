@@ -6,9 +6,12 @@ interface Props {
   finances: ClubFinances;
   sponsorLabel?: string;
   sponsorName?: string;
+  /** Renda de bilheteria por jogo em casa (valor fixo da liga) — exibida como
+   *  informação, não entra no saldo semanal (é por partida, não semanal). */
+  ticketRevenue?: number;
 }
 
-export default function FinancePanel({ finances, sponsorLabel, sponsorName }: Props) {
+export default function FinancePanel({ finances, sponsorLabel, sponsorName, ticketRevenue }: Props) {
   const net = finances.weeklyIncome - finances.wageBill + (finances.merchRevenue ?? 0);
 
   return (
@@ -31,6 +34,12 @@ export default function FinancePanel({ finances, sponsorLabel, sponsorName }: Pr
         </div>
         {sponsorName && (
           <div className={styles.rowSub}>👕 {sponsorName}</div>
+        )}
+        {ticketRevenue != null && ticketRevenue > 0 && (
+          <div className={styles.row}>
+            <span className={styles.rowLabel}>🎟️ Bilheteria</span>
+            <span className={styles.rowValue} style={{ color: '#22c55e' }}>+{formatMoney(ticketRevenue)}/jogo em casa</span>
+          </div>
         )}
         {finances.merchRevenue != null && finances.merchRevenue > 0 && (
           <div className={styles.row}>
