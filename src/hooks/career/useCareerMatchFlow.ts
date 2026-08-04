@@ -26,6 +26,7 @@ import { maybeGetCareerEvent } from '@/engine/careerEvents';
 import { getFinances, getInbox, isTransferWindowOpen, getTransferList, type CareerState, type InboxMessage } from '@/engine/career';
 import type { ConversationContext } from '@/engine/playerConversations';
 import type { Screen } from '@/types/navigation';
+import type { AchievementEvalInput } from '../useAchievements';
 
 interface UseCareerMatchFlowParams {
   careerState: CareerState | null;
@@ -38,17 +39,23 @@ interface UseCareerMatchFlowParams {
   setIsTournamentEntry: (v: boolean) => void;
   recordH2H: (homeId: string, awayId: string, homeScore: number, awayScore: number) => void;
   setToastMsg: (msg: string | null) => void;
+  /** Avalia conquistas ao fim de cada partida de carreira (liga/copa/continental). */
+  evaluateAchievements: (input: AchievementEvalInput) => void;
   /** Fase 4 — tenta gerar 0-1 conversa com atleta no contexto dado. */
   generateConversation?: (ctx: ConversationContext) => void;
 }
 
 export function useCareerMatchFlow({
   careerState, setCareerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
-  recordH2H, setToastMsg, generateConversation,
+  recordH2H, setToastMsg, evaluateAchievements, generateConversation,
 }: UseCareerMatchFlowParams) {
   const [pendingCareerLeagueFixture, setPendingCareerLeagueFixture] = useState<{ roundIdx: number; fixtureIdx: number } | null>(null);
   const [pendingCareerBracketStage, setPendingCareerBracketStage] = useState<PlayableStage | null>(null);
   const [pendingCareerBracketIdx, setPendingCareerBracketIdx] = useState<number>(0);
+  // Copa doméstica ('cup') vs continental ('continental') — as duas usam
+  // matchContext 'bracket' e o mesmo par stage/idx, então este discriminador diz
+  // ao handleCareerBracketMatchResult em qual campo do save gravar o resultado.
+  const [pendingCareerBracketKind, setPendingCareerBracketKind] = useState<'cup' | 'continental'>('cup');
 
   const handleEditCareerLeagueTactics = useCallback(() => {
     if (!careerState) return;
@@ -286,8 +293,9 @@ export function useCareerMatchFlow({
         lastResult: { userScore, oppScore, opponentId: userIsHome ? fixture.awayTeamId : fixture.homeTeamId },
       });
     }
+    evaluateAchievements({ result, userTeamId: leg.userTeamId, matchContext: 'league', leagueState: updatedState });
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
-  }, [careerState, pendingCareerLeagueFixture, recordH2H, setToastMsg, setCareerState, generateConversation]);
+  }, [careerState, pendingCareerLeagueFixture, recordH2H, setToastMsg, setCareerState, generateConversation, evaluateAchievements]);
 
   const handleEditCareerBracketTactics = useCallback(() => {
     if (!careerState) return;
@@ -302,11 +310,22 @@ export function useCareerMatchFlow({
   }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
 
   const handlePlayCareerBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
+    setPendingCareerBracketKind('cup');
     setPendingCareerBracketStage(stage);
     setPendingCareerBracketIdx(matchIdx);
     setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
     setMatchContext('bracket'); setIsKnockout(true);
-    saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx, isCareer: true });
+    saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx, bracketKind: 'cup', isCareer: true });
+    setScreen('setup');
+  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
+
+  const handlePlayContinentalMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
+    setPendingCareerBracketKind('continental');
+    setPendingCareerBracketStage(stage);
+    setPendingCareerBracketIdx(matchIdx);
+    setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
+    setMatchContext('bracket'); setIsKnockout(true);
+    saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx, bracketKind: 'continental', isCareer: true });
     setScreen('setup');
   }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
 
@@ -363,9 +382,76 @@ export function useCareerMatchFlow({
     setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: advanceBracket(s) } } : prev);
   }, [careerState, setCareerState]);
 
+  // ── Copa continental (UCL/UEL/UECL) ──
+  // Espelham os handlers de copa doméstica acima, mas leem/gravam em
+  // season.continentalCup. O resultado da partida cai no handleCareerBracketMatchResult
+  // compartilhado, que roteia pelo pendingCareerBracketKind.
+  const handlePlayNextContinentalMatch = useCallback(() => {
+    if (!careerState) return;
+    const cup = careerState.season.continentalCup;
+    if (!cup) { setScreen('career-hub'); return; }
+    if (cup.stage === 'champion') { setScreen('career-continental'); return; }
+    const stageMatches = getStageMatches(cup);
+    const matchIdx = stageMatches.findIndex(m =>
+      !m.played && (m.homeTeamId === cup.userTeamId || m.awayTeamId === cup.userTeamId));
+    if (matchIdx < 0 || !stageMatches[matchIdx]) { setScreen('career-continental'); return; }
+    const match = stageMatches[matchIdx];
+    const home = cup.teams.find(t => t.id === match.homeTeamId);
+    const away = cup.teams.find(t => t.id === match.awayTeamId);
+    if (!home || !away) { setScreen('career-continental'); return; }
+    handlePlayContinentalMatch(match, home, away, cup.stage as PlayableStage, matchIdx);
+  }, [careerState, setScreen, handlePlayContinentalMatch]);
+
+  const handleSimulateOtherContinentalMatches = useCallback(() => {
+    if (!careerState?.season.continentalCup) return;
+    const updated = simulateAllCpuBracketMatches(careerState.season.continentalCup);
+    setCareerState(prev => prev?.season.continentalCup ? { ...prev, season: { ...prev.season, continentalCup: updated } } : prev);
+  }, [careerState, setCareerState]);
+
+  const handleSimulateContinentalToEnd = useCallback(() => {
+    if (!careerState?.season.continentalCup) return;
+    let cup = careerState.season.continentalCup;
+    let safety = 0;
+    const MAX_ITER = 5;
+    while (cup.stage !== 'champion' && safety < MAX_ITER) {
+      cup = simulateAllCpuBracketMatches(cup);
+      cup = advanceBracket(cup);
+      safety++;
+    }
+    setCareerState(prev => prev?.season.continentalCup ? { ...prev, season: { ...prev.season, continentalCup: cup } } : prev);
+  }, [careerState, setCareerState]);
+
+  const handleSimulateContinentalMatch = useCallback((_stage: PlayableStage, matchIdx: number) => {
+    if (!careerState?.season.continentalCup) return;
+    const cupState = careerState.season.continentalCup;
+    const stageMatches = getStageMatches(cupState);
+    const match = stageMatches[matchIdx];
+    const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
+    const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
+    const sim = simularBracketMatch(home, away);
+    const updated: BracketMatch = { ...match, ...sim };
+    let s = { ...cupState };
+    s = updateStageMatch(s, matchIdx, updated);
+    setCareerState(prev => prev?.season.continentalCup ? { ...prev, season: { ...prev.season, continentalCup: advanceBracket(s) } } : prev);
+  }, [careerState, setCareerState]);
+
+  const handleEditContinentalTactics = useCallback(() => {
+    if (!careerState?.season.continentalCup) return;
+    const cup = careerState.season.continentalCup;
+    const userTeam = cup.teams.find(t => t.id === cup.userTeamId);
+    if (!userTeam) return;
+    setHomeTeam(cloneTeam(userTeam, true));
+    setAwayTeam(cloneTeam(userTeam, true));
+    setMatchContext('bracket'); setIsKnockout(true);
+    setIsTournamentEntry(true);
+    setScreen('setup');
+  }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
+
   const handleCareerBracketMatchResult = useCallback((result: MatchResult) => {
     if (!careerState || !pendingCareerBracketStage) return;
-    const cupState = careerState.season.cup;
+    const isContinental = pendingCareerBracketKind === 'continental';
+    const cupState = isContinental ? careerState.season.continentalCup : careerState.season.cup;
+    if (!cupState) return;
     const stageMatches = getStageMatches(cupState);
     const match = stageMatches[pendingCareerBracketIdx];
     const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
@@ -398,18 +484,25 @@ export function useCareerMatchFlow({
     const goalScorers = tallyUserGoals(result.events, advanced.userTeamId);
     setCareerState(prev => {
       if (!prev) return prev;
+      const seasonPatch = isContinental
+        ? { continentalCup: finalState }
+        : { cup: finalState };
       return {
         ...prev,
         season: {
-          ...prev.season, cup: finalState,
+          ...prev.season, ...seasonPatch,
           userGoalScorers: mergeGoalTally(prev.season.userGoalScorers, goalScorers),
         },
         finances: { ...finances, budget: finances.budget + ticketRevenue },
         inbox: newInjuryMessages.length > 0 ? [...getInbox(prev), ...newInjuryMessages] : prev.inbox,
       };
     });
+    evaluateAchievements({
+      result, userTeamId: advanced.userTeamId, matchContext: 'bracket', bracketState: finalState,
+      continentalCupId: isContinental ? careerState.season.continentalCupId : undefined,
+    });
     recordH2H(result.homeTeam.id, result.awayTeam.id, result.homeScore, result.awayScore);
-  }, [careerState, pendingCareerBracketStage, pendingCareerBracketIdx, recordH2H, setToastMsg, setCareerState]);
+  }, [careerState, pendingCareerBracketStage, pendingCareerBracketKind, pendingCareerBracketIdx, recordH2H, setToastMsg, setCareerState, evaluateAchievements]);
 
   // Plain function, not useCallback: must run synchronously and return a value
   // the caller (TradeProposalScreen, 04.4-07) uses immediately, unlike every
@@ -418,7 +511,8 @@ export function useCareerMatchFlow({
     setPendingCareerLeagueFixture({ roundIdx, fixtureIdx });
   }, []);
 
-  const handleRestorePendingCareerBracketMatch = useCallback((stage: PlayableStage, matchIdx: number) => {
+  const handleRestorePendingCareerBracketMatch = useCallback((stage: PlayableStage, matchIdx: number, kind: 'cup' | 'continental' = 'cup') => {
+    setPendingCareerBracketKind(kind);
     setPendingCareerBracketStage(stage);
     setPendingCareerBracketIdx(matchIdx);
   }, []);
@@ -440,6 +534,13 @@ export function useCareerMatchFlow({
     handleSimulateCareerBracketMatch,
     handleSimulateCareerCupToEnd,
     handleCareerBracketMatchResult,
+    // Copa continental
+    handlePlayContinentalMatch,
+    handlePlayNextContinentalMatch,
+    handleSimulateOtherContinentalMatches,
+    handleSimulateContinentalMatch,
+    handleSimulateContinentalToEnd,
+    handleEditContinentalTactics,
     handleRestorePendingCareerLeagueFixture,
     handleRestorePendingCareerBracketMatch,
   };

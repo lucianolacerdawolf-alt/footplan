@@ -3,7 +3,8 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCareerManager } from '../useCareerManager';
 import { makeTeam } from '@/components/__tests__/testFixtures';
-import { getLeague } from '@/data/leagues';
+import { getLeague, allLeagues } from '@/data/leagues';
+import { getContinentalCup, getQualifiedTeams, createContinentalBracket } from '@/engine/continentalCups';
 import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue, renewalCost, calculateMarketValue } from '@/engine/transferMarket';
 import { computeStandings } from '@/engine/tournament';
 import { deriveCupResult, getFinances, getFreeAgentPool, getJobOffers, getPlayerConversations } from '@/engine/career';import type { MatchResult, MatchEvent, Team, Player } from '@/engine/types';
@@ -38,6 +39,8 @@ function mockParams() {
     recordH2H: vi.fn(),
     notifySave: vi.fn(),
     setToastMsg: vi.fn(),
+    evaluateAchievements: vi.fn(),
+    unlockAchievement: vi.fn(),
   };
 }
 
@@ -1311,6 +1314,97 @@ describe('handleAdvanceSeason expira contratos (Fase 1)', () => {
     const expiringMsg = after.inbox!.find(m => m.subject === 'Contratos a expirar');
     expect(expiringMsg).toBeDefined();
     expect(expiringMsg!.body).toContain(player.name);
+  });
+});
+
+describe('Copas Continentais (integração no avanço de temporada)', () => {
+  // Move o time do usuário para um índice de league.teams. Com nenhuma partida
+  // jogada, computeStandings desempata pela ordem do array (sort estável), então
+  // o índice vira a posição final — controle determinístico da classificação.
+  function placeUserAt(result: { current: ReturnType<typeof useCareerManager> }, index: number) {
+    act(() => {
+      result.current.setCareerState(prev => {
+        if (!prev) return prev;
+        const teams = [...prev.season.league.teams];
+        const userIdx = teams.findIndex(t => t.id === prev.season.league.userTeamId);
+        const [u] = teams.splice(userIdx, 1);
+        teams.splice(index, 0, u);
+        return { ...prev, season: { ...prev.season, league: { ...prev.season.league, teams } } };
+      });
+    });
+  }
+
+  it('1º lugar na PL classifica pra Liga dos Campeões e monta o bracket com o usuário', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { userTeamId } = startPlCareer(result);
+    placeUserAt(result, 0);
+    forceTerminalSeason(result);
+    act(() => { result.current.handleAdvanceSeason(); });
+
+    const season = result.current.careerState!.season;
+    expect(season.continentalCupId).toBe('ucl');
+    expect(season.continentalCup).toBeDefined();
+    expect(season.continentalCup!.teams).toHaveLength(16);
+    expect(season.continentalCup!.teams.some(t => t.id === userTeamId)).toBe(true);
+    expect(result.current.careerState!.inbox!.some(m => /Liga dos Campeões/.test(m.subject))).toBe(true);
+  });
+
+  it('última posição na PL não classifica (sem copa continental)', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    const teamCount = result.current.careerState!.season.league.teams.length;
+    placeUserAt(result, teamCount - 1);
+    forceTerminalSeason(result);
+    act(() => { result.current.handleAdvanceSeason(); });
+
+    expect(result.current.careerState!.season.continentalCup).toBeUndefined();
+    expect(result.current.careerState!.season.continentalCupId).toBeUndefined();
+  });
+
+  it('vencer a copa continental credita a premiação ao fim da temporada', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const uclDef = getContinentalCup('ucl')!;
+    const rosters = result.current.careerState!.rosters;
+    const userTeam = rosters[leagueId].find(t => t.id === userTeamId)!;
+    const pool = getQualifiedTeams(rosters, allLeagues, uclDef, userTeamId);
+    const bracket = { ...createContinentalBracket(userTeam, pool, uclDef, leagueId), stage: 'champion' as const, championId: userTeamId };
+    act(() => {
+      result.current.setCareerState(prev => prev && ({
+        ...prev,
+        season: { ...prev.season, continentalCup: bracket, continentalCupId: 'ucl', continentalCupDef: uclDef },
+      }));
+    });
+    forceTerminalSeason(result);
+    act(() => { result.current.handleAdvanceSeason(); });
+
+    // Premiação de campeão da UCL = €15.0M — a mensagem de resultado registra o valor.
+    expect(result.current.careerState!.inbox!.some(m => m.body.includes('€15.0M'))).toBe(true);
+  });
+
+  it('vencer liga + copa + UCL na mesma temporada destrava Rei da Europa e a Tríplice Coroa', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const uclDef = getContinentalCup('ucl')!;
+    const rosters = result.current.careerState!.rosters;
+    const userTeam = rosters[leagueId].find(t => t.id === userTeamId)!;
+    const pool = getQualifiedTeams(rosters, allLeagues, uclDef, userTeamId);
+    const bracket = { ...createContinentalBracket(userTeam, pool, uclDef, leagueId), stage: 'champion' as const, championId: userTeamId };
+    act(() => {
+      result.current.setCareerState(prev => prev && ({
+        ...prev,
+        season: { ...prev.season, continentalCup: bracket, continentalCupId: 'ucl', continentalCupDef: uclDef },
+      }));
+    });
+    placeUserAt(result, 0);        // 1º na liga
+    forceTerminalSeason(result);   // copa doméstica: championId = userTeam
+    act(() => { result.current.handleAdvanceSeason(); });
+
+    const unlocked = params.unlockAchievement.mock.calls.map(c => c[0]);
+    expect(unlocked).toContain('continental_participant');
+    expect(unlocked).toContain('continental_champion');
+    expect(unlocked).toContain('treble_winner');
   });
 });
 

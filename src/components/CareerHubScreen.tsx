@@ -25,8 +25,12 @@ interface Props {
   state: CareerState;
   league: LeagueDefinition;
   onViewCup: () => void;
+  /** Abre a chave da copa continental (career-continental). */
+  onViewContinental: () => void;
   onPlayNext: () => void;
   onPlayNextCup: () => void;
+  /** Joga o próximo jogo da copa continental do usuário. */
+  onPlayNextContinental: () => void;
   onAdvanceSeason: () => void;
   onNewCareer: () => void;
   onBack: () => void;
@@ -66,12 +70,36 @@ interface Props {
 type NextMatch =
   | { type: 'league'; fixture: LeagueFixture; homeName: string; awayName: string; round: number; opponentTeamId: string }
   | { type: 'cup'; homeName: string; awayName: string; stage: string; stageLabel: string; opponentTeamId: string }
+  | { type: 'continental'; homeName: string; awayName: string; stage: string; stageLabel: string; opponentTeamId: string; cupShortName: string; cupLogo: string }
   | null;
 
 function determineNextMatch(state: CareerState): NextMatch {
   const { season } = state;
   const { league, cup } = season;
   const userId = league.userTeamId;
+
+  // Prioridade: copa continental → copa doméstica → liga.
+  const cc = season.continentalCup;
+  if (cc && cc.stage !== 'champion') {
+    const stageMatches = getStageMatches(cc);
+    const userMatch = stageMatches.find(m =>
+      !m.played && (m.homeTeamId === userId || m.awayTeamId === userId));
+    if (userMatch) {
+      const homeTeam = cc.teams.find(t => t.id === userMatch.homeTeamId);
+      const awayTeam = cc.teams.find(t => t.id === userMatch.awayTeamId);
+      const opponentTeamId = userMatch.homeTeamId === userId ? userMatch.awayTeamId! : userMatch.homeTeamId!;
+      return {
+        type: 'continental',
+        homeName: homeTeam?.name ?? '???',
+        awayName: awayTeam?.name ?? '???',
+        stage: cc.stage,
+        stageLabel: CUP_STAGE_LABELS[cc.stage] ?? cc.stage,
+        opponentTeamId,
+        cupShortName: season.continentalCupDef?.shortName ?? 'Continental',
+        cupLogo: season.continentalCupDef?.logo ?? '🌍',
+      };
+    }
+  }
 
   if (cup.stage !== 'champion') {
     const stageMatches = getStageMatches(cup);
@@ -116,7 +144,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, onSyncRosters, rosterSyncing, rosterLastUpdatedAt }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, onSyncRosters, rosterSyncing, rosterLastUpdatedAt }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -195,8 +223,9 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
     if (!nextMatch) return null;
     return state.season.league.teams.find(t => t.id === nextMatch.opponentTeamId)
       ?? state.season.cup.teams.find(t => t.id === nextMatch.opponentTeamId)
+      ?? state.season.continentalCup?.teams.find(t => t.id === nextMatch.opponentTeamId)
       ?? null;
-  }, [nextMatch, state.season.league.teams, state.season.cup.teams]);
+  }, [nextMatch, state.season.league.teams, state.season.cup.teams, state.season.continentalCup]);
 
   const socialPosts = useMemo(() => {
     if (!userTeam) return [];
@@ -291,6 +320,25 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
       <div className={styles.compRow}>
         <span>🏆 {league.cupName}: <strong>{cupStageLabel}</strong></span>
       </div>
+
+      {state.season.continentalCup && state.season.continentalCupDef && (() => {
+        const cc = state.season.continentalCup!;
+        const ccDef = state.season.continentalCupDef!;
+        const label = cc.stage === 'champion'
+          ? (cc.championId === state.season.league.userTeamId ? '🏆 Campeão!' : 'Eliminado')
+          : (CUP_STAGE_LABELS[cc.stage] ?? cc.stage);
+        return (
+          <div className={styles.compRow} style={{ borderLeft: `3px solid ${ccDef.color}`, paddingLeft: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <span>{ccDef.logo} {ccDef.name}: <strong>{label}</strong></span>
+            <button
+              onClick={onViewContinental}
+              style={{ background: 'transparent', border: `1px solid ${ccDef.color}88`, color: ccDef.color, borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+            >
+              Ver chave →
+            </button>
+          </div>
+        );
+      })()}
 
       {boardObj && boardObj.objectives.length > 0 && (
         <div className={styles.objectivesCard}>
@@ -396,7 +444,11 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
       {nextMatch && !seasonReady && (
         <div className={styles.nextMatchCard}>
           <div className={styles.nextMatchLabel}>
-            {nextMatch.type === 'cup' ? '🏆' : '📅'} Próxima Partida · {nextMatch.type === 'cup' ? `Copa (${nextMatch.stageLabel})` : `Liga (Rodada ${nextMatch.round + 1})`}
+            {nextMatch.type === 'league' ? '📅' : nextMatch.type === 'continental' ? nextMatch.cupLogo : '🏆'} Próxima Partida · {
+              nextMatch.type === 'league' ? `Liga (Rodada ${nextMatch.round + 1})`
+              : nextMatch.type === 'continental' ? `${nextMatch.cupShortName} (${nextMatch.stageLabel})`
+              : `Copa (${nextMatch.stageLabel})`
+            }
           </div>
           <div className={styles.nextMatchTeams}>
             <strong>{nextMatch.homeName}</strong>
@@ -405,6 +457,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
           </div>
           <button className={styles.playBtn} onClick={() => {
             if (nextMatch.type === 'league') onPlayNext();
+            else if (nextMatch.type === 'continental') onPlayNextContinental();
             else onPlayNextCup();
           }}>
             ⚽ Jogar

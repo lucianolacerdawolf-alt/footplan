@@ -8,7 +8,7 @@ export type CareerTab = 'central' | 'elenco' | 'transferencias' | 'meu-clube' | 
 export const CAREER_TAB_SCREENS: ReadonlySet<Screen> = new Set([
   'career-hub', 'transfer-market', 'career-trophy-room',
   'career-league', 'career-league-table', 'career-bracket',
-  'career-job-market',
+  'career-job-market', 'career-continental',
 ]);
 
 const SCREEN_TO_TAB: Partial<Record<Screen, CareerTab>> = {
@@ -19,6 +19,7 @@ const SCREEN_TO_TAB: Partial<Record<Screen, CareerTab>> = {
   'career-league-table': 'escritorio',
   'career-bracket': 'escritorio',
   'career-job-market': 'escritorio',
+  'career-continental': 'escritorio',
 };
 
 export function getCareerTabForScreen(screen: Screen): CareerTab | null {

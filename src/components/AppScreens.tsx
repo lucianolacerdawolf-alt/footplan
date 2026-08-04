@@ -162,6 +162,13 @@ export interface AppScreensProps {
   handleSimulateCareerBracketMatch: (stage: PlayableStage, matchIdx: number) => void;
   handleSimulateCareerCupToEnd: () => void;
   handleCareerBracketMatchResult: (result: MatchResult) => void;
+  // Copa continental
+  handlePlayContinentalMatch: (match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => void;
+  handlePlayNextContinentalMatch: () => void;
+  handleSimulateOtherContinentalMatches: () => void;
+  handleSimulateContinentalMatch: (stage: PlayableStage, matchIdx: number) => void;
+  handleSimulateContinentalToEnd: () => void;
+  handleEditContinentalTactics: () => void;
   handleProposeTrade: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
   handleBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
   handleListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
@@ -523,8 +530,10 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         state={p.careerState}
         league={getLeague(p.careerState.leagueId)!}
         onViewCup={() => p.setScreen('career-bracket')}
+        onViewContinental={() => p.setScreen('career-continental')}
         onPlayNext={p.handlePlayNextCareerMatch}
         onPlayNextCup={p.handlePlayNextCareerCupMatch}
+        onPlayNextContinental={p.handlePlayNextContinentalMatch}
         onAdvanceSeason={p.handleAdvanceSeason}
         onNewCareer={p.handleNewCareerFromHub}
         onBack={() => { p.setIsCareerMode(false); p.goHome(); }}
@@ -676,6 +685,32 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onSimulateOthers={p.handleSimulateOtherCareerBracketMatches}
         onSimulateToEnd={p.handleSimulateCareerCupToEnd}
         onEditTactics={p.handleEditCareerBracketTactics}
+        onBack={() => p.setScreen('career-hub')}
+        hideTopNav
+      />
+    );
+  },
+
+  'career-continental': (p) => {
+    const cc = p.careerState?.season.continentalCup;
+    const ccDef = p.careerState?.season.continentalCupDef;
+    if (!cc || !ccDef) return null;
+    return (
+      <BracketScreen
+        state={cc}
+        cupColor={ccDef.color}
+        onPlayMatch={(match, home, away) => {
+          const stage = cc.stage as PlayableStage;
+          const matches = stage === 'roundOf16' ? cc.roundOf16
+            : stage === 'quarterfinals' ? cc.quarterFinals
+            : stage === 'semifinals' ? cc.semiFinals
+            : [cc.final];
+          p.handlePlayContinentalMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
+        }}
+        onSimulateMatch={p.handleSimulateContinentalMatch}
+        onSimulateOthers={p.handleSimulateOtherContinentalMatches}
+        onSimulateToEnd={p.handleSimulateContinentalToEnd}
+        onEditTactics={p.handleEditContinentalTactics}
         onBack={() => p.setScreen('career-hub')}
         hideTopNav
       />

@@ -1,14 +1,16 @@
 import { useCallback } from 'react';
 import type { Team } from '@/engine/types';
-import { computeStandings } from '@/engine/tournament';
+import { computeStandings, type BracketState } from '@/engine/tournament';
 import { assignMarketValues, computeWageBill, computeWeeklyIncome, getLeaguePrizeMoney, getCupPrizeMoney } from '@/engine/transferMarket';
 import { generateBoardObjectives, evaluateBoardObjectives, createBoardObjectivesInboxMessage, createBoardObjectivesResultMessage } from '@/engine/boardObjectives';
 import { refreshFreeAgentPool } from '@/engine/freeAgentPool';
-import { getLeague } from '@/data/leagues';
+import { getLeague, allLeagues } from '@/data/leagues';
+import { determineUserContinentalCup, getContinentalPrizeMoney, getQualifiedTeams, createContinentalBracket } from '@/engine/continentalCups';
+import { CUP_RESULT_LABELS } from '@/engine/careerLabels';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/engine/seasonClosure';
 import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, computeMerchRevenue } from '@/engine/sponsors';
 import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
-import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage } from '@/engine/inbox';
+import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage, createContinentalQualificationMessage, createContinentalResultMessage } from '@/engine/inbox';
 import { generateJobOffers } from '@/engine/jobMarket';
 import type { Screen } from '@/types/navigation';
 
@@ -17,9 +19,11 @@ interface UseCareerSeasonParams {
   setCareerState: React.Dispatch<React.SetStateAction<CareerState | null>>;
   setScreen: (s: Screen) => void;
   setToastMsg: (msg: string | null) => void;
+  /** Destrava conquistas continentais/Tríplice no fechamento da temporada. */
+  unlockAchievement: (id: string) => void;
 }
 
-export function useCareerSeason({ careerState, setCareerState, setScreen, setToastMsg }: UseCareerSeasonParams) {
+export function useCareerSeason({ careerState, setCareerState, setScreen, setToastMsg, unlockAchievement }: UseCareerSeasonParams) {
   const handleAdvanceSeason = useCallback(() => {
     if (!careerState) return;
     if (careerState.season.league.phase !== 'done' || careerState.season.cup.stage !== 'champion') return;
@@ -122,6 +126,43 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       const sponsoredIncome = Math.round(baseIncome * getSponsorMultiplier(nextSponsorTier));
       const merch = computeMerchRevenue(newReputation);
 
+      // ── Copa continental (UCL/UEL/UECL) ──
+      // 1) Premiação da copa continental da temporada que ENCERROU (se o usuário disputou).
+      let continentalPrize = 0;
+      const endingContinental = careerState.season.continentalCup;
+      const endingContinentalId = careerState.season.continentalCupId;
+      if (endingContinental && endingContinentalId) {
+        const ccResult = deriveCupResult(endingContinental, careerState.season.league.userTeamId);
+        continentalPrize = getContinentalPrizeMoney(endingContinentalId, ccResult);
+        const ccName = careerState.season.continentalCupDef?.name ?? 'competição continental';
+        objectiveMessages.push(createContinentalResultMessage(
+          ccName, CUP_RESULT_LABELS[ccResult], continentalPrize,
+          `Temporada ${careerState.currentSeasonYear}`,
+        ));
+        // Conquistas continentais avaliadas no fechamento — robusto tanto pra quem
+        // jogou quanto pra quem simulou a final (o caminho por-partida só dispara ao jogar).
+        unlockAchievement('continental_participant');
+        if (ccResult === 'champion') {
+          if (endingContinentalId === 'ucl') unlockAchievement('continental_champion');
+          else if (endingContinentalId === 'uel') unlockAchievement('europa_king');
+          else if (endingContinentalId === 'uecl') unlockAchievement('conference_king');
+          // Tríplice Coroa: liga + copa nacional + UCL na mesma temporada.
+          if (endingContinentalId === 'ucl' && leagueChampion && cupResult === 'champion') {
+            unlockAchievement('treble_winner');
+          }
+        }
+      }
+      // 2) Classificação para a PRÓXIMA temporada, pela posição final na liga.
+      const userCupDef = determineUserContinentalCup(leagueDef, leaguePosition);
+      let nextContinentalBracket: BracketState | undefined;
+      if (userCupDef) {
+        const pool = getQualifiedTeams(evolvedRosters, allLeagues, userCupDef, nextUserTeam.id);
+        nextContinentalBracket = createContinentalBracket(nextUserTeam, pool, userCupDef, careerState.leagueId);
+        objectiveMessages.push(createContinentalQualificationMessage(
+          userCupDef.name, `Temporada ${careerState.currentSeasonYear + 1}`,
+        ));
+      }
+
       // Generate objectives for the new season
       const nextBoardObj = generateBoardObjectives(nextLeague, newReputation, careerState.currentSeasonYear + 1, leaguePosition);
       objectiveMessages.push(createBoardObjectivesInboxMessage(nextBoardObj));
@@ -154,10 +195,13 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         season: {
           league: nextLeague, cup: nextCup, tradesUsedThisSeason: 0,
           budgetAtSeasonStart: finances.budget, userGoalScorers: {},
+          continentalCup: nextContinentalBracket,
+          continentalCupId: userCupDef?.id,
+          continentalCupDef: userCupDef ?? undefined,
         },
         rosters: evolvedRosters,
         history: [...careerState.history, entry],
-        finances: { budget: finances.budget + leaguePrize + cupPrize + goalBonuses, wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
+        finances: { budget: finances.budget + leaguePrize + cupPrize + goalBonuses + continentalPrize, wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
         inbox: [...(careerState.inbox ?? []), ...objectiveMessages],
         freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(careerState), careerState.currentSeasonYear + 1, Math.random, departures),
         sponsorTier: nextSponsorTier,
@@ -175,7 +219,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       console.error('handleAdvanceSeason crashed:', err);
       setToastMsg('Erro inesperado ao avançar temporada. Tente recarregar a página.');
     }
-  }, [careerState, setCareerState, setScreen, setToastMsg]);
+  }, [careerState, setCareerState, setScreen, setToastMsg, unlockAchievement]);
 
   const handleRenegotiateSponsor = useCallback(() => {
     if (!careerState) return;

@@ -123,6 +123,22 @@ export function createContractGoalBonusMessage(payments: { playerName: string; b
   });
 }
 
+export function createContinentalQualificationMessage(cupName: string, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `Classificado para a ${cupName}!`,
+    body: `Parabéns! A campanha na liga garantiu vaga na ${cupName}. A competição acontece ao longo desta temporada, intercalada com a liga e a copa nacional.`,
+  });
+}
+
+export function createContinentalResultMessage(cupName: string, resultLabel: string, prize: number, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `${cupName}: ${resultLabel}`,
+    body: `Campanha na ${cupName} encerrada — ${resultLabel.toLowerCase()}.${prize > 0 ? ` Premiação de €${(prize / 1_000_000).toFixed(1)}M creditada ao clube.` : ''}`,
+  });
+}
+
 export function hasMandatoryUnread(inbox: InboxMessage[]): boolean {
   return inbox.some(m => m.isMandatory && !m.isRead);
 }

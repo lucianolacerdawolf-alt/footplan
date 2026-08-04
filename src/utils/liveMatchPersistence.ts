@@ -101,6 +101,9 @@ export interface LiveMatchSnapshot {
   matchFixtureIdx?: number;
   matchBracketStage?: string;
   matchBracketIdx?: number;
+  /** Copa doméstica ('cup', default) vs continental ('continental') — roteia o
+   *  resultado ao campo certo do save após um reload no meio da partida. */
+  matchBracketKind?: 'cup' | 'continental';
   isCareer?: boolean;
 }
 
@@ -113,6 +116,7 @@ export interface LiveMatchMeta {
   fixtureIdx?: number;
   bracketStage?: string;
   bracketIdx?: number;
+  bracketKind?: 'cup' | 'continental';
   isCareer?: boolean;
 }
 

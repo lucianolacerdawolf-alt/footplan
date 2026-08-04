@@ -30,7 +30,7 @@ const ALL_SCREENS: Screen[] = [
   'tournament-setup', 'league', 'bracket', 'achievements', 'online-lobby',
   'career-hub', 'career-league', 'career-bracket', 'trade-propose', 'season-end',
   'league-table', 'career-league-table', 'career-trophy-room', 'transfer-market',
-  'career-job-market',
+  'career-job-market', 'career-continental',
 ];
 
 describe('screenMap — teste de navegação (P3 #9)', () => {

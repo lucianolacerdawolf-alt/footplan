@@ -4,6 +4,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 // type-only: boardObjectives importa CareerState de volta, mas imports de tipo
 // são apagados na compilação — não há ciclo em runtime.
 import type { BoardObjectivesState } from './boardObjectives';
+import type { ContinentalCupDef } from './continentalCups';
 import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
@@ -122,6 +123,11 @@ export interface CareerState {
     // Opcionais pelo mesmo motivo dos campos de nível CareerState (compat com saves antigos).
     budgetAtSeasonStart?: number;       // pra calcular o budgetDelta no fechamento da temporada
     userGoalScorers?: Record<string, number>; // nome do jogador → gols na temporada (liga + copa)
+    // Copa continental (UCL/UEL/UECL) — só populada quando o usuário se classificou
+    // na temporada anterior. Ausente = sem copa continental nesta temporada.
+    continentalCup?: BracketState;
+    continentalCupId?: string;          // 'ucl' | 'uel' | 'uecl'
+    continentalCupDef?: ContinentalCupDef; // referência p/ branding + prize money
   };
   rosters: Record<string, Team[]>;
   history: CareerSeasonHistoryEntry[];

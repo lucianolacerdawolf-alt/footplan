@@ -20,6 +20,7 @@ import { useCareerJobMarket } from './career/useCareerJobMarket';
 import { useCareerConversations } from './career/useCareerConversations';
 import { useCareerPreMatch } from './career/useCareerPreMatch';
 import type { Screen } from '../types/navigation';
+import type { AchievementEvalInput } from './useAchievements';
 
 // Timestamp (ms) do último save local da carreira — usado pra reconciliar com o
 // cloud no mount (o cloud só sobrescreve se for estritamente mais novo).
@@ -36,11 +37,15 @@ interface UseCareerManagerParams {
   recordH2H: (homeId: string, awayId: string, homeScore: number, awayScore: number) => void;
   notifySave: () => void;
   setToastMsg: (msg: string | null) => void;
+  /** Avalia conquistas ao fim de uma partida de carreira (liga/copa/continental). */
+  evaluateAchievements: (input: AchievementEvalInput) => void;
+  /** Destrava uma conquista específica fora do fluxo de partida — ex.: Tríplice Coroa. */
+  unlockAchievement: (id: string) => void;
 }
 
 export function useCareerManager({
   setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setIsCareerMode,
-  recordH2H, notifySave, setToastMsg,
+  recordH2H, notifySave, setToastMsg, evaluateAchievements, unlockAchievement,
 }: UseCareerManagerParams) {
   const [careerState, setCareerState] = usePersistedState<CareerState | null>('fp:career', null, { onPersist: notifySave });
 
@@ -152,11 +157,11 @@ export function useCareerManager({
   const preMatch = useCareerPreMatch({ careerState, setCareerState, setToastMsg });
   const matchFlow = useCareerMatchFlow({
     careerState, setCareerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
-    recordH2H, setToastMsg,
+    recordH2H, setToastMsg, evaluateAchievements,
     generateConversation: conversations.handleMaybeGenerateConversation,
   });
   const transfers = useTransferManager({ careerState, setCareerState, setToastMsg });
-  const season = useCareerSeason({ careerState, setCareerState, setScreen, setToastMsg });
+  const season = useCareerSeason({ careerState, setCareerState, setScreen, setToastMsg, unlockAchievement });
   const inbox = useCareerInbox({ setCareerState });
   const jobMarket = useCareerJobMarket({ careerState, setCareerState, setScreen, setToastMsg });
 

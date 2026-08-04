@@ -15,6 +15,9 @@ interface Props {
   /** Só true no Modo Carreira — a barra de abas fixa já cobre "voltar pra Central" e
    *  "editar táticas" (aba Elenco), então esses botões de topo ficam redundantes. */
   hideTopNav?: boolean;
+  /** Cor de branding da competição (copa continental UCL/UEL/UECL) — tinge o título
+   *  pra diferenciar visualmente da copa doméstica. Ausente = estilo padrão. */
+  cupColor?: string;
 }
 
 function teamById(teams: Team[], id: string | null): Team | null {
@@ -84,7 +87,7 @@ function MatchCard({
   );
 }
 
-export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onSimulateToEnd, eliminated, onEditTactics, onBack, hideTopNav }: Props) {
+export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onSimulateToEnd, eliminated, onEditTactics, onBack, hideTopNav, cupColor }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
   const [simulating, setSimulating] = useState(false);
   const runSimOthers = () => {
@@ -169,7 +172,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
           <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
         )}
         <div className={styles.headerCenter}>
-          <span className={styles.title}>{state.cupName} · {stageLabels[stage]}</span>
+          <span className={styles.title} style={cupColor ? { color: cupColor } : undefined}>{state.cupName} · {stageLabels[stage]}</span>
         </div>
         {!hideTopNav && (
           <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>

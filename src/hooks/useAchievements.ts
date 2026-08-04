@@ -12,6 +12,10 @@ export interface UseAchievementsReturn {
   evaluate: (input: AchievementEvalInput) => Achievement[];
   /** Check if an achievement is already unlocked */
   isUnlocked: (id: string) => boolean;
+  /** Unlock a specific achievement by id, idempotente. Retorna a conquista se foi
+   *  destravada agora (null se já estava ou o id não existe). Usado por gatilhos
+   *  que não são "fim de partida" — ex.: Tríplice Coroa no fechamento da temporada. */
+  unlockById: (id: string) => Achievement | null;
   /** Get all achievements with their unlock state */
   getAll: () => Array<Achievement & { unlocked: boolean; unlockedAt?: number }>;
 }
@@ -57,5 +61,20 @@ export function useAchievements(): UseAchievementsReturn {
     [setData],
   );
 
-  return { data, unlocked: data.unlocked, evaluate, isUnlocked, getAll };
+  const unlockById = useCallback(
+    (id: string): Achievement | null => {
+      const ach = ACHIEVEMENTS.find(a => a.id === id);
+      if (!ach) return null;
+      let newly: Achievement | null = null;
+      setData(prev => {
+        if (prev.unlocked.some(u => u.id === id)) return prev;
+        newly = ach;
+        return { ...prev, unlocked: [...prev.unlocked, { id, unlockedAt: Date.now() }] };
+      });
+      return newly;
+    },
+    [setData],
+  );
+
+  return { data, unlocked: data.unlocked, evaluate, isUnlocked, unlockById, getAll };
 }

@@ -266,7 +266,62 @@ describe('achievements', () => {
     expect(unlocked.length).toBe(0);
   });
 
-  it('all 15 achievements are defined', () => {
-    expect(ACHIEVEMENTS.length).toBe(15);
+  it('all 20 achievements are defined', () => {
+    expect(ACHIEVEMENTS.length).toBe(20);
+  });
+});
+
+describe('conquistas continentais', () => {
+  const home = makeTeam('arsenal', 'Arsenal');
+  const away = makeTeam('madrid', 'Real Madrid');
+
+  function championBracket(userTeamId: string): BracketState {
+    return {
+      teams: [home, away], userTeamId,
+      roundOf16: [], quarterFinals: [], semiFinals: [],
+      final: { id: 'final', homeTeamId: userTeamId, awayTeamId: away.id, played: true, homeScore: 2, awayScore: 1, winnerId: userTeamId },
+      stage: 'champion', championId: userTeamId, cupName: 'Liga dos Campeões', leagueId: 'pl',
+    };
+  }
+
+  it('continental_champion destrava vencendo a UCL; europa_king e cup_king não', () => {
+    const result = makeResult(home, away, 2, 1);
+    const ctx = makeCtx({ result, userTeamId: home.id, matchContext: 'bracket', bracketState: championBracket(home.id), continentalCupId: 'ucl' });
+    const ids = checkAchievements(ctx).map(a => a.id);
+    expect(ids).toContain('continental_champion');
+    expect(ids).toContain('continental_participant');
+    expect(ids).not.toContain('europa_king');
+    expect(ids).not.toContain('cup_king'); // continental não conta como copa doméstica
+  });
+
+  it('europa_king / conference_king pela id da copa', () => {
+    const result = makeResult(home, away, 1, 0);
+    const uel = makeCtx({ result, userTeamId: home.id, matchContext: 'bracket', bracketState: championBracket(home.id), continentalCupId: 'uel' });
+    expect(checkAchievements(uel).map(a => a.id)).toContain('europa_king');
+    const uecl = makeCtx({ result, userTeamId: home.id, matchContext: 'bracket', bracketState: championBracket(home.id), continentalCupId: 'uecl' });
+    expect(checkAchievements(uecl).map(a => a.id)).toContain('conference_king');
+  });
+
+  it('cup_king (copa doméstica) destrava sem continentalCupId', () => {
+    const result = makeResult(home, away, 2, 1);
+    const ctx = makeCtx({ result, userTeamId: home.id, matchContext: 'bracket', bracketState: championBracket(home.id) });
+    const ids = checkAchievements(ctx).map(a => a.id);
+    expect(ids).toContain('cup_king');
+    expect(ids).not.toContain('continental_champion');
+  });
+
+  it('continental_participant destrava em qualquer partida continental (sem ser campeão)', () => {
+    const result = makeResult(home, away, 0, 0);
+    const notChamp: BracketState = { ...championBracket(home.id), stage: 'roundOf16', championId: undefined };
+    const ctx = makeCtx({ result, userTeamId: home.id, matchContext: 'bracket', bracketState: notChamp, continentalCupId: 'ucl' });
+    const ids = checkAchievements(ctx).map(a => a.id);
+    expect(ids).toContain('continental_participant');
+    expect(ids).not.toContain('continental_champion');
+  });
+
+  it('treble_winner nunca destrava por-partida (só no fechamento da temporada)', () => {
+    const result = makeResult(home, away, 2, 1);
+    const ctx = makeCtx({ result, userTeamId: home.id, matchContext: 'bracket', bracketState: championBracket(home.id), continentalCupId: 'ucl' });
+    expect(checkAchievements(ctx).map(a => a.id)).not.toContain('treble_winner');
   });
 });

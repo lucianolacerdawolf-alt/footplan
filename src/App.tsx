@@ -66,6 +66,11 @@ function App() {
     }
   }, [achievements]);
 
+  const unlockAchievement = useCallback((id: string) => {
+    const ach = achievements.unlockById(id);
+    if (ach) setToastMsg(`🏆 Conquista desbloqueada: ${ach.name}`);
+  }, [achievements]);
+
   const {
     leagueState, setLeagueState,
     handleStartLeague, handlePlayLeagueMatch, handleSimulateUserLeagueMatch,
@@ -107,6 +112,12 @@ function App() {
     handleSimulateCareerBracketMatch,
     handleSimulateCareerCupToEnd,
     handleCareerBracketMatchResult,
+    handlePlayContinentalMatch,
+    handlePlayNextContinentalMatch,
+    handleSimulateOtherContinentalMatches,
+    handleSimulateContinentalMatch,
+    handleSimulateContinentalToEnd,
+    handleEditContinentalTactics,
     handleProposeTrade,
     handleBuyPlayer,
     handleListPlayerForSale,
@@ -136,7 +147,7 @@ function App() {
     rosterLastUpdatedAt,
   } = useCareerManager({
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setIsCareerMode,
-    recordH2H, notifySave, setToastMsg,
+    recordH2H, notifySave, setToastMsg, evaluateAchievements, unlockAchievement,
   });
 
   // Pattern 2 (RESEARCH.md/PATTERNS.md): deixa useGameFlow's handleStartMatch operar
@@ -195,7 +206,7 @@ function App() {
     if (snap.matchContext === 'league' && isCareerSnap && snap.matchRoundIdx != null && snap.matchFixtureIdx != null) {
       handleRestorePendingCareerLeagueFixture(snap.matchRoundIdx, snap.matchFixtureIdx);
     } else if (snap.matchContext === 'bracket' && isCareerSnap && snap.matchBracketStage != null && snap.matchBracketIdx != null) {
-      handleRestorePendingCareerBracketMatch(snap.matchBracketStage as PlayableStage, snap.matchBracketIdx);
+      handleRestorePendingCareerBracketMatch(snap.matchBracketStage as PlayableStage, snap.matchBracketIdx, snap.matchBracketKind ?? 'cup');
     } else if (snap.matchContext === 'league' && snap.matchRoundIdx != null && snap.matchFixtureIdx != null) {
       handleRestorePendingLeagueFixture(snap.matchRoundIdx, snap.matchFixtureIdx);
     } else if (snap.matchContext === 'bracket' && snap.matchBracketStage != null && snap.matchBracketIdx != null) {
@@ -368,6 +379,12 @@ function App() {
     handleSimulateCareerBracketMatch,
     handleSimulateCareerCupToEnd,
     handleCareerBracketMatchResult,
+    handlePlayContinentalMatch,
+    handlePlayNextContinentalMatch,
+    handleSimulateOtherContinentalMatches,
+    handleSimulateContinentalMatch,
+    handleSimulateContinentalToEnd,
+    handleEditContinentalTactics,
     handleProposeTrade,
     handleBuyPlayer,
     handleListPlayerForSale,

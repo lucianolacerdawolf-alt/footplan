@@ -378,6 +378,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       matchFixtureIdx: meta?.fixtureIdx,
       matchBracketStage: meta?.bracketStage,
       matchBracketIdx: meta?.bracketIdx,
+      matchBracketKind: meta?.bracketKind,
       isCareer: meta?.isCareer,
     };
     saveLiveMatch(snapshot);

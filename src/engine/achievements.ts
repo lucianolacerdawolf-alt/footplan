@@ -44,6 +44,9 @@ export interface AchievementCheckContext {
   matchContext: 'regular' | 'league' | 'bracket';
   leagueState?: LeagueState | null;
   bracketState?: BracketState | null;
+  /** Quando presente, o `bracketState` é uma copa continental (UCL/UEL/UECL), não a
+   *  copa doméstica — distingue as conquistas continentais das de copa. */
+  continentalCupId?: string;
   totalMatchesPlayed: number;
 }
 
@@ -248,6 +251,46 @@ export const ACHIEVEMENTS: Achievement[] = [
     hint: 'Campanha perfeita na copa',
     category: 'campanha',
   },
+  {
+    id: 'continental_participant',
+    name: 'No Mapa da Europa',
+    description: 'Dispute uma competição continental no Modo Carreira',
+    icon: '🌍',
+    hint: 'Classifique-se para uma copa continental (UCL/UEL/UECL)',
+    category: 'campanha',
+  },
+  {
+    id: 'continental_champion',
+    name: 'Rei da Europa',
+    description: 'Vença a Liga dos Campeões (UCL) no Modo Carreira',
+    icon: '🏆',
+    hint: 'Ser campeão da UCL',
+    category: 'campanha',
+  },
+  {
+    id: 'europa_king',
+    name: 'Conquistador',
+    description: 'Vença a Liga Europa (UEL) no Modo Carreira',
+    icon: '🥈',
+    hint: 'Ser campeão da UEL',
+    category: 'campanha',
+  },
+  {
+    id: 'conference_king',
+    name: 'Gigante das Copas',
+    description: 'Vença a Liga Conferência (UECL) no Modo Carreira',
+    icon: '🥉',
+    hint: 'Ser campeão da UECL',
+    category: 'campanha',
+  },
+  {
+    id: 'treble_winner',
+    name: 'Tríplice Coroa',
+    description: 'Vença liga, copa nacional e Liga dos Campeões na mesma temporada',
+    icon: '👑',
+    hint: 'Os três grandes troféus numa temporada só',
+    category: 'campanha',
+  },
 ];
 
 // ── Condition functions ──────────────────────────────────────────────────────
@@ -306,8 +349,24 @@ const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementCheckContext) => b
     return standings.length > 0 && standings[0].teamId === ctx.userTeamId;
   },
   cup_king(ctx) {
+    if (ctx.continentalCupId) return false; // copa doméstica só — continental tem conquista própria
     if (ctx.matchContext !== 'bracket' || !ctx.bracketState) return false;
     return ctx.bracketState.stage === 'champion' && ctx.bracketState.championId === ctx.userTeamId;
+  },
+  continental_participant(ctx) {
+    return ctx.matchContext === 'bracket' && ctx.continentalCupId != null;
+  },
+  continental_champion(ctx) {
+    return ctx.continentalCupId === 'ucl' && !!ctx.bracketState
+      && ctx.bracketState.stage === 'champion' && ctx.bracketState.championId === ctx.userTeamId;
+  },
+  europa_king(ctx) {
+    return ctx.continentalCupId === 'uel' && !!ctx.bracketState
+      && ctx.bracketState.stage === 'champion' && ctx.bracketState.championId === ctx.userTeamId;
+  },
+  conference_king(ctx) {
+    return ctx.continentalCupId === 'uecl' && !!ctx.bracketState
+      && ctx.bracketState.stage === 'champion' && ctx.bracketState.championId === ctx.userTeamId;
   },
   invincible(ctx) {
     if (ctx.matchContext !== 'league' || !ctx.leagueState) return false;
@@ -328,6 +387,7 @@ const ACHIEVEMENT_CONDITIONS: Record<string, (ctx: AchievementCheckContext) => b
     return ctx.totalMatchesPlayed >= 20;
   },
   cup_invincible(ctx) {
+    if (ctx.continentalCupId) return false; // copa doméstica só
     if (ctx.matchContext !== 'bracket' || !ctx.bracketState) return false;
     if (ctx.bracketState.stage !== 'champion' || ctx.bracketState.championId !== ctx.userTeamId) return false;
     const stages: Array<Array<{ homeTeamId: string | null; awayTeamId: string | null; homeScore?: number; awayScore?: number; played: boolean; winnerId?: string }>> = [
