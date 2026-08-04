@@ -1266,6 +1266,17 @@ describe('handleRenewContract (Fase 1)', () => {
 });
 
 describe('handleAdvanceSeason expira contratos (Fase 1)', () => {
+  // A evolução de elenco (progressAllLeagues) aposenta jogadores 34+ de forma
+  // probabilística via Math.random. Estes testes fixam UM jogador específico e
+  // checam que ele sobrevive à temporada com o contrato decrementado. Sem travar
+  // o RNG, quando esse jogador é 34+ a aposentadoria dispara de vez em quando e o
+  // teste fica flaky (dependente da ordem de execução, já que Math.random não é
+  // semeado por arquivo). Travamos em 0.999 — acima da chance máxima de
+  // aposentadoria (0.9) — para garantir determinismo sem depender de idade/ordem.
+  beforeEach(() => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.999);
+  });
+
   it('remove quem chegou a 0 do elenco, coloca no mercado e gera a mensagem de saída', () => {
     const { result } = renderHook(() => useCareerManager(mockParams()));
     const { leagueId, userTeamId } = startPlCareer(result);
