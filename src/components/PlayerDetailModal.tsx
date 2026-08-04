@@ -3,6 +3,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { calculateMarketValue, calculateWeeklyWage } from '../engine/transferMarket';
 import { formatMoney } from '../utils/formatMoney';
 import { countryFlagEmoji } from '../utils/countryFlags';
+import { getContractSeasonsLeft } from '../engine/career';
 import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './PlayerDetailModal.module.css';
 
@@ -104,6 +105,27 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
             {player.isSuspended && '🟥 Suspenso'}
             {player.isSuspended && (player.injuredRounds ?? 0) > 0 && ' · '}
             {(player.injuredRounds ?? 0) > 0 && `🤕 Lesionado (${player.injuredRounds} rodada${(player.injuredRounds ?? 0) > 1 ? 's' : ''})`}
+          </div>
+        )}
+
+        {(player.contractGoal || player.lastRenewedSeasonYear != null) && (
+          <div className={styles.contractInfo}>
+            <div className={styles.contractRow}>
+              <span>📋 Contrato</span>
+              <span>{getContractSeasonsLeft(player)} temp. restante{(getContractSeasonsLeft(player)) > 1 ? 's' : ''}</span>
+            </div>
+            {player.contractGoal && (
+              <div className={styles.contractRow}>
+                <span>🎯 Meta</span>
+                <span>{player.contractGoal.target} gols → {formatMoney(player.contractGoal.bonus)}</span>
+              </div>
+            )}
+            {player.lastRenewedSeasonYear != null && (
+              <div className={styles.contractRow}>
+                <span>🕓 Renovado</span>
+                <span>Temporada {player.lastRenewedSeasonYear}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
