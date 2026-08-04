@@ -1,8 +1,16 @@
 # Plano — Competições Continentais
 
 > Data: Julho 2026
-> Status: ⬜ Pendente
+> Status: ✅ Concluído em 2026-08-04 (commit `129ac74`) — publicado em produção
 > Esforço: ~7-8h
+>
+> **Entregue com diferenças do plano original:** classificação das outras 11 ligas
+> por OVR médio com backfill até 16 (UEL/UECL somam <16 vagas); sem "modo fantasma"
+> (não classificou = sem copa naquela temporada); roteamento do resultado por
+> discriminador `pendingCareerBracketKind` (copa doméstica e continental compartilham
+> `matchContext: 'bracket'`). Bônus: a fiação das 5 conquistas continentais exigiu
+> ligar a avaliação de conquistas ao Modo Carreira (que antes não avaliava nenhuma),
+> então as conquistas existentes também passaram a destravar na carreira.
 
 ---
 
