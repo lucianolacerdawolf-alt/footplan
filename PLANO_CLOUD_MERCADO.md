@@ -59,6 +59,24 @@ CREATE POLICY "Users can only access own career"
   ON careers FOR ALL USING (auth.uid() = user_id);
 ```
 
+Snapshot de elencos (cache permanente — leitura preferida antes da API, ver `rosterCloud.ts`):
+
+```sql
+CREATE TABLE roster_snapshots (
+  id TEXT PRIMARY KEY,
+  rosters JSONB NOT NULL,          -- Record<leagueId, Team[]>
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+INSERT INTO roster_snapshots (id, rosters) VALUES ('global', '{}');
+ALTER TABLE roster_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "read global snapshot"
+  ON roster_snapshots FOR SELECT USING (true);
+CREATE POLICY "write global snapshot"
+  ON roster_snapshots FOR ALL
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
+```
+
 ### 1.5 Fluxo de Auth
 
 ```

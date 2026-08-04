@@ -38,6 +38,8 @@ describe('REGRESSÃO H1 — cache contaminado é rejeitado', () => {
     vi.unstubAllEnvs();
     vi.stubEnv('VITE_FOOTBALL_API_KEY', '');
     vi.stubEnv('VITE_FOOTBALL_PROXY_URL', '');
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
     clearRosterCache();
   });
   afterEach(() => {

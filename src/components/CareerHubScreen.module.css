@@ -179,6 +179,23 @@
 }
 .jobMarketChevron { color: var(--accent); font-weight: 700; }
 
+/* ── Sincronização de Elencos (Fase 1) ───────────────────── */
+.rosterSyncCard {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 14px; border-radius: 10px;
+  border: 1.5px solid var(--border); background: var(--code-bg);
+}
+.rosterSyncInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rosterSyncLabel { font-size: 12px; font-weight: 700; color: var(--text-h); }
+.rosterSyncMeta { font-size: 10px; color: var(--text-secondary); }
+.rosterSyncBtn {
+  flex-shrink: 0; padding: 7px 12px; font-size: 11px; font-weight: 700; font-family: var(--sans);
+  border: 1px solid var(--accent); border-radius: 8px; cursor: pointer;
+  background: var(--accent-bg); color: var(--accent); transition: opacity 0.15s;
+}
+.rosterSyncBtn:hover:not(:disabled) { opacity: 0.85; }
+.rosterSyncBtn:disabled { cursor: not-allowed; opacity: 0.5; }
+
 @media (max-width: 640px) {
   .screen { padding: 10px 8px 24px; gap: 10px; }
   .clubName { font-size: 17px; }

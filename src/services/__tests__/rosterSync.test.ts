@@ -1,7 +1,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { syncLeagueRoster, clearRosterCache } from '../rosterSync';
+import { syncLeagueRoster, syncAllLeagueRosters, getRosterSyncInfo, clearRosterCache } from '../rosterSync';
 import type { LeagueDefinition } from '@/data/leagues/types';
 import type { Team } from '@/engine/types';
+
+// Mock do rosterCloud: isola a lógica de cache do Supabase sem precisar de backend.
+const mockSnapshot: { value: { rosters: Record<string, Team[]>; updatedAt: string } | null } = { value: null };
+vi.mock('../rosterCloud', () => ({
+  hasRosterCloud: () => true,
+  loadRosterSnapshot: async () => mockSnapshot.value,
+  saveRosterSnapshot: async (rosters: Record<string, Team[]>) => {
+    mockSnapshot.value = { rosters, updatedAt: '2024-01-01T00:00:00.000Z' };
+  },
+}));
+import { saveRosterSnapshot } from '../rosterCloud';
 
 function makePlayer(id: string, name: string, position: Team['squad'][number]['position'], number: number, ovr = 75): Team['squad'][number] {
   return {
@@ -57,6 +68,9 @@ describe('syncLeagueRoster', () => {
     // chave/proxy configurados na máquina de quem roda `npm test`.
     vi.stubEnv('VITE_FOOTBALL_API_KEY', '');
     vi.stubEnv('VITE_FOOTBALL_PROXY_URL', '');
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    mockSnapshot.value = null;
     clearRosterCache();
   });
   afterEach(() => {
@@ -82,7 +96,7 @@ describe('syncLeagueRoster', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const league = makeLeague();
-    const result = await syncLeagueRoster(league);
+    const result = await syncLeagueRoster(league, { force: true });
 
     expect(result.source).toBe('live');
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -116,7 +130,7 @@ describe('syncLeagueRoster', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const league = makeLeague();
-    const result = await syncLeagueRoster(league);
+    const result = await syncLeagueRoster(league, { force: true });
 
     expect(result.source).toBe('live');
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -197,7 +211,7 @@ describe('syncLeagueRoster', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await syncLeagueRoster(league);
+    const result = await syncLeagueRoster(league, { force: true });
     const mergedTeam = result.league.teams[0];
 
     // 4-3-3 = 1 GK + 4 DEF + 3 MID + 3 FWD = 11 titulares — squad.slice(0, 11) é como
@@ -247,7 +261,7 @@ describe('syncLeagueRoster', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await syncLeagueRoster(league);
+    const result = await syncLeagueRoster(league, { force: true });
 
     expect(result.source).toBe('live');
     const mergedTeam = result.league.teams[0];
@@ -268,11 +282,54 @@ describe('syncLeagueRoster', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     const league = makeLeague();
-    await syncLeagueRoster(league);
+    await syncLeagueRoster(league, { force: true });
     const second = await syncLeagueRoster(league);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(second.source).toBe('cache');
+  });
+
+  it('sem force, NÃO chama a API mesmo com chave configurada (política de poupar requisições)', async () => {
+    vi.stubEnv('VITE_FOOTBALL_API_KEY', 'test-key-123');
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ count: 1, teams: [] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const league = makeLeague();
+    const result = await syncLeagueRoster(league);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.source).toBe('static');
+  });
+
+  it('sem force e sem cache, lê do snapshot do Supabase (fonte cloud)', async () => {
+    const league = makeLeague();
+    // Pré-popula o snapshot no Supabase com o elenco sincronizado.
+    const cloudTeams: Team[] = [{
+      ...league.teams[0],
+      squad: [{ id: 'cloud-p1', name: 'Cloud Keeper', number: 1, position: 'GK', currentFatigue: 0,
+        attributes: { speed: 80, stamina: 80, passing: 80, finishing: 80, tackling: 80, dribbling: 80, vision: 80, positioning: 80 } }],
+    }];
+    await saveRosterSnapshot({ [league.id]: cloudTeams });
+
+    const result = await syncLeagueRoster(league);
+
+    expect(result.source).toBe('cloud');
+    expect(result.league.teams[0].squad.map(p => p.name)).toContain('Cloud Keeper');
+  });
+
+  it('sem force, sem cache e sem cloud → estático (nunca bate na API sozinho)', async () => {
+    vi.stubEnv('VITE_FOOTBALL_API_KEY', 'test-key-123');
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ count: 1, teams: [] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const league = makeLeague();
+    const result = await syncLeagueRoster(league);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.source).toBe('static');
   });
 
   it('em erro de rede, cai de volta pra liga estática sem quebrar', async () => {
@@ -280,7 +337,7 @@ describe('syncLeagueRoster', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
 
     const league = makeLeague();
-    const result = await syncLeagueRoster(league);
+    const result = await syncLeagueRoster(league, { force: true });
 
     expect(result.source).toBe('error');
     expect(result.league).toBe(league);
@@ -292,7 +349,7 @@ describe('syncLeagueRoster', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 429 }));
 
     const league = makeLeague();
-    const result = await syncLeagueRoster(league);
+    const result = await syncLeagueRoster(league, { force: true });
 
     expect(result.source).toBe('error');
     expect(result.error).toMatch(/limite/i);
@@ -325,7 +382,7 @@ describe('syncLeagueRoster', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await syncLeagueRoster(league);
+    const result = await syncLeagueRoster(league, { force: true });
     const teamNames = new Set(result.stats.map(s => s.teamName));
 
     // Barcelona e Espanyol casaram cada um com o time remoto certo (mescla rodou pros dois,
@@ -373,7 +430,7 @@ describe('syncLeagueRoster', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const result = await syncLeagueRoster(league);
+    const result = await syncLeagueRoster(league, { force: true });
 
     const arsenal = result.league.teams.find(t => t.id === 'arsenal')!;
     const villa = result.league.teams.find(t => t.id === 'aston-villa')!;
@@ -384,5 +441,73 @@ describe('syncLeagueRoster', () => {
     // E os goleiros corretos continuam lá.
     expect(arsenalNames).toContain('David Raya');
     expect(villaNames).toContain('Emiliano Martinez');
+  });
+});
+
+describe('syncAllLeagueRosters', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', makeMemoryStorage());
+    vi.unstubAllEnvs();
+    vi.stubEnv('VITE_FOOTBALL_API_KEY', '');
+    vi.stubEnv('VITE_FOOTBALL_PROXY_URL', '');
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    mockSnapshot.value = null;
+    clearRosterCache();
+  });
+  afterEach(() => {
+    clearRosterCache();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('compila as 12 ligas e reporta fontes sem chamar a API (sem force)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ count: 1, teams: [] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await syncAllLeagueRosters();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.leagueCount).toBe(12);
+    expect(result.sources.pl).toBe('static');
+  });
+
+  it('com force, retorna as 12 ligas (mesmo com fontes indisponíveis, não quebra)', async () => {
+    const result = await syncAllLeagueRosters({ force: true });
+
+    expect(result.leagueCount).toBe(12);
+    expect(Object.keys(result.rosters).length).toBe(12);
+    // Sem fontes configuradas, cada liga cai pra estática — nunca null.
+    expect(Object.values(result.rosters).every(teams => Array.isArray(teams) && teams.length > 0)).toBe(true);
+  });
+});
+
+describe('getRosterSyncInfo', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', makeMemoryStorage());
+    vi.unstubAllEnvs();
+    vi.stubEnv('VITE_FOOTBALL_API_KEY', '');
+    vi.stubEnv('VITE_FOOTBALL_PROXY_URL', '');
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    mockSnapshot.value = null;
+    clearRosterCache();
+  });
+  afterEach(() => {
+    clearRosterCache();
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('sem snapshot nem cache, updatedAt é null', async () => {
+    const info = await getRosterSyncInfo();
+    expect(info.updatedAt).toBeNull();
+  });
+
+  it('com snapshot no Supabase, retorna o updatedAt do snapshot', async () => {
+    const league = makeLeague();
+    await saveRosterSnapshot({ [league.id]: league.teams });
+    const info = await getRosterSyncInfo();
+    expect(info.updatedAt).toBeTypeOf('string');
   });
 });

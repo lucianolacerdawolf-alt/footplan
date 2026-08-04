@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { assignMarketValues, computeWageBill, initialBudget, computeWeeklyIncome } from '../engine/transferMarket';
@@ -9,6 +9,7 @@ import { cloneTeam } from '../utils/teamUtils';
 import { allLeagues } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
+import { syncAllLeagueRosters, getRosterSyncInfo } from '../services/rosterSync';
 import { generateSponsor, getStartingTier } from '../engine/sponsors';
 import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
@@ -154,9 +155,51 @@ export function useCareerManager({
   const inbox = useCareerInbox({ setCareerState });
   const jobMarket = useCareerJobMarket({ careerState, setCareerState, setScreen, setToastMsg });
 
+  // Atualização manual dos elencos via API: sincroniza as 12 ligas e grava o snapshot no
+  // Supabase (via rosterSync). Atualiza rosters da carreira só para ligas FORA da liga do
+  // usuário — a liga da carreira tem evolução/trocas/contratos que não podem ser sobrescritos.
+  const [rosterSyncing, setRosterSyncing] = useState(false);
+  const [rosterLastUpdatedAt, setRosterLastUpdatedAt] = useState<string | null>(null);
+
+  const handleSyncRosters = useCallback(async () => {
+    if (rosterSyncing) return;
+    setRosterSyncing(true);
+    setToastMsg('🔄 Atualizando elencos via API…');
+    try {
+      const result = await syncAllLeagueRosters({ force: true });
+      if (result) {
+        setCareerState(prev => {
+          if (!prev) return prev;
+          const rosters = { ...prev.rosters };
+          for (const [lid, teams] of Object.entries(result.rosters)) {
+            if (lid === prev.leagueId) continue;
+            rosters[lid] = teams;
+          }
+          return { ...prev, rosters };
+        });
+        setRosterLastUpdatedAt(result.updatedAt);
+        setToastMsg(
+          result.liveCount > 0
+            ? `✅ Elencos atualizados via API (${result.liveCount}/${result.leagueCount} ligas ao vivo).`
+            : '⚠️ Não foi possível buscar da API — elencos mantidos.',
+        );
+      }
+    } catch {
+      setToastMsg('⚠️ Falha ao atualizar elencos via API.');
+    } finally {
+      setRosterSyncing(false);
+    }
+  }, [rosterSyncing, setCareerState, setToastMsg]);
+
+  // Carrega a data da última atualização ao montar (exibe no Hub).
+  useEffect(() => {
+    getRosterSyncInfo().then(info => setRosterLastUpdatedAt(info.updatedAt)).catch(() => {});
+  }, []);
+
   return {
     careerState, setCareerState,
     handleStartCareer,
+    handleSyncRosters, rosterSyncing, rosterLastUpdatedAt,
     ...matchFlow,
     ...transfers,
     ...season,

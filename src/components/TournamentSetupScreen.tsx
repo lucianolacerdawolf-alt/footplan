@@ -28,15 +28,25 @@ function sanitizeManagerName(raw: string): string {
 export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, onStart, onRosterSynced }: Props) {
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
   const [managerName, setManagerName] = useState('');
-  const { syncing, lastSource, lastError, sync } = useLiveRoster();
+  const { syncing, lastSource, lastError, lastUpdatedAt, sync, syncAll, loadSyncInfo } = useLiveRoster();
 
-  // Auto-sync roster from API on mount
+  // No mount, carrega o que já está salvo (cache local → Supabase → estático) SEM bater na
+  // API — a política é "só puxar da API quando o usuário pedir" (botão abaixo).
   useEffect(() => {
     sync(league).then(updated => {
       if (updated !== league) onRosterSynced?.(updated);
     });
+    loadSyncInfo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [league.id]);
+
+  const handleManualSync = async () => {
+    const result = await syncAll({ force: true });
+    if (result) {
+      const updated = result.rosters[league.id];
+      if (updated) onRosterSynced?.({ ...league, teams: updated });
+    }
+  };
 
   const handleStart = () => {
     if (!userTeamId) return;
@@ -77,6 +87,9 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
         {!syncing && lastSource === 'live' && (
           <span className="roster-sync-status ok">✓ Elencos atualizados via API</span>
         )}
+        {!syncing && lastSource === 'cloud' && (
+          <span className="roster-sync-status ok">✓ Elencos carregados da nuvem</span>
+        )}
         {!syncing && lastSource === 'cache' && (
           <span className="roster-sync-status ok">✓ Elencos carregados do cache</span>
         )}
@@ -85,6 +98,19 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
             ⚠ Usando elencos offline{lastError ? ` (${lastError})` : ''}
           </span>
         )}
+        {lastUpdatedAt && !syncing && (
+          <span className="roster-sync-status dim">
+            Última atualização: {new Date(lastUpdatedAt).toLocaleDateString('pt-BR')} {new Date(lastUpdatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
+        <button
+          className="slot-nav-btn slot-nav-btn-primary roster-sync-btn"
+          onClick={handleManualSync}
+          disabled={syncing}
+          title="Buscar elencos atualizados na API (pode gastar requisições do seu limite)"
+        >
+          {syncing ? 'Sincronizando...' : '🔄 Atualizar Elencos via API'}
+        </button>
       </div>
 
       {mode === 'career' && (

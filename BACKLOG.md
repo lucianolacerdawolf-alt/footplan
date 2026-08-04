@@ -24,6 +24,22 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 **Posso retomar quando:** só se virar incômodo real. Os dois defeitos *internos* que existiam já foram corrigidos (`cc0e8ec`, `d14d70b`).
 
+### 🟡 Re-sincronizar elencos no Supabase — 5 segundas divisões (limite diário API-Football)
+
+**Por que sobrou:** em 2026-08-03, o `npm run rosters:sync` gravou o snapshot global das 12 ligas em `roster_snapshots` (`id = 'global'`), mas só **7** vieram ao vivo (football-data.org): pl, laliga, ligue1, serieA, bundesliga, championship, ligaPortugal. As outras 5 (laliga2, bundesliga2, serieB, ligue2, ligaPortugal2) dependem da **API-Football**, que estourou o **limite diário de 100 requisições** (e `laliga2` respondeu 403) — entraram como elencos **estáticos**.
+
+**O que envolve:** quando o limite diário da API-Football resetar (dia seguinte), rodar de novo:
+
+```bash
+npm run rosters:sync
+```
+
+O script busca as 12 ligas ao vivo, grava o cache local de cada uma e sobrescreve o snapshot no Supabase (`roster_snapshots`, linha `global`). Nada mais muda — o app já lê do Supabase antes de bater na API.
+
+**Como confirmar que deu certo:** `npx vite-node scripts/read-rosters.ts` deve mostrar as 5 ligas (laliga2, bundesliga2, serieB, ligue2, ligaPortugal2) com jogadores reais (ex: nomes de atletas conhecidos), em vez dos gerados sinteticamente. Se `laliga2` seguir com 403, é restrição da conta naquela competição — registrar e seguir.
+
+**Posso retomar quando:** a partir do dia seguinte à última execução (o limite diário reseta), ~1 minuto pra rodar.
+
 ---
 
 ## 🏗️ Saúde do código

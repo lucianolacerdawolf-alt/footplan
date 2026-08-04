@@ -57,6 +57,10 @@ interface Props {
   onViewLeague: () => void;
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
   blockAdvanceReason?: string;
+  /** Atualiza os elencos das 12 ligas via API (busca ao vivo + grava no Supabase). */
+  onSyncRosters?: () => void;
+  rosterSyncing?: boolean;
+  rosterLastUpdatedAt?: string | null;
 }
 
 type NextMatch =
@@ -112,7 +116,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, onPlayNextCup, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, onSyncRosters, rosterSyncing, rosterLastUpdatedAt }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -338,6 +342,27 @@ export default function CareerHubScreen({ state, league, onViewCup, onPlayNext, 
         </span>
         <span className={styles.jobMarketChevron}>→</span>
       </button>
+
+      {onSyncRosters && (
+        <div className={styles.rosterSyncCard}>
+          <div className={styles.rosterSyncInfo}>
+            <span className={styles.rosterSyncLabel}>🔄 Elencos</span>
+            {rosterLastUpdatedAt && (
+              <span className={styles.rosterSyncMeta}>
+                Última atualização: {new Date(rosterLastUpdatedAt).toLocaleDateString('pt-BR')}
+              </span>
+            )}
+          </div>
+          <button
+            className={styles.rosterSyncBtn}
+            onClick={onSyncRosters}
+            disabled={rosterSyncing}
+            title="Buscar elencos atualizados das 12 ligas na API e salvar na nuvem"
+          >
+            {rosterSyncing ? 'Sincronizando...' : 'Atualizar Elencos via API'}
+          </button>
+        </div>
+      )}
 
       {onRespondConversation && (
         <ConversationsPanel

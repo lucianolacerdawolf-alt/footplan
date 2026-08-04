@@ -23,6 +23,8 @@ import { fetchApiFootballLeague, hasApiFootballAccess, isApiFootballLeagueMapped
 import { generatePlayer } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { rebalanceForFormation } from '../engine/squadUtils';
+import { allLeagues } from '../data/leagues';
+import { loadRosterSnapshot, saveRosterSnapshot, hasRosterCloud } from './rosterCloud';
 
 const CACHE_PREFIX = 'fp:rosterCache:';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
@@ -245,7 +247,7 @@ function writeCache(leagueId: string, teams: Team[], staticIds: string[]): void 
   } catch { /* noop — quota cheia ou storage indisponível, não é crítico */ }
 }
 
-export type RosterSource = 'cache' | 'live' | 'static' | 'error';
+export type RosterSource = 'cache' | 'cloud' | 'live' | 'static' | 'error';
 
 export interface RosterSyncResult {
   league: LeagueDefinition;
@@ -258,6 +260,10 @@ export interface RosterSyncResult {
  * Sincroniza o elenco de uma liga com dados ao vivo. SEMPRE retorna uma LeagueDefinition
  * utilizável — na pior das hipóteses (sem chave, API fora, sem rede), retorna a `league`
  * estática recebida sem modificação nenhuma.
+ *
+ * Política de requisições (pedido do usuário): a API NUNCA é chamada automaticamente.
+ * Sem `force`, a leitura é cache local → snapshot no Supabase → dados estáticos. A API só é
+ * chamada quando `force: true` — o caminho do botão "Atualizar Elencos via API".
  */
 /** Uma fonte de dados ao vivo candidata — `mapped` decide se essa liga tem cobertura
  *  nessa fonte antes mesmo de tentar (evita substituir o erro real de uma fonte pelo
@@ -274,13 +280,19 @@ export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?
     if (cached) {
       return { league: { ...league, teams: cached.teams }, source: 'cache', stats: [] };
     }
+    const snapshot = await loadRosterSnapshot();
+    const cloudTeams = snapshot?.rosters[league.id];
+    if (cloudTeams && Array.isArray(cloudTeams) && cloudTeams.length > 0) {
+      writeCache(league.id, cloudTeams, league.teams.map(t => t.id));
+      return { league: { ...league, teams: cloudTeams }, source: 'cloud', stats: [] };
+    }
+    return { league, source: 'static', stats: [], error: 'Sem elenco salvo. Use "Atualizar Elencos via API" para buscar dados ao vivo.' };
   }
 
-  const force = opts?.force ?? false;
   const sources: RemoteSource[] = [
     { name: 'football-data.org', mapped: league.id in COMPETITION_CODES && hasApiKey(), fetch: () => fetchCompetitionTeams(league.id) },
-    { name: 'SportAPI7', mapped: isSportApiLeagueMapped(league.id) && hasSportApiAccess(), fetch: () => fetchSportApiLeague(league.id, force) },
-    { name: 'API-Football', mapped: isApiFootballLeagueMapped(league.id) && hasApiFootballAccess(), fetch: () => fetchApiFootballLeague(league.id, force) },
+    { name: 'SportAPI7', mapped: isSportApiLeagueMapped(league.id) && hasSportApiAccess(), fetch: () => fetchSportApiLeague(league.id, true) },
+    { name: 'API-Football', mapped: isApiFootballLeagueMapped(league.id) && hasApiFootballAccess(), fetch: () => fetchApiFootballLeague(league.id, true) },
   ];
   const usableSources = sources.filter(s => s.mapped);
 
@@ -320,6 +332,58 @@ export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?
   }
 
   return { league, source: 'error', stats: [], error: firstError ?? 'Nenhum dado de elenco disponível para esta liga.' };
+}
+
+/** Snapshot completo das 12 ligas sincronizadas — grava no cache local de cada liga E no
+ *  Supabase (rosterCloud), pra leituras futuras não dependerem da API. `force` = buscar ao
+ *  vivo na API; sem `force`, apenas compila o que já está em cache/cloud/estático. */
+export interface AllRostersResult {
+  rosters: Record<string, Team[]>;
+  sources: Record<string, RosterSource>;
+  updatedAt: string | null;
+  leagueCount: number;
+  liveCount: number;
+}
+
+export async function syncAllLeagueRosters(opts?: { force?: boolean }): Promise<AllRostersResult> {
+  const rosters: Record<string, Team[]> = {};
+  const sources: Record<string, RosterSource> = {};
+  let liveCount = 0;
+  let updatedAt: string | null = null;
+
+  for (const league of allLeagues) {
+    const result = await syncLeagueRoster(league, opts);
+    rosters[league.id] = result.league.teams;
+    sources[league.id] = result.source;
+    if (result.source === 'live') liveCount++;
+  }
+
+  if (opts?.force) {
+    updatedAt = new Date().toISOString();
+    try {
+      await saveRosterSnapshot(rosters);
+    } catch {
+      updatedAt = null; // sem cloud, segue com cache local
+    }
+  } else {
+    const snapshot = await loadRosterSnapshot();
+    updatedAt = snapshot?.updatedAt ?? null;
+  }
+
+  return { rosters, sources, updatedAt, leagueCount: allLeagues.length, liveCount };
+}
+
+/** Informação de quando os elencos foram atualizados pela última vez (pra exibir na UI). */
+export async function getRosterSyncInfo(): Promise<{ updatedAt: string | null; hasCloud: boolean }> {
+  const snapshot = await loadRosterSnapshot();
+  if (snapshot) return { updatedAt: snapshot.updatedAt, hasCloud: true };
+  // Sem snapshot no Supabase, olha o cache local mais recente das 12 ligas.
+  let latest = 0;
+  for (const league of allLeagues) {
+    const cached = readCache(league);
+    if (cached && cached.fetchedAt > latest) latest = cached.fetchedAt;
+  }
+  return { updatedAt: latest > 0 ? new Date(latest).toISOString() : null, hasCloud: hasRosterCloud() };
 }
 
 export function clearRosterCache(leagueId?: string): void {
