@@ -145,6 +145,8 @@ function App() {
     handleSyncRosters,
     rosterSyncing,
     rosterLastUpdatedAt,
+    cloudStatus,
+    retryCloudSave,
   } = useCareerManager({
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setIsCareerMode,
     recordH2H, notifySave, setToastMsg, evaluateAchievements, unlockAchievement,
@@ -410,6 +412,8 @@ function App() {
     handleSyncRosters,
     rosterSyncing,
     rosterLastUpdatedAt,
+    cloudStatus,
+    retryCloudSave,
     clearHistory,
     setIsTournamentEntry,
     difficulty,

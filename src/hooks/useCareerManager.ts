@@ -49,7 +49,7 @@ export function useCareerManager({
 }: UseCareerManagerParams) {
   const [careerState, setCareerState] = usePersistedState<CareerState | null>('fp:career', null, { onPersist: notifySave });
 
-  const { loadFromCloud, enqueueCloudSave } = useCloudSave();
+  const { status: cloudStatus, loadFromCloud, enqueueCloudSave, retry: retryCloudSave } = useCloudSave();
 
   // T-04.4-02: fp:career pode ser JSON sintaticamente válido mas com shape errado
   // (editado manualmente no DevTools, ou versão antiga). Roda só no mount — não a
@@ -210,6 +210,7 @@ export function useCareerManager({
     careerState, setCareerState,
     handleStartCareer,
     handleSyncRosters, rosterSyncing, rosterLastUpdatedAt,
+    cloudStatus, retryCloudSave,
     ...matchFlow,
     ...transfers,
     ...season,

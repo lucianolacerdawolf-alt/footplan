@@ -8,13 +8,15 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
-### 🟢 Cloud Save falha em silêncio absoluto
+### ✅ Cloud Save falha em silêncio absoluto — CORRIGIDO (2026-08-04)
 
 **Por que sobrou:** encontrado na revisão de docs de 2026-07-31, ao investigar uma contradição entre `BACKLOG.md` e `STATE.md` sobre a tabela Supabase.
 
-**O que envolve:** `useCloudSave` já expõe `status` (`'saving' | 'saved' | 'offline'`) e `retry`, mas `useCareerManager.ts:66` só consome `loadFromCloud` e `enqueueCloudSave`. Nenhuma tela lê o status. Se o save na nuvem falhar — tabela ausente, credencial errada, rede caída — o usuário nunca fica sabendo. Basta expor o status em algum canto da Central (ícone discreto já resolve) e ligar o `retry` que já existe.
+**O que envolvia:** `useCloudSave` já expunha `status` (`'saving' | 'saved' | 'offline'`) e `retry`, mas `useCareerManager` só consumia `loadFromCloud` e `enqueueCloudSave`. Nenhuma tela lia o status. Se o save na nuvem falhasse — tabela ausente, credencial errada, rede caída — o usuário nunca ficava sabendo.
 
-**Posso retomar quando:** a qualquer momento — o hook já tem tudo pronto, é só consumir.
+**Correção.** `useCareerManager` passou a expor `cloudStatus`/`retryCloudSave`, threadados por `App.tsx` → `AppScreens.tsx` até a `CareerHubScreen`, que agora mostra um indicador discreto de backup na nuvem: `saving`/`saved` em cinza, `offline` em âmbar com botão **"Tentar de novo"** (chama o `retry` que já existia). `idle`/`loading` não renderizam nada — sem ruído pra quem joga offline (sem Supabase configurado). 4 testes novos em `CareerHubScreen.test.tsx` cobrem os quatro estados. Suíte: 564 testes, 0 falhas.
+
+> Contexto: a config do Supabase foi verificada ao vivo em 2026-08-04 — RLS ligado nas duas tabelas, `careers` com policy "own career" (`user_id = auth.uid()`), `roster_snapshots` com read aberto e write `ALL` a anônimo (decisão em aberto, ver diagnóstico de produção).
 
 ### 🟡 Elenco ao vivo pode vir com jogador no clube errado (limitação do provedor)
 

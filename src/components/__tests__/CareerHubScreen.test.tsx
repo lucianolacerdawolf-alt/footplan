@@ -189,3 +189,55 @@ describe('CareerHubScreen — preparação pré-jogo (Fase 3)', () => {
     expect(btn).toBeDisabled();
   });
 });
+
+describe('CareerHubScreen — status do backup na nuvem', () => {
+  function renderWithCloud(cloudStatus?: 'idle' | 'loading' | 'saving' | 'saved' | 'offline', onRetryCloudSave = vi.fn()) {
+    return render(
+      <CareerHubScreen
+        state={makeCareerState()}
+        league={getLeague('pl')!}
+        onViewCup={vi.fn()}
+        onViewContinental={vi.fn()}
+        onPlayNext={vi.fn()}
+        onPlayNextCup={vi.fn()}
+        onPlayNextContinental={vi.fn()}
+        onAdvanceSeason={vi.fn()}
+        onNewCareer={vi.fn()}
+        onBack={vi.fn()}
+        onMarkInboxRead={vi.fn()}
+        onAcceptTransferOffer={vi.fn()}
+        onRejectTransferOffer={vi.fn()}
+        onNextRound={vi.fn()}
+        onOpenJobMarket={vi.fn()}
+        jobOfferCount={0}
+        onViewLeague={vi.fn()}
+        cloudStatus={cloudStatus}
+        onRetryCloudSave={onRetryCloudSave}
+      />
+    );
+  }
+
+  it('não mostra nada quando a nuvem não está configurada (idle)', () => {
+    renderWithCloud('idle');
+    expect(screen.queryByText(/Backup na nuvem/)).not.toBeInTheDocument();
+  });
+
+  it('não mostra nada durante o load inicial (loading)', () => {
+    renderWithCloud('loading');
+    expect(screen.queryByText(/Backup na nuvem/)).not.toBeInTheDocument();
+  });
+
+  it('mostra confirmação discreta quando o backup está em dia', () => {
+    renderWithCloud('saved');
+    expect(screen.getByText(/Backup na nuvem em dia/)).toBeInTheDocument();
+  });
+
+  it('mostra a falha e chama onRetryCloudSave ao clicar em "Tentar de novo"', () => {
+    const onRetryCloudSave = vi.fn();
+    renderWithCloud('offline', onRetryCloudSave);
+
+    expect(screen.getByText(/Backup na nuvem falhou/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Tentar de novo'));
+    expect(onRetryCloudSave).toHaveBeenCalledTimes(1);
+  });
+});

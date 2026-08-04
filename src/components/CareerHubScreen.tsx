@@ -15,6 +15,7 @@ import type { TrainingChoice } from '../engine/training';
 import { isTrainingDone } from '../engine/training';
 import type { PressConferenceQuestion } from '../engine/pressConference';
 import type { Team } from '../engine/types';
+import type { CloudStatus } from '../hooks/useCloudSave';
 import InboxPanel from './InboxPanel';
 import ConversationsPanel from './ConversationsPanel';
 import PreMatchPrepCard from './PreMatchPrepCard';
@@ -65,6 +66,10 @@ interface Props {
   onSyncRosters?: () => void;
   rosterSyncing?: boolean;
   rosterLastUpdatedAt?: string | null;
+  /** Estado do backup na nuvem (Supabase). `undefined`/`idle` = sem nuvem configurada. */
+  cloudStatus?: CloudStatus;
+  /** Reenvia o último save que falhou pra nuvem (aparece quando `cloudStatus === 'offline'`). */
+  onRetryCloudSave?: () => void;
 }
 
 type NextMatch =
@@ -144,7 +149,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, onSyncRosters, rosterSyncing, rosterLastUpdatedAt }: Props) {
+export default function CareerHubScreen({ state, league, onViewCup, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, onSyncRosters, rosterSyncing, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
   void onViewCup;
   const inbox = getInbox(state);
   const finances = getFinances(state);
@@ -409,6 +414,32 @@ export default function CareerHubScreen({ state, league, onViewCup, onViewContin
           >
             {rosterSyncing ? 'Sincronizando...' : 'Atualizar Elencos via API'}
           </button>
+        </div>
+      )}
+
+      {/* Status do backup na nuvem — antes falhava 100% em silêncio (o hook expunha
+          `status`/`retry`, mas nenhuma tela lia). `idle`/`loading` = nada a reportar
+          (sem nuvem configurada ou ainda carregando). */}
+      {(cloudStatus === 'saving' || cloudStatus === 'saved' || cloudStatus === 'offline') && (
+        <div className={styles.cloudSaveRow} role="status" aria-live="polite">
+          {cloudStatus === 'saving' && (
+            <span className={styles.cloudSaveMuted}>☁️ Salvando na nuvem…</span>
+          )}
+          {cloudStatus === 'saved' && (
+            <span className={styles.cloudSaveMuted}>☁️ Backup na nuvem em dia</span>
+          )}
+          {cloudStatus === 'offline' && (
+            <>
+              <span className={styles.cloudSaveOffline}>
+                ⚠️ Backup na nuvem falhou — progresso salvo só neste dispositivo
+              </span>
+              {onRetryCloudSave && (
+                <button className={styles.cloudRetryBtn} onClick={onRetryCloudSave}>
+                  Tentar de novo
+                </button>
+              )}
+            </>
+          )}
         </div>
       )}
 

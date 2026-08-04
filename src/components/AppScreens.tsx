@@ -9,6 +9,7 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { Difficulty } from '../engine/matchConfig';
+import type { CloudStatus } from '../hooks/useCloudSave';
 import type { CareerState, ContractRenewalOptions } from '../engine/career';
 import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers, getSponsorTier, getSponsorName } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, getSponsorMultiplier, getSponsorMinReputation, type SponsorTier } from '../engine/sponsors';
@@ -194,6 +195,8 @@ export interface AppScreensProps {
   handleSyncRosters: () => void;
   rosterSyncing: boolean;
   rosterLastUpdatedAt: string | null;
+  cloudStatus: CloudStatus;
+  retryCloudSave: () => void;
 
   // ── Misc ──
   clearHistory: () => void;
@@ -555,6 +558,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onSyncRosters={p.handleSyncRosters}
         rosterSyncing={p.rosterSyncing}
         rosterLastUpdatedAt={p.rosterLastUpdatedAt}
+        cloudStatus={p.cloudStatus}
+        onRetryCloudSave={p.retryCloudSave}
       />
     );
   },
