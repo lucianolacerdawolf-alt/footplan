@@ -268,6 +268,15 @@ function App() {
     setScreen('league-select');
   }, [setTournamentMode, setReturnScreen, setScreen]);
 
+  // Navegação da carreira com identidade estável. A CareerHubScreen é React.memo;
+  // se estas fossem arrows inline no screenMap, mudariam a cada render do App e
+  // furariam o memo (a tela re-renderizaria em qualquer toast/save). Setters do
+  // useAppShell já são estáveis, então estes callbacks nunca mudam.
+  const exitCareer = useCallback(() => { setIsCareerMode(false); goHome(); }, [setIsCareerMode, goHome]);
+  const goCareerContinental = useCallback(() => setScreen('career-continental'), [setScreen]);
+  const goCareerLeague = useCallback(() => setScreen('career-league'), [setScreen]);
+  const goCareerJobMarket = useCallback(() => setScreen('career-job-market'), [setScreen]);
+
   const handleCareerTournamentStart = useCallback((userTeam: Team, managerName?: string) => {
     const name = managerName ?? '';
     if (career.careerState) { setPendingCareerStart({ userTeam, managerName: name }); return; }
@@ -313,6 +322,10 @@ function App() {
     handleCareerFromHome,
     handleQuickPlay,
     handleNewCareerFromHub,
+    exitCareer,
+    goCareerContinental,
+    goCareerLeague,
+    goCareerJobMarket,
     handleCareerTournamentStart,
     handleTournamentStart,
     handleStartOnlineMatch,

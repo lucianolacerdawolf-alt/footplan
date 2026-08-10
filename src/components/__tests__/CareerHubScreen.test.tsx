@@ -44,7 +44,6 @@ function renderHub(
     <CareerHubScreen
       state={state}
       league={getLeague('pl')!}
-      onViewCup={vi.fn()}
       onPlayNext={vi.fn()}
       onAdvanceSeason={vi.fn()}
       onNewCareer={vi.fn()}

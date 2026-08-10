@@ -335,3 +335,42 @@ inline para `useCallback` no `App`, garantir `career` estável e envolvê-la em
 ## Verificação (segunda rodada)
 
 - `tsc` e `oxlint` limpos; **573 testes verdes**; dev server sem erros.
+
+---
+
+# Terceira rodada — `React.memo` na CareerHubScreen (o #2 "de verdade")
+
+Feito o ganho de performance real que a segunda rodada apontou como o caminho
+correto.
+
+**O quê:**
+1. `CareerHubScreen` agora é `export default memo(CareerHubScreen)`.
+2. As 4 arrow functions inline do renderer `career-hub` em `AppScreens`
+   (`onViewContinental`, `onBack`, `onViewLeague`, `onOpenJobMarket`) foram
+   hoistadas para `useCallback` estáveis no `App` (`goCareerContinental`,
+   `exitCareer`, `goCareerLeague`, `goCareerJobMarket`) e passadas como props.
+
+**Por que agora funciona** (o que faltava na 2ª rodada):
+- Handlers do bundle `career` já são `useCallback` → referências estáveis.
+- `state`/`league` são estáveis por referência (`careerState` só muda quando o
+  estado da carreira muda — aí o re-render é **correto**; `getLeague` retorna do
+  array estático `allLeagues`).
+- `jobOfferCount`/`blockAdvanceReason` são primitivos → comparados por valor.
+- As 4 arrows eram o único ponto instável — agora estáveis.
+
+Com todas as props estáveis, o `memo` deixa a Central **pular re-renders** quando o
+App re-renderiza por motivo alheio (toast de save, conquista, troca de outra parte
+do estado).
+
+**Prova empírica:** um teste temporário espiou `computeStandings` (chamada no
+render da Central). Após o mount, dois re-renders do componente pai com props
+idênticas **não** dispararam novas chamadas — confirmando que o `memo` barrou o
+re-render (sem o `memo`, a contagem subiria). Teste removido após validar.
+
+Também removido o `onViewCup` morto do `CareerHubScreen.test.tsx` (resquício do #5;
+o `tsc -b` não cobre os testes, por isso não tinha acusado).
+
+## Verificação (terceira rodada)
+
+- `tsc`/`oxlint` limpos; **573 testes verdes**; prova de skip de render confirmada;
+  dev server sem erros.

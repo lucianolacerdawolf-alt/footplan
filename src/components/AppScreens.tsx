@@ -125,6 +125,11 @@ export interface AppScreensProps {
   handleCareerFromHome: () => void;
   handleQuickPlay: () => void;
   handleNewCareerFromHub: () => void;
+  // Navegação da carreira com identidade estável (p/ React.memo da CareerHubScreen).
+  exitCareer: () => void;
+  goCareerContinental: () => void;
+  goCareerLeague: () => void;
+  goCareerJobMarket: () => void;
   handleCareerTournamentStart: (userTeam: Team, managerName?: string) => void;
   handleTournamentStart: (userTeam: Team) => void;
 
@@ -489,19 +494,19 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       <CareerHubScreen
         state={p.career.careerState}
         league={getLeague(p.career.careerState.leagueId)!}
-        onViewContinental={() => p.setScreen('career-continental')}
+        onViewContinental={p.goCareerContinental}
         onPlayNext={p.career.handlePlayNextCareerMatch}
         onPlayNextCup={p.career.handlePlayNextCareerCupMatch}
         onPlayNextContinental={p.career.handlePlayNextContinentalMatch}
         onAdvanceSeason={p.career.handleAdvanceSeason}
         onNewCareer={p.handleNewCareerFromHub}
-        onBack={() => { p.setIsCareerMode(false); p.goHome(); }}
+        onBack={p.exitCareer}
         onMarkInboxRead={p.career.handleMarkInboxRead}
         onAcceptTransferOffer={p.career.handleAcceptTransferOffer}
         onRejectTransferOffer={p.career.handleRejectTransferOffer}
         onNextRound={p.career.handleNextCareerLeagueRound}
-        onViewLeague={() => p.setScreen('career-league')}
-        onOpenJobMarket={() => p.setScreen('career-job-market')}
+        onViewLeague={p.goCareerLeague}
+        onOpenJobMarket={p.goCareerJobMarket}
         jobOfferCount={getJobOffers(p.career.careerState).length}
         onRespondConversation={p.career.handleRespondConversation}
         onApplyTraining={p.career.handleApplyTraining}
