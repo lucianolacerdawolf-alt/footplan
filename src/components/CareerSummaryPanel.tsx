@@ -54,7 +54,7 @@ export default function CareerSummaryPanel({ summary, highlights }: Props) {
           {bestFinancialSeason && (
             <div className={styles.highlightRow}>
               <span className={styles.highlightLabel}>💰 Melhor saldo (Temp. {bestFinancialSeason.year})</span>
-              <span className={styles.highlightValue} style={{ color: bestFinancialSeason.budgetDelta >= 0 ? '#22c55e' : '#ef4444' }}>
+              <span className={styles.highlightValue} style={{ color: bestFinancialSeason.budgetDelta >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
                 {bestFinancialSeason.budgetDelta >= 0 ? '+' : ''}{formatMoney(bestFinancialSeason.budgetDelta)}
               </span>
             </div>

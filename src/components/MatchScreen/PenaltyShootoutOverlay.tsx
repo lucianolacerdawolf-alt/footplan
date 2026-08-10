@@ -168,7 +168,7 @@ export default function PenaltyShootoutOverlay({
   return (
     <div className="penalty-overlay">
       {resultFlash && (
-        <div className="penalty-result-flash" style={{ color: resultFlash === 'GOOOL!' ? '#4ade80' : '#f87171' }}>
+        <div className="penalty-result-flash" style={{ color: resultFlash === 'GOOOL!' ? 'var(--win)' : 'var(--loss)' }}>
           {resultFlash}
         </div>
       )}

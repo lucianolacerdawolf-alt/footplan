@@ -231,3 +231,4 @@ export function useCareerManager({
     ...preMatch,
   };
 }
+export type UseCareerManagerReturn = ReturnType<typeof useCareerManager>;

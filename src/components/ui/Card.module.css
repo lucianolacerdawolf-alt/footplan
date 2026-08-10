@@ -1,0 +1,19 @@
+/* Primitivo de cartão/superfície. Consolida o padrão repetido
+ * `background:#111827; border:1px solid #1f2937; border-radius` visto em quase
+ * toda tela. Usa tokens pra manter consistência e permitir temas. */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px;
+}
+
+/* Realce — borda de acento pra cartões de ação (ex: próxima partida). */
+.accent { border-color: var(--accent); background: var(--accent-bg); }
+
+/* Compacto — menos padding pra listas densas. */
+.compact { padding: 10px 12px; }
+
+/* Título de seção padrão dentro de um cartão. */
+.title {
+  font-size: 11px; font-weight: 700; color: var(--text-secondary);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+}

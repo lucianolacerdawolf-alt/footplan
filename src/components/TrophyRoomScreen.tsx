@@ -86,11 +86,11 @@ const TRANSFER_ICON: Record<TransferRecordType, string> = {
  *  TRADE: `amount` é a compensação em dinheiro que o usuário pagou por cima da troca
  *  de jogadores (0 numa troca seca) — só mostra valor se houver compensação. */
 function transferAmountDisplay(record: TransferRecord): { text: string; color?: string } | null {
-  if (record.type === 'SELL') return { text: `+${formatMoney(record.amount)}`, color: '#22c55e' };
+  if (record.type === 'SELL') return { text: `+${formatMoney(record.amount)}`, color: 'var(--positive)' };
   if (record.type === 'TRADE' || record.type === 'SIGN_FREE_AGENT') {
-    return record.amount > 0 ? { text: `-${formatMoney(record.amount)}`, color: '#ef4444' } : null;
+    return record.amount > 0 ? { text: `-${formatMoney(record.amount)}`, color: 'var(--negative)' } : null;
   }
-  return { text: `-${formatMoney(record.amount)}`, color: '#ef4444' };
+  return { text: `-${formatMoney(record.amount)}`, color: 'var(--negative)' };
 }
 
 export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
@@ -355,7 +355,7 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
                       {entry.budgetDelta != null && (
                         <div className={styles.detailRow}>
                           <span className={styles.detailLabel}>Finanças</span>
-                          <span className={styles.detailValue} style={{ color: entry.budgetDelta >= 0 ? '#22c55e' : '#ef4444' }}>
+                          <span className={styles.detailValue} style={{ color: entry.budgetDelta >= 0 ? 'var(--positive)' : 'var(--negative)' }}>
                             {entry.budgetDelta >= 0 ? '+' : ''}{formatMoney(entry.budgetDelta)}
                           </span>
                         </div>
@@ -374,7 +374,7 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
                 <span
                   key={entry.year}
                   className={styles.repChip}
-                  style={{ color: entry.reputationDelta >= 0 ? '#22c55e' : '#ef4444' }}
+                  style={{ color: entry.reputationDelta >= 0 ? 'var(--positive)' : 'var(--negative)' }}
                   title={`Temporada ${entry.year}`}
                 >
                   {entry.reputationDelta >= 0 ? '+' : ''}{entry.reputationDelta}

@@ -43,7 +43,7 @@ export default function SquadSwapPanel({
         const isInjured = injuredIds.includes(p.id);
         const fatigue = fatigueOf(p);
         const effOvr = Math.round(playerOvr(p) * (1 - fatigue / 200));
-        const fatigueColor = fatigue > 70 ? '#ef4444' : fatigue > 45 ? '#f59e0b' : '#22c55e';
+        const fatigueColor = fatigue > 70 ? 'var(--negative)' : fatigue > 45 ? 'var(--warning)' : 'var(--positive)';
         return (
           <div key={p.id}
             className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap && !disabled ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
@@ -100,7 +100,7 @@ export default function SquadSwapPanel({
             <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
             <span className="sq-ovr">
               {playerOvr(p)}
-              {showFatigue && fatigue > 20 && <span style={{ color: '#22c55e', fontSize: 9, marginLeft: 3 }}>▶{effOvr}</span>}
+              {showFatigue && fatigue > 20 && <span style={{ color: 'var(--positive)', fontSize: 9, marginLeft: 3 }}>▶{effOvr}</span>}
             </span>
           </div>
         );

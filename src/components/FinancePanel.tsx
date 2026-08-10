@@ -64,23 +64,23 @@ export default function FinancePanel({
         {estWeeklyTicket > 0 && (
           <div className={styles.row}>
             <span className={styles.rowLabel}>🎟️ Bilheteria (est.)</span>
-            <span className={styles.rowValue} style={{ color: '#22c55e' }}>+{formatMoney(estWeeklyTicket)}</span>
+            <span className={styles.rowValue} style={{ color: 'var(--positive)' }}>+{formatMoney(estWeeklyTicket)}</span>
           </div>
         )}
         {finances.merchRevenue != null && finances.merchRevenue > 0 && (
           <div className={styles.row}>
             <span className={styles.rowLabel}>👕 Merchandising</span>
-            <span className={styles.rowValue} style={{ color: '#22c55e' }}>+{formatMoney(finances.merchRevenue)}</span>
+            <span className={styles.rowValue} style={{ color: 'var(--positive)' }}>+{formatMoney(finances.merchRevenue)}</span>
           </div>
         )}
         <div className={styles.row}>
           <span className={styles.rowLabel}>👔 Salários</span>
-          <span className={styles.rowValue} style={{ color: '#ef4444' }}>-{formatMoney(finances.wageBill)}</span>
+          <span className={styles.rowValue} style={{ color: 'var(--negative)' }}>-{formatMoney(finances.wageBill)}</span>
         </div>
         <div className={styles.divider} />
         <div className={styles.row}>
           <span className={styles.rowLabel}>📈 Saldo Semanal</span>
-          <span className={styles.rowValue} style={{ color: net >= 0 ? '#22c55e' : '#ef4444', fontWeight: 800 }}>
+          <span className={styles.rowValue} style={{ color: net >= 0 ? 'var(--positive)' : 'var(--negative)', fontWeight: 800 }}>
             {net >= 0 ? '+' : ''}{formatMoney(net)}
           </span>
         </div>
@@ -92,7 +92,7 @@ export default function FinancePanel({
           <div className={styles.sectionLabel}>Por jogo em casa</div>
           <div className={styles.row}>
             <span className={styles.rowLabel}>🎟️ Bilheteria</span>
-            <span className={styles.rowValue} style={{ color: '#22c55e' }}>+{formatMoney(ticketRevenue)}</span>
+            <span className={styles.rowValue} style={{ color: 'var(--positive)' }}>+{formatMoney(ticketRevenue)}</span>
           </div>
           <div className={styles.rowSub}>Valor cheio a cada jogo em casa. No saldo semanal entra a estimativa (~metade dos jogos são em casa).</div>
         </div>
@@ -111,7 +111,7 @@ export default function FinancePanel({
           {canPromote ? (
             <div className={styles.row}>
               <span className={styles.rowLabel}>⬆️ Próximo: {nextTierLabel}</span>
-              <span className={styles.rowValue} style={{ color: (currentReputation ?? 0) >= (nextTierReputation ?? 0) ? '#22c55e' : 'var(--text-secondary)' }}>
+              <span className={styles.rowValue} style={{ color: (currentReputation ?? 0) >= (nextTierReputation ?? 0) ? 'var(--positive)' : 'var(--text-secondary)' }}>
                 {currentReputation ?? 0}/{nextTierReputation} rep.
               </span>
             </div>
@@ -147,11 +147,11 @@ export default function FinancePanel({
         <div className={styles.sectionLabel}>Salários (anual)</div>
         <div className={styles.row}>
           <span className={styles.rowLabel}>📅 Folha anual</span>
-          <span className={styles.rowValue} style={{ color: '#ef4444' }}>{formatMoney(annualWage)}</span>
+          <span className={styles.rowValue} style={{ color: 'var(--negative)' }}>{formatMoney(annualWage)}</span>
         </div>
         <div className={styles.row}>
           <span className={styles.rowLabel}>📊 % da renda anual</span>
-          <span className={styles.rowValue} style={{ color: wagePctOfIncome > 100 ? '#f59e0b' : 'var(--text-secondary)' }}>
+          <span className={styles.rowValue} style={{ color: wagePctOfIncome > 100 ? 'var(--warning)' : 'var(--text-secondary)' }}>
             {wagePctOfIncome}%
           </span>
         </div>

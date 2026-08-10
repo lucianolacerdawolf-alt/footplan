@@ -96,65 +96,23 @@ function App() {
     evaluateAchievements, recordH2H, notifySave, setToastMsg,
   });
 
-  const {
-    careerState, setCareerState,
-    handleStartCareer,
-    handleEditCareerLeagueTactics,
-    handlePlayCareerLeagueMatch,
-    handlePlayNextCareerMatch,
-    handlePlayNextCareerCupMatch,
-    handleSimulateUserCareerLeagueMatch,
-    handleSimulateCareerLeagueRound,
-    handleNextCareerLeagueRound,
-    handleCareerLeagueMatchResult,
-    handleEditCareerBracketTactics,
-    handlePlayCareerBracketMatch,
-    handleSimulateOtherCareerBracketMatches,
-    handleSimulateCareerBracketMatch,
-    handleSimulateCareerCupToEnd,
-    handleCareerBracketMatchResult,
-    handlePlayContinentalMatch,
-    handlePlayNextContinentalMatch,
-    handleSimulateOtherContinentalMatches,
-    handleSimulateContinentalMatch,
-    handleSimulateContinentalToEnd,
-    handleEditContinentalTactics,
-    handleProposeTrade,
-    handleBuyPlayer,
-    handleListPlayerForSale,
-    handleUnlistPlayerForSale,
-    handleSignFreeAgent,
-    handleAcceptTransferOffer,
-    handleRejectTransferOffer,
-    handleRenewContract,
-    handleAcceptJobOffer,
-    handleDeclineJobOffer,
-    handleRespondConversation,
-    handleApplyTraining,
-    handleOpenPressConference,
-    handleRespondPressConference,
-    handleClosePressConference,
-    pressQuestion,
-    pressDone,
-    handleAdvanceSeason,
-    handleMarkInboxRead,
-    handleMarkAllInboxRead,
-    handleMarketRosterSynced,
-    handleRestorePendingCareerLeagueFixture,
-    handleRestorePendingCareerBracketMatch,
-    handleRenegotiateSponsor,
-    handleSyncRosters,
-    rosterSyncing,
-    rosterLastUpdatedAt,
-    cloudStatus,
-    retryCloudSave,
-  } = useCareerManager({
+  // Bundle inteiro do gerenciador de carreira. Antes eram ~50 campos
+  // desestruturados e re-listados manualmente em screenProps (o pior ponto de
+  // prop drilling do App). Agora vai como um único objeto `career` — telas de
+  // carreira leem p.career.<campo>. Novo handler = mexer só no hook + interface,
+  // não mais em três lugares.
+  const career = useCareerManager({
     setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setIsCareerMode,
     recordH2H, notifySave, setToastMsg, evaluateAchievements, unlockAchievement,
   });
+  // `career` é um objeto novo a cada render; para os callbacks memoizados que
+  // alimentam o useGameFlow, dependemos do setter do useState (identidade estável)
+  // em vez do bundle inteiro — senão careerLeagueSetter/careerBracketSetter
+  // recriariam a cada render e furariam a memoização.
+  const { setCareerState } = career;
 
   // Pattern 2 (RESEARCH.md/PATTERNS.md): deixa useGameFlow's handleStartMatch operar
-  // sobre careerState.season.league/cup através dos MESMOS setLeagueState/setBracketState
+  // sobre career.careerState.season.league/cup através dos MESMOS setLeagueState/setBracketState
   // Dispatch<SetStateAction<...>> shapes que já usa pra Campeonatos — sem isso, teríamos
   // que duplicar handleStartMatch inteiro só pra trocar onde o resultado é gravado.
   const careerLeagueSetter: React.Dispatch<React.SetStateAction<LeagueState | null>> = useCallback(updater => setCareerState(prev => {
@@ -179,8 +137,8 @@ function App() {
     setLeagueState: isCareerMode ? careerLeagueSetter : setLeagueState,
     setBracketState: isCareerMode ? careerBracketSetter : setBracketState,
     setLastResult, matchContext, isTournamentEntry, isCareerMode,
-    leagueState: isCareerMode ? (careerState?.season.league ?? null) : leagueState,
-    bracketState: isCareerMode ? (careerState?.season.cup ?? null) : bracketState,
+    leagueState: isCareerMode ? (career.careerState?.season.league ?? null) : leagueState,
+    bracketState: isCareerMode ? (career.careerState?.season.cup ?? null) : bracketState,
     homeTeam, recordH2H, evaluateAchievements, difficulty,
   });
 
@@ -207,9 +165,9 @@ function App() {
     // Restaura o estado pendente (fixture/bracket) pra que o resultado da partida
     // seja gravado corretamente no estado da liga/copa/carreira ao final do jogo.
     if (snap.matchContext === 'league' && isCareerSnap && snap.matchRoundIdx != null && snap.matchFixtureIdx != null) {
-      handleRestorePendingCareerLeagueFixture(snap.matchRoundIdx, snap.matchFixtureIdx);
+      career.handleRestorePendingCareerLeagueFixture(snap.matchRoundIdx, snap.matchFixtureIdx);
     } else if (snap.matchContext === 'bracket' && isCareerSnap && snap.matchBracketStage != null && snap.matchBracketIdx != null) {
-      handleRestorePendingCareerBracketMatch(snap.matchBracketStage as PlayableStage, snap.matchBracketIdx, snap.matchBracketKind ?? 'cup');
+      career.handleRestorePendingCareerBracketMatch(snap.matchBracketStage as PlayableStage, snap.matchBracketIdx, snap.matchBracketKind ?? 'cup');
     } else if (snap.matchContext === 'league' && snap.matchRoundIdx != null && snap.matchFixtureIdx != null) {
       handleRestorePendingLeagueFixture(snap.matchRoundIdx, snap.matchFixtureIdx);
     } else if (snap.matchContext === 'bracket' && snap.matchBracketStage != null && snap.matchBracketIdx != null) {
@@ -229,7 +187,7 @@ function App() {
   useEffect(() => {
     const snap = loadLiveMatch();
     if (snap) return; // partida ao vivo tem prioridade
-    if (!careerState) return;
+    if (!career.careerState) return;
     if (localStorage.getItem('fp:isCareerMode') !== '1') return;
     setIsCareerMode(true);
     setScreen('career-hub');
@@ -247,14 +205,14 @@ function App() {
   // do RESEARCH.md) — isCareerMode resolve a ambiguidade, checado ANTES dos branches
   // regulares de liga/copa.
   const handleViewStatsFromMatch = useCallback((result: MatchResult) => {
-    if (isCareerMode && matchContext === 'league') { handleCareerLeagueMatchResult(result); }
-    else if (isCareerMode && matchContext === 'bracket') { handleCareerBracketMatchResult(result); }
+    if (isCareerMode && matchContext === 'league') { career.handleCareerLeagueMatchResult(result); }
+    else if (isCareerMode && matchContext === 'bracket') { career.handleCareerBracketMatchResult(result); }
     else if (matchContext === 'league') { handleLeagueMatchResult(result); }
     else if (matchContext === 'bracket') { handleBracketMatchResult(result); }
     else { handleViewStats(result); return; }
     setLastResult(result);
     setScreen('stats');
-  }, [matchContext, isCareerMode, handleCareerLeagueMatchResult, handleCareerBracketMatchResult, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats, setLastResult, setScreen]);
+  }, [matchContext, isCareerMode, career, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats, setLastResult, setScreen]);
 
   // ── Resume prompt ─────────────────────────────────────────────────────────
   const { resumePrompt, setResumePrompt, handleResumeContinue, handleResumeNew } = useResumePrompt({
@@ -293,15 +251,15 @@ function App() {
 
   // ── Modo Carreira: entrada ────────────────────────────────────────────────
   const handleCareerFromHome = useCallback(() => {
-    if (careerState) { setIsCareerMode(true); setScreen('career-hub'); return; }
+    if (career.careerState) { setIsCareerMode(true); setScreen('career-hub'); return; }
     setIsCareerMode(true);
     setTournamentMode('league');
     setReturnScreen('tournament-setup');
     setScreen('league-select');
-  }, [careerState, setIsCareerMode, setTournamentMode, setReturnScreen, setScreen]);
+  }, [career.careerState, setIsCareerMode, setTournamentMode, setReturnScreen, setScreen]);
 
   // D-14: entry point CareerHubScreen uses to start a career in a different league —
-  // does NOT clear careerState here; handleCareerTournamentStart's existing
+  // does NOT clear career.careerState here; handleCareerTournamentStart's existing
   // pendingCareerStart overwrite-confirmation gate (already built, was previously
   // unreachable) fires when the user picks a team on the screen this routes to.
   const handleNewCareerFromHub = useCallback(() => {
@@ -312,9 +270,9 @@ function App() {
 
   const handleCareerTournamentStart = useCallback((userTeam: Team, managerName?: string) => {
     const name = managerName ?? '';
-    if (careerState) { setPendingCareerStart({ userTeam, managerName: name }); return; }
-    handleStartCareer(userTeam, selectedLeague!, name);
-  }, [careerState, selectedLeague, handleStartCareer]);
+    if (career.careerState) { setPendingCareerStart({ userTeam, managerName: name }); return; }
+    career.handleStartCareer(userTeam, selectedLeague!, name);
+  }, [career, selectedLeague]);
 
   // ── Render ────────────────────────────────────────────────────────────────
   const screenProps: AppScreensProps = {
@@ -332,7 +290,7 @@ function App() {
     returnScreen,
     leagueState,
     bracketState,
-    careerState,
+    career,
     history,
     achievements,
     peer,
@@ -368,53 +326,6 @@ function App() {
     handleSimulateOtherBracketMatches,
     handleSimulateBracketMatch,
     handleEditBracketTactics,
-    handleEditCareerLeagueTactics,
-    handlePlayCareerLeagueMatch,
-    handlePlayNextCareerMatch,
-    handlePlayNextCareerCupMatch,
-    handleSimulateUserCareerLeagueMatch,
-    handleSimulateCareerLeagueRound,
-    handleNextCareerLeagueRound,
-    handleCareerLeagueMatchResult,
-    handleEditCareerBracketTactics,
-    handlePlayCareerBracketMatch,
-    handleSimulateOtherCareerBracketMatches,
-    handleSimulateCareerBracketMatch,
-    handleSimulateCareerCupToEnd,
-    handleCareerBracketMatchResult,
-    handlePlayContinentalMatch,
-    handlePlayNextContinentalMatch,
-    handleSimulateOtherContinentalMatches,
-    handleSimulateContinentalMatch,
-    handleSimulateContinentalToEnd,
-    handleEditContinentalTactics,
-    handleProposeTrade,
-    handleBuyPlayer,
-    handleListPlayerForSale,
-    handleUnlistPlayerForSale,
-    handleSignFreeAgent,
-    handleAcceptTransferOffer,
-    handleRejectTransferOffer,
-    handleRenewContract,
-    handleAcceptJobOffer,
-    handleDeclineJobOffer,
-    handleRespondConversation,
-    handleApplyTraining,
-    handleOpenPressConference,
-    handleRespondPressConference,
-    handleClosePressConference,
-    pressQuestion,
-    pressDone,
-    handleAdvanceSeason,
-    handleMarkInboxRead,
-    handleMarkAllInboxRead,
-    handleMarketRosterSynced,
-    handleRenegotiateSponsor,
-    handleSyncRosters,
-    rosterSyncing,
-    rosterLastUpdatedAt,
-    cloudStatus,
-    retryCloudSave,
     clearHistory,
     setIsTournamentEntry,
     difficulty,
@@ -425,18 +336,18 @@ function App() {
 
   // "Elenco" não tem tela de repouso própria — é um atalho direto pro editor de
   // táticas/escalação (mesma tela 'setup' usada pra iniciar uma partida de verdade).
-  // isTournamentEntry (true só quando entrou via handleEditCareerLeagueTactics/
+  // isTournamentEntry (true só quando entrou via career.handleEditCareerLeagueTactics/
   // handleEditCareerBracketTactics, nunca quando vai realmente jogar) distingue os
   // dois casos — assim a barra fica visível editando escalação, mas some de novo
   // assim que uma partida real começa (setup pra jogar, match, stats).
   const onElencoScreen = screen === 'setup' && isTournamentEntry;
-  const showCareerTabs = isCareerMode && !!careerState && (CAREER_TAB_SCREENS.has(screen) || onElencoScreen);
+  const showCareerTabs = isCareerMode && !!career.careerState && (CAREER_TAB_SCREENS.has(screen) || onElencoScreen);
   const activeCareerTab = onElencoScreen ? 'elenco' : getCareerTabForScreen(screen);
 
   // Botão físico de voltar do Android. No navegador o hook não registra nada.
   useAndroidBackButton({
     screen, setScreen, goHome,
-    isCareerMode, hasCareerState: !!careerState,
+    isCareerMode, hasCareerState: !!career.careerState,
     tournamentMode, matchContext, isTournamentEntry, returnScreen,
     overlayOpen: !!resumePrompt,
     onCloseOverlay: closeResumePrompt,
@@ -465,7 +376,7 @@ function App() {
         <CareerTabBar
           active={activeCareerTab}
           onCentral={() => setScreen('career-hub')}
-          onElenco={() => { setReturnScreen(screen); handleEditCareerLeagueTactics(); }}
+          onElenco={() => { setReturnScreen(screen); career.handleEditCareerLeagueTactics(); }}
           onTransferencias={() => setScreen('transfer-market')}
           onMeuClube={() => setScreen('career-trophy-room')}
           onEscritorio={() => setScreen('career-league')}
@@ -508,12 +419,12 @@ function App() {
               Carreira em andamento
             </div>
             <div className="resume-body">
-              {`Você já tem uma carreira como ${careerState?.manager.name} (Temporada ${careerState?.currentSeasonYear}). Iniciar uma nova carreira vai substituir esse save.`}
+              {`Você já tem uma carreira como ${career.careerState?.manager.name} (Temporada ${career.careerState?.currentSeasonYear}). Iniciar uma nova carreira vai substituir esse save.`}
             </div>
             <div className="resume-actions">
               <button
                 className="resume-btn-primary"
-                onClick={() => { handleStartCareer(pendingCareerStart!.userTeam, selectedLeague!, pendingCareerStart!.managerName); setPendingCareerStart(null); }}
+                onClick={() => { career.handleStartCareer(pendingCareerStart!.userTeam, selectedLeague!, pendingCareerStart!.managerName); setPendingCareerStart(null); }}
               >
                 Sim, substituir
               </button>
