@@ -9,6 +9,8 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   /** Ocupa 100% da largura do container. */
   block?: boolean;
+  /** CTA "hero" com brilho e micro-escala (substitui o antigo `.start-btn`). */
+  glow?: boolean;
 }
 
 /**
@@ -18,13 +20,14 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
  * aria-*, title…).
  */
 export default function Button({
-  variant = 'primary', size = 'md', block = false, className = '', type = 'button', children, ...rest
+  variant = 'primary', size = 'md', block = false, glow = false, className = '', type = 'button', children, ...rest
 }: Props) {
   const cls = [
     styles.btn,
     styles[variant],
     size !== 'md' ? styles[size] : '',
     block ? styles.block : '',
+    glow ? styles.glow : '',
     className,
   ].filter(Boolean).join(' ');
   return <button type={type} className={cls} {...rest}>{children}</button>;

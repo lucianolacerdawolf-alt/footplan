@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Team } from '../engine/types';
 import type { BracketState, BracketMatch, PlayableStage } from '../engine/tournament';
 import styles from './BracketScreen.module.css';
+import { Button } from './ui';
 import { crestSrc } from '../utils/crest';
 
 interface Props {
@@ -119,7 +120,7 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
             </div>
           )}
         </div>
-        <button className="start-btn" onClick={onBack}>{hideTopNav ? '← Voltar à Central' : 'Jogar Novamente'}</button>
+        <Button glow onClick={onBack}>{hideTopNav ? '← Voltar à Central' : 'Jogar Novamente'}</Button>
       </div>
     );
   }

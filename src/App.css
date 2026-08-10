@@ -155,14 +155,9 @@
 .p-ovr { font-size: 11px; font-weight: 700; color: var(--accent); }
 
 .setup-action { text-align: center; padding: 6px 16px 14px; }
-.start-btn {
-  padding: 13px 44px; font-size: 16px; font-weight: 700; font-family: var(--sans); border: none;
-  border-radius: 10px; cursor: pointer;
-  background: var(--accent); color: #04222a;
-  letter-spacing: 0.3px; box-shadow: 0 3px 16px rgba(6,182,212,0.35); transition: all 0.2s;
-}
-.start-btn:hover { opacity: 0.9; transform: scale(1.03); box-shadow: 0 5px 22px rgba(6,182,212,0.5); }
-.start-btn:active { transform: scale(0.97); }
+/* `.start-btn` foi consolidado no primitivo <Button glow> (ver
+ * components/ui/Button). Mantido só o override mobile do setup-topbar,
+ * reapontado para `.setup-confirm-btn`. */
 
 .back-btn-secondary {
   padding: 10px 24px; font-size: 14px; font-weight: 600; font-family: var(--sans);
@@ -875,7 +870,7 @@
 /* ── Mobile tweaks (Fase 5.4) ─────────────────────────────────────── */
 @media (max-width: 640px) {
   .setup-topbar { flex-wrap: wrap; gap: 8px; }
-  .setup-topbar .start-btn,
+  .setup-topbar .setup-confirm-btn,
   .setup-topbar .back-btn-secondary { font-size: 13px; padding: 8px 14px; }
   .setup-controls { gap: 4px; }
   .setup-select select { font-size: 13px; padding: 6px 8px; }

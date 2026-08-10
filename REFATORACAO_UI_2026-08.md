@@ -278,3 +278,60 @@ como fase própria.
 - `npx oxlint` → sem warnings/erros.
 - `npx vitest run` → **573 passed**.
 - Dev server (`vite`) sem erros de runtime/HMR após as mudanças.
+
+---
+
+# Segunda rodada (adoção de primitivos + investigação de memoização)
+
+Branch: `refactor/primitivos-e-memo`.
+
+## #1b — Consolidação do CTA "hero" no `Button`
+
+**O quê:** adicionada a opção `glow` ao primitivo `Button` (brilho + micro-escala
+no hover), replicando **exatamente** a classe global `.start-btn`. Os 8 usos de
+`.start-btn` foram migrados para `<Button glow>`:
+
+`SeasonEndScreen`, `MatchStatsScreen` (×2), `BracketScreen`, `LeagueScreen` (×2),
+`SetupScreen`, `MatchScreen`.
+
+A classe global `.start-btn` (base/hover/active) foi **removida** do `App.css`. O
+único override que restava — o encolhimento mobile dentro de `.setup-topbar` — foi
+reapontado para uma classe alvo `.setup-confirm-btn` passada via `className` no
+`Button` do SetupScreen, preservando o comportamento em telas estreitas.
+
+**Risco visual:** nulo — o CSS do `glow` é byte-a-byte igual ao antigo `.start-btn`.
+Verificável no diff.
+
+**Por quê:** `.start-btn` era o CTA mais reusado do app (8 telas) e vivia como
+classe global solta. Agora é uma opção do primitivo.
+
+## #2 — Memoização do bundle `career`: investigada e **não aplicada** (com razão)
+
+A ideia original ("memoizar o retorno do `useCareerManager` para o `career` ser
+estável") **não reduz re-renders** neste app, e seria trabalho sem efeito. Motivo,
+confirmado lendo o código:
+
+1. As telas são renderizadas por `renderScreen(screen, props)` →
+   `screenMap[screen](props)`, chamado **incondicionalmente a cada render do App**.
+   Isso cria elementos novos toda vez — as telas re-renderizam independentemente da
+   estabilidade de `career`.
+2. Os renderers em `screenMap` passam **arrow functions inline** como props
+   (`onBack={() => …}`, `onViewLeague={() => …}` etc.), que mudam de identidade a
+   cada render. Ou seja, mesmo aplicando `React.memo` nas telas, elas **não**
+   conseguiriam pular o render.
+
+**Conclusão:** o ganho real de performance exige a mudança arquitetural mais
+profunda — estabilizar as props do `screenMap` (hoistar as arrows para
+`useCallback`) **e** aplicar `React.memo` nas telas pesadas. É o mesmo território do
+"#1 profundo" (Context) já adiado. Memoizar só o bundle seria uma micro-otimização
+de efeito nulo hoje, então **não foi feita** — registrado aqui em vez de shipar
+código inócuo.
+
+**Recomendação (follow-up medido):** se/quando houver evidência de jank, atacar
+apenas a `CareerHubScreen` (a mais pesada): hoistar suas ~4 props de callback
+inline para `useCallback` no `App`, garantir `career` estável e envolvê-la em
+`React.memo`. Só então a memoização paga.
+
+## Verificação (segunda rodada)
+
+- `tsc` e `oxlint` limpos; **573 testes verdes**; dev server sem erros.
