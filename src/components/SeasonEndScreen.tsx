@@ -1,5 +1,6 @@
 import type { CareerSeasonHistoryEntry } from '../engine/career';
 import type { LeagueDefinition } from '../data/leagues/types';
+import { memo } from 'react';
 import styles from './SeasonEndScreen.module.css';
 import { crestSrc } from '../utils/crest';
 import { Button } from './ui';
@@ -20,7 +21,7 @@ const CUP_RESULT_LABELS: Record<CareerSeasonHistoryEntry['cupResult'], string> =
   'not-played': 'Não disputada',
 };
 
-export default function SeasonEndScreen({ entry, league, newReputation, onContinue }: Props) {
+function SeasonEndScreen({ entry, league, newReputation, onContinue }: Props) {
   const champion = league.teams.find(t => t.id === entry.leagueChampionId) ?? null;
   const reputationSign = entry.reputationDelta >= 0 ? '+' : '';
 
@@ -64,3 +65,5 @@ export default function SeasonEndScreen({ entry, league, newReputation, onContin
     </div>
   );
 }
+
+export default memo(SeasonEndScreen);

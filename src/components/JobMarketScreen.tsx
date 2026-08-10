@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { JobOffer } from '../engine/career';
 import type { Team } from '../engine/types';
 import { getLeague } from '../data/leagues';
@@ -15,7 +15,7 @@ interface Props {
   onBack: () => void;
 }
 
-export default function JobMarketScreen({ offers, reputation, currentClubName, rosters, onAccept, onDecline, onBack }: Props) {
+function JobMarketScreen({ offers, reputation, currentClubName, rosters, onAccept, onDecline, onBack }: Props) {
   const [pendingOffer, setPendingOffer] = useState<JobOffer | null>(null);
 
   return (
@@ -94,3 +94,5 @@ export default function JobMarketScreen({ offers, reputation, currentClubName, r
     </div>
   );
 }
+
+export default memo(JobMarketScreen);

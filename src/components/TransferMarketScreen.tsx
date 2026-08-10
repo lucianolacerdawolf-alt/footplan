@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import type { Team, Player, Position } from '../engine/types';
 import { allLeagues } from '../data/leagues';
 import { getAvgOvr } from '../utils/teamUtils';
@@ -71,7 +71,7 @@ function sortPlayers<T extends Player>(players: T[], sortBy: SortKey): T[] {
   });
 }
 
-export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
+function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
@@ -491,3 +491,5 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
     </div>
   );
 }
+
+export default memo(TransferMarketScreen);

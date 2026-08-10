@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { memo, useMemo } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, Standing, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -105,7 +105,7 @@ interface Props {
   hideTopNav?: boolean;
 }
 
-export default function LeagueTableScreen({ state, league, onBack, hideTopNav }: Props) {
+function LeagueTableScreen({ state, league, onBack, hideTopNav }: Props) {
   const { teams, userTeamId, fixtures } = state;
   const standings: Standing[] = computeStandings(teams, fixtures);
 
@@ -153,3 +153,5 @@ export default function LeagueTableScreen({ state, league, onBack, hideTopNav }:
     </div>
   );
 }
+
+export default memo(LeagueTableScreen);

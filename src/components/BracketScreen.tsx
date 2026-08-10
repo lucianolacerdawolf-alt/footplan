@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { Team } from '../engine/types';
 import type { BracketState, BracketMatch, PlayableStage } from '../engine/tournament';
 import styles from './BracketScreen.module.css';
 import { Button } from './ui';
 import { crestSrc } from '../utils/crest';
+import { getStageMatches } from '../engine/bracketHelpers';
 
 interface Props {
   state: BracketState;
-  onPlayMatch: (match: BracketMatch, homeTeam: Team, awayTeam: Team) => void;
+  /** O índice da partida no estágio atual é computado internamente (a tela já tem
+   *  o `state`), permitindo que o pai passe o handler estável direto — essencial
+   *  pro React.memo da tela. */
+  onPlayMatch: (match: BracketMatch, homeTeam: Team, awayTeam: Team, stage: PlayableStage, matchIndex: number) => void;
   onSimulateMatch: (stage: PlayableStage, matchIndex: number) => void;
   onSimulateOthers: () => void;
   onSimulateToEnd?: () => void;
@@ -89,7 +93,7 @@ function MatchCard({
   );
 }
 
-export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onSimulateToEnd, eliminated, onEditTactics, onBack, hideTopNav, cupColor }: Props) {
+function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onSimulateToEnd, eliminated, onEditTactics, onBack, hideTopNav, cupColor }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
   const [simulating, setSimulating] = useState(false);
   const runSimOthers = () => {
@@ -158,7 +162,8 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
             onPlay={() => {
               const home = teamById(teams, m.homeTeamId)!;
               const away = teamById(teams, m.awayTeamId)!;
-              onPlayMatch(m, home, away);
+              const matchIdx = getStageMatches(state).findIndex(x => x.id === m.id);
+              onPlayMatch(m, home, away, state.stage as PlayableStage, matchIdx);
             }}
             onSimulate={isActive ? () => onSimulateMatch(state.stage as PlayableStage, idx) : undefined}
           />
@@ -196,3 +201,5 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
     </div>
   );
 }
+
+export default memo(BracketScreen);
