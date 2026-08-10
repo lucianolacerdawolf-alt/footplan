@@ -580,7 +580,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         capacity={userTeam?.capacity}
         morale={userTeam?.morale}
         onRenegotiateSponsor={p.career.handleRenegotiateSponsor}
-        onRenewContract={(playerId, options) => p.career.handleRenewContract(playerId, options)}
+        onRenewContract={p.career.handleRenewContract}
       />
     );
   },
@@ -669,7 +669,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     return (
       <TradeProposalScreen
         userTeam={userTeam}
-        opponentTeams={cs.rosters[cs.leagueId].filter(t => t.id !== cs.season.league.userTeamId)}
+        leagueRoster={cs.rosters[cs.leagueId]}
         budget={getFinances(cs).budget}
         onBack={p.nav.toTransferMarket}
         onPropose={p.career.handleProposeTrade}

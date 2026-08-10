@@ -413,17 +413,12 @@ Isso também **removeu** o helper `stageMatchIndex` duplicado da 1ª rodada — 
 código e o memo passa a valer nas 3 telas de chave (copa, continental, mata-mata
 avulso).
 
-## Telas deixadas SEM memo (com razão)
+## Telas com props computadas inline — fechadas na 5ª rodada
 
-- **TrophyRoomScreen** — recebe um objeto `currentSeason` montado inline a cada
-  render (novo por referência). Memoizar exigiria mover essa construção pra dentro
-  do componente (refactor da API de ~20 props) para benefício pequeno (tela de
-  gestão, pouco toast). Deixada como follow-up.
-- **TradeProposalScreen** — recebe `opponentTeams` de um `.filter(...)` inline
-  (novo array). Tela curta (propor troca), baixo valor de memo. Follow-up.
-
-Shipar memo nelas sem estabilizar essas props seria **oco** (nunca pularia) — não
-foi feito.
+Ver a seção seguinte. `TrophyRoomScreen` e `TradeProposalScreen` recebiam,
+respectivamente, um objeto `currentSeason` e um array `opponentTeams` montados
+inline no screenMap (novos por referência a cada render). Ambas foram memoizadas
+depois de estabilizar essas props.
 
 ## Prova empírica
 
@@ -436,3 +431,42 @@ após validar.
 
 - `tsc`/`oxlint` limpos; **573 testes verdes** (incl. 8 do BracketScreen, que
   cobrem o refactor do `onPlayMatch`); dev server sem erros.
+
+---
+
+# Quinta rodada — fecha TrophyRoom e TradeProposal
+
+As duas telas de carreira que faltavam, cujas props eram computadas inline.
+
+## TradeProposalScreen
+Antes recebia `opponentTeams={cs.rosters[...].filter(...)}` — novo array a cada
+render. Agora recebe `leagueRoster` (o elenco inteiro da liga, **fatia estável**
+do estado) e deriva os adversários internamente com `useMemo`. Envolvida em
+`memo(...)`. Restante das props já era estável (`userTeam` por referência, budget
+primitivo, handlers). Sem teste próprio afetado.
+
+## TrophyRoomScreen
+O prop `currentSeason` é um objeto pequeno remontado inline a cada render — e é o
+**único** prop instável por referência (os demais são fatias do estado, handlers
+`useCallback` e primitivos/strings). Em vez de refatorar a API de ~22 props (o
+teste passa `currentSeason` como objeto direto), usei
+`memo(TrophyRoomScreen, arePropsEqual)` com um **comparador custom**: shallow-equal
+em todos os props, com `currentSeason` comparado campo a campo por valor. Também
+troquei o `onRenewContract` inline do screenMap pelo handler estável direto.
+
+**Prova empírica:** com `history` estável e um `currentSeason` novo-porém-igual a
+cada render do pai, `computeCareerSummary` (chamada no render) **não** foi
+re-executada — o comparador barrou. E, com `history` mudando de referência, a tela
+re-renderiza corretamente (o shallow-equal detecta). TradeProposal idem (spy em
+`getAvgOvr`). Testes removidos após validar.
+
+## Estado final da memoização
+
+Todas as telas de carreira memoizadas: CareerHub, TransferMarket, JobMarket,
+SeasonEnd, LeagueTable, LeagueScreen, BracketScreen, TradeProposal, TrophyRoom.
+Nenhuma tela de carreira fica de fora.
+
+## Verificação (quinta rodada)
+
+- `tsc`/`oxlint` limpos; **573 testes verdes** (incl. 24 do TrophyRoom); skips
+  confirmados empiricamente; dev server sem erros.
