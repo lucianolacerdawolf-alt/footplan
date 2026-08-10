@@ -6,6 +6,7 @@ import { computeStandings } from '../engine/tournament';
 import { FORMATION_COUNTS } from '../engine/constants';
 import { StandingsTable } from './LeagueTableScreen';
 import styles from './LeagueScreen.module.css';
+import { Button } from './ui';
 import { crestSrc } from '../utils/crest';
 
 function squadHealth(team: Team) {
@@ -104,7 +105,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
           Você terminou em <strong>{userPos}º lugar</strong> com {userStanding.points} pontos
         </div>
         <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
-        <button className="start-btn" onClick={onBack}>{hideTopNav ? '← Voltar à Central' : 'Nova Partida'}</button>
+        <Button glow onClick={onBack}>{hideTopNav ? '← Voltar à Central' : 'Nova Partida'}</Button>
       </div>
     );
   }
@@ -230,14 +231,14 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
 
         {roundComplete && (
           <>
-            <button
-              className="start-btn"
+            <Button
+              glow
               onClick={onNextRound}
               disabled={!!blockAdvanceReason}
               title={blockAdvanceReason}
             >
               {currentRound + 1 < fixtures.length ? `Rodada ${currentRound + 2} →` : 'Ver Classificação Final →'}
-            </button>
+            </Button>
             {blockAdvanceReason && <div className={styles.blockNotice}>🔔 {blockAdvanceReason}</div>}
           </>
         )}

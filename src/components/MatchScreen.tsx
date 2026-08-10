@@ -4,6 +4,7 @@ import type { GameMode } from './TeamSelectionScreen';
 import { cloneTeam } from '../utils/teamUtils';
 import { getStarterCount } from '../engine/squadUtils';
 import TacticPresets from './shared/TacticPresets';
+import { Button } from './ui';
 import TacticEditor from './shared/TacticEditor';
 import type { SubWindow, LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchState, loadLiveMatchMeta, clearLiveMatchMeta } from '../utils/liveMatchPersistence';
@@ -837,9 +838,9 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 24 }}>
               A partida ainda não havia começado
             </div>
-            <button className="start-btn" onClick={handleBack}>
+            <Button glow onClick={handleBack}>
               Voltar ao Lobby
-            </button>
+            </Button>
           </div>
         </div>
       )}

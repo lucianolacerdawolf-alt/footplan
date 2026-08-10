@@ -35,5 +35,14 @@
 .sm { min-height: 34px; padding: 6px 14px; font-size: 12px; }
 .lg { padding: 14px 32px; font-size: 16px; }
 
+/* Glow — CTA "hero". Replica o antigo `.start-btn` global (accent + brilho +
+ * micro-escala no hover). Combina com .primary (mesma cor/fundo). */
+.glow {
+  padding: 13px 44px; font-size: 16px;
+  box-shadow: 0 3px 16px rgba(6, 182, 212, 0.35);
+}
+.glow:not(:disabled):hover { transform: scale(1.03); box-shadow: 0 5px 22px rgba(6, 182, 212, 0.5); }
+.glow:not(:disabled):active { transform: scale(0.97); }
+
 /* Ocupa a largura do container. */
 .block { width: 100%; }

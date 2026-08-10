@@ -2,6 +2,7 @@ import type { CareerSeasonHistoryEntry } from '../engine/career';
 import type { LeagueDefinition } from '../data/leagues/types';
 import styles from './SeasonEndScreen.module.css';
 import { crestSrc } from '../utils/crest';
+import { Button } from './ui';
 
 interface Props {
   entry: CareerSeasonHistoryEntry;
@@ -58,7 +59,7 @@ export default function SeasonEndScreen({ entry, league, newReputation, onContin
       </div>
 
       <div className={styles.action}>
-        <button className="start-btn" onClick={onContinue}>Começar Temporada {entry.year + 1} →</button>
+        <Button glow onClick={onContinue}>Começar Temporada {entry.year + 1} →</Button>
       </div>
     </div>
   );

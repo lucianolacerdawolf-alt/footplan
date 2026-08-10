@@ -4,6 +4,7 @@ import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS
 import { cloneTeam } from '../utils/teamUtils';
 import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 import { isPlayerUnavailable, rebalanceForFormation, getStarterCount } from '../engine/squadUtils';
+import { Button } from './ui';
 import { FORMATION_BONUS, getTacticalHardCounter } from '../engine/matchConfig';
 import TacticLabel from './TacticLabel';
 import TacticPresets from './shared/TacticPresets';
@@ -379,9 +380,9 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
             {mode === 'league' ? 'Campeonato' : mode === 'cup' ? 'Mata-mata' : mode === 'career' ? 'Modo Carreira' : mode === 'online' ? 'Online' : 'Configuração Tática'}
           </p>
         </header>
-        <button className="start-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
+        <Button glow className="setup-confirm-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
           {isTacticsOnly ? 'Confirmar Táticas ✓' : goesToPreview ? 'Confirmar e Continuar →' : 'Iniciar Partida →'}
-        </button>
+        </Button>
       </div>
 
       {(() => {

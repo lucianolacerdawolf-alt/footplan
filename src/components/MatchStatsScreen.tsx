@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import styles from './MatchStatsScreen.module.css';
+import { Button } from './ui';
 import type { MatchResult, Strategy } from '../engine/types';
 import type { MatchRecord } from '../hooks/useMatchHistory';
 import { calculateRatings, manOfTheMatch, goalScorers, cardEvents } from '../engine/playerRating';
@@ -290,8 +291,8 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
       {/* Actions */}
       <div className={styles.actions}>
         {onContinue
-          ? <button className="start-btn" onClick={onContinue}>{continueLabel ?? 'Continuar'}</button>
-          : <button className="start-btn" onClick={onMenu}>Escolher Times</button>
+          ? <Button glow onClick={onContinue}>{continueLabel ?? 'Continuar'}</Button>
+          : <Button glow onClick={onMenu}>Escolher Times</Button>
         }
       </div>
 
