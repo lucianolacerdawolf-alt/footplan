@@ -125,19 +125,19 @@ export default function OpponentAnalysisModal({ opponent, userTeam, h2h, onClose
                   <div className={styles.statCard}>
                     <div className={styles.statLabel}>Ataque</div>
                     <div className={styles.statBar}>
-                      <div className={styles.statFill} style={{ width: `${Math.round(formationBonus.atk * 100)}%`, background: formationBonus.atk >= 1.05 ? '#22c55e' : formationBonus.atk >= 0.95 ? '#eab308' : '#ef4444' }} />
+                      <div className={styles.statFill} style={{ width: `${Math.round(formationBonus.atk * 100)}%`, background: formationBonus.atk >= 1.05 ? 'var(--positive)' : formationBonus.atk >= 0.95 ? '#eab308' : 'var(--negative)' }} />
                     </div>
                   </div>
                   <div className={styles.statCard}>
                     <div className={styles.statLabel}>Defesa</div>
                     <div className={styles.statBar}>
-                      <div className={styles.statFill} style={{ width: `${Math.round(formationBonus.def * 100)}%`, background: formationBonus.def >= 1.05 ? '#22c55e' : formationBonus.def >= 0.95 ? '#eab308' : '#ef4444' }} />
+                      <div className={styles.statFill} style={{ width: `${Math.round(formationBonus.def * 100)}%`, background: formationBonus.def >= 1.05 ? 'var(--positive)' : formationBonus.def >= 0.95 ? '#eab308' : 'var(--negative)' }} />
                     </div>
                   </div>
                   <div className={styles.statCard}>
                     <div className={styles.statLabel}>Posse</div>
                     <div className={styles.statBar}>
-                      <div className={styles.statFill} style={{ width: `${Math.round(formationBonus.possession * 100)}%`, background: formationBonus.possession >= 1.05 ? '#22c55e' : formationBonus.possession >= 0.95 ? '#eab308' : '#ef4444' }} />
+                      <div className={styles.statFill} style={{ width: `${Math.round(formationBonus.possession * 100)}%`, background: formationBonus.possession >= 1.05 ? 'var(--positive)' : formationBonus.possession >= 0.95 ? '#eab308' : 'var(--negative)' }} />
                     </div>
                   </div>
                 </div>
@@ -195,9 +195,9 @@ export default function OpponentAnalysisModal({ opponent, userTeam, h2h, onClose
                 <div className={styles.section}>
                   <div className={styles.sectionTitle}>Histórico de Confrontos</div>
                   <div className={styles.h2hGrid}>
-                    <div className={styles.h2hCard}><span className={styles.h2hNum} style={{ color: '#22c55e' }}>{h2h.wins}</span><span className={styles.h2hLabel}>Vitórias</span></div>
+                    <div className={styles.h2hCard}><span className={styles.h2hNum} style={{ color: 'var(--positive)' }}>{h2h.wins}</span><span className={styles.h2hLabel}>Vitórias</span></div>
                     <div className={styles.h2hCard}><span className={styles.h2hNum} style={{ color: '#eab308' }}>{h2h.draws}</span><span className={styles.h2hLabel}>Empates</span></div>
-                    <div className={styles.h2hCard}><span className={styles.h2hNum} style={{ color: '#ef4444' }}>{h2h.losses}</span><span className={styles.h2hLabel}>Derrotas</span></div>
+                    <div className={styles.h2hCard}><span className={styles.h2hNum} style={{ color: 'var(--negative)' }}>{h2h.losses}</span><span className={styles.h2hLabel}>Derrotas</span></div>
                   </div>
                   {h2h.log && h2h.log.length > 0 && (
                     <div className={styles.h2hLog}>

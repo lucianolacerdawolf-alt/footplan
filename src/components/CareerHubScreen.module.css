@@ -29,7 +29,7 @@
 }
 .clubMeta {
   display: flex; gap: 6px; flex-wrap: wrap;
-  font-size: 11px; color: #9ca3af; font-weight: 500;
+  font-size: 11px; color: var(--text-muted); font-weight: 500;
 }
 .managerRow {
   display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
@@ -38,20 +38,29 @@
 .managerName { color: #d1d5db; font-weight: 600; }
 .managerRep { color: #fbbf24; font-weight: 700; }
 .sponsorBadge {
-  background: #1f2937; color: #9ca3af; padding: 2px 8px;
+  background: #1f2937; color: var(--text-muted); padding: 2px 8px;
   border-radius: 99px; font-size: 10px; font-weight: 600;
 }
 
+/* ── Layout de duas colunas (desktop) ─────────────────────── */
+/* AÇÃO à esquerda (o que fazer agora), INFORMAÇÃO à direita. Em telas estreitas
+ * empilha e a ação vem primeiro. */
+.body { display: flex; flex-direction: column; gap: 12px; }
+.primaryCol, .secondaryCol { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+@media (min-width: 900px) {
+  .screen { max-width: 1040px; }
+  .body { display: grid; grid-template-columns: 1.1fr 0.9fr; align-items: start; }
+}
+
+/* Ícone + texto inline (hero e metadados). */
+.metaIcon, .managerName, .managerRep, .sponsorBadge { display: inline-flex; align-items: center; gap: 4px; }
+
 /* ── Quick Stats ──────────────────────────────────────────── */
+/* As células agora vêm do primitivo <StatTile>; aqui fica só o grid. */
 .quickStats {
   display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;
 }
-.statCard {
-  background: #111827; border: 1px solid #1f2937; border-radius: 10px;
-  padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px;
-}
-.statValue { font-size: 18px; font-weight: 800; color: #e5e7eb; }
-.statLabel { font-size: 9px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
 
 /* ── Season Progress ──────────────────────────────────────── */
 .progressCard {
@@ -77,7 +86,7 @@
 /* ── Competition status ──────────────────────────────────── */
 .compRow {
   display: flex; align-items: center; justify-content: space-between;
-  font-size: 12px; color: #9ca3af; gap: 8px;
+  font-size: 12px; color: var(--text-muted); gap: 8px;
 }
 .compRow strong { color: #d1d5db; }
 
@@ -154,12 +163,12 @@
 .objAchieved { color: var(--text-secondary); }
 .objAchieved .objectiveLabel { text-decoration: line-through; color: var(--text-secondary); }
 .objFailed .objectiveLabel { color: #fca5a5; }
-.objFailed .objectiveReward { color: #f87171; }
+.objFailed .objectiveReward { color: var(--loss); }
 .objectivesPending {
   font-size: 10px; color: var(--text-secondary); text-align: center; font-style: italic;
 }
 .objectivesWarning {
-  font-size: 10px; color: #f87171; text-align: center; font-weight: 600;
+  font-size: 10px; color: var(--loss); text-align: center; font-weight: 600;
 }
 
 /* ── Mercado de Treinador (Fase 2) ───────────────────────── */
@@ -212,14 +221,33 @@
 }
 .cloudRetryBtn:hover { opacity: 0.8; }
 
+/* ── Copa continental (cor dinâmica via --cc) ─────────────── */
+.continentalRow {
+  border-left: 3px solid var(--cc); padding-left: 8px;
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+}
+.continentalBtn {
+  flex-shrink: 0; background: transparent;
+  border: 1px solid color-mix(in srgb, var(--cc) 55%, transparent);
+  color: var(--cc); border-radius: 8px; padding: 4px 10px;
+  font-size: 12px; font-weight: 700; cursor: pointer; font-family: var(--sans);
+}
+.continentalBtn:hover { background: color-mix(in srgb, var(--cc) 12%, transparent); }
+
+/* ── Ajustes avançados (sync de elencos, recolhido) ───────── */
+.advanced { border-top: 1px solid var(--border); padding-top: 8px; }
+.advancedSummary {
+  cursor: pointer; font-size: 11px; font-weight: 600; color: var(--text-secondary);
+  list-style: none; padding: 4px 0;
+}
+.advancedSummary::-webkit-details-marker { display: none; }
+.advanced[open] .rosterSyncCard { margin-top: 8px; }
+
 @media (max-width: 640px) {
   .screen { padding: 10px 8px 24px; gap: 10px; }
   .clubName { font-size: 17px; }
   .crestImg { width: 44px; height: 44px; }
   .clubHero { padding: 12px; gap: 12px; }
   .quickStats { grid-template-columns: repeat(5, 1fr); gap: 4px; }
-  .statCard { padding: 8px 4px; }
-  .statValue { font-size: 15px; }
-  .statLabel { font-size: 8px; }
   .compRow { flex-direction: column; align-items: flex-start; gap: 4px; }
 }

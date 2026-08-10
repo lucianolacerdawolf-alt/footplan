@@ -389,7 +389,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         const m = moraleTeam?.morale ?? 0;
         if (!moraleTeam || m === 0) return null;
         const icon = m >= 6 ? '😄' : m >= 2 ? '😊' : m <= -6 ? '😟' : m <= -2 ? '😕' : '😐';
-        const color = m > 0 ? '#4ade80' : '#f87171';
+        const color = m > 0 ? 'var(--win)' : 'var(--loss)';
         return (
           <div className="morale-strip">
             <span className="morale-label">Moral do time</span>

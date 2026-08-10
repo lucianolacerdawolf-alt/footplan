@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type { CareerState } from '../engine/career';
 import { getInbox, getSponsorName, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory } from '../engine/career';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
@@ -22,11 +22,11 @@ import PreMatchPrepCard from './PreMatchPrepCard';
 import SocialFeedCard from './SocialFeedCard';
 import styles from './CareerHubScreen.module.css';
 import { crestSrc } from '../utils/crest';
+import { Button, StatTile, Icon } from './ui';
 
 interface Props {
   state: CareerState;
   league: LeagueDefinition;
-  onViewCup: () => void;
   /** Abre a chave da copa continental (career-continental). */
   onViewContinental: () => void;
   onPlayNext: () => void;
@@ -156,8 +156,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-export default function CareerHubScreen({ state, league, onViewCup, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, onSyncRosters, rosterSyncing, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
-  void onViewCup;
+export default function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, onSyncRosters, rosterSyncing, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
   const inbox = getInbox(state);
   const finances = getFinances(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
@@ -255,9 +254,9 @@ export default function CareerHubScreen({ state, league, onViewCup, onViewContin
   return (
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">
-          ← Voltar
-        </button>
+        <Button variant="ghost" size="sm" onClick={onBack} aria-label="Voltar">
+          <Icon name="arrow-left" size={14} /> Voltar
+        </Button>
       </div>
 
       {/* Club Identity Hero */}
@@ -272,157 +271,209 @@ export default function CareerHubScreen({ state, league, onViewCup, onViewContin
               <span>{league.flag} {league.name}</span>
               <span>·</span>
               <span>Temporada {state.currentSeasonYear}</span>
-              {userTeam.stadium && <><span>·</span><span>🏟️ {userTeam.stadium}</span></>}
+              {userTeam.stadium && <><span>·</span><span className={styles.metaIcon}><Icon name="stadium" size={12} /> {userTeam.stadium}</span></>}
             </div>
             <div className={styles.managerRow}>
-              <span className={styles.managerName}>👔 {state.manager.name}</span>
+              <span className={styles.managerName}><Icon name="manager" size={13} /> {state.manager.name}</span>
               <span className={styles.managerRep}>
-                ⭐ {state.manager.reputation} rep
+                <Icon name="star" size={13} /> {state.manager.reputation} rep
               </span>
               <span className={styles.sponsorBadge}>
-                👕 {sponsorName}
+                <Icon name="shirt" size={12} /> {sponsorName}
               </span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Quick Stats Row */}
-      <div className={styles.quickStats}>
-        <div className={styles.statCard}>
-          <span className={styles.statValue}>{gamesPlayed}</span>
-          <span className={styles.statLabel}>Jogos</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statValue} style={{ color: '#34d399' }}>{record.wins}</span>
-          <span className={styles.statLabel}>Vitórias</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statValue} style={{ color: '#9ca3af' }}>{record.draws}</span>
-          <span className={styles.statLabel}>Empates</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statValue} style={{ color: '#f87171' }}>{record.losses}</span>
-          <span className={styles.statLabel}>Derrotas</span>
-        </div>
-        <div className={styles.statCard}>
-          <span className={styles.statValue}>{record.goalsFor}</span>
-          <span className={styles.statLabel}>Gols</span>
-        </div>
-      </div>
+      {/* Corpo em duas colunas no desktop: AÇÃO (o que fazer agora) à esquerda,
+          INFORMAÇÃO (contexto do clube/mundo) à direita. Em telas estreitas as
+          colunas empilham e a ação vem primeiro. */}
+      <div className={styles.body}>
+        {/* ── Coluna de ação ────────────────────────────────────── */}
+        <div className={styles.primaryCol}>
+          {nextMatch && !seasonReady && opponentTeam && onApplyTraining && onOpenPressConference && (
+            <PreMatchPrepCard
+              trainingDone={trainingDone}
+              pressDone={!!pressDone}
+              opponentName={opponentTeam.name}
+              onTraining={onApplyTraining}
+              onOpenPress={() => onOpenPressConference(opponentTeam)}
+              pressQuestion={pressQuestion ?? null}
+              onAnswerPress={onAnswerPressConference ?? (() => {})}
+              onClosePress={onClosePressConference ?? (() => {})}
+            />
+          )}
 
-      {/* Season Progress + Position */}
-      {!seasonReady && (
-        <div className={styles.progressCard}>
-          <div className={styles.progressHeader}>
-            <span>Progresso da Temporada</span>
-            <span>{currentRound}/{totalRounds} rodadas ({progressPct}%)</span>
-          </div>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
-          </div>
-          <div className={styles.progressFooter}>
-            <span>{userPosition}º lugar · {userTeam ? `OVR titular médio: ${avgOvr}` : ''}</span>
-            {topScorer && <span>⚽ Artilheiro: {topScorer[0]} ({topScorer[1]} gols)</span>}
-          </div>
+          {nextMatch && !seasonReady && (
+            <div className={styles.nextMatchCard}>
+              <div className={styles.nextMatchLabel}>
+                <Icon name={nextMatch.type === 'league' ? 'calendar' : nextMatch.type === 'continental' ? 'globe' : 'trophy'} size={14} /> Próxima Partida · {
+                  nextMatch.type === 'league' ? `Liga (Rodada ${nextMatch.round + 1})`
+                  : nextMatch.type === 'continental' ? `${nextMatch.cupShortName} (${nextMatch.stageLabel})`
+                  : `Copa (${nextMatch.stageLabel})`
+                }
+              </div>
+              <div className={styles.nextMatchTeams}>
+                <strong>{nextMatch.homeName}</strong>
+                <span className={styles.nextMatchVs}>vs</span>
+                <strong>{nextMatch.awayName}</strong>
+              </div>
+              <Button size="lg" onClick={() => {
+                if (nextMatch.type === 'league') onPlayNext();
+                else if (nextMatch.type === 'continental') onPlayNextContinental();
+                else onPlayNextCup();
+              }}>
+                <Icon name="play" size={16} /> Jogar
+              </Button>
+            </div>
+          )}
+
+          {awaitingRound && (
+            <div className={styles.advanceRow}>
+              {roundComplete ? (
+                <>
+                  <Button block onClick={onNextRound} disabled={!!blockAdvanceReason} title={blockAdvanceReason}>
+                    Avançar Rodada →
+                  </Button>
+                  {blockAdvanceReason && <div className={styles.advanceStatus}><Icon name="bell" size={13} /> {blockAdvanceReason}</div>}
+                </>
+              ) : (
+                <Button block variant="secondary" onClick={onViewLeague}>
+                  Simular resto da rodada no Escritório →
+                </Button>
+              )}
+            </div>
+          )}
+
+          {seasonReady ? (
+            <div className={styles.advanceRow}>
+              <Button block size="lg" onClick={onAdvanceSeason}>Avançar Temporada →</Button>
+            </div>
+          ) : (
+            <div className={styles.advanceStatus}>Termine a liga e a copa pra avançar de temporada</div>
+          )}
+
+          {onRespondConversation && (
+            <ConversationsPanel
+              conversations={getPlayerConversations(state)}
+              onRespond={onRespondConversation}
+            />
+          )}
+
+          <InboxPanel
+            messages={inbox}
+            onMarkRead={onMarkInboxRead}
+            onAcceptTransferOffer={onAcceptTransferOffer}
+            onRejectTransferOffer={onRejectTransferOffer}
+          />
         </div>
-      )}
 
-      {/* Competition Status */}
-      <div className={styles.compRow}>
-        <span>🏆 {league.cupName}: <strong>{cupStageLabel}</strong></span>
-      </div>
-
-      {state.season.continentalCup && state.season.continentalCupDef && (() => {
-        const cc = state.season.continentalCup;
-        const ccDef = state.season.continentalCupDef;
-        const label = cc.stage === 'champion'
-          ? (cc.championId === state.season.league.userTeamId ? '🏆 Campeão!' : 'Eliminado')
-          : (CUP_STAGE_LABELS[cc.stage] ?? cc.stage);
-        return (
-          <div className={styles.compRow} style={{ borderLeft: `3px solid ${ccDef.color}`, paddingLeft: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-            <span>{ccDef.logo} {ccDef.name}: <strong>{label}</strong></span>
-            <button
-              onClick={onViewContinental}
-              style={{ background: 'transparent', border: `1px solid ${ccDef.color}88`, color: ccDef.color, borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
-            >
-              Ver chave →
-            </button>
+        {/* ── Coluna de informação ──────────────────────────────── */}
+        <div className={styles.secondaryCol}>
+          {/* Quick Stats Row */}
+          <div className={styles.quickStats}>
+            <StatTile value={gamesPlayed} label="Jogos" />
+            <StatTile value={record.wins} label="Vitórias" tone="win" />
+            <StatTile value={record.draws} label="Empates" tone="draw" />
+            <StatTile value={record.losses} label="Derrotas" tone="loss" />
+            <StatTile value={record.goalsFor} label="Gols" />
           </div>
-        );
-      })()}
 
-      {boardObj && boardObj.objectives.length > 0 && (
-        <div className={styles.objectivesCard}>
-          <div className={styles.objectivesTitle}>Objetivos da Diretoria</div>
-          {boardObj.objectives.map(obj => {
-            const isAchieved = obj.achieved === true;
-            const isFailed = obj.achieved === false;
-            const isPending = obj.achieved === undefined;
-            // Enquanto a temporada corre, mostra onde o time está em relação à meta.
-            // Sem isto tudo ficava "📌 pendente" até o último dia, e o usuário só
-            // descobria que falhou quando já não dava pra reagir.
-            const prog = isPending
-              ? getObjectiveProgress(obj, userPosition, cupProgress.stage, cupProgress.eliminated, finances.budget)
-              : null;
-            const icon = isAchieved ? '✅'
-              : isFailed ? '❌'
-              : prog?.status === 'atingido' ? '✅'
-              : prog?.status === 'fora' ? '⚠️'
-              : '📌';
+          {/* Season Progress + Position */}
+          {!seasonReady && (
+            <div className={styles.progressCard}>
+              <div className={styles.progressHeader}>
+                <span>Progresso da Temporada</span>
+                <span>{currentRound}/{totalRounds} rodadas ({progressPct}%)</span>
+              </div>
+              <div className={styles.progressBar}>
+                <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
+              </div>
+              <div className={styles.progressFooter}>
+                <span>{userPosition}º lugar · {userTeam ? `OVR titular médio: ${avgOvr}` : ''}</span>
+                {topScorer && <span>⚽ Artilheiro: {topScorer[0]} ({topScorer[1]} gols)</span>}
+              </div>
+            </div>
+          )}
+
+          {/* Competition Status */}
+          <div className={styles.compRow}>
+            <span><Icon name="trophy" size={13} /> {league.cupName}: <strong>{cupStageLabel}</strong></span>
+          </div>
+
+          {state.season.continentalCup && state.season.continentalCupDef && (() => {
+            const cc = state.season.continentalCup;
+            const ccDef = state.season.continentalCupDef;
+            const label = cc.stage === 'champion'
+              ? (cc.championId === state.season.league.userTeamId ? '🏆 Campeão!' : 'Eliminado')
+              : (CUP_STAGE_LABELS[cc.stage] ?? cc.stage);
+            // A cor da competição é dado dinâmico (vem de ccDef) — entra como custom
+            // property e o resto do estilo vive no módulo (.continentalRow/.continentalBtn).
             return (
-              <div key={obj.id} className={`${styles.objectiveRow} ${isAchieved ? styles.objAchieved : isFailed ? styles.objFailed : ''}`}>
-                <span className={styles.objectiveIcon}>{icon}</span>
-                <span className={styles.objectiveLabel}>
-                  {obj.label}
-                  {prog && <span className={styles.objectiveProgress}>{prog.detail}</span>}
-                </span>
-                <span className={styles.objectiveReward}>
-                  {isPending ? `+${obj.reward} rep` : isAchieved ? `+${obj.reward}` : `-${obj.penalty}`}
-                </span>
+              <div className={`${styles.compRow} ${styles.continentalRow}`} style={{ '--cc': ccDef.color } as CSSProperties}>
+                <span>{ccDef.logo} {ccDef.name}: <strong>{label}</strong></span>
+                <button className={styles.continentalBtn} onClick={onViewContinental}>
+                  Ver chave →
+                </button>
               </div>
             );
-          })}
-          {boardObj.objectives.some(o => o.achieved === undefined) && (
-            <div className={styles.objectivesPending}>Em andamento — avaliação ao fim da temporada</div>
-          )}
-          {boardObj.streakBad >= 2 && (
-            <div className={styles.objectivesWarning}>
-              ⚠️ {boardObj.streakBad >= 3 ? 'Última chance: ' : ''}Diretoria insatisfeita ({boardObj.streakBad} temporada{boardObj.streakBad > 1 ? 's' : ''} consecutiva{boardObj.streakBad > 1 ? 's' : ''} abaixo do esperado)
+          })()}
+
+          {boardObj && boardObj.objectives.length > 0 && (
+            <div className={styles.objectivesCard}>
+              <div className={styles.objectivesTitle}>Objetivos da Diretoria</div>
+              {boardObj.objectives.map(obj => {
+                const isAchieved = obj.achieved === true;
+                const isFailed = obj.achieved === false;
+                const isPending = obj.achieved === undefined;
+                // Enquanto a temporada corre, mostra onde o time está em relação à meta.
+                // Sem isto tudo ficava "📌 pendente" até o último dia, e o usuário só
+                // descobria que falhou quando já não dava pra reagir.
+                const prog = isPending
+                  ? getObjectiveProgress(obj, userPosition, cupProgress.stage, cupProgress.eliminated, finances.budget)
+                  : null;
+                const icon = isAchieved ? '✅'
+                  : isFailed ? '❌'
+                  : prog?.status === 'atingido' ? '✅'
+                  : prog?.status === 'fora' ? '⚠️'
+                  : '📌';
+                return (
+                  <div key={obj.id} className={`${styles.objectiveRow} ${isAchieved ? styles.objAchieved : isFailed ? styles.objFailed : ''}`}>
+                    <span className={styles.objectiveIcon}>{icon}</span>
+                    <span className={styles.objectiveLabel}>
+                      {obj.label}
+                      {prog && <span className={styles.objectiveProgress}>{prog.detail}</span>}
+                    </span>
+                    <span className={styles.objectiveReward}>
+                      {isPending ? `+${obj.reward} rep` : isAchieved ? `+${obj.reward}` : `-${obj.penalty}`}
+                    </span>
+                  </div>
+                );
+              })}
+              {boardObj.objectives.some(o => o.achieved === undefined) && (
+                <div className={styles.objectivesPending}>Em andamento — avaliação ao fim da temporada</div>
+              )}
+              {boardObj.streakBad >= 2 && (
+                <div className={styles.objectivesWarning}>
+                  <Icon name="warning" size={12} /> {boardObj.streakBad >= 3 ? 'Última chance: ' : ''}Diretoria insatisfeita ({boardObj.streakBad} temporada{boardObj.streakBad > 1 ? 's' : ''} consecutiva{boardObj.streakBad > 1 ? 's' : ''} abaixo do esperado)
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
 
-      <button className={styles.jobMarketCard} onClick={onOpenJobMarket}>
-        <span className={styles.jobMarketIcon} aria-hidden="true">💼</span>
-        <span className={styles.jobMarketLabel}>
-          Mercado de Treinador
-          {jobOfferCount > 0 && <span className={styles.jobMarketBadge}>{jobOfferCount} oferta{jobOfferCount > 1 ? 's' : ''}</span>}
-        </span>
-        <span className={styles.jobMarketChevron}>→</span>
-      </button>
-
-      {onSyncRosters && (
-        <div className={styles.rosterSyncCard}>
-          <div className={styles.rosterSyncInfo}>
-            <span className={styles.rosterSyncLabel}>🔄 Elencos</span>
-            {rosterLastUpdatedAt && (
-              <span className={styles.rosterSyncMeta}>
-                Última atualização: {new Date(rosterLastUpdatedAt).toLocaleDateString('pt-BR')}
-              </span>
-            )}
-          </div>
-          <button
-            className={styles.rosterSyncBtn}
-            onClick={onSyncRosters}
-            disabled={rosterSyncing}
-            title="Buscar elencos atualizados das 12 ligas na API e salvar na nuvem"
-          >
-            {rosterSyncing ? 'Sincronizando...' : 'Atualizar Elencos via API'}
+          <button className={styles.jobMarketCard} onClick={onOpenJobMarket}>
+            <span className={styles.jobMarketIcon}><Icon name="briefcase" size={18} /></span>
+            <span className={styles.jobMarketLabel}>
+              Mercado de Treinador
+              {jobOfferCount > 0 && <span className={styles.jobMarketBadge}>{jobOfferCount} oferta{jobOfferCount > 1 ? 's' : ''}</span>}
+            </span>
+            <span className={styles.jobMarketChevron}><Icon name="chevron-right" size={16} /></span>
           </button>
+
+          {socialPosts.length > 0 && <SocialFeedCard posts={socialPosts} />}
         </div>
-      )}
+      </div>
 
       {/* Status do backup na nuvem — antes falhava 100% em silêncio (o hook expunha
           `status`/`retry`, mas nenhuma tela lia). `idle`/`loading` = nada a reportar
@@ -430,107 +481,50 @@ export default function CareerHubScreen({ state, league, onViewCup, onViewContin
       {(cloudStatus === 'saving' || cloudStatus === 'saved' || cloudStatus === 'offline') && (
         <div className={styles.cloudSaveRow} role="status" aria-live="polite">
           {cloudStatus === 'saving' && (
-            <span className={styles.cloudSaveMuted}>☁️ Salvando na nuvem…</span>
+            <span className={styles.cloudSaveMuted}><Icon name="cloud" size={13} /> Salvando na nuvem…</span>
           )}
           {cloudStatus === 'saved' && (
-            <span className={styles.cloudSaveMuted}>☁️ Backup na nuvem em dia</span>
+            <span className={styles.cloudSaveMuted}><Icon name="cloud" size={13} /> Backup na nuvem em dia</span>
           )}
           {cloudStatus === 'offline' && (
             <>
               <span className={styles.cloudSaveOffline}>
-                ⚠️ Backup na nuvem falhou — progresso salvo só neste dispositivo
+                <Icon name="cloud-off" size={13} /> Backup na nuvem falhou — progresso salvo só neste dispositivo
               </span>
               {onRetryCloudSave && (
-                <button className={styles.cloudRetryBtn} onClick={onRetryCloudSave}>
+                <Button variant="secondary" size="sm" onClick={onRetryCloudSave}>
                   Tentar de novo
-                </button>
+                </Button>
               )}
             </>
           )}
         </div>
       )}
 
-      {onRespondConversation && (
-        <ConversationsPanel
-          conversations={getPlayerConversations(state)}
-          onRespond={onRespondConversation}
-        />
-      )}
-
-      <InboxPanel
-        messages={inbox}
-        onMarkRead={onMarkInboxRead}
-        onAcceptTransferOffer={onAcceptTransferOffer}
-        onRejectTransferOffer={onRejectTransferOffer}
-      />
-
-      {nextMatch && !seasonReady && opponentTeam && onApplyTraining && onOpenPressConference && (
-        <PreMatchPrepCard
-          trainingDone={trainingDone}
-          pressDone={!!pressDone}
-          opponentName={opponentTeam.name}
-          onTraining={onApplyTraining}
-          onOpenPress={() => onOpenPressConference(opponentTeam)}
-          pressQuestion={pressQuestion ?? null}
-          onAnswerPress={onAnswerPressConference ?? (() => {})}
-          onClosePress={onClosePressConference ?? (() => {})}
-        />
-      )}
-
-      {socialPosts.length > 0 && <SocialFeedCard posts={socialPosts} />}
-
-      {nextMatch && !seasonReady && (
-        <div className={styles.nextMatchCard}>
-          <div className={styles.nextMatchLabel}>
-            {nextMatch.type === 'league' ? '📅' : nextMatch.type === 'continental' ? nextMatch.cupLogo : '🏆'} Próxima Partida · {
-              nextMatch.type === 'league' ? `Liga (Rodada ${nextMatch.round + 1})`
-              : nextMatch.type === 'continental' ? `${nextMatch.cupShortName} (${nextMatch.stageLabel})`
-              : `Copa (${nextMatch.stageLabel})`
-            }
+      {/* Sincronização de elencos: ação global/admin (12 ligas), fora do fluxo de
+          jogo. Recolhida por padrão pra não competir com as ações da partida. */}
+      {onSyncRosters && (
+        <details className={styles.advanced}>
+          <summary className={styles.advancedSummary}>Ajustes avançados</summary>
+          <div className={styles.rosterSyncCard}>
+            <div className={styles.rosterSyncInfo}>
+              <span className={styles.rosterSyncLabel}><Icon name="refresh" size={13} /> Elencos</span>
+              {rosterLastUpdatedAt && (
+                <span className={styles.rosterSyncMeta}>
+                  Última atualização: {new Date(rosterLastUpdatedAt).toLocaleDateString('pt-BR')}
+                </span>
+              )}
+            </div>
+            <Button
+              variant="secondary" size="sm"
+              onClick={onSyncRosters}
+              disabled={rosterSyncing}
+              title="Buscar elencos atualizados das 12 ligas na API e salvar na nuvem"
+            >
+              {rosterSyncing ? 'Sincronizando...' : 'Atualizar Elencos via API'}
+            </Button>
           </div>
-          <div className={styles.nextMatchTeams}>
-            <strong>{nextMatch.homeName}</strong>
-            <span className={styles.nextMatchVs}>vs</span>
-            <strong>{nextMatch.awayName}</strong>
-          </div>
-          <button className={styles.playBtn} onClick={() => {
-            if (nextMatch.type === 'league') onPlayNext();
-            else if (nextMatch.type === 'continental') onPlayNextContinental();
-            else onPlayNextCup();
-          }}>
-            ⚽ Jogar
-          </button>
-        </div>
-      )}
-
-      {awaitingRound && (
-        <div className={styles.advanceRow}>
-          {roundComplete ? (
-            <>
-              <button
-                className={styles.advanceBtn}
-                onClick={onNextRound}
-                disabled={!!blockAdvanceReason}
-                title={blockAdvanceReason}
-              >
-                Avançar Rodada →
-              </button>
-              {blockAdvanceReason && <div className={styles.advanceStatus}>🔔 {blockAdvanceReason}</div>}
-            </>
-          ) : (
-            <button className={styles.advanceBtn} onClick={onViewLeague}>
-              Simular resto da rodada no Escritório →
-            </button>
-          )}
-        </div>
-      )}
-
-      {seasonReady ? (
-        <div className={styles.advanceRow}>
-          <button className={styles.advanceBtn} onClick={onAdvanceSeason}>Avançar Temporada →</button>
-        </div>
-      ) : (
-        <div className={styles.advanceStatus}>Termine a liga e a copa pra avançar de temporada</div>
+        </details>
       )}
 
       <div className={styles.newCareerRow}>

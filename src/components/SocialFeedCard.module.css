@@ -61,6 +61,6 @@
 
 .likes {
   font-size: 10px;
-  color: #f87171;
+  color: var(--loss);
   font-weight: 600;
 }

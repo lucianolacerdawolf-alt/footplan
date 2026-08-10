@@ -46,7 +46,7 @@
 .tableCrest { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
 .tdPts { font-weight: 900; font-size: 19px; color: var(--text-h); }
 .sgPos { color: #4ade80; font-weight: 700; }
-.sgNeg { color: #f87171; font-weight: 700; }
+.sgNeg { color: var(--loss); font-weight: 700; }
 
 /* Form guide */
 .thForm { text-align: center; font-size: 10px; color: var(--text-secondary); padding: 0 4px; }

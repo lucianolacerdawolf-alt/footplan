@@ -9,17 +9,15 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { Difficulty } from '../engine/matchConfig';
-import type { CloudStatus } from '../hooks/useCloudSave';
-import type { CareerState, ContractRenewalOptions } from '../engine/career';
+import type { UseCareerManagerReturn } from '../hooks/useCareerManager';
 import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers, getSponsorTier, getSponsorName } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, getSponsorMultiplier, getSponsorMinReputation, type SponsorTier } from '../engine/sponsors';
 import { getTicketRevenue } from '../engine/transferMarket';
 import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
+import { getStageMatches } from '../engine/bracketHelpers';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
-import type { TrainingChoice } from '../engine/training';
-import type { PressConferenceQuestion } from '../engine/pressConference';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
 
@@ -95,7 +93,6 @@ export interface AppScreensProps {
   // ── Tournament state ──
   leagueState: LeagueState | null;
   bracketState: BracketState | null;
-  careerState: CareerState | null;
 
   // ── Data ──
   history: MatchRecord[];
@@ -149,54 +146,10 @@ export interface AppScreensProps {
   handleEditBracketTactics: () => void;
 
   // ── Career manager ──
-  handleEditCareerLeagueTactics: () => void;
-  handlePlayCareerLeagueMatch: (fixture: LeagueFixture, home: Team, away: Team) => void;
-  handlePlayNextCareerMatch: () => void;
-  handlePlayNextCareerCupMatch: () => void;
-  handleSimulateUserCareerLeagueMatch: () => void;
-  handleSimulateCareerLeagueRound: (roundIndex: number) => void;
-  handleNextCareerLeagueRound: () => void;
-  handleCareerLeagueMatchResult: (result: MatchResult) => void;
-  handleEditCareerBracketTactics: () => void;
-  handlePlayCareerBracketMatch: (match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => void;
-  handleSimulateOtherCareerBracketMatches: () => void;
-  handleSimulateCareerBracketMatch: (stage: PlayableStage, matchIdx: number) => void;
-  handleSimulateCareerCupToEnd: () => void;
-  handleCareerBracketMatchResult: (result: MatchResult) => void;
-  // Copa continental
-  handlePlayContinentalMatch: (match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => void;
-  handlePlayNextContinentalMatch: () => void;
-  handleSimulateOtherContinentalMatches: () => void;
-  handleSimulateContinentalMatch: (stage: PlayableStage, matchIdx: number) => void;
-  handleSimulateContinentalToEnd: () => void;
-  handleEditContinentalTactics: () => void;
-  handleProposeTrade: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
-  handleBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
-  handleListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
-  handleUnlistPlayerForSale: (playerId: string) => void;
-  handleMarketRosterSynced: (leagueId: string, teams: Team[]) => void;
-  handleSignFreeAgent: (playerId: string, amount: number) => { success: boolean; reason: string };
-  handleAcceptTransferOffer: (messageId: string) => void;
-  handleRejectTransferOffer: (messageId: string) => void;
-  handleRenewContract: (playerId: string, options: ContractRenewalOptions) => void;
-  handleAcceptJobOffer: (offerId: string) => void;
-  handleDeclineJobOffer: (offerId: string) => void;
-  handleRespondConversation: (convId: string, choiceIdx: number) => void;
-  handleApplyTraining: (choice: TrainingChoice) => void;
-  handleOpenPressConference: (opponentTeam: Team) => void;
-  handleRespondPressConference: (choiceIdx: number) => void;
-  handleClosePressConference: () => void;
-  pressQuestion: PressConferenceQuestion | null;
-  pressDone: boolean;
-  handleAdvanceSeason: () => void;
-  handleMarkInboxRead: (id: string) => void;
-  handleRenegotiateSponsor: () => void;
-  handleMarkAllInboxRead: () => void;
-  handleSyncRosters: () => void;
-  rosterSyncing: boolean;
-  rosterLastUpdatedAt: string | null;
-  cloudStatus: CloudStatus;
-  retryCloudSave: () => void;
+  // Bundle inteiro do useCareerManager num único prop, em vez de ~50 handlers
+  // repassados individualmente (reduz o prop drilling). Telas de carreira leem
+  // p.career.<handler>.
+  career: UseCareerManagerReturn;
 
   // ── Misc ──
   clearHistory: () => void;
@@ -206,6 +159,12 @@ export interface AppScreensProps {
 }
 
 type ScreenRenderer = (props: AppScreensProps) => React.ReactNode;
+
+/** Índice da partida dentro do estágio atual da chave. Antes esse trecho
+ *  (selecionar as partidas do estágio + findIndex) estava copiado nos três
+ *  renderers de mata-mata: copa (`bracket`/`career-bracket`) e continental. */
+const stageMatchIndex = (bracket: BracketState, match: BracketMatch): number =>
+  getStageMatches(bracket).findIndex(m => m.id === match.id);
 
 /** Mapa tela→renderer. Exportado pra teste de navegação (P3 #9) — afere que
  *  todo `Screen` do tipo fechado tem renderer, e que nenhum onBack pode apontar
@@ -239,7 +198,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         p.setReturnScreen(null);
         p.setScreen(save.type === 'league' ? 'league' : 'bracket');
       }}
-      onBack={() => { p.setReturnScreen(null); if (p.isCareerMode && p.careerState) { p.setScreen('career-hub'); } else { p.setIsCareerMode(false); p.setScreen('home'); } }}
+      onBack={() => { p.setReturnScreen(null); if (p.isCareerMode && p.career.careerState) { p.setScreen('career-hub'); } else { p.setIsCareerMode(false); p.setScreen('home'); } }}
       onSelect={(league) => {
         localStorage.setItem('fp:selectedLeague', JSON.stringify(league.id));
         p.setSelectedLeague(league);
@@ -338,12 +297,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       <BracketScreen
         state={bracket}
         onPlayMatch={(match, home, away) => {
-          const stage = bracket.stage as PlayableStage;
-          const matches = stage === 'roundOf16' ? bracket.roundOf16
-            : stage === 'quarterfinals' ? bracket.quarterFinals
-            : stage === 'semifinals' ? bracket.semiFinals
-            : [bracket.final];
-          p.handlePlayBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
+          p.handlePlayBracketMatch(match, home, away, bracket.stage as PlayableStage, stageMatchIndex(bracket, match));
         }}
         onSimulateMatch={p.handleSimulateBracketMatch}
         onSimulateOthers={p.handleSimulateOtherBracketMatches}
@@ -366,8 +320,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     // mostrava/editava "home", deixando o usuário mexer no time adversário quando o dele
     // era o visitante daquela partida.
     const tournamentUserTeamId =
-      p.isCareerMode && p.matchContext === 'league' ? p.careerState?.season.league.userTeamId
-      : p.isCareerMode && p.matchContext === 'bracket' ? p.careerState?.season.cup.userTeamId
+      p.isCareerMode && p.matchContext === 'league' ? p.career.careerState?.season.league.userTeamId
+      : p.isCareerMode && p.matchContext === 'bracket' ? p.career.careerState?.season.cup.userTeamId
       : p.matchContext === 'league' ? p.leagueState?.userTeamId
       : p.matchContext === 'bracket' ? p.bracketState?.userTeamId
       : undefined;
@@ -396,9 +350,9 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         lockAway={p.matchContext !== 'regular' || p.gameMode === 'cpu'}
         userIsHome={userIsHome}
         goesToPreview={p.matchContext === 'league' || p.matchContext === 'bracket'}
-        onRenewContract={p.isCareerMode && p.isTournamentEntry ? (playerId, options) => p.handleRenewContract(playerId, options) : undefined}
-        currentSeasonYear={p.careerState?.currentSeasonYear}
-        budget={p.careerState ? getFinances(p.careerState).budget : undefined}
+        onRenewContract={p.isCareerMode && p.isTournamentEntry ? (playerId, options) => p.career.handleRenewContract(playerId, options) : undefined}
+        currentSeasonYear={p.career.careerState?.currentSeasonYear}
+        budget={p.career.careerState ? getFinances(p.career.careerState).budget : undefined}
       />
     );
   },
@@ -414,7 +368,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       peerConnected: p.peer.peerConnected,
     } : undefined;
     const isTournament = p.matchContext === 'league' || p.matchContext === 'bracket';
-    const leagueForTicker = p.isCareerMode ? p.careerState?.season.league : p.leagueState;
+    const leagueForTicker = p.isCareerMode ? p.career.careerState?.season.league : p.leagueState;
     const tickerFixtures = p.matchContext === 'league' && leagueForTicker
       ? leagueForTicker.fixtures[leagueForTicker.currentRound] ?? undefined
       : undefined;
@@ -424,11 +378,11 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     const userSide: 'home' | 'away' | undefined =
       p.matchContext === 'league'
         ? p.isCareerMode
-          ? p.careerState?.season.league.userTeamId === p.homeTeam.id ? 'home' : 'away'
+          ? p.career.careerState?.season.league.userTeamId === p.homeTeam.id ? 'home' : 'away'
           : p.leagueState?.userTeamId === p.homeTeam.id ? 'home' : 'away'
         : p.matchContext === 'bracket'
         ? p.isCareerMode
-          ? p.careerState?.season.cup.userTeamId === p.homeTeam.id ? 'home' : 'away'
+          ? p.career.careerState?.season.cup.userTeamId === p.homeTeam.id ? 'home' : 'away'
           : p.bracketState?.userTeamId === p.homeTeam.id ? 'home' : 'away'
         : undefined;
     const matchBackScreen = isTournament ? 'matchday' : p.matchContext === 'online' ? 'online-lobby' : p.returnScreen === 'home' ? 'home' : 'setup';
@@ -457,10 +411,10 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   'matchday': (p) => {
     if (!p.homeTeam || !p.awayTeam) return null;
     const totalRounds = p.isCareerMode
-      ? p.careerState?.season.league.fixtures.length ?? 38
+      ? p.career.careerState?.season.league.fixtures.length ?? 38
       : p.leagueState?.fixtures.length ?? 38;
     const currentRound = p.isCareerMode
-      ? (p.careerState?.season.league.currentRound ?? 0) + 1
+      ? (p.career.careerState?.season.league.currentRound ?? 0) + 1
       : (p.leagueState?.currentRound ?? 0) + 1;
     const stageLabel = (stage: string) =>
       stage === 'roundOf16' ? 'Oitavas' : stage === 'quarterfinals' ? 'Quartas' : stage === 'semifinals' ? 'Semis' : stage === 'final' ? 'Final' : stage === 'champion' ? 'Campeão' : undefined;
@@ -468,16 +422,16 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       ? `Rodada ${currentRound} / ${totalRounds}`
       : p.matchContext === 'bracket'
         ? (p.isCareerMode
-          ? stageLabel(p.careerState?.season.cup.stage ?? '')
+          ? stageLabel(p.career.careerState?.season.cup.stage ?? '')
           : stageLabel(p.bracketState?.stage ?? ''))
         : undefined;
 
     let contextLabel = p.matchContext === 'bracket'
-      ? (p.isCareerMode ? (p.careerState?.season.cup.cupName ?? 'Copa') : (p.bracketState?.cupName ?? 'Copa'))
+      ? (p.isCareerMode ? (p.career.careerState?.season.cup.cupName ?? 'Copa') : (p.bracketState?.cupName ?? 'Copa'))
       : p.matchContext === 'league'
-        ? (p.isCareerMode ? (getLeague(p.careerState?.leagueId ?? '')?.name ?? 'Liga') : (p.selectedLeague?.name ?? 'Liga'))
+        ? (p.isCareerMode ? (getLeague(p.career.careerState?.leagueId ?? '')?.name ?? 'Liga') : (p.selectedLeague?.name ?? 'Liga'))
         : 'Amistoso';
-    if (p.isCareerMode) contextLabel += ` · Temporada ${p.careerState?.currentSeasonYear ?? 1}`;
+    if (p.isCareerMode) contextLabel += ` · Temporada ${p.career.careerState?.currentSeasonYear ?? 1}`;
 
     return (
       <MatchdayScreen
@@ -496,14 +450,14 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     const isTournament = p.matchContext !== 'regular' && p.matchContext !== 'online';
     const isTitleWin = p.matchContext === 'bracket' && p.lastResult.winner
       && (p.isCareerMode
-        ? p.careerState?.season.cup.userTeamId === p.lastResult.winner.id
+        ? p.career.careerState?.season.cup.userTeamId === p.lastResult.winner.id
         : p.bracketState?.userTeamId === p.lastResult.winner.id);
     // Time do usuário para o badge Vitória/Derrota/Empate — sem isso, o badge
     // assumia o time da casa, invertendo o resultado em jogos fora de casa.
     const userTeamId = p.matchContext === 'league'
-      ? (p.isCareerMode ? p.careerState?.season.league.userTeamId : p.leagueState?.userTeamId)
+      ? (p.isCareerMode ? p.career.careerState?.season.league.userTeamId : p.leagueState?.userTeamId)
       : p.matchContext === 'bracket'
-        ? (p.isCareerMode ? p.careerState?.season.cup.userTeamId : p.bracketState?.userTeamId)
+        ? (p.isCareerMode ? p.career.careerState?.season.cup.userTeamId : p.bracketState?.userTeamId)
         : undefined;
     return (
       <MatchStatsScreen
@@ -527,72 +481,71 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   ),
 
   'career-hub': (p) => {
-    if (!p.careerState) return null;
-    const hubBlockAdvanceReason = hasMandatoryUnread(getInbox(p.careerState))
+    if (!p.career.careerState) return null;
+    const hubBlockAdvanceReason = hasMandatoryUnread(getInbox(p.career.careerState))
       ? 'Leia as mensagens obrigatórias acima antes de avançar'
       : undefined;
     return (
       <CareerHubScreen
-        state={p.careerState}
-        league={getLeague(p.careerState.leagueId)!}
-        onViewCup={() => p.setScreen('career-bracket')}
+        state={p.career.careerState}
+        league={getLeague(p.career.careerState.leagueId)!}
         onViewContinental={() => p.setScreen('career-continental')}
-        onPlayNext={p.handlePlayNextCareerMatch}
-        onPlayNextCup={p.handlePlayNextCareerCupMatch}
-        onPlayNextContinental={p.handlePlayNextContinentalMatch}
-        onAdvanceSeason={p.handleAdvanceSeason}
+        onPlayNext={p.career.handlePlayNextCareerMatch}
+        onPlayNextCup={p.career.handlePlayNextCareerCupMatch}
+        onPlayNextContinental={p.career.handlePlayNextContinentalMatch}
+        onAdvanceSeason={p.career.handleAdvanceSeason}
         onNewCareer={p.handleNewCareerFromHub}
         onBack={() => { p.setIsCareerMode(false); p.goHome(); }}
-        onMarkInboxRead={p.handleMarkInboxRead}
-        onAcceptTransferOffer={p.handleAcceptTransferOffer}
-        onRejectTransferOffer={p.handleRejectTransferOffer}
-        onNextRound={p.handleNextCareerLeagueRound}
+        onMarkInboxRead={p.career.handleMarkInboxRead}
+        onAcceptTransferOffer={p.career.handleAcceptTransferOffer}
+        onRejectTransferOffer={p.career.handleRejectTransferOffer}
+        onNextRound={p.career.handleNextCareerLeagueRound}
         onViewLeague={() => p.setScreen('career-league')}
         onOpenJobMarket={() => p.setScreen('career-job-market')}
-        jobOfferCount={getJobOffers(p.careerState).length}
-        onRespondConversation={p.handleRespondConversation}
-        onApplyTraining={p.handleApplyTraining}
-        onOpenPressConference={p.handleOpenPressConference}
-        onAnswerPressConference={p.handleRespondPressConference}
-        onClosePressConference={p.handleClosePressConference}
-        pressQuestion={p.pressQuestion}
-        pressDone={p.pressDone}
+        jobOfferCount={getJobOffers(p.career.careerState).length}
+        onRespondConversation={p.career.handleRespondConversation}
+        onApplyTraining={p.career.handleApplyTraining}
+        onOpenPressConference={p.career.handleOpenPressConference}
+        onAnswerPressConference={p.career.handleRespondPressConference}
+        onClosePressConference={p.career.handleClosePressConference}
+        pressQuestion={p.career.pressQuestion}
+        pressDone={p.career.pressDone}
         blockAdvanceReason={hubBlockAdvanceReason}
-        onSyncRosters={p.handleSyncRosters}
-        rosterSyncing={p.rosterSyncing}
-        rosterLastUpdatedAt={p.rosterLastUpdatedAt}
-        cloudStatus={p.cloudStatus}
-        onRetryCloudSave={p.retryCloudSave}
+        onSyncRosters={p.career.handleSyncRosters}
+        rosterSyncing={p.career.rosterSyncing}
+        rosterLastUpdatedAt={p.career.rosterLastUpdatedAt}
+        cloudStatus={p.career.cloudStatus}
+        onRetryCloudSave={p.career.retryCloudSave}
       />
     );
   },
 
   'transfer-market': (p) => {
-    if (!p.careerState) return null;
-    const finances = getFinances(p.careerState);
-    const userTeamId = p.careerState.season.league.userTeamId;
+    if (!p.career.careerState) return null;
+    const finances = getFinances(p.career.careerState);
+    const userTeamId = p.career.careerState.season.league.userTeamId;
     return (
       <TransferMarketScreen
-        userTeam={p.careerState.rosters[p.careerState.leagueId].find(t => t.id === userTeamId)!}
-        userLeagueId={p.careerState.leagueId}
-        rosters={p.careerState.rosters}
-        freeAgents={getFreeAgentPool(p.careerState)}
-        transferListPlayerIds={getTransferList(p.careerState)}
+        userTeam={p.career.careerState.rosters[p.career.careerState.leagueId].find(t => t.id === userTeamId)!}
+        userLeagueId={p.career.careerState.leagueId}
+        rosters={p.career.careerState.rosters}
+        freeAgents={getFreeAgentPool(p.career.careerState)}
+        transferListPlayerIds={getTransferList(p.career.careerState)}
         budget={finances.budget}
-        isWindowOpen={isTransferWindowOpen(p.careerState.season.league.currentRound)}
-        onBuyPlayer={p.handleBuyPlayer}
-        onListPlayerForSale={p.handleListPlayerForSale}
-        onUnlistPlayerForSale={p.handleUnlistPlayerForSale}
-        onSignFreeAgent={p.handleSignFreeAgent}
-        onRosterSynced={p.handleMarketRosterSynced}
+        isWindowOpen={isTransferWindowOpen(p.career.careerState.season.league.currentRound)}
+        onBuyPlayer={p.career.handleBuyPlayer}
+        onListPlayerForSale={p.career.handleListPlayerForSale}
+        onUnlistPlayerForSale={p.career.handleUnlistPlayerForSale}
+        onSignFreeAgent={p.career.handleSignFreeAgent}
+        onRosterSynced={p.career.handleMarketRosterSynced}
         onProposeTrade={() => p.setScreen('trade-propose')}
       />
     );
   },
 
   'career-trophy-room': (p) => {
-    if (!p.careerState) return null;
-    const cs = p.careerState;
+    if (!p.career.careerState) return null;
+    const cs = p.career.careerState;
     // Só o estado vazio usa isto: sem nenhuma temporada concluída, a tela mostra
     // a campanha em curso em vez de "nenhuma temporada concluída ainda" e nada mais.
     const lg = cs.season.league;
@@ -633,31 +586,31 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         nextTierReputation={nextTier ? getSponsorMinReputation(nextTier) : null}
         capacity={userTeam?.capacity}
         morale={userTeam?.morale}
-        onRenegotiateSponsor={p.handleRenegotiateSponsor}
-        onRenewContract={(playerId, options) => p.handleRenewContract(playerId, options)}
+        onRenegotiateSponsor={p.career.handleRenegotiateSponsor}
+        onRenewContract={(playerId, options) => p.career.handleRenewContract(playerId, options)}
       />
     );
   },
 
   'career-league': (p) => {
-    if (!p.careerState) return null;
-    const blockAdvanceReason = hasMandatoryUnread(getInbox(p.careerState))
+    if (!p.career.careerState) return null;
+    const blockAdvanceReason = hasMandatoryUnread(getInbox(p.career.careerState))
       ? 'Leia as mensagens obrigatórias na Central de Carreira antes de avançar'
       : undefined;
     return (
       <LeagueScreen
-        state={p.careerState.season.league}
-        league={getLeague(p.careerState.leagueId)!}
-        onPlayMatch={p.handlePlayCareerLeagueMatch}
-        onSimulateUserMatch={p.handleSimulateUserCareerLeagueMatch}
-        onSimulateRound={p.handleSimulateCareerLeagueRound}
-        onNextRound={p.handleNextCareerLeagueRound}
-        onEditTactics={p.handleEditCareerLeagueTactics}
+        state={p.career.careerState.season.league}
+        league={getLeague(p.career.careerState.leagueId)!}
+        onPlayMatch={p.career.handlePlayCareerLeagueMatch}
+        onSimulateUserMatch={p.career.handleSimulateUserCareerLeagueMatch}
+        onSimulateRound={p.career.handleSimulateCareerLeagueRound}
+        onNextRound={p.career.handleNextCareerLeagueRound}
+        onEditTactics={p.career.handleEditCareerLeagueTactics}
         onViewTable={() => p.setScreen('career-league-table')}
         onViewCup={() => p.setScreen('career-bracket')}
         onBack={() => p.setScreen('career-hub')}
         onOpenJobMarket={() => p.setScreen('career-job-market')}
-        jobMarketOffers={getJobOffers(p.careerState).length}
+        jobMarketOffers={getJobOffers(p.career.careerState).length}
         blockAdvanceReason={blockAdvanceReason}
         hideTopNav
       />
@@ -665,12 +618,12 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'career-league-table': (p) => {
-    if (!p.careerState) return null;
-    const league = getLeague(p.careerState.leagueId);
+    if (!p.career.careerState) return null;
+    const league = getLeague(p.career.careerState.leagueId);
     if (!league) return null;
     return (
       <LeagueTableScreen
-        state={p.careerState.season.league}
+        state={p.career.careerState.season.league}
         league={league}
         onBack={() => p.setScreen('career-league')}
         hideTopNav
@@ -679,23 +632,18 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'career-bracket': (p) => {
-    const cup = p.careerState?.season.cup;
-    if (!p.careerState || !cup) return null;
+    const cup = p.career.careerState?.season.cup;
+    if (!p.career.careerState || !cup) return null;
     return (
       <BracketScreen
         state={cup}
         onPlayMatch={(match, home, away) => {
-          const stage = cup.stage as PlayableStage;
-          const matches = stage === 'roundOf16' ? cup.roundOf16
-            : stage === 'quarterfinals' ? cup.quarterFinals
-            : stage === 'semifinals' ? cup.semiFinals
-            : [cup.final];
-          p.handlePlayCareerBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
+          p.career.handlePlayCareerBracketMatch(match, home, away, cup.stage as PlayableStage, stageMatchIndex(cup, match));
         }}
-        onSimulateMatch={p.handleSimulateCareerBracketMatch}
-        onSimulateOthers={p.handleSimulateOtherCareerBracketMatches}
-        onSimulateToEnd={p.handleSimulateCareerCupToEnd}
-        onEditTactics={p.handleEditCareerBracketTactics}
+        onSimulateMatch={p.career.handleSimulateCareerBracketMatch}
+        onSimulateOthers={p.career.handleSimulateOtherCareerBracketMatches}
+        onSimulateToEnd={p.career.handleSimulateCareerCupToEnd}
+        onEditTactics={p.career.handleEditCareerBracketTactics}
         onBack={() => p.setScreen('career-hub')}
         hideTopNav
       />
@@ -703,25 +651,20 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'career-continental': (p) => {
-    const cc = p.careerState?.season.continentalCup;
-    const ccDef = p.careerState?.season.continentalCupDef;
+    const cc = p.career.careerState?.season.continentalCup;
+    const ccDef = p.career.careerState?.season.continentalCupDef;
     if (!cc || !ccDef) return null;
     return (
       <BracketScreen
         state={cc}
         cupColor={ccDef.color}
         onPlayMatch={(match, home, away) => {
-          const stage = cc.stage as PlayableStage;
-          const matches = stage === 'roundOf16' ? cc.roundOf16
-            : stage === 'quarterfinals' ? cc.quarterFinals
-            : stage === 'semifinals' ? cc.semiFinals
-            : [cc.final];
-          p.handlePlayContinentalMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
+          p.career.handlePlayContinentalMatch(match, home, away, cc.stage as PlayableStage, stageMatchIndex(cc, match));
         }}
-        onSimulateMatch={p.handleSimulateContinentalMatch}
-        onSimulateOthers={p.handleSimulateOtherContinentalMatches}
-        onSimulateToEnd={p.handleSimulateContinentalToEnd}
-        onEditTactics={p.handleEditContinentalTactics}
+        onSimulateMatch={p.career.handleSimulateContinentalMatch}
+        onSimulateOthers={p.career.handleSimulateOtherContinentalMatches}
+        onSimulateToEnd={p.career.handleSimulateContinentalToEnd}
+        onEditTactics={p.career.handleEditContinentalTactics}
         onBack={() => p.setScreen('career-hub')}
         hideTopNav
       />
@@ -729,7 +672,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'trade-propose': (p) => {
-    const cs = p.careerState;
+    const cs = p.career.careerState;
     if (!cs) return null;
     const userTeam = cs.season.league.teams
       .find(t => t.id === cs.season.league.userTeamId);
@@ -740,13 +683,13 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         opponentTeams={cs.rosters[cs.leagueId].filter(t => t.id !== cs.season.league.userTeamId)}
         budget={getFinances(cs).budget}
         onBack={() => p.setScreen('transfer-market')}
-        onPropose={p.handleProposeTrade}
+        onPropose={p.career.handleProposeTrade}
       />
     );
   },
 
   'career-job-market': (p) => {
-    const cs = p.careerState;
+    const cs = p.career.careerState;
     if (!cs) return null;
     const userTeam = cs.rosters[cs.leagueId]
       .find(t => t.id === cs.season.league.userTeamId);
@@ -756,22 +699,22 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         reputation={cs.manager.reputation}
         currentClubName={userTeam?.name ?? 'Seu clube'}
         rosters={cs.rosters}
-        onAccept={p.handleAcceptJobOffer}
-        onDecline={p.handleDeclineJobOffer}
+        onAccept={p.career.handleAcceptJobOffer}
+        onDecline={p.career.handleDeclineJobOffer}
         onBack={() => p.setScreen('career-hub')}
       />
     );
   },
 
   'season-end': (p) => {
-    if (!p.careerState || p.careerState.history.length === 0) return null;
-    const league = getLeague(p.careerState.leagueId);
+    if (!p.career.careerState || p.career.careerState.history.length === 0) return null;
+    const league = getLeague(p.career.careerState.leagueId);
     if (!league) return null;
     return (
       <SeasonEndScreen
-        entry={p.careerState.history[p.careerState.history.length - 1]}
+        entry={p.career.careerState.history[p.career.careerState.history.length - 1]}
         league={league}
-        newReputation={p.careerState.manager.reputation}
+        newReputation={p.career.careerState.manager.reputation}
         onContinue={() => p.setScreen('career-hub')}
       />
     );

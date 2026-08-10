@@ -140,6 +140,19 @@
   --home: #3b82f6;
   --away: #ef4444;
 
+  /* ── Cores semânticas ──
+   * Antes espalhadas como hex literais em ~20 arquivos (stats de carreira,
+   * finanças, resultados, fadiga). Centralizadas aqui pra consistência visual
+   * e pra abrir caminho pra temas. Os valores replicam exatamente os que já
+   * estavam em uso — nenhuma mudança de aparência ao tokenizar. */
+  --win: #34d399;                  /* vitória, valor positivo forte */
+  --draw: #9ca3af;                 /* empate, neutro */
+  --loss: #f87171;                 /* derrota, valor negativo */
+  --positive: #22c55e;             /* receita entrando */
+  --negative: #ef4444;             /* despesa saindo (mesmo tom de --away) */
+  --warning: #f59e0b;              /* alerta / atenção (mesmo tom de --accent-2) */
+  --text-muted: #9ca3af;           /* rótulos acessórios (mesmo tom que era literal) */
+
   --shadow: rgba(0, 0, 0, 0.55) 0 10px 20px -4px;
 
   /* ── Tipografia ── */
