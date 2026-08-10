@@ -46,6 +46,19 @@ O script busca as 12 ligas ao vivo, grava o cache local de cada uma e sobrescrev
 
 ## 🏗️ Saúde do código
 
+### ✅ Refatoração de UI, fluxo e design — 2026-08-10 (concluída)
+
+Resposta a uma análise de código/fluxo/design. **9 melhorias** aplicadas (tudo menos tema claro, adiado a pedido). Detalhe completo em [`REFATORACAO_UI_2026-08.md`](REFATORACAO_UI_2026-08.md).
+
+- **Design system:** tokens semânticos de cor (`--win/--draw/--loss/--positive/--negative/--warning/--text-muted` em `index.css`) substituindo ~20 arquivos com hex solto (zero mudança visual); primitivos em `src/components/ui/` (`Button` com variantes + `glow`, `Card`, `StatTile`, `Icon` SVG); ícones de interface migrados de emoji pra SVG na Central; CTA "hero" (`.start-btn`, 8 telas) consolidado em `<Button glow>` e a classe global removida.
+- **Fluxo/layout:** `CareerHubScreen` reorganizada de "God screen" (14 cards empilhados) pra 2 colunas ação×informação, com grid desktop ≥900px; sync de elencos movido pra "Ajustes avançados" recolhível.
+- **Arquitetura:** bundle do `useCareerManager` agrupado num único prop `career` (screenProps/`AppScreensProps` caíram de ~90 → ~40 campos); navegação de carreira consolidada num objeto estável `nav` (`CareerNav`); helper de índice de mata-mata deduplicado (`BracketScreen` computa o índice internamente).
+- **Performance:** `React.memo` em **todas as 9 telas de carreira** (CareerHub, TransferMarket, JobMarket, SeasonEnd, LeagueTable, LeagueScreen, BracketScreen, TradeProposal, TrophyRoom). TrophyRoom usa comparador custom (o `currentSeason` é comparado por valor). Skips confirmados empiricamente.
+
+Suíte: 573 testes, 0 falhas. `tsc`/`oxlint` limpos.
+
+**Follow-ups não feitos:** tema claro (#10, adiado); dedup profundo dos handlers liga↔carreira nos hooks; estilos inline estáticos restantes em `MatchScreen`/`HalftimePanel`; adoção incremental dos primitivos nas telas ainda não migradas.
+
 ### ✅ Auditoria 2026-07-24 — melhoria contínua (concluída)
 
 Todas as 27 melhorias foram aplicadas. Nenhum item pendente.
