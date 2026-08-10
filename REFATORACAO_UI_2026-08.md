@@ -374,3 +374,65 @@ o `tsc -b` não cobre os testes, por isso não tinha acusado).
 
 - `tsc`/`oxlint` limpos; **573 testes verdes**; prova de skip de render confirmada;
   dev server sem erros.
+
+---
+
+# Quarta rodada — `React.memo` nas demais telas de carreira
+
+Estendido o padrão do memo para as outras telas de carreira.
+
+## Objeto de navegação estável `nav`
+
+Introduzido `CareerNav` (`types/navigation.ts`) — um objeto com todos os callbacks
+de navegação da carreira (`toHub`, `toCareerLeague`, `toTransferMarket`,
+`exitCareer`, …). É criado **uma vez** via `useMemo` no `App` (deps = setters
+estáveis do `useAppShell`) e passado como um único prop `nav`. Substitui as ~15
+arrow functions inline que os renderers do `screenMap` criavam a cada render —
+que eram justamente o que furava o `React.memo`. Também consolidou os 4 callbacks
+avulsos da 3ª rodada.
+
+## Telas memoizadas (props agora estáveis)
+
+`TransferMarketScreen`, `JobMarketScreen`, `SeasonEndScreen`, `LeagueTableScreen`,
+`LeagueScreen`, `BracketScreen` — todas envolvidas em `memo(...)`.
+
+Por que as props ficaram estáveis:
+- **Getters de estado retornam fatias**, não cópias: `getFreeAgentPool`,
+  `getTransferList`, `getJobOffers`, `getInbox`, `getTransferHistory` fazem
+  `return state.campo ?? []` → mesma referência quando `careerState` não muda.
+- **Handlers do bundle `career`** são `useCallback` → estáveis.
+- **Navegação** agora vem do `nav` estável.
+- `state`/`league` por referência; contadores/labels são primitivos.
+
+### Refactor do `BracketScreen.onPlayMatch`
+Antes o `onPlayMatch` era uma closure inline no `screenMap` (computava o índice da
+partida). Agora o `BracketScreen` computa o índice internamente (com o mesmo
+`getStageMatches(state).findIndex`, comportamento byte-idêntico) e o `screenMap`
+passa o handler estável direto (`p.career.handlePlayCareerBracketMatch` etc.).
+Isso também **removeu** o helper `stageMatchIndex` duplicado da 1ª rodada — menos
+código e o memo passa a valer nas 3 telas de chave (copa, continental, mata-mata
+avulso).
+
+## Telas deixadas SEM memo (com razão)
+
+- **TrophyRoomScreen** — recebe um objeto `currentSeason` montado inline a cada
+  render (novo por referência). Memoizar exigiria mover essa construção pra dentro
+  do componente (refactor da API de ~20 props) para benefício pequeno (tela de
+  gestão, pouco toast). Deixada como follow-up.
+- **TradeProposalScreen** — recebe `opponentTeams` de um `.filter(...)` inline
+  (novo array). Tela curta (propor troca), baixo valor de memo. Follow-up.
+
+Shipar memo nelas sem estabilizar essas props seria **oco** (nunca pularia) — não
+foi feito.
+
+## Prova empírica
+
+Além da 3ª rodada (CareerHubScreen), confirmado o skip no `JobMarketScreen`:
+espiando `getLeague` (chamada no render por oferta), dois re-renders do pai com
+props idênticas **não** dispararam novas chamadas. Padrão validado. Teste removido
+após validar.
+
+## Verificação (quarta rodada)
+
+- `tsc`/`oxlint` limpos; **573 testes verdes** (incl. 8 do BracketScreen, que
+  cobrem o refactor do `onPlayMatch`); dev server sem erros.

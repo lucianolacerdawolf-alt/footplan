@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { memo, useState, useMemo } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -45,7 +45,7 @@ function teamById(teams: Team[], id: string): Team {
   return teams.find(t => t.id === id)!;
 }
 
-export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason, onViewCup, onOpenJobMarket, jobMarketOffers, hideTopNav }: Props) {
+function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimulateRound, onNextRound, onEditTactics, onViewTable, onBack, blockAdvanceReason, onViewCup, onOpenJobMarket, jobMarketOffers, hideTopNav }: Props) {
   const { teams, userTeamId, fixtures, currentRound, phase } = state;
   const [simulating, setSimulating] = useState(false);
   const runSim = (fn: () => void) => {
@@ -246,3 +246,5 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
     </div>
   );
 }
+
+export default memo(LeagueScreen);

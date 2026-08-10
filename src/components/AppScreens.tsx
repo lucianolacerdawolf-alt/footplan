@@ -2,7 +2,7 @@ import React from 'react';
 import type { Team, MatchResult, RandomFn } from '../engine/types';
 import type { GameMode } from './TeamSelectionScreen';
 import type { PlayableStage, LeagueState, BracketState, LeagueFixture, BracketMatch } from '../engine/tournament';
-import type { Screen, MatchContext, TournamentMode } from '../types/navigation';
+import type { Screen, MatchContext, TournamentMode, CareerNav } from '../types/navigation';
 import type { LeagueDefinition } from '../data/leagues/types';
 import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
 import type { MatchRecord } from '../hooks/useMatchHistory';
@@ -15,7 +15,6 @@ import { getSponsorLabel, getNextTierUp, getSponsorMultiplier, getSponsorMinRepu
 import { getTicketRevenue } from '../engine/transferMarket';
 import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
-import { getStageMatches } from '../engine/bracketHelpers';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import type { SeededRng } from '../engine/rng';
@@ -125,11 +124,8 @@ export interface AppScreensProps {
   handleCareerFromHome: () => void;
   handleQuickPlay: () => void;
   handleNewCareerFromHub: () => void;
-  // Navegação da carreira com identidade estável (p/ React.memo da CareerHubScreen).
-  exitCareer: () => void;
-  goCareerContinental: () => void;
-  goCareerLeague: () => void;
-  goCareerJobMarket: () => void;
+  // Navegação da carreira com identidade estável (p/ React.memo das telas de carreira).
+  nav: CareerNav;
   handleCareerTournamentStart: (userTeam: Team, managerName?: string) => void;
   handleTournamentStart: (userTeam: Team) => void;
 
@@ -164,12 +160,6 @@ export interface AppScreensProps {
 }
 
 type ScreenRenderer = (props: AppScreensProps) => React.ReactNode;
-
-/** Índice da partida dentro do estágio atual da chave. Antes esse trecho
- *  (selecionar as partidas do estágio + findIndex) estava copiado nos três
- *  renderers de mata-mata: copa (`bracket`/`career-bracket`) e continental. */
-const stageMatchIndex = (bracket: BracketState, match: BracketMatch): number =>
-  getStageMatches(bracket).findIndex(m => m.id === match.id);
 
 /** Mapa tela→renderer. Exportado pra teste de navegação (P3 #9) — afere que
  *  todo `Screen` do tipo fechado tem renderer, e que nenhum onBack pode apontar
@@ -301,9 +291,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     return (
       <BracketScreen
         state={bracket}
-        onPlayMatch={(match, home, away) => {
-          p.handlePlayBracketMatch(match, home, away, bracket.stage as PlayableStage, stageMatchIndex(bracket, match));
-        }}
+        onPlayMatch={p.handlePlayBracketMatch}
         onSimulateMatch={p.handleSimulateBracketMatch}
         onSimulateOthers={p.handleSimulateOtherBracketMatches}
         onEditTactics={p.handleEditBracketTactics}
@@ -494,19 +482,19 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       <CareerHubScreen
         state={p.career.careerState}
         league={getLeague(p.career.careerState.leagueId)!}
-        onViewContinental={p.goCareerContinental}
+        onViewContinental={p.nav.toCareerContinental}
         onPlayNext={p.career.handlePlayNextCareerMatch}
         onPlayNextCup={p.career.handlePlayNextCareerCupMatch}
         onPlayNextContinental={p.career.handlePlayNextContinentalMatch}
         onAdvanceSeason={p.career.handleAdvanceSeason}
         onNewCareer={p.handleNewCareerFromHub}
-        onBack={p.exitCareer}
+        onBack={p.nav.exitCareer}
         onMarkInboxRead={p.career.handleMarkInboxRead}
         onAcceptTransferOffer={p.career.handleAcceptTransferOffer}
         onRejectTransferOffer={p.career.handleRejectTransferOffer}
         onNextRound={p.career.handleNextCareerLeagueRound}
-        onViewLeague={p.goCareerLeague}
-        onOpenJobMarket={p.goCareerJobMarket}
+        onViewLeague={p.nav.toCareerLeague}
+        onOpenJobMarket={p.nav.toCareerJobMarket}
         jobOfferCount={getJobOffers(p.career.careerState).length}
         onRespondConversation={p.career.handleRespondConversation}
         onApplyTraining={p.career.handleApplyTraining}
@@ -543,7 +531,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onUnlistPlayerForSale={p.career.handleUnlistPlayerForSale}
         onSignFreeAgent={p.career.handleSignFreeAgent}
         onRosterSynced={p.career.handleMarketRosterSynced}
-        onProposeTrade={() => p.setScreen('trade-propose')}
+        onProposeTrade={p.nav.toTradePropose}
       />
     );
   },
@@ -611,10 +599,10 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onSimulateRound={p.career.handleSimulateCareerLeagueRound}
         onNextRound={p.career.handleNextCareerLeagueRound}
         onEditTactics={p.career.handleEditCareerLeagueTactics}
-        onViewTable={() => p.setScreen('career-league-table')}
-        onViewCup={() => p.setScreen('career-bracket')}
-        onBack={() => p.setScreen('career-hub')}
-        onOpenJobMarket={() => p.setScreen('career-job-market')}
+        onViewTable={p.nav.toCareerLeagueTable}
+        onViewCup={p.nav.toCareerBracket}
+        onBack={p.nav.toHub}
+        onOpenJobMarket={p.nav.toCareerJobMarket}
         jobMarketOffers={getJobOffers(p.career.careerState).length}
         blockAdvanceReason={blockAdvanceReason}
         hideTopNav
@@ -630,7 +618,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       <LeagueTableScreen
         state={p.career.careerState.season.league}
         league={league}
-        onBack={() => p.setScreen('career-league')}
+        onBack={p.nav.toCareerLeague}
         hideTopNav
       />
     );
@@ -642,14 +630,12 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     return (
       <BracketScreen
         state={cup}
-        onPlayMatch={(match, home, away) => {
-          p.career.handlePlayCareerBracketMatch(match, home, away, cup.stage as PlayableStage, stageMatchIndex(cup, match));
-        }}
+        onPlayMatch={p.career.handlePlayCareerBracketMatch}
         onSimulateMatch={p.career.handleSimulateCareerBracketMatch}
         onSimulateOthers={p.career.handleSimulateOtherCareerBracketMatches}
         onSimulateToEnd={p.career.handleSimulateCareerCupToEnd}
         onEditTactics={p.career.handleEditCareerBracketTactics}
-        onBack={() => p.setScreen('career-hub')}
+        onBack={p.nav.toHub}
         hideTopNav
       />
     );
@@ -663,14 +649,12 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       <BracketScreen
         state={cc}
         cupColor={ccDef.color}
-        onPlayMatch={(match, home, away) => {
-          p.career.handlePlayContinentalMatch(match, home, away, cc.stage as PlayableStage, stageMatchIndex(cc, match));
-        }}
+        onPlayMatch={p.career.handlePlayContinentalMatch}
         onSimulateMatch={p.career.handleSimulateContinentalMatch}
         onSimulateOthers={p.career.handleSimulateOtherContinentalMatches}
         onSimulateToEnd={p.career.handleSimulateContinentalToEnd}
         onEditTactics={p.career.handleEditContinentalTactics}
-        onBack={() => p.setScreen('career-hub')}
+        onBack={p.nav.toHub}
         hideTopNav
       />
     );
@@ -687,7 +671,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         userTeam={userTeam}
         opponentTeams={cs.rosters[cs.leagueId].filter(t => t.id !== cs.season.league.userTeamId)}
         budget={getFinances(cs).budget}
-        onBack={() => p.setScreen('transfer-market')}
+        onBack={p.nav.toTransferMarket}
         onPropose={p.career.handleProposeTrade}
       />
     );
@@ -706,7 +690,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         rosters={cs.rosters}
         onAccept={p.career.handleAcceptJobOffer}
         onDecline={p.career.handleDeclineJobOffer}
-        onBack={() => p.setScreen('career-hub')}
+        onBack={p.nav.toHub}
       />
     );
   },
@@ -720,7 +704,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         entry={p.career.careerState.history[p.career.careerState.history.length - 1]}
         league={league}
         newReputation={p.career.careerState.manager.reputation}
-        onContinue={() => p.setScreen('career-hub')}
+        onContinue={p.nav.toHub}
       />
     );
   },

@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { LeagueState, BracketState } from './engine/tournament';
 import type { PlayableStage } from './engine/tournament';
+import type { CareerNav } from './types/navigation';
 import { loadLiveMatch, clearLiveMatch, type LiveMatchSnapshot } from './utils/liveMatchPersistence';
 import { useMatchHistory } from './hooks/useMatchHistory';
 import { useH2H } from './hooks/useH2H';
@@ -268,14 +269,21 @@ function App() {
     setScreen('league-select');
   }, [setTournamentMode, setReturnScreen, setScreen]);
 
-  // Navegação da carreira com identidade estável. A CareerHubScreen é React.memo;
-  // se estas fossem arrows inline no screenMap, mudariam a cada render do App e
-  // furariam o memo (a tela re-renderizaria em qualquer toast/save). Setters do
-  // useAppShell já são estáveis, então estes callbacks nunca mudam.
-  const exitCareer = useCallback(() => { setIsCareerMode(false); goHome(); }, [setIsCareerMode, goHome]);
-  const goCareerContinental = useCallback(() => setScreen('career-continental'), [setScreen]);
-  const goCareerLeague = useCallback(() => setScreen('career-league'), [setScreen]);
-  const goCareerJobMarket = useCallback(() => setScreen('career-job-market'), [setScreen]);
+  // Navegação da carreira com identidade estável, num único objeto. As telas de
+  // carreira são React.memo; se estes fossem arrows inline no screenMap, mudariam
+  // a cada render do App e furariam o memo (a tela re-renderizaria em qualquer
+  // toast/save). Setters do useAppShell já são estáveis, então `nav` nunca muda.
+  const nav: CareerNav = useMemo(() => ({
+    exitCareer: () => { setIsCareerMode(false); goHome(); },
+    toHub: () => setScreen('career-hub'),
+    toCareerLeague: () => setScreen('career-league'),
+    toCareerLeagueTable: () => setScreen('career-league-table'),
+    toCareerBracket: () => setScreen('career-bracket'),
+    toCareerContinental: () => setScreen('career-continental'),
+    toCareerJobMarket: () => setScreen('career-job-market'),
+    toTransferMarket: () => setScreen('transfer-market'),
+    toTradePropose: () => setScreen('trade-propose'),
+  }), [setScreen, setIsCareerMode, goHome]);
 
   const handleCareerTournamentStart = useCallback((userTeam: Team, managerName?: string) => {
     const name = managerName ?? '';
@@ -322,10 +330,7 @@ function App() {
     handleCareerFromHome,
     handleQuickPlay,
     handleNewCareerFromHub,
-    exitCareer,
-    goCareerContinental,
-    goCareerLeague,
-    goCareerJobMarket,
+    nav,
     handleCareerTournamentStart,
     handleTournamentStart,
     handleStartOnlineMatch,
