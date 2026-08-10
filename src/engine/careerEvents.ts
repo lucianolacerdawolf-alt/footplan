@@ -98,8 +98,8 @@ const EVENTS: CareerEvent[] = [
   },
 ];
 
-/** Chance de evento a cada rodada da carreira: 25% */
-export function maybeGetCareerEvent(): CareerEvent | null {
-  if (Math.random() > 0.25) return null;
-  return EVENTS[Math.floor(Math.random() * EVENTS.length)];
+/** Chance de evento a cada rodada da carreira: 25%. `rng` injetável pra testes determinísticos. */
+export function maybeGetCareerEvent(rng: () => number = Math.random): CareerEvent | null {
+  if (rng() > 0.25) return null;
+  return EVENTS[Math.floor(rng() * EVENTS.length)];
 }

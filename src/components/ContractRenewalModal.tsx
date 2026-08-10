@@ -93,7 +93,7 @@ export default function ContractRenewalModal({ player, budget, currentSeasonYear
     setSalaryIdx(closestPresetIndex(c.weeklyWage, wagePresets));
     setBonusIdx(closestPresetIndex(c.signingBonus ?? 0, SIGNING_BONUS_PRESETS.map(p => Math.round(marketValue * p.fraction))));
     setGoalIdx(c.contractGoal
-      ? GOAL_PRESETS.findIndex(g => g.target === c.contractGoal!.target)
+      ? GOAL_PRESETS.findIndex(g => g.target === c.contractGoal?.target)
       : 0);
   };
 

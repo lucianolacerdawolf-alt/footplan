@@ -287,7 +287,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   ),
 
   'tournament-setup': (p) => {
-    const league = p.selectedLeague!;
+    const league = p.selectedLeague;
+    if (!league) return null;
     return (
       <TournamentSetupScreen
         mode={p.isCareerMode ? 'career' : p.tournamentMode}
@@ -301,11 +302,12 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'league': (p) => {
-    if (!p.leagueState) return null;
+    const league = p.selectedLeague;
+    if (!p.leagueState || !league) return null;
     return (
       <LeagueScreen
         state={p.leagueState}
-        league={p.selectedLeague!}
+        league={league}
         onPlayMatch={p.handlePlayLeagueMatch}
         onSimulateUserMatch={p.handleSimulateUserLeagueMatch}
         onSimulateRound={p.handleSimulateLeagueRound}
@@ -318,27 +320,29 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'league-table': (p) => {
-    if (!p.leagueState) return null;
+    const league = p.selectedLeague;
+    if (!p.leagueState || !league) return null;
     return (
       <LeagueTableScreen
         state={p.leagueState}
-        league={p.selectedLeague!}
+        league={league}
         onBack={() => p.setScreen('league')}
       />
     );
   },
 
   'bracket': (p) => {
-    if (!p.bracketState) return null;
+    const bracket = p.bracketState;
+    if (!bracket) return null;
     return (
       <BracketScreen
-        state={p.bracketState}
+        state={bracket}
         onPlayMatch={(match, home, away) => {
-          const stage = p.bracketState!.stage as PlayableStage;
-          const matches = stage === 'roundOf16' ? p.bracketState!.roundOf16
-            : stage === 'quarterfinals' ? p.bracketState!.quarterFinals
-            : stage === 'semifinals' ? p.bracketState!.semiFinals
-            : [p.bracketState!.final];
+          const stage = bracket.stage as PlayableStage;
+          const matches = stage === 'roundOf16' ? bracket.roundOf16
+            : stage === 'quarterfinals' ? bracket.quarterFinals
+            : stage === 'semifinals' ? bracket.semiFinals
+            : [bracket.final];
           p.handlePlayBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
         }}
         onSimulateMatch={p.handleSimulateBracketMatch}
@@ -401,9 +405,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
 
   'match': (p) => {
     if (!p.homeTeam || !p.awayTeam) return null;
-    const onlineRngFn: RandomFn | undefined = p.matchContext === 'online' && p.onlineRngRef.current
-      ? () => p.onlineRngRef.current!.next()
-      : undefined;
+    const onlineRng = p.matchContext === 'online' ? p.onlineRngRef.current : null;
+    const onlineRngFn: RandomFn | undefined = onlineRng ? () => onlineRng.next() : undefined;
     const onlineProps = p.matchContext === 'online' && p.peer.state === 'connected' ? {
       isHost: p.peer.isHost,
       send: p.peer.send,
@@ -663,10 +666,12 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
 
   'career-league-table': (p) => {
     if (!p.careerState) return null;
+    const league = getLeague(p.careerState.leagueId);
+    if (!league) return null;
     return (
       <LeagueTableScreen
         state={p.careerState.season.league}
-        league={getLeague(p.careerState.leagueId)!}
+        league={league}
         onBack={() => p.setScreen('career-league')}
         hideTopNav
       />
@@ -674,16 +679,17 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'career-bracket': (p) => {
-    if (!p.careerState) return null;
+    const cup = p.careerState?.season.cup;
+    if (!p.careerState || !cup) return null;
     return (
       <BracketScreen
-        state={p.careerState.season.cup}
+        state={cup}
         onPlayMatch={(match, home, away) => {
-          const stage = p.careerState!.season.cup.stage as PlayableStage;
-          const matches = stage === 'roundOf16' ? p.careerState!.season.cup.roundOf16
-            : stage === 'quarterfinals' ? p.careerState!.season.cup.quarterFinals
-            : stage === 'semifinals' ? p.careerState!.season.cup.semiFinals
-            : [p.careerState!.season.cup.final];
+          const stage = cup.stage as PlayableStage;
+          const matches = stage === 'roundOf16' ? cup.roundOf16
+            : stage === 'quarterfinals' ? cup.quarterFinals
+            : stage === 'semifinals' ? cup.semiFinals
+            : [cup.final];
           p.handlePlayCareerBracketMatch(match, home, away, stage, matches.findIndex(m => m.id === match.id));
         }}
         onSimulateMatch={p.handleSimulateCareerBracketMatch}
@@ -723,12 +729,16 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'trade-propose': (p) => {
-    if (!p.careerState) return null;
+    const cs = p.careerState;
+    if (!cs) return null;
+    const userTeam = cs.season.league.teams
+      .find(t => t.id === cs.season.league.userTeamId);
+    if (!userTeam) return null;
     return (
       <TradeProposalScreen
-        userTeam={p.careerState.season.league.teams.find(t => t.id === p.careerState!.season.league.userTeamId)!}
-        opponentTeams={p.careerState.rosters[p.careerState.leagueId].filter(t => t.id !== p.careerState!.season.league.userTeamId)}
-        budget={getFinances(p.careerState).budget}
+        userTeam={userTeam}
+        opponentTeams={cs.rosters[cs.leagueId].filter(t => t.id !== cs.season.league.userTeamId)}
+        budget={getFinances(cs).budget}
         onBack={() => p.setScreen('transfer-market')}
         onPropose={p.handleProposeTrade}
       />
@@ -736,15 +746,16 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 
   'career-job-market': (p) => {
-    if (!p.careerState) return null;
-    const userTeam = p.careerState.rosters[p.careerState.leagueId]
-      .find(t => t.id === p.careerState!.season.league.userTeamId);
+    const cs = p.careerState;
+    if (!cs) return null;
+    const userTeam = cs.rosters[cs.leagueId]
+      .find(t => t.id === cs.season.league.userTeamId);
     return (
       <JobMarketScreen
-        offers={getJobOffers(p.careerState)}
-        reputation={p.careerState.manager.reputation}
+        offers={getJobOffers(cs)}
+        reputation={cs.manager.reputation}
         currentClubName={userTeam?.name ?? 'Seu clube'}
-        rosters={p.careerState.rosters}
+        rosters={cs.rosters}
         onAccept={p.handleAcceptJobOffer}
         onDecline={p.handleDeclineJobOffer}
         onBack={() => p.setScreen('career-hub')}

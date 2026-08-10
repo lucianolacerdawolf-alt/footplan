@@ -4,6 +4,7 @@ import { getAvgOvr } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import { formatMoney } from '../utils/formatMoney';
 import { calculateMarketValue } from '../engine/transferMarket';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   userTeam: Team;
@@ -86,7 +87,7 @@ export default function TradeProposalScreen({ userTeam, opponentTeams, budget, o
                     className="team-tile"
                     onClick={() => setOpponentId(team.id)}
                   >
-                    <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+                    <img className="tile-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
                     <span className="tile-name">{team.name}</span>
                     <span className="tile-ovr">{getAvgOvr(team)}</span>
                   </button>

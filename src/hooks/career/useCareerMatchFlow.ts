@@ -86,8 +86,9 @@ export function useCareerMatchFlow({
     const round = league.fixtures[league.currentRound];
     const fixture = round.find(f => (f.homeTeamId === league.userTeamId || f.awayTeamId === league.userTeamId) && !f.played);
     if (!fixture) { setScreen('career-league'); return; }
-    const home = league.teams.find(t => t.id === fixture.homeTeamId)!;
-    const away = league.teams.find(t => t.id === fixture.awayTeamId)!;
+    const home = league.teams.find(t => t.id === fixture.homeTeamId);
+    const away = league.teams.find(t => t.id === fixture.awayTeamId);
+    if (!home || !away) { setScreen('career-league'); return; }
     handlePlayCareerLeagueMatch(fixture, home, away);
   }, [careerState, setScreen, handlePlayCareerLeagueMatch]);
 
@@ -132,14 +133,12 @@ export function useCareerMatchFlow({
     const phase: typeof leg.phase = next >= leg.fixtures.length ? 'done' : 'playing';
     const updatedState = { ...leg, teams: variedTeams, currentRound: next, phase };
 
-    const finances = getFinances(careerState);
     const userTeamAfter = variedTeams.find(t => t.id === leg.userTeamId)!;
     const wageBill = computeWageBill(userTeamAfter);
     // Bilheteria: a rodada que está terminando (leg.currentRound, antes do incremento
     // pra `next`) é o jogo já disputado — creditar se foi em casa.
     const justPlayedFixture = leg.fixtures[leg.currentRound].find(f => f.homeTeamId === leg.userTeamId || f.awayTeamId === leg.userTeamId);
     const ticketRevenue = justPlayedFixture?.homeTeamId === leg.userTeamId ? getTicketRevenue(careerState.leagueId) : 0;
-    const budget = finances.budget + finances.weeklyIncome + ticketRevenue + (finances.merchRevenue ?? 0) - wageBill;
 
     const newMessages: InboxMessage[] = [];
     let eventBudgetDelta = 0;
@@ -232,11 +231,16 @@ export function useCareerMatchFlow({
 
     setCareerState(prev => {
       if (!prev) return prev;
+      // Finanças derivadas do `prev` (estado mais recente), não do snapshot — senão
+      // um evento concorrente (ex: venda de jogador) era sobrescrito ao avançar a rodada.
+      const prevFinances = getFinances(prev);
+      const nextBudget = prevFinances.budget + prevFinances.weeklyIncome + ticketRevenue
+        + (prevFinances.merchRevenue ?? 0) - wageBill + eventBudgetDelta;
       return {
         ...prev,
         ...freeAgentPoolPatch,
         season: { ...prev.season, league: updatedState },
-        finances: { ...finances, budget: budget + eventBudgetDelta, wageBill },
+        finances: { ...prevFinances, budget: nextBudget, wageBill },
         inbox: newMessages.length > 0 ? [...getInbox(prev), ...newMessages] : prev.inbox,
       };
     });
@@ -276,6 +280,11 @@ export function useCareerMatchFlow({
     const goalScorers = tallyUserGoals(result.events, leg.userTeamId);
     setCareerState(prev => {
       if (!prev) return prev;
+      // Guarda contra duplo resultado (F5 restore + clique rápido): se a partida já
+      // foi registrada no `prev`, não registrar de novo (senão moral/lesões/gols eram
+      // aplicados 2x).
+      const prevFixture = prev.season.league.fixtures[roundIdx]?.[fixtureIdx];
+      if (!prevFixture || prevFixture.played) return prev;
       return {
         ...prev,
         season: {
@@ -373,8 +382,10 @@ export function useCareerMatchFlow({
     const cupState = careerState.season.cup;
     const stageMatches = getStageMatches(cupState);
     const match = stageMatches[matchIdx];
-    const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
-    const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
+    if (!match) return;
+    const home = cupState.teams.find(t => t.id === match.homeTeamId);
+    const away = cupState.teams.find(t => t.id === match.awayTeamId);
+    if (!home || !away) return;
     const sim = simularBracketMatch(home, away);
     const updated: BracketMatch = { ...match, ...sim };
     let s = { ...cupState };
@@ -426,8 +437,10 @@ export function useCareerMatchFlow({
     const cupState = careerState.season.continentalCup;
     const stageMatches = getStageMatches(cupState);
     const match = stageMatches[matchIdx];
-    const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
-    const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
+    if (!match) return;
+    const home = cupState.teams.find(t => t.id === match.homeTeamId);
+    const away = cupState.teams.find(t => t.id === match.awayTeamId);
+    if (!home || !away) return;
     const sim = simularBracketMatch(home, away);
     const updated: BracketMatch = { ...match, ...sim };
     let s = { ...cupState };
@@ -454,10 +467,11 @@ export function useCareerMatchFlow({
     if (!cupState) return;
     const stageMatches = getStageMatches(cupState);
     const match = stageMatches[pendingCareerBracketIdx];
-    const home = cupState.teams.find(t => t.id === match.homeTeamId)!;
-    const away = cupState.teams.find(t => t.id === match.awayTeamId)!;
+    if (!match) return;
+    const home = cupState.teams.find(t => t.id === match.homeTeamId);
+    const away = cupState.teams.find(t => t.id === match.awayTeamId);
+    if (!home || !away) return;
     const ticketRevenue = match.homeTeamId === cupState.userTeamId ? getTicketRevenue(careerState.leagueId) : 0;
-    const finances = getFinances(careerState);
     const updated = buildBracketMatchFromResult(match, result, home.id, away.id);
     let s = { ...cupState };
     s = updateStageMatch(s, pendingCareerBracketIdx, updated);
@@ -484,6 +498,13 @@ export function useCareerMatchFlow({
     const goalScorers = tallyUserGoals(result.events, advanced.userTeamId);
     setCareerState(prev => {
       if (!prev) return prev;
+      // Guarda contra duplo resultado: se a partida já foi registrada no `prev`,
+      // não registrar de novo (senão bilheteria/lesões eram aplicados 2x).
+      const prevCupState = isContinental ? prev.season.continentalCup : prev.season.cup;
+      if (!prevCupState) return prev;
+      const prevMatch = getStageMatches(prevCupState)[pendingCareerBracketIdx];
+      if (!prevMatch || prevMatch.played) return prev;
+      const prevFinances = getFinances(prev);
       const seasonPatch = isContinental
         ? { continentalCup: finalState }
         : { cup: finalState };
@@ -493,7 +514,7 @@ export function useCareerMatchFlow({
           ...prev.season, ...seasonPatch,
           userGoalScorers: mergeGoalTally(prev.season.userGoalScorers, goalScorers),
         },
-        finances: { ...finances, budget: finances.budget + ticketRevenue },
+        finances: { ...prevFinances, budget: prevFinances.budget + ticketRevenue },
         inbox: newInjuryMessages.length > 0 ? [...getInbox(prev), ...newInjuryMessages] : prev.inbox,
       };
     });

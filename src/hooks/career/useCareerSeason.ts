@@ -188,31 +188,38 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         currentSeasonYear: careerState.currentSeasonYear + 1,
       });
 
-      setCareerState({
-        ...careerState,
-        manager: { ...careerState.manager, reputation: newReputation },
-        currentSeasonYear: careerState.currentSeasonYear + 1,
-        season: {
-          league: nextLeague, cup: nextCup, tradesUsedThisSeason: 0,
-          budgetAtSeasonStart: finances.budget, userGoalScorers: {},
-          continentalCup: nextContinentalBracket,
-          continentalCupId: userCupDef?.id,
-          continentalCupDef: userCupDef ?? undefined,
-        },
-        rosters: evolvedRosters,
-        history: [...careerState.history, entry],
-        finances: { budget: finances.budget + leaguePrize + cupPrize + goalBonuses + continentalPrize, wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
-        inbox: [...(careerState.inbox ?? []), ...objectiveMessages],
-        freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(careerState), careerState.currentSeasonYear + 1, Math.random, departures),
-        sponsorTier: nextSponsorTier,
-        sponsorName: nextSponsorName,
-        boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },
-        jobOffers,
-        // Fase 3 — as rodadas zeram no novo calendário; os flags pré-jogo (treino/
-        // coletiva) devem recomeçar, senão a rodada 0 da temporada nova herdaria o
-        // "já feito" da temporada anterior.
-        preMatchDoneRound: undefined,
-        pressDoneRound: undefined,
+      setCareerState(prev => {
+        if (!prev) return prev;
+        // Guarda contra duplo clique/estado stale: só avança se a temporada AINDA
+        // está encerrada no estado mais recente — senão o fechamento era reaplicado
+        // 2x (prêmios duplicados, objetivos gerados duas vezes).
+        if (prev.season.league.phase !== 'done' || prev.season.cup.stage !== 'champion') return prev;
+        return {
+          ...prev,
+          manager: { ...prev.manager, reputation: newReputation },
+          currentSeasonYear: prev.currentSeasonYear + 1,
+          season: {
+            league: nextLeague, cup: nextCup, tradesUsedThisSeason: 0,
+            budgetAtSeasonStart: finances.budget, userGoalScorers: {},
+            continentalCup: nextContinentalBracket,
+            continentalCupId: userCupDef?.id,
+            continentalCupDef: userCupDef ?? undefined,
+          },
+          rosters: evolvedRosters,
+          history: [...prev.history, entry],
+          finances: { budget: finances.budget + leaguePrize + cupPrize + goalBonuses + continentalPrize, wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
+          inbox: [...(prev.inbox ?? []), ...objectiveMessages],
+          freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(prev), prev.currentSeasonYear + 1, Math.random, departures),
+          sponsorTier: nextSponsorTier,
+          sponsorName: nextSponsorName,
+          boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },
+          jobOffers,
+          // Fase 3 — as rodadas zeram no novo calendário; os flags pré-jogo (treino/
+          // coletiva) devem recomeçar, senão a rodada 0 da temporada nova herdaria o
+          // "já feito" da temporada anterior.
+          preMatchDoneRound: undefined,
+          pressDoneRound: undefined,
+        };
       });
       setScreen('season-end');
     } catch (err) {

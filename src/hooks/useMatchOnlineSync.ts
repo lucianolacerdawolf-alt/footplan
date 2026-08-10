@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Team, Strategy, MatchResult, Player } from '@/engine/types';
 import type { SubWindow } from '@/utils/liveMatchPersistence';
 
@@ -53,6 +53,17 @@ export function useMatchOnlineSync({
   const [hostReady, setHostReady] = useState(false);
   const [guestReady, setGuestReady] = useState(false);
 
+  // Espelhos em ref dos times/fase: o handler de mensagens lê SEMPRE o valor mais
+  // recente. Antes ele capturava home/away do render — se squad-update/strategy-update
+  // e start-simulate chegassem no mesmo tick (o host envia tudo junto), o primeiro
+  // tempo rodava com a escalação ANTERIOR às atualizações.
+  const homeRef = useRef(home);
+  const awayRef = useRef(away);
+  const phaseRef = useRef(phase);
+  useEffect(() => { homeRef.current = home; }, [home]);
+  useEffect(() => { awayRef.current = away; }, [away]);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+
   const syncStrategy = useCallback((side: 'home' | 'away', strategy: Strategy) => {
     online?.send({ type: 'strategy-update', side, strategy } satisfies MatchSyncMsg);
   }, [online]);
@@ -106,15 +117,17 @@ export function useMatchOnlineSync({
         else { setHostReady(true); }
       }
       if (msg.type === 'start-simulate' && !online.isHost) {
+        // Guarda de fase: um start-simulate duplicado não reinicia o 1º tempo.
+        if (phaseRef.current !== 'idle') return;
         knockoutResolvedRef.current = false;
         setKnockoutResult(null);
         setSubsHome(0); setSubsAway(0); setSubWindowsHome(ZERO_SUB_WINDOWS); setSubWindowsAway(ZERO_SUB_WINDOWS); setInjuredIds([]);
-        runFirstHalf(home, away);
+        runFirstHalf(homeRef.current, awayRef.current);
       }
     };
     online.setOnData(handler);
     return () => online.setOnData(null);
-  }, [online, pauseReplay, home, away, runFirstHalf, setHome, setAway, setSubsHome, setSubsAway, setSubWindowsHome, setSubWindowsAway, setInjuredIds, setKnockoutResult, knockoutResolvedRef]);
+  }, [online, pauseReplay, runFirstHalf, setHome, setAway, setSubsHome, setSubsAway, setSubWindowsHome, setSubWindowsAway, setInjuredIds, setKnockoutResult, knockoutResolvedRef]);
 
   // Reset ready states when entering halftime
   useEffect(() => {
@@ -127,7 +140,7 @@ export function useMatchOnlineSync({
   // Auto-start second half when both ready in online mode
   useEffect(() => {
     if (!online || phase !== 'halftime') return;
-    if ((online.isHost && hostReady && guestReady) || (!online.isHost && hostReady && guestReady)) {
+    if (hostReady && guestReady) {
       runSecondHalf(home, away);
     }
   }, [online, phase, hostReady, guestReady, home, away, runSecondHalf]);
@@ -135,7 +148,7 @@ export function useMatchOnlineSync({
   // Auto-resume when both ready in online pause
   useEffect(() => {
     if (!online || !paused) return;
-    if ((online.isHost && hostReady && guestReady) || (!online.isHost && hostReady && guestReady)) {
+    if (hostReady && guestReady) {
       setHostReady(false);
       setGuestReady(false);
       resumeReplay();

@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
-import type { Team, Player } from '../engine/types';
+import type { Team } from '../engine/types';
 import { MENTALITY_LABELS } from '../engine/types';
 import { useH2H } from '../hooks/useH2H';
 import { playerOvr } from '../utils/playerOvr';
 import { generateStadium } from '../utils/stadiums';
 import { isDerby } from '../engine/rivalries';
 import { generateTacticalComment } from '../engine/tacticalCommentary';
+import { pickHighlights } from '../utils/highlights';
 import styles from './MatchdayScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   homeTeam: Team;
@@ -15,23 +17,6 @@ interface Props {
   onPlay: () => void;
   onBack: () => void;
   roundLabel?: string;
-}
-
-/**
- * Escolhe os 3 destaques do time. Ordenar só por OVR enchia a lista de goleiros —
- * o OVR de GK é calibrado em outra escala e domina o topo do elenco, então uma
- * prévia de jogo mostrava "3 goleiros em destaque". No máximo 1 GK entra, e só
- * se sobrar vaga depois dos jogadores de linha.
- */
-export function pickHighlights(squad: Player[], count = 3): Player[] {
-  const byOvr = (a: Player, b: Player) => playerOvr(b) - playerOvr(a);
-  const outfield = squad.filter(p => p.position !== 'GK').sort(byOvr);
-  const keepers = squad.filter(p => p.position === 'GK').sort(byOvr);
-
-  const picked = outfield.slice(0, count);
-  // Só completa com goleiro se o elenco não tiver jogadores de linha suficientes.
-  if (picked.length < count && keepers.length > 0) picked.push(keepers[0]);
-  return picked.slice(0, count);
 }
 
 function getWeather(): { icon: string; label: string } {
@@ -73,7 +58,7 @@ export default function MatchdayScreen({ homeTeam, awayTeam, contextLabel, onPla
         <div className={styles.heroBg}>
           <div className={styles.vsBar}>
             <div className={styles.teamSide}>
-              <img className={styles.logo} src={homeTeam.logoUrl} alt={homeTeam.name} />
+              <img className={styles.logo} src={crestSrc(homeTeam.logoUrl)} alt={homeTeam.name} />
               <span className={styles.teamName}>{homeTeam.name}</span>
               <span className={styles.teamAbbr}>{homeTeam.abbreviation}</span>
             </div>
@@ -81,7 +66,7 @@ export default function MatchdayScreen({ homeTeam, awayTeam, contextLabel, onPla
               <span className={styles.vsBadge}>VS</span>
             </div>
             <div className={styles.teamSide}>
-              <img className={styles.logo} src={awayTeam.logoUrl} alt={awayTeam.name} />
+              <img className={styles.logo} src={crestSrc(awayTeam.logoUrl)} alt={awayTeam.name} />
               <span className={styles.teamName}>{awayTeam.name}</span>
               <span className={styles.teamAbbr}>{awayTeam.abbreviation}</span>
             </div>

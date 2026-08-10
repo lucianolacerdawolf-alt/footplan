@@ -8,6 +8,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { isPlayerUnavailable } from '../engine/squadUtils';
 import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './OpponentAnalysisModal.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   opponent: Team;
@@ -62,7 +63,7 @@ export default function OpponentAnalysisModal({ opponent, userTeam, h2h, onClose
         <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar">✕</button>
 
         <div className={styles.header}>
-          <img src={opponent.logoUrl} alt="" className={styles.crest} />
+          <img src={crestSrc(opponent.logoUrl)} alt="" className={styles.crest} />
           <div id="opp-analysis-title">
             <div className={styles.teamName} style={{ color: opponent.color }}>{opponent.name}</div>
             <div className={styles.teamOvr}>

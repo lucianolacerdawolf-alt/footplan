@@ -40,40 +40,39 @@ export function useAchievements(): UseAchievementsReturn {
     }));
   }, [data.unlocked]);
 
+  // Nota: o retorno dos novos destravamentos é computado do estado atual do closure
+  // (NÃO dentro do updater do setState — o updater roda de forma adiada, então o
+  // valor capturado dentro dele nunca estaria disponível na chamada síncrona).
+  // Os consumidores (App.tsx) mostram o toast com base nesse retorno.
   const evaluate = useCallback(
     (input: AchievementEvalInput): Achievement[] => {
+      const newTotal = data.totalMatchesPlayed + 1;
+      const ctx: AchievementCheckContext = { ...input, totalMatchesPlayed: newTotal };
+      const alreadyIds = new Set(data.unlocked.map(u => u.id));
       const newlyUnlocked: Achievement[] = [];
-      setData(prev => {
-        const newTotal = prev.totalMatchesPlayed + 1;
-        const ctx: AchievementCheckContext = { ...input, totalMatchesPlayed: newTotal };
-        const alreadyIds = new Set(prev.unlocked.map(u => u.id));
-        const eligible = checkAchievements(ctx);
-        let newUnlocked = prev.unlocked;
-        for (const ach of eligible) {
-          if (alreadyIds.has(ach.id)) continue;
-          newUnlocked = [...newUnlocked, { id: ach.id, unlockedAt: Date.now() }];
-          newlyUnlocked.push(ach);
-        }
-        return { unlocked: newUnlocked, totalMatchesPlayed: newTotal };
-      });
+      let newUnlocked = data.unlocked;
+      for (const ach of checkAchievements(ctx)) {
+        if (alreadyIds.has(ach.id)) continue;
+        newUnlocked = [...newUnlocked, { id: ach.id, unlockedAt: Date.now() }];
+        newlyUnlocked.push(ach);
+      }
+      if (newUnlocked !== data.unlocked || newTotal !== data.totalMatchesPlayed) {
+        setData({ unlocked: newUnlocked, totalMatchesPlayed: newTotal });
+      }
       return newlyUnlocked;
     },
-    [setData],
+    [data.unlocked, data.totalMatchesPlayed, setData],
   );
 
   const unlockById = useCallback(
     (id: string): Achievement | null => {
       const ach = ACHIEVEMENTS.find(a => a.id === id);
       if (!ach) return null;
-      let newly: Achievement | null = null;
-      setData(prev => {
-        if (prev.unlocked.some(u => u.id === id)) return prev;
-        newly = ach;
-        return { ...prev, unlocked: [...prev.unlocked, { id, unlockedAt: Date.now() }] };
-      });
-      return newly;
+      if (data.unlocked.some(u => u.id === id)) return null;
+      setData({ ...data, unlocked: [...data.unlocked, { id, unlockedAt: Date.now() }] });
+      return ach;
     },
-    [setData],
+    [data, setData],
   );
 
   return { data, unlocked: data.unlocked, evaluate, isUnlocked, unlockById, getAll };

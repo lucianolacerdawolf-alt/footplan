@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickHighlights } from '../MatchdayScreen';
+import { pickHighlights } from '../../utils/highlights';
 import type { Player } from '@/engine/types';
 
 function player(id: string, position: Player['position'], ovrBase: number): Player {

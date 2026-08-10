@@ -21,7 +21,8 @@ import { useOnlineMatch } from './hooks/useOnlineMatch';
 import { useResumePrompt } from './hooks/useResumePrompt';
 import { renderScreen, type AppScreensProps } from './components/AppScreens';
 import Toast from './components/Toast';
-import CareerTabBar, { CAREER_TAB_SCREENS, getCareerTabForScreen } from './components/CareerTabBar';
+import CareerTabBar from './components/CareerTabBar';
+import { CAREER_TAB_SCREENS, getCareerTabForScreen } from './utils/careerTabs';
 import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 

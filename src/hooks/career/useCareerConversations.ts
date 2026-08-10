@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { getPlayerConversations, type CareerState } from '@/engine/career';
 import { maybeGenerateConversation, respondToConversation, type ConversationContext } from '@/engine/playerConversations';
 import { applyMoraleToTeam } from '@/engine/morale';
@@ -17,17 +17,32 @@ function patchUserTeamMorale(teams: Team[], userTeamId: string, delta: number): 
 }
 
 export function useCareerConversations({ careerState, setCareerState, setToastMsg }: UseCareerConversationsParams) {
+  // Espelho do estado mais recente em ref: a decisão de gerar é tomada fora do
+  // updater (o motor usa Math.random — seria impuro dentro do updater), mas o
+  // snapshot do closure podia NÃO conter a conversa que acabou de ser gerada no
+  // mesmo tick (ex: resultado + avanço de rodada gerava 2 conversas na rodada).
+  const careerStateRef = useRef(careerState);
+  useEffect(() => { careerStateRef.current = careerState; }, [careerState]);
+
   /**
    * Tenta gerar 0-1 conversa pra rodada atual (liga). Chamado depois de resultado
    * de partida e no avanço de rodada. Nada é gerado se já houver conversa não
    * respondida na mesma rodada — o motor garante ≤1/rodada.
    */
   const handleMaybeGenerateConversation = useCallback((ctx: ConversationContext) => {
-    if (!careerState) return;
-    const conv = maybeGenerateConversation(careerState, ctx);
+    const latest = careerStateRef.current;
+    if (!latest) return;
+    if (getPlayerConversations(latest).some(c => c.round === ctx.round && !c.responded)) return;
+    const conv = maybeGenerateConversation(latest, ctx);
     if (!conv) return;
-    setCareerState(prev => prev ? { ...prev, playerConversations: [...getPlayerConversations(prev), conv] } : prev);
-  }, [careerState, setCareerState]);
+    // Guarda final contra duplo disparo no mesmo tick: se o updater anterior já
+    // gravou uma conversa da rodada, não grava de novo.
+    setCareerState(prev => {
+      if (!prev) return prev;
+      if (getPlayerConversations(prev).some(c => c.round === ctx.round && !c.responded)) return prev;
+      return { ...prev, playerConversations: [...getPlayerConversations(prev), conv] };
+    });
+  }, [setCareerState]);
 
   const handleRespondConversation = useCallback((convId: string, choiceIdx: number) => {
     if (!careerState) return;

@@ -6,6 +6,7 @@ import { computeStandings } from '../engine/tournament';
 import { FORMATION_COUNTS } from '../engine/constants';
 import { StandingsTable } from './LeagueTableScreen';
 import styles from './LeagueScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 function squadHealth(team: Team) {
   const counts = FORMATION_COUNTS[team.strategy.formation];
@@ -95,7 +96,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
         )}
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
-          <img src={champion.logoUrl} alt={champion.name} className={styles.championCrest} />
+          <img src={crestSrc(champion.logoUrl)} alt={champion.name} className={styles.championCrest} />
           <div className={styles.championName} style={{ color: champion.color }}>{champion.name}</div>
           <div className={styles.championSub}>Campeão da Temporada</div>
         </div>
@@ -155,7 +156,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
         )}
         {onOpenJobMarket && (jobMarketOffers ?? 0) > 0 && (
           <button className={styles.viewTableLink} onClick={onOpenJobMarket}>
-            💼 {jobMarketOffers} Oferta{jobMarketOffers! > 1 ? 's' : ''} de Emprego →
+            💼 {jobMarketOffers} Oferta{(jobMarketOffers ?? 0) > 1 ? 's' : ''} de Emprego →
           </button>
         )}
       </div>
@@ -166,7 +167,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
           <div className={styles.sectionLabel}>Seu Jogo</div>
           <div className={`${styles.fixture} ${styles.fixtureUser}`}>
             <div className={styles.fixtureTeam}>
-              <img src={teamById(teams, userFixture.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+              <img src={crestSrc(teamById(teams, userFixture.homeTeamId).logoUrl)} className={styles.fixtureCrest} alt="" />
               <span style={{ color: teamById(teams, userFixture.homeTeamId).color }}>
                 {teamById(teams, userFixture.homeTeamId).abbreviation}
               </span>
@@ -176,7 +177,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
               <span style={{ color: teamById(teams, userFixture.awayTeamId).color }}>
                 {teamById(teams, userFixture.awayTeamId).abbreviation}
               </span>
-              <img src={teamById(teams, userFixture.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+              <img src={crestSrc(teamById(teams, userFixture.awayTeamId).logoUrl)} className={styles.fixtureCrest} alt="" />
             </div>
             {!userFixture.played && (
               <div className={styles.userMatchBtns}>
@@ -211,7 +212,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
           {otherFixtures.map(f => (
             <div key={f.id} className={styles.fixture}>
               <div className={styles.fixtureTeam}>
-                <img src={teamById(teams, f.homeTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+                <img src={crestSrc(teamById(teams, f.homeTeamId).logoUrl)} className={styles.fixtureCrest} alt="" />
                 <span style={{ color: teamById(teams, f.homeTeamId).color }}>
                   {teamById(teams, f.homeTeamId).abbreviation}
                 </span>
@@ -221,7 +222,7 @@ export default function LeagueScreen({ state, league, onPlayMatch, onSimulateUse
                 <span style={{ color: teamById(teams, f.awayTeamId).color }}>
                   {teamById(teams, f.awayTeamId).abbreviation}
                 </span>
-                <img src={teamById(teams, f.awayTeamId).logoUrl} className={styles.fixtureCrest} alt="" />
+                <img src={crestSrc(teamById(teams, f.awayTeamId).logoUrl)} className={styles.fixtureCrest} alt="" />
               </div>
             </div>
           ))}

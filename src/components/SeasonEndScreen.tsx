@@ -1,6 +1,7 @@
 import type { CareerSeasonHistoryEntry } from '../engine/career';
 import type { LeagueDefinition } from '../data/leagues/types';
 import styles from './SeasonEndScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   entry: CareerSeasonHistoryEntry;
@@ -30,7 +31,7 @@ export default function SeasonEndScreen({ entry, league, newReputation, onContin
         <div className={styles.championCrown}>🏆</div>
         {champion ? (
           <>
-            <img src={champion.logoUrl} alt={champion.name} className={styles.championCrest} />
+            <img src={crestSrc(champion.logoUrl)} alt={champion.name} className={styles.championCrest} />
             <div className={styles.championName} style={{ color: champion.color }}>{champion.name}</div>
           </>
         ) : (

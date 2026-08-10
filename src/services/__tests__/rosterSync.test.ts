@@ -102,7 +102,8 @@ describe('syncLeagueRoster', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe('https://footplan-proxy.example.workers.dev/api/football/competitions/PL/teams');
-    expect(init).toBeUndefined(); // sem headers de auth — o proxy cuida disso
+    expect(init?.headers).toBeUndefined(); // sem headers de auth — o proxy cuida disso
+    expect(init?.signal).toBeDefined(); // timeout via AbortSignal (fetchWithTimeout)
   });
 
   it('com chave configurada e resposta válida, mescla o elenco corretamente', async () => {

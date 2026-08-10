@@ -2,7 +2,8 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import CareerTabBar, { CAREER_TAB_SCREENS, getCareerTabForScreen } from '../CareerTabBar';
+import CareerTabBar from '../CareerTabBar';
+import { CAREER_TAB_SCREENS, getCareerTabForScreen } from '../../utils/careerTabs';
 
 describe('CareerTabBar', () => {
   it('renderiza as 5 abas', () => {

@@ -8,6 +8,7 @@ import { calculateMarketValue } from '../engine/transferMarket';
 import { syncLeagueRoster } from '../services/rosterSync';
 import PlayerDetailModal from './PlayerDetailModal';
 import styles from './TransferMarketScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   userTeam: Team;
@@ -350,7 +351,7 @@ export default function TransferMarketScreen({ userTeam, userLeagueId, rosters, 
                       .map(team => (
                         <div key={team.id} className={styles.teamGroup}>
                           <button className={styles.playerRowHeader} onClick={() => setBuyTeamId(team.id)} style={{ width: '100%', justifyContent: 'flex-start' }}>
-                            <img src={team.logoUrl} alt="" className={styles.teamCrest} />
+                            <img src={crestSrc(team.logoUrl)} alt="" className={styles.teamCrest} />
                             <span className={styles.teamName}>{team.name}</span>
                             <span className={styles.teamAvgOvr}>OVR {getAvgOvr(team)}</span>
                           </button>

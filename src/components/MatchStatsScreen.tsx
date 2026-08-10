@@ -5,6 +5,7 @@ import type { MatchRecord } from '../hooks/useMatchHistory';
 import { calculateRatings, manOfTheMatch, goalScorers, cardEvents } from '../engine/playerRating';
 import { FORMATION_BONUS } from '../engine/matchConfig';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   result: MatchResult;
@@ -145,7 +146,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.team}>
-          <img src={homeTeam.logoUrl} alt={homeTeam.name} className={styles.crest} />
+          <img src={crestSrc(homeTeam.logoUrl)} alt={homeTeam.name} className={styles.crest} />
           <span className={styles.teamName} style={{ color: homeTeam.color }}>{homeTeam.abbreviation}</span>
         </div>
         <div className={styles.scoreBlock}>
@@ -165,7 +166,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
           <span className={styles.screenLabel}>Estatísticas</span>
         </div>
         <div className={styles.team}>
-          <img src={awayTeam.logoUrl} alt={awayTeam.name} className={styles.crest} />
+          <img src={crestSrc(awayTeam.logoUrl)} alt={awayTeam.name} className={styles.crest} />
           <span className={styles.teamName} style={{ color: awayTeam.color }}>{awayTeam.abbreviation}</span>
         </div>
       </div>
@@ -178,7 +179,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
             {scorers.map((g, i) => (
               <div key={`${g.team.id}-${g.minute}-${g.scorer}-${i}`} className={styles.scorerRow}>
                 <span className={styles.scorerMinute}>{g.minute}&apos;</span>
-                <img src={g.team.logoUrl} alt={`Escudo ${g.team.abbreviation}`} className={styles.scorerCrest} />
+                <img src={crestSrc(g.team.logoUrl)} alt={`Escudo ${g.team.abbreviation}`} className={styles.scorerCrest} />
                 <span className={styles.scorerName} style={{ color: g.team.color }}>{g.scorer}</span>
               </div>
             ))}
@@ -194,7 +195,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
             <span className={styles.motmLabel}>Melhor em Campo</span>
           </div>
           <div className={styles.motmBody}>
-            <img src={motm.team.logoUrl} alt="" className={styles.motmCrest} />
+            <img src={crestSrc(motm.team.logoUrl)} alt="" className={styles.motmCrest} />
             <div className={styles.motmInfo}>
               <span className={styles.motmName} style={{ color: motm.team.color }}>
                 #{motm.player.number} {motm.player.name}
@@ -219,7 +220,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
         <div className={styles.ratingsList}>
           {topPerformers.map(r => (
             <div key={r.player.id} className={styles.ratingRow}>
-              <img src={r.team.logoUrl} alt="" className={styles.ratingCrest} />
+              <img src={crestSrc(r.team.logoUrl)} alt="" className={styles.ratingCrest} />
               <span className={styles.ratingNum}>#{r.player.number}</span>
               <span className={styles.ratingName} style={{ color: r.team.color }}>{r.player.name}</span>
               <span className={styles.ratingPos}>{r.player.position}</span>
@@ -305,11 +306,11 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
               <div key={r.id} className={styles.historyRow}>
                 <span className={styles.historyDate}>{r.date}</span>
                 <div className={styles.historyMatch}>
-                  <img src={r.homeTeam.logoUrl} alt={r.homeTeam.abbreviation} className={styles.historyCrest} />
+                  <img src={crestSrc(r.homeTeam.logoUrl)} alt={r.homeTeam.abbreviation} className={styles.historyCrest} />
                   <span className={styles.historyAbbr} style={{ color: r.homeTeam.color }}>{r.homeTeam.abbreviation}</span>
                   <span className={styles.historyScore}>{r.homeScore}–{r.awayScore}</span>
                   <span className={styles.historyAbbr} style={{ color: r.awayTeam.color }}>{r.awayTeam.abbreviation}</span>
-                  <img src={r.awayTeam.logoUrl} alt={r.awayTeam.abbreviation} className={styles.historyCrest} />
+                  <img src={crestSrc(r.awayTeam.logoUrl)} alt={r.awayTeam.abbreviation} className={styles.historyCrest} />
                 </div>
               </div>
             ))}

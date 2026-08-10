@@ -12,9 +12,15 @@
 // football-data.org — RapidAPI não tem motivo legítimo pra ser chamada do cliente).
 
 import type { RemoteTeam, RemotePlayer } from './footballApi';
+import type { Position } from '../engine/types';
+import { fetchWithTimeout } from './http';
+import { mapRemotePosition } from './positionMapping';
 
 const CACHE_PREFIX = 'fp:sportapi:';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+// Versão do schema do cache — caches gravados por builds antigos são descartados
+// por readCache (ver CACHE_VERSION em rosterSync.ts pra lógica equivalente).
+const CACHE_VERSION = 1;
 
 /** Pausa entre requisições por time — evita rajada contra o rate limit da RapidAPI ao
  *  buscar o elenco de 18-24 times em sequência. */
@@ -68,6 +74,7 @@ interface ApiPlayer {
 interface CachedTeams {
   fetchedAt: number;
   data: RemoteTeam[];
+  version?: number;
 }
 
 function readCache(key: string): CachedTeams | null {
@@ -76,13 +83,14 @@ function readCache(key: string): CachedTeams | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedTeams;
     if (!parsed.fetchedAt || Date.now() - parsed.fetchedAt > CACHE_TTL_MS) return null;
+    if (parsed.version !== CACHE_VERSION) return null;
     if (!Array.isArray(parsed.data) || parsed.data.length === 0) return null;
     return parsed;
   } catch { return null; }
 }
 
 function writeCache(key: string, data: RemoteTeam[]): void {
-  try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ fetchedAt: Date.now(), data })); } catch { /* noop */ }
+  try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ fetchedAt: Date.now(), data, version: CACHE_VERSION })); } catch { /* noop */ }
 }
 
 function sleep(ms: number): Promise<void> {
@@ -90,25 +98,28 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function spFetch(path: string, proxyBase: string): Promise<unknown> {
-  const res = await fetch(`${proxyBase}/api/rapidapi/sportapi7/${path}`);
+  const res = await fetchWithTimeout(`${proxyBase}/api/rapidapi/sportapi7/${path}`);
   if (res.status === 429) throw new Error('Limite de requisições da SportAPI7 atingido.');
   if (!res.ok) throw new Error(`SportAPI7 respondeu ${res.status}.`);
   return res.json();
 }
 
-function mapPosition(pos: string, detailed: string[]): string {
+/** Posição da SportAPI7 (letra G/D/M/F + posições detalhadas) → Position do jogo.
+ *  A letra resolve direto; as detalhadas caem na keyword-mapping compartilhada
+ *  (mapRemotePosition), e o fallback é MID — igual ao comportamento antigo. */
+function mapPosition(pos: string, detailed: string[]): Position {
   const p = pos.toUpperCase();
-  if (p === 'G') return 'Goalkeeper';
-  if (p === 'D') return 'Defence';
-  if (p === 'M') return 'Midfield';
-  if (p === 'F') return 'Offence';
+  if (p === 'G') return 'GK';
+  if (p === 'D') return 'DEF';
+  if (p === 'M') return 'MID';
+  if (p === 'F') return 'FWD';
   if (detailed.length > 0) {
     const d = detailed[0];
-    if (['CB', 'LB', 'RB', 'LCB', 'RCB'].some(x => d.includes(x))) return 'Defence';
-    if (['CM', 'CDM', 'CAM', 'LM', 'RM'].some(x => d.includes(x))) return 'Midfield';
-    if (['ST', 'CF', 'LW', 'RW', 'SS'].some(x => d.includes(x))) return 'Offence';
+    if (['CB', 'LB', 'RB', 'LCB', 'RCB'].some(x => d.includes(x))) return 'DEF';
+    if (['CM', 'CDM', 'CAM', 'LM', 'RM'].some(x => d.includes(x))) return 'MID';
+    if (['ST', 'CF', 'LW', 'RW', 'SS'].some(x => d.includes(x))) return 'FWD';
   }
-  return 'Midfield';
+  return mapRemotePosition(pos);
 }
 
 /** `force`: ignora o cache de 24h desta fonte (mas ainda grava um novo no final) — usado

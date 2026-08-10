@@ -167,10 +167,11 @@ export function createContinentalBracket(
 }
 
 /** Premiação continental por estágio alcançado. Aceita o mesmo union de resultado
- *  usado no histórico (deriveCupResult); `not-played` e ids inválidos rendem 0. */
+ *  usado no histórico (deriveCupResult); `not-played`, ids inválidos e resultados
+ *  desconhecidos (builds antigos/histórico corrompido) rendem 0. */
 export function getContinentalPrizeMoney(cupId: string, result: ContinentalResult): number {
   const cup = getContinentalCup(cupId);
   if (!cup || result === 'not-played') return 0;
   const key = result === 'runner-up' ? 'runnerUp' : result;
-  return cup.prizeMoney[key];
+  return cup.prizeMoney[key] ?? 0;
 }

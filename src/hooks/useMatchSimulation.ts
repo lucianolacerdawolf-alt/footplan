@@ -56,6 +56,22 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
   const replayRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Timers da pausa de gol/pênalti (2500ms) — precisam ser rastreados à parte: um
+  // timer pendente podia destravar uma sessão restaurada (F5) que deveria aterrissar
+  // pausada, ou vazar de uma partida pra outra (o check `replayRef.current` era
+  // insuficiente — restoreSnapshot limpa o interval mas não anula o handle).
+  const goalPauseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleGoalPauseResume = useCallback(() => {
+    if (goalPauseTimeoutRef.current) clearTimeout(goalPauseTimeoutRef.current);
+    goalPauseTimeoutRef.current = setTimeout(() => {
+      goalPauseTimeoutRef.current = null;
+      if (mountedRef.current && replayRef.current) {
+        pausedRef.current = false;
+        setPaused(false);
+        setIsGoalPause(false);
+      }
+    }, 2500);
+  }, []);
   const hScoreRef = useRef(0);
   const aScoreRef = useRef(0);
   const engineStateRef = useRef<MatchState | null>(null);
@@ -105,6 +121,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   useEffect(() => () => {
     if (replayRef.current) clearInterval(replayRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (goalPauseTimeoutRef.current) clearTimeout(goalPauseTimeoutRef.current);
   }, []);
 
   const pauseReplay = useCallback(() => {
@@ -138,6 +155,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     priorReplayEvents: MatchEvent[] = [],
   ) => {
     if (replayRef.current) clearInterval(replayRef.current);
+    if (goalPauseTimeoutRef.current) { clearTimeout(goalPauseTimeoutRef.current); goalPauseTimeoutRef.current = null; }
     pausedRef.current = false;
     setPaused(false);
 
@@ -207,13 +225,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
           pausedRef.current = true;
           setPaused(true);
           setIsGoalPause(true);
-          setTimeout(() => {
-            if (mountedRef.current && replayRef.current) {
-              pausedRef.current = false;
-              setPaused(false);
-              setIsGoalPause(false);
-            }
-          }, 2500);
+          scheduleGoalPauseResume();
         }
 
         if (evt.type === 'penalty' && evt.scorer) {
@@ -223,13 +235,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
             pausedRef.current = true;
             setPaused(true);
             setIsGoalPause(true);
-            setTimeout(() => {
-              if (mountedRef.current && replayRef.current) {
-                pausedRef.current = false;
-                setPaused(false);
-                setIsGoalPause(false);
-              }
-            }, 2500);
+            scheduleGoalPauseResume();
           }
         }
 
@@ -251,7 +257,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
         onDone();
       }
     }, CLOCK_TICK_MS);
-  }, [initialHomeId, speedRef]);
+  }, [initialHomeId, speedRef, scheduleGoalPauseResume]);
 
   /**
    * Retoma a partida. Se o interval de replay ainda existir (pausa normal dentro da
@@ -323,6 +329,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   }) => {
     if (replayRef.current) clearInterval(replayRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (goalPauseTimeoutRef.current) { clearTimeout(goalPauseTimeoutRef.current); goalPauseTimeoutRef.current = null; }
 
     engineStateRef.current = snap.engineState;
     isFirstHalfRef.current = snap.isFirstHalf;
@@ -357,6 +364,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
   const runFirstHalf = useCallback((home: Team, away: Team) => {
     if (replayRef.current) clearInterval(replayRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (goalPauseTimeoutRef.current) { clearTimeout(goalPauseTimeoutRef.current); goalPauseTimeoutRef.current = null; }
     setSimulating(true);
     setStarted(true);
     setResult(null);
@@ -400,6 +408,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
 
     if (replayRef.current) clearInterval(replayRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (goalPauseTimeoutRef.current) { clearTimeout(goalPauseTimeoutRef.current); goalPauseTimeoutRef.current = null; }
     setSimulating(true);
     setPhase('simulating');
     setClockSeconds(HALF_SECONDS);
@@ -444,6 +453,7 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     if (!engineStateRef.current || phase === 'done' || phase === 'idle') return;
     if (replayRef.current) clearInterval(replayRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    if (goalPauseTimeoutRef.current) { clearTimeout(goalPauseTimeoutRef.current); goalPauseTimeoutRef.current = null; }
     const home = liveHomeRef.current;
     const away = liveAwayRef.current;
     if (!home || !away) return;

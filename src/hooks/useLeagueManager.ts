@@ -40,16 +40,19 @@ export function useLeagueManager({
 }: UseLeagueManagerParams) {
   const leagueId = league?.id ?? 'pl';
 
-  // Legacy save migration
+  // Legacy save migration — localStorage pode lançar (quota, modo privado); a
+  // migração é um bônus, nunca deve derrubar o app.
   useEffect(() => {
-    if (localStorage.getItem('fp:leagueStateMigrated') === '1') return;
-    const legacy = localStorage.getItem('fp:leagueState');
-    const migrated = localStorage.getItem('fp:leagueState:pl');
-    if (legacy && !migrated) {
-      localStorage.setItem('fp:leagueState:pl', legacy);
-      localStorage.removeItem('fp:leagueState');
-    }
-    localStorage.setItem('fp:leagueStateMigrated', '1');
+    try {
+      if (localStorage.getItem('fp:leagueStateMigrated') === '1') return;
+      const legacy = localStorage.getItem('fp:leagueState');
+      const migrated = localStorage.getItem('fp:leagueState:pl');
+      if (legacy && !migrated) {
+        localStorage.setItem('fp:leagueState:pl', legacy);
+        localStorage.removeItem('fp:leagueState');
+      }
+      localStorage.setItem('fp:leagueStateMigrated', '1');
+    } catch { /* noop */ }
   }, []);
 
   const [leagueState, setLeagueState] = usePersistedState<LeagueState | null>(`fp:leagueState:${leagueId}`, null, { onPersist: notifySave });
@@ -140,8 +143,21 @@ export function useLeagueManager({
     const updatedState: LeagueState = { ...state, teams: variedTeams, currentRound: next, phase };
     setLeagueState(updatedState);
     if (phase === 'done') {
+      // Resultado sintético de encerramento — NUNCA um cast mentiroso (null as
+      // unknown): as condições de conquista baseadas em resultado leem result.events/
+      // result.homeTeam, e um null faria o check inteiro falhar silenciosamente.
+      const userTeamObj = updatedState.teams.find(t => t.id === updatedState.userTeamId)
+        ?? updatedState.teams[0];
+      const anyOpponent = updatedState.teams.find(t => t.id !== userTeamObj.id) ?? userTeamObj;
+      const emptyStats = { shots: 0, shotsOnTarget: 0, fouls: 0, yellowCards: 0, redCards: 0 };
       evaluateAchievements({
-        result: null as unknown as MatchResult, userTeamId: state.userTeamId,
+        result: {
+          homeTeam: userTeamObj, awayTeam: anyOpponent,
+          homeScore: 0, awayScore: 0, events: [],
+          homePossession: 50, awayPossession: 50,
+          homeStats: emptyStats, awayStats: emptyStats,
+        },
+        userTeamId: updatedState.userTeamId,
         matchContext: 'league', leagueState: updatedState,
       });
     }

@@ -3,6 +3,7 @@ import type { Team } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLiveRoster } from '../hooks/useLiveRoster';
+import { crestSrc } from '../utils/crest';
 
 export type TournamentMode = 'league' | 'bracket' | 'career';
 
@@ -22,7 +23,15 @@ const MODE_BTN: Record<TournamentMode, string> = {
 };
 
 function sanitizeManagerName(raw: string): string {
-  return raw.replace(/[\x00-\x1F\x7F]/g, '').slice(0, 24);
+  // Remove caracteres de controle (C0 e DEL) por code point — oxlint rejeita a regex
+  // equivalente (no-control-regex) mesmo com escapes \u.
+  let out = '';
+  for (const ch of raw) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (code < 0x20 || code === 0x7f) continue;
+    out += ch;
+  }
+  return out.slice(0, 24);
 }
 
 export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, onStart, onRosterSynced }: Props) {
@@ -140,7 +149,7 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
         >
           {selectedTeam ? (
             <>
-              <img className="slot-crest" src={selectedTeam.logoUrl} alt={selectedTeam.name} />
+              <img className="slot-crest" src={crestSrc(selectedTeam.logoUrl)} alt={selectedTeam.name} />
               <span className="slot-name">{selectedTeam.name}</span>
               <span className="slot-ovr">{getAvgOvr(selectedTeam)} OVR</span>
             </>
@@ -173,7 +182,7 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
               style={isSelected ? { borderColor: team.color, background: team.color + '10' } : undefined}
               onClick={() => setUserTeamId(isSelected ? null : team.id)}
             >
-              <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+              <img className="tile-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
               <span className="tile-name">{team.name}</span>
               <span className="tile-ovr">{getAvgOvr(team)}</span>
             </button>

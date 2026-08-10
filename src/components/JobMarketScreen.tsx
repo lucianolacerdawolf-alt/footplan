@@ -3,6 +3,7 @@ import type { JobOffer } from '../engine/career';
 import type { Team } from '../engine/types';
 import { getLeague } from '../data/leagues';
 import styles from './JobMarketScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   offers: JobOffer[];
@@ -44,7 +45,7 @@ export default function JobMarketScreen({ offers, reputation, currentClubName, r
               <div key={offer.id} className={styles.offerCard}>
                 <div className={styles.offerTop}>
                   <div className={styles.offerCrest}>
-                    <img src={team?.logoUrl ?? ''} alt={offer.clubName} className={styles.crestImg} />
+                    <img src={crestSrc(team?.logoUrl)} alt={offer.clubName} className={styles.crestImg} />
                   </div>
                   <div className={styles.offerInfo}>
                     <span className={styles.offerClub}>{offer.clubName}</span>

@@ -24,7 +24,8 @@ import { generatePlayer } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { rebalanceForFormation } from '../engine/squadUtils';
 import { allLeagues } from '../data/leagues';
-import { loadRosterSnapshot, saveRosterSnapshot, hasRosterCloud } from './rosterCloud';
+import { loadRosterSnapshot, saveRosterSnapshot, hasRosterCloud, type RosterSnapshot } from './rosterCloud';
+import { mapRemotePosition } from './positionMapping';
 
 const CACHE_PREFIX = 'fp:rosterCache:';
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
@@ -53,15 +54,6 @@ function normalizeName(name: string): string {
     stripped += ch;
   }
   return stripped.replace(/[^a-z0-9]/g, '');
-}
-
-function mapPosition(remote: string | null): Position {
-  if (!remote) return 'MID';
-  const p = remote.toLowerCase();
-  if (p.includes('keeper')) return 'GK';
-  if (p.includes('defen') || p.includes('back')) return 'DEF';
-  if (p.includes('midfield')) return 'MID';
-  return 'FWD';
 }
 
 function ageFromDob(dateOfBirth: string | null): number | undefined {
@@ -164,7 +156,7 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[]): { team:
 
   const grouped: Record<Position, Player[]> = { GK: [], DEF: [], MID: [], FWD: [] };
   remoteSquad.forEach((rp, i) => {
-    const position = mapPosition(rp.position);
+    const position = mapRemotePosition(rp.position);
     const age = ageFromDob(rp.dateOfBirth);
     const existing = byName.get(normalizeName(rp.name));
     if (existing) {
@@ -274,14 +266,19 @@ interface RemoteSource {
   fetch: () => Promise<RemoteTeam[]>;
 }
 
-export async function syncLeagueRoster(league: LeagueDefinition, opts?: { force?: boolean }): Promise<RosterSyncResult> {
+export async function syncLeagueRoster(
+  league: LeagueDefinition,
+  opts?: { force?: boolean },
+  snapshot?: RosterSnapshot | null,
+): Promise<RosterSyncResult> {
   if (!opts?.force) {
     const cached = readCache(league);
     if (cached) {
       return { league: { ...league, teams: cached.teams }, source: 'cache', stats: [] };
     }
-    const snapshot = await loadRosterSnapshot();
-    const cloudTeams = snapshot?.rosters[league.id];
+    // `snapshot` é injetado por syncAllLeagueRosters pra não disparar 12 cargas de
+    // cloud em sequência; quando ausente (chamada avulsa), carrega aqui mesmo.
+    const cloudTeams = (snapshot ?? await loadRosterSnapshot())?.rosters[league.id];
     if (cloudTeams && Array.isArray(cloudTeams) && cloudTeams.length > 0) {
       writeCache(league.id, cloudTeams, league.teams.map(t => t.id));
       return { league: { ...league, teams: cloudTeams }, source: 'cloud', stats: [] };
@@ -351,8 +348,12 @@ export async function syncAllLeagueRosters(opts?: { force?: boolean }): Promise<
   let liveCount = 0;
   let updatedAt: string | null = null;
 
+  // Carrega o snapshot cloud UMA vez e injeta nas 12 chamadas de liga — antes, cada
+  // syncLeagueRoster fazia ensureAuth() + query própria (12 cargas redundantes em série).
+  const snapshot = await loadRosterSnapshot();
+
   for (const league of allLeagues) {
-    const result = await syncLeagueRoster(league, opts);
+    const result = await syncLeagueRoster(league, opts, snapshot);
     rosters[league.id] = result.league.teams;
     sources[league.id] = result.source;
     if (result.source === 'live') liveCount++;
@@ -366,7 +367,6 @@ export async function syncAllLeagueRosters(opts?: { force?: boolean }): Promise<
       updatedAt = null; // sem cloud, segue com cache local
     }
   } else {
-    const snapshot = await loadRosterSnapshot();
     updatedAt = snapshot?.updatedAt ?? null;
   }
 

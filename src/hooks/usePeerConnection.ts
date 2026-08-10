@@ -56,6 +56,10 @@ export function usePeerConnection(): UsePeerConnectionReturn {
   const onDataRef = useRef<((data: unknown) => void) | null>(null);
   const timeoutRef = useRef<number>(0);
   const mountedRef = useRef(true);
+  // O timeout chama cleanup() (peer.destroy()), que no PeerJS emite `close` SÍNCRONO
+  // no mesmo tick — sem este flag, o handler de `close` sobrescrevia o estado 'error'
+  // do timeout com 'idle' (o React 18+ batcheia os dois setState num render só).
+  const timeoutFiredRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -79,11 +83,13 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
   const createRoom = useCallback(() => {
     cleanup();
+    timeoutFiredRef.current = false;
     setError(null);
     setState('connecting');
     setIsHost(true);
     timeoutRef.current = window.setTimeout(() => {
       if (!mountedRef.current) return;
+      timeoutFiredRef.current = true;
       setState('error');
       setError('Tempo limite de conexão — tente novamente');
       cleanup();
@@ -147,6 +153,9 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
     peer.on('close', () => {
       if (!mountedRef.current) return;
+      // Ignora o `close` síncrono disparado pelo destroy() do timeout — o estado
+      // 'error' já foi definido e não pode ser sobrescrito por 'idle'.
+      if (timeoutFiredRef.current) return;
       setState('idle');
       setRoomId(null);
     });
@@ -154,11 +163,13 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
   const joinRoom = useCallback((hostId: string) => {
     cleanup();
+    timeoutFiredRef.current = false;
     setError(null);
     setState('connecting');
     setIsHost(false);
     timeoutRef.current = window.setTimeout(() => {
       if (!mountedRef.current) return;
+      timeoutFiredRef.current = true;
       setState('error');
       setError('Tempo limite de conexão — tente novamente');
       cleanup();
@@ -220,6 +231,7 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
   const disconnect = useCallback(() => {
     cleanup();
+    timeoutFiredRef.current = false;
     setState('idle');
     setRoomId(null);
     setError(null);

@@ -325,7 +325,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       return;
     }
 
-    const state = engineStateRef.current!;
+    const state = engineStateRef.current;
+    if (!state) return;
     const clonedHome = cloneTeam(h);
     const clonedAway = cloneTeam(a);
     const extraTimeResult = resolveKnockoutExtraTime(clonedHome, clonedAway, state);
@@ -353,13 +354,19 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   // Persistência de sessão — salva a partida ao vivo pra sobreviver a um F5.
   // Funciona pra todos os modos: Partida Única, Liga, Copa, e Modo Carreira.
   // Partidas online são salvas mas só restauram se o peer WebRTC continuar ativo.
+  //
+  // O save é THROTTLED (500ms): durante a simulação, replayEvents muda a cada ciclo
+  // (~20x/s) e o effect rodava serialize + localStorage a cada render — gravar o
+  // snapshot completo a cada 50ms. O snapshot mais novo fica num ref; um interval
+  // grava o último pendente e o flush final acontece no unmount.
+  const latestSnapshotRef = useRef<LiveMatchSnapshot | null>(null);
   useEffect(() => {
     if (matchContext === 'online') return;
-    if (phase === 'done') { clearLiveMatch(); clearLiveMatchMeta(); return; }
+    if (phase === 'done') { latestSnapshotRef.current = null; clearLiveMatch(); clearLiveMatchMeta(); return; }
     if (!started || phase === 'idle' || !engineStateRef.current) return;
 
     const meta = loadLiveMatchMeta();
-    const snapshot: LiveMatchSnapshot = {
+    latestSnapshotRef.current = {
       version: 3,
       savedAt: Date.now(),
       matchContext: matchContext ?? 'regular',
@@ -381,13 +388,27 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       matchBracketKind: meta?.bracketKind,
       isCareer: meta?.isCareer,
     };
-    saveLiveMatch(snapshot);
   }, [
     matchContext, started, phase, replayEvents, subsHome, subsAway, subWindowsHome, subWindowsAway,
     injuredIds, home, away, clockSeconds, pausesRemaining, isKnockout, initialHome, initialAway,
     continueLabel, speed, homeScore, awayScore, fatigueMap, expelledIds,
     engineStateRef, isFirstHalfRef, nextCycleRef,
   ]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!latestSnapshotRef.current) return;
+      saveLiveMatch(latestSnapshotRef.current);
+      latestSnapshotRef.current = null;
+    }, 500);
+    return () => {
+      clearInterval(interval);
+      if (latestSnapshotRef.current) {
+        saveLiveMatch(latestSnapshotRef.current);
+        latestSnapshotRef.current = null;
+      }
+    };
+  }, []);
 
   const updateHome = (s: Strategy) => {
     const next = { ...home, strategy: s };

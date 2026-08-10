@@ -11,10 +11,14 @@
 // sem proxy configurado, essa fonte simplesmente não fica disponível.
 
 import type { RemoteTeam, RemotePlayer } from './footballApi';
-import type { Position } from '../engine/types';
+import { fetchWithTimeout } from './http';
+import { mapRemotePosition } from './positionMapping';
 
 const CACHE_PREFIX = 'fp:apifootball:';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+// Versão do schema do cache — caches gravados por builds antigos são descartados
+// por readCache (ver CACHE_VERSION em rosterSync.ts pra lógica equivalente).
+const CACHE_VERSION = 1;
 
 /** Liga interna → ID da liga na API-Football */
 export const APIF_LEAGUE_IDS: Record<string, number> = {
@@ -63,17 +67,10 @@ interface ApiTeam {
   venue: { name: string; city: string };
 }
 
-function mapPosition(apiPos: string): Position {
-  const p = apiPos.toLowerCase();
-  if (p.includes('goalkeeper')) return 'GK';
-  if (p.includes('defender')) return 'DEF';
-  if (p.includes('midfielder')) return 'MID';
-  return 'FWD';
-}
-
 interface CachedData {
   fetchedAt: number;
   teams: RemoteTeam[];
+  version?: number;
 }
 
 function readCache(leagueId: string): CachedData | null {
@@ -82,6 +79,7 @@ function readCache(leagueId: string): CachedData | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedData;
     if (!parsed.fetchedAt || Date.now() - parsed.fetchedAt > CACHE_TTL_MS) return null;
+    if (parsed.version !== CACHE_VERSION) return null;
     if (!Array.isArray(parsed.teams) || parsed.teams.length === 0) return null;
     return parsed;
   } catch { return null; }
@@ -89,7 +87,7 @@ function readCache(leagueId: string): CachedData | null {
 
 function writeCache(leagueId: string, teams: RemoteTeam[]): void {
   try {
-    localStorage.setItem(CACHE_PREFIX + leagueId, JSON.stringify({ fetchedAt: Date.now(), teams }));
+    localStorage.setItem(CACHE_PREFIX + leagueId, JSON.stringify({ fetchedAt: Date.now(), teams, version: CACHE_VERSION }));
   } catch { /* noop */ }
 }
 
@@ -100,7 +98,7 @@ async function fetchAllPages(pathAndQuery: string, proxyBase: string): Promise<u
   const sep = pathAndQuery.includes('?') ? '&' : '?';
 
   while (page <= totalPages) {
-    const res = await fetch(`${proxyBase}/api/rapidapi/apifootball/${pathAndQuery}${sep}page=${page}`);
+    const res = await fetchWithTimeout(`${proxyBase}/api/rapidapi/apifootball/${pathAndQuery}${sep}page=${page}`);
     if (res.status === 429) throw new Error('Limite diário de requisições da API-Football atingido (100/dia).');
     if (!res.ok) throw new Error(`API-Football respondeu ${res.status}.`);
     const data = await res.json() as { paging: { current: number; total: number }; response: unknown[] };
@@ -155,12 +153,12 @@ export async function fetchApiFootballLeague(leagueId: string, force = false): P
     const rp: RemotePlayer = {
       id: ap.player.id,
       name: ap.player.name,
-      position: mapPosition(stat.games.position),
+      position: mapRemotePosition(stat.games.position),
       dateOfBirth: null,
       nationality: ap.player.nationality ?? null,
       shirtNumber: stat.games.number ?? null,
     };
-    byTeam.get(teamId)!.push(rp);
+    byTeam.get(teamId)?.push(rp);
   }
 
   // 4. Build RemoteTeam[]

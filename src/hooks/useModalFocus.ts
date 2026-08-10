@@ -14,6 +14,11 @@ export function useModalFocus<T extends HTMLElement = HTMLElement>(open: boolean
   const ref = useRef<T | null>(null);
   // Guarda quem tinha o foco antes de abrir — restaurado no unmount/close.
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  // onClose em ref: se o chamador passa uma arrow inline, sem isso o efeito abaixo
+  // re-executava a cada render com o modal aberto, recapturando previousFocusRef JÁ
+  // DENTRO do modal — o restore de foco no fechamento mirava o modal, não quem abriu.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -28,7 +33,7 @@ export function useModalFocus<T extends HTMLElement = HTMLElement>(open: boolean
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
       if (e.key !== 'Tab' || !container) return;
@@ -55,7 +60,7 @@ export function useModalFocus<T extends HTMLElement = HTMLElement>(open: boolean
       document.removeEventListener('keydown', onKeyDown, true);
       previousFocusRef.current?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return ref;
 }

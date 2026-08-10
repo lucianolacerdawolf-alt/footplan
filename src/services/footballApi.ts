@@ -15,6 +15,8 @@
 //
 // Docs: https://docs.football-data.org/general/v4/
 
+import { fetchWithTimeout } from './http';
+
 const DIRECT_API_BASE = 'https://api.football-data.org/v4';
 
 /** Código de competição do football-data.org por id interno de liga (ver src/data/leagues). */
@@ -105,7 +107,7 @@ export async function fetchCompetitionTeams(leagueId: string): Promise<RemoteTea
   if (proxyBase) {
     let res: Response;
     try {
-      res = await fetch(`${proxyBase}/api/football/competitions/${code}/teams`);
+      res = await fetchWithTimeout(`${proxyBase}/api/football/competitions/${code}/teams`);
     } catch (err) {
       throw new FootballApiError(`Falha de rede ao contatar o proxy (${proxyBase}): ${(err as Error).message}`);
     }
@@ -117,7 +119,7 @@ export async function fetchCompetitionTeams(leagueId: string): Promise<RemoteTea
 
   let res: Response;
   try {
-    res = await fetch(`${DIRECT_API_BASE}/competitions/${code}/teams`, {
+    res = await fetchWithTimeout(`${DIRECT_API_BASE}/competitions/${code}/teams`, {
       headers: { 'X-Auth-Token': apiKey },
     });
   } catch (err) {

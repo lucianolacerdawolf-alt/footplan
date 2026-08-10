@@ -37,7 +37,10 @@ export function hasRosterCloud(): boolean {
   return !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
 }
 
-/** Carrega o snapshot global persistido das 12 ligas (ou null se não existir/offline). */
+/** Carrega o snapshot global persistido das 12 ligas (ou null se não existir/offline).
+ *  Distinção importante: "sem Supabase configurado" retorna null SEM log (comportamento
+ *  esperado); erro real (rede, auth, consulta) também retorna null — o app segue offline-first —
+ *  mas LOGADO via console.warn, pra falhas de cloud não ficarem silenciosas pra sempre. */
 export async function loadRosterSnapshot(): Promise<RosterSnapshot | null> {
   if (!hasRosterCloud()) return null;
   try {
@@ -47,12 +50,16 @@ export async function loadRosterSnapshot(): Promise<RosterSnapshot | null> {
       .select('rosters, updated_at')
       .eq('id', GLOBAL_ID)
       .maybeSingle();
-    if (error) return null;
+    if (error) {
+      console.warn('[rosterCloud] falha ao ler snapshot global:', error.message);
+      return null;
+    }
     if (!data || typeof data !== 'object' || !('rosters' in data)) return null;
     const row = data as { rosters: Record<string, Team[]>; updated_at: string };
     if (!row.rosters || Object.keys(row.rosters).length === 0) return null;
     return { rosters: row.rosters, updatedAt: row.updated_at };
-  } catch {
+  } catch (err) {
+    console.warn('[rosterCloud] falha ao carregar snapshot global:', err instanceof Error ? err.message : err);
     return null;
   }
 }

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { syncLeagueRoster, syncAllLeagueRosters, getRosterSyncInfo, type RosterSource, type MergeStats, type AllRostersResult } from '../services/rosterSync';
 import { hasApiKey } from '../services/footballApi';
@@ -27,11 +27,23 @@ export function useLiveRoster(): UseLiveRosterReturn {
   const [lastError, setLastError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
 
+  // Token de sequência: se o usuário disparar 2 syncs concorrentes, o resultado do
+  // MAIS NOVO vence (antes era last-write-wins por ordem de chegada — o mais velho
+  // podia sobrescrever o estado do mais novo ao resolver depois).
+  const seqRef = useRef(0);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const sync = useCallback(async (league: LeagueDefinition, opts?: { force?: boolean }) => {
+    const seq = ++seqRef.current;
     setSyncing(true);
     setLastError(null);
     try {
       const result = await syncLeagueRoster(league, opts);
+      if (!mountedRef.current || seq !== seqRef.current) return league;
       setLastSource(result.source);
       setLastStats(result.stats);
       setLastError(result.error ?? null);
@@ -39,34 +51,36 @@ export function useLiveRoster(): UseLiveRosterReturn {
       return result.league;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido ao sincronizar';
-      setLastError(msg);
+      if (mountedRef.current && seq === seqRef.current) setLastError(msg);
       return league;
     } finally {
-      setSyncing(false);
+      if (mountedRef.current && seq === seqRef.current) setSyncing(false);
     }
   }, []);
 
   const syncAll = useCallback(async (opts?: { force?: boolean }): Promise<AllRostersResult | null> => {
+    const seq = ++seqRef.current;
     setSyncing(true);
     setLastError(null);
     try {
       const result = await syncAllLeagueRosters(opts);
+      if (!mountedRef.current || seq !== seqRef.current) return null;
       setLastSource(opts?.force ? 'live' : (result.liveCount > 0 ? 'live' : 'cloud'));
       setLastStats([]);
       setLastUpdatedAt(result.updatedAt);
       return result;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido ao sincronizar';
-      setLastError(msg);
+      if (mountedRef.current && seq === seqRef.current) setLastError(msg);
       return null;
     } finally {
-      setSyncing(false);
+      if (mountedRef.current && seq === seqRef.current) setSyncing(false);
     }
   }, []);
 
   const loadSyncInfo = useCallback(async () => {
     const info = await getRosterSyncInfo();
-    setLastUpdatedAt(info.updatedAt);
+    if (mountedRef.current) setLastUpdatedAt(info.updatedAt);
   }, []);
 
   return { syncing, lastSource, lastStats, lastError, apiKeyConfigured: hasApiKey(), lastUpdatedAt, sync, syncAll, loadSyncInfo };

@@ -54,13 +54,15 @@ export function useCareerManager({
   // T-04.4-02: fp:career pode ser JSON sintaticamente válido mas com shape errado
   // (editado manualmente no DevTools, ou versão antiga). Roda só no mount — não a
   // cada mudança de careerState, senão brigaria com uma atualização legítima em
-  // andamento.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // andamento (o ref guarda o "já validei" e evita o double-run do StrictMode dev).
+  const initialValidatedRef = useRef(false);
   useEffect(() => {
+    if (initialValidatedRef.current) return;
+    initialValidatedRef.current = true;
     if (careerState !== null && !isValidCareerState(careerState)) {
       setCareerState(null);
     }
-  }, []);
+  }, [careerState, setCareerState]);
 
   // Cloud save: tenta carregar do Supabase no mount se não houver save local.
   // Se o cloud tiver dados, sobrescreve o localStorage.
@@ -68,10 +70,20 @@ export function useCareerManager({
   // o local é gravado de forma síncrona (usePersistedState), o cloud tem debounce
   // de 2s (useCloudSave) e falha offline — sem essa checagem, um cloud velho
   // apagava progresso local ao reabrir o app.
+  const cloudLoadStartedRef = useRef(false);
   useEffect(() => {
+    if (cloudLoadStartedRef.current) return;
+    cloudLoadStartedRef.current = true;
     loadFromCloud().then(cloud => {
       if (!cloud || !isValidCareerState(cloud.state)) return;
       const cloudUpdatedAt = new Date(cloud.updatedAt).getTime();
+      // Timestamp do save local lido AQUI (quando o cloud resolve), não no mount:
+      // entre loadFromCloud() disparar e resolver (rede, lento) o usuário pode ter
+      // criado/jogado uma carreira nova — o save dela (agora) é mais novo que um
+      // cloud antigo e não pode ser sobrescrito. A leitura é idempotente, então o
+      // updater abaixo permanece puro.
+      let localSavedAt = 0;
+      try { localSavedAt = Number(localStorage.getItem(CAREER_SAVED_AT_KEY)) || 0; } catch { /* noop */ }
       // Decide contra o estado local MAIS RECENTE (o `prev` do updater), nunca o
       // capturado no fecho do mount. Entre loadFromCloud() disparar e resolver
       // (rede, lento) o usuário pode ter criado/jogado uma carreira nova; usar o
@@ -81,8 +93,6 @@ export function useCareerManager({
       setCareerState(prev => {
         const localValid = prev !== null && isValidCareerState(prev);
         if (!localValid) return cloud.state;
-        let localSavedAt = 0;
-        try { localSavedAt = Number(localStorage.getItem(CAREER_SAVED_AT_KEY)) || 0; } catch { /* noop */ }
         // Só sobrescreve quando o cloud é estritamente mais novo que o save local.
         return (Number.isFinite(cloudUpdatedAt) && cloudUpdatedAt > localSavedAt) ? cloud.state : prev;
       });
@@ -201,7 +211,8 @@ export function useCareerManager({
     }
   }, [rosterSyncing, setCareerState, setToastMsg]);
 
-  // Carrega a data da última atualização ao montar (exibe no Hub).
+  // Carrega a data da última atualização ao montar (exibe no Hub). Falha é
+  // inofensiva — o hub simplesmente não mostra a data (mantém null).
   useEffect(() => {
     getRosterSyncInfo().then(info => setRosterLastUpdatedAt(info.updatedAt)).catch(() => {});
   }, []);

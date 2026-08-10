@@ -2,6 +2,7 @@ import type { Team } from '../engine/types';
 import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { fireClick } from '../utils/fireClick';
+import { crestSrc } from '../utils/crest';
 
 export type GameMode = 'cpu' | 'player';
 
@@ -90,7 +91,7 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
            style={team ? { borderColor: color, background: bg } : undefined}>
         {team ? (
           <>
-            <img className="slot-crest" src={team.logoUrl} alt={team.name} />
+            <img className="slot-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
             <span className="slot-name">{team.name}</span>
             <span className="slot-ovr">{getAvgOvr(team)} OVR</span>
             <div className="uniform-toggle">
@@ -176,7 +177,7 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
               onClick={() => handleTeamClick(team.id)}
               disabled={!!homeId && !!awayId && !isSelected}
             >
-              <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+              <img className="tile-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
               <span className="tile-name">{team.name}</span>
               <span className="tile-ovr">{getAvgOvr(team)}</span>
             </button>

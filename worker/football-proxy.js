@@ -23,12 +23,29 @@
 
 const ALLOWED_CODES = new Set(['PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'ELC', 'BL2', 'FL2', 'SB', 'SPL', 'PPL2']);
 
-// Rotas RapidAPI liberadas por esse proxy — pares [host, prefixo de path permitido].
-// Mantém a superfície pequena de propósito: só os endpoints que o FootPlan realmente usa.
+// Rotas RapidAPI liberadas por esse proxy — pares [host, base] + allowlist de paths.
+// Antes o regex aceitava QUALQUER path sob sportapi7/apifootball (qualquer pessoa
+// podia apontar endpoints pagos arbitrários pro proxy e queimar a cota RapidAPI).
+// Agora só o que o FootPlan realmente usa (ver src/services/sportApi.ts e apiFootball.ts):
+//   sportapi7:  unique-tournament/{ut}/season/{season}/standings/total  e  team/{id}/players
+//   apifootball: teams?...  e  players?...  (paginação via ?page=)
 const RAPIDAPI_ROUTES = {
-  sportapi7: { host: 'sportapi7.p.rapidapi.com', base: 'https://sportapi7.p.rapidapi.com/api/v1' },
-  apifootball: { host: 'api-football-v1.p.rapidapi.com', base: 'https://api-football-v1.p.rapidapi.com/v3' },
+  sportapi7: {
+    host: 'sportapi7.p.rapidapi.com',
+    base: 'https://sportapi7.p.rapidapi.com/api/v1',
+    allowed: [/^unique-tournament\/\d+\/season\/\d+\/standings\/total$/, /^team\/\d+\/players$/],
+  },
+  apifootball: {
+    host: 'api-football-v1.p.rapidapi.com',
+    base: 'https://api-football-v1.p.rapidapi.com/v3',
+    allowed: [/^teams$/, /^teams\?/, /^players$/, /^players\?/],
+  },
 };
+
+// Timeout de upstream: um fetch pendurado (rede lenta/travada) segurava a requisição
+// do Worker indefinidamente. 10s é folgado pra essas APIs e curto o bastante pra não
+// segurar o cliente.
+const UPSTREAM_TIMEOUT_MS = 10_000;
 
 // Ajuste pra incluir o domínio real onde o FootPlan fica publicado.
 const ALLOWED_ORIGINS = [
@@ -81,9 +98,11 @@ export default {
       try {
         upstream = await fetch(`https://api.football-data.org/v4/competitions/${code}/teams`, {
           headers: { 'X-Auth-Token': env.FOOTBALL_API_KEY },
+          signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
         });
       } catch (err) {
-        return json({ error: `Falha ao contatar football-data.org: ${err.message}` }, 502, headers);
+        console.error('football-data upstream failed:', err);
+        return json({ error: 'Falha ao contatar a fonte de dados. Tente novamente em instantes.' }, 502, headers);
       }
       const body = await upstream.text();
       return new Response(body, { status: upstream.status, headers: { ...headers, 'Content-Type': 'application/json' } });
@@ -98,13 +117,18 @@ export default {
       if (!env.RAPIDAPI_KEY) {
         return json({ error: 'RAPIDAPI_KEY não configurada no Worker (rode: npx wrangler secret put RAPIDAPI_KEY).' }, 500, headers);
       }
+      if (!route.allowed.some(re => re.test(restPath))) {
+        return json({ error: `Endpoint "${restPath}" não permitido por esse proxy.` }, 400, headers);
+      }
       let upstream;
       try {
         upstream = await fetch(`${route.base}/${restPath}${url.search}`, {
           headers: { 'x-rapidapi-key': env.RAPIDAPI_KEY, 'x-rapidapi-host': route.host },
+          signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
         });
       } catch (err) {
-        return json({ error: `Falha ao contatar ${route.host}: ${err.message}` }, 502, headers);
+        console.error(`${provider} upstream failed:`, err);
+        return json({ error: 'Falha ao contatar a fonte de dados. Tente novamente em instantes.' }, 502, headers);
       }
       const body = await upstream.text();
       return new Response(body, { status: upstream.status, headers: { ...headers, 'Content-Type': 'application/json' } });

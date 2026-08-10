@@ -126,7 +126,7 @@ export default function PenaltyShootoutOverlay({
 
     setKickIndex(newIndex);
     setPhase('pick');
-  }, [kickIndex, totalRegularKicks, homeTeam.id, awayTeam.id]);
+  }, [kickIndex, totalRegularKicks]);
 
   const handleUserPick = useCallback((corner: Corner) => {
     if (phase !== 'pick' || !currentIsUserKick) return;

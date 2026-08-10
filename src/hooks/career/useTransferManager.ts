@@ -50,8 +50,6 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
       }
       return t;
     });
-    const newUserSquad = [...userTeam.squad.filter(p => p.id !== offeredPlayerId), requestedPlayer];
-    const newWageBill = computeWageBill({ ...userTeam, squad: newUserSquad });
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
     const record: TransferRecord = {
       id: crypto.randomUUID(), date: dateLabel, seasonYear: careerState.currentSeasonYear,
@@ -61,15 +59,26 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
 
     setCareerState(prev => {
       if (!prev) return prev;
+      // Guarda contra duplo clique/estado stale: se o jogador oferecido já saiu ou o
+      // pedido já foi aplicado, a operação NÃO é reaplicada (senão o orçamento era
+      // debitado duas vezes).
+      const prevUserTeam = prev.rosters[prev.leagueId].find(t => t.id === userTeam.id);
+      const prevOpponentTeam = prev.rosters[prev.leagueId].find(t => t.id === opponentTeam.id);
+      if (!prevUserTeam || !prevOpponentTeam) return prev;
+      if (!prevUserTeam.squad.some(p => p.id === offeredPlayerId)) return prev;
+      if (!prevOpponentTeam.squad.some(p => p.id === requestedPlayerId)) return prev;
+      const prevFinances = getFinances(prev);
+      const newRosters = { ...prev.rosters, [prev.leagueId]: swapSquad(prev.rosters[prev.leagueId]) };
+      const postUserTeam = newRosters[prev.leagueId].find(t => t.id === userTeam.id)!;
       return {
         ...prev,
-        rosters: { ...prev.rosters, [prev.leagueId]: swapSquad(prev.rosters[prev.leagueId]) },
+        rosters: newRosters,
         season: {
           ...prev.season,
           league: { ...prev.season.league, teams: swapSquad(prev.season.league.teams) },
           cup: { ...prev.season.cup, teams: swapSquad(prev.season.cup.teams) },
         },
-        finances: { ...finances, budget: finances.budget - cashOffered, wageBill: newWageBill },
+        finances: { ...prevFinances, budget: prevFinances.budget - cashOffered, wageBill: computeWageBill(postUserTeam) },
         transferHistory: [...getTransferHistory(prev), record],
         // O jogador trocado saiu do elenco — não faz mais sentido continuar na lista de venda.
         transferListPlayerIds: getTransferList(prev).filter(id => id !== offeredPlayerId),
@@ -124,7 +133,6 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
       if (t.id === userTeam.id) return { ...t, squad: [...t.squad, player] };
       return t;
     });
-    const newWageBill = computeWageBill({ ...userTeam, squad: [...userTeam.squad, player] });
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
     const record: TransferRecord = {
       id: crypto.randomUUID(), date: dateLabel, seasonYear: careerState.currentSeasonYear,
@@ -134,6 +142,14 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
 
     setCareerState(prev => {
       if (!prev) return prev;
+      // Guardas contra duplo clique/estado stale: o jogador precisa ainda estar no
+      // time vendedor e ainda NÃO estar no time do usuário — sem isso a compra era
+      // reaplicada e o orçamento debitado duas vezes no mesmo tick.
+      const prevSeller = prev.rosters[sellerLeagueId!].find(t => t.id === sellerTeam!.id);
+      if (!prevSeller?.squad.some(p => p.id === playerId)) return prev;
+      const prevUserTeam = prev.rosters[prev.leagueId].find(t => t.id === userTeam.id);
+      if (!prevUserTeam || prevUserTeam.squad.some(p => p.id === playerId)) return prev;
+      const prevFinances = getFinances(prev);
       const newRosters = isSameLeague
         ? { ...prev.rosters, [prev.leagueId]: moveSquadSameLeague(prev.rosters[prev.leagueId]) }
         : {
@@ -143,6 +159,7 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
             ),
             [prev.leagueId]: addToUser(prev.rosters[prev.leagueId]),
           };
+      const postUserTeam = newRosters[prev.leagueId].find(t => t.id === userTeam.id)!;
       return {
         ...prev,
         rosters: newRosters,
@@ -151,7 +168,7 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
           league: { ...prev.season.league, teams: isSameLeague ? moveSquadSameLeague(prev.season.league.teams) : addToUser(prev.season.league.teams) },
           cup: { ...prev.season.cup, teams: isSameLeague ? moveSquadSameLeague(prev.season.cup.teams) : addToUser(prev.season.cup.teams) },
         },
-        finances: { ...finances, budget: finances.budget - amount, wageBill: newWageBill },
+        finances: { ...prevFinances, budget: prevFinances.budget - amount, wageBill: computeWageBill(postUserTeam) },
         transferHistory: [...getTransferHistory(prev), record],
         inbox: [...getInbox(prev), createTransferAcceptedMessage(player.name, sellerTeam.name, userTeam.name, amount, dateLabel)],
       };
@@ -176,7 +193,6 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
     const leagueRoster = careerState.rosters[careerState.leagueId];
     const userTeam = leagueRoster.find(t => t.id === careerState.season.league.userTeamId)!;
     const addToSquad = (teams: Team[]): Team[] => teams.map(t => t.id === userTeam.id ? { ...t, squad: [...t.squad, player] } : t);
-    const newWageBill = computeWageBill({ ...userTeam, squad: [...userTeam.squad, player] });
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
     const record: TransferRecord = {
       id: crypto.randomUUID(), date: dateLabel, seasonYear: careerState.currentSeasonYear,
@@ -186,15 +202,21 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
 
     setCareerState(prev => {
       if (!prev) return prev;
+      // Guarda contra duplo clique: o jogador precisa ainda estar no pool de agentes
+      // livres — senão o orçamento era debitado duas vezes no mesmo tick.
+      if (!getFreeAgentPool(prev).some(p => p.id === playerId)) return prev;
+      const prevFinances = getFinances(prev);
+      const newRosters = { ...prev.rosters, [prev.leagueId]: addToSquad(prev.rosters[prev.leagueId]) };
+      const postUserTeam = newRosters[prev.leagueId].find(t => t.id === userTeam.id)!;
       return {
         ...prev,
-        rosters: { ...prev.rosters, [prev.leagueId]: addToSquad(prev.rosters[prev.leagueId]) },
+        rosters: newRosters,
         season: {
           ...prev.season,
           league: { ...prev.season.league, teams: addToSquad(prev.season.league.teams) },
           cup: { ...prev.season.cup, teams: addToSquad(prev.season.cup.teams) },
         },
-        finances: { ...finances, budget: finances.budget - amount, wageBill: newWageBill },
+        finances: { ...prevFinances, budget: prevFinances.budget - amount, wageBill: computeWageBill(postUserTeam) },
         freeAgentPool: getFreeAgentPool(prev).filter(p => p.id !== playerId),
         transferHistory: [...getTransferHistory(prev), record],
         inbox: [...getInbox(prev), createTransferAcceptedMessage(player.name, 'Agente Livre', userTeam.name, amount, dateLabel)],
@@ -272,8 +294,6 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
       if (t.id === offeringTeam!.id) return { ...t, squad: [...t.squad, playerWithoutGoal] };
       return t;
     });
-    const finances = getFinances(careerState);
-    const newWageBill = computeWageBill({ ...userTeam, squad: userTeam.squad.filter(p => p.id !== playerId) });
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
     const record: TransferRecord = {
       id: crypto.randomUUID(), date: dateLabel, seasonYear: careerState.currentSeasonYear,
@@ -283,6 +303,12 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
 
     setCareerState(prev => {
       if (!prev) return prev;
+      // Guarda contra duplo clique/estado stale: se o jogador já saiu do elenco do
+      // usuário (no `prev`, estado mais recente), a venda já foi aplicada — não
+      // creditar o valor de novo.
+      const prevUserTeam = prev.rosters[prev.leagueId].find(t => t.id === userTeam.id);
+      if (!prevUserTeam?.squad.some(p => p.id === playerId)) return prev;
+      const prevFinances = getFinances(prev);
       const newRosters = isSameLeague
         ? { ...prev.rosters, [prev.leagueId]: moveSquadSameLeague(prev.rosters[prev.leagueId]) }
         : {
@@ -292,6 +318,7 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
             ),
             [prev.leagueId]: removeFromUser(prev.rosters[prev.leagueId]),
           };
+      const postUserTeam = newRosters[prev.leagueId].find(t => t.id === userTeam.id)!;
       return {
         ...prev,
         rosters: newRosters,
@@ -301,7 +328,7 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
           cup: { ...prev.season.cup, teams: isSameLeague ? moveSquadSameLeague(prev.season.cup.teams) : removeFromUser(prev.season.cup.teams) },
         },
         // Board Strictness (EA FC): a diretoria retém 20% do valor de venda.
-        finances: { ...finances, budget: finances.budget + netSellRevenue(amount), wageBill: newWageBill },
+        finances: { ...prevFinances, budget: prevFinances.budget + netSellRevenue(amount), wageBill: computeWageBill(postUserTeam) },
         transferHistory: [...getTransferHistory(prev), record],
         transferListPlayerIds: getTransferList(prev).filter(id => id !== playerId),
         inbox: [...getInbox(prev).filter(m => m.id !== messageId), createTransferOutCompletedMessage(player.name, offeringTeam!.name, amount, dateLabel)],
@@ -361,19 +388,25 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
 
     const replacePlayer = (squad: Player[]): Player[] => squad.map(p => p.id === playerId ? renewedWithYear : p);
     const applyToTeam = (teams: Team[]): Team[] => teams.map(t => t.id === userTeam.id ? { ...t, squad: replacePlayer(t.squad) } : t);
-    const newWageBill = computeWageBill({ ...userTeam, squad: replacePlayer(userTeam.squad) });
 
     setCareerState(prev => {
       if (!prev) return prev;
+      // Guarda contra duplo clique: quem já renovou nesta safra (no `prev`, estado
+      // mais recente) não pode renovar de novo — senão o custo era debitado 2x.
+      const prevPlayer = prev.rosters[prev.leagueId].find(t => t.id === userTeam.id)?.squad.find(p => p.id === playerId);
+      if (!prevPlayer || prevPlayer.lastRenewedSeasonYear === prev.currentSeasonYear) return prev;
+      const prevFinances = getFinances(prev);
+      const newRosters = { ...prev.rosters, [prev.leagueId]: applyToTeam(prev.rosters[prev.leagueId]) };
+      const postUserTeam = newRosters[prev.leagueId].find(t => t.id === userTeam.id)!;
       return {
         ...prev,
-        rosters: { ...prev.rosters, [prev.leagueId]: applyToTeam(prev.rosters[prev.leagueId]) },
+        rosters: newRosters,
         season: {
           ...prev.season,
           league: { ...prev.season.league, teams: applyToTeam(prev.season.league.teams) },
           cup: { ...prev.season.cup, teams: applyToTeam(prev.season.cup.teams) },
         },
-        finances: { ...finances, budget: finances.budget - cost, wageBill: newWageBill },
+        finances: { ...prevFinances, budget: prevFinances.budget - cost, wageBill: computeWageBill(postUserTeam) },
       };
     });
     const bonusText = options.signingBonus ? ` · ${formatMoney(options.signingBonus)} de bônus` : '';

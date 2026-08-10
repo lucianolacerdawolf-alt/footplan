@@ -1,13 +1,16 @@
-import type { Player } from '../engine/types';
+import type { Player, Position } from '../engine/types';
 
-const WEIGHTS: Record<string, Record<string, number>> = {
+type AttributeKey = keyof Player['attributes'];
+type Subtype = 'CB' | 'FB' | 'CDM' | 'CM' | 'CAM' | 'W' | 'ST';
+
+const WEIGHTS: Record<Position, Record<AttributeKey, number>> = {
   GK:  { speed: 0, stamina: 0, passing: 1.5, finishing: 0, tackling: 0, dribbling: 0, vision: 2.0, positioning: 4.0 },
   DEF: { speed: 1.8, stamina: 1.2, passing: 1.0, finishing: 0, tackling: 3.0, dribbling: 0, vision: 0, positioning: 2.5 },
   MID: { speed: 1.0, stamina: 1.2, passing: 2.5, finishing: 0, tackling: 0.8, dribbling: 1.8, vision: 2.5, positioning: 0 },
   FWD: { speed: 2.5, stamina: 0, passing: 0.8, finishing: 3.5, dribbling: 2.2, vision: 0, tackling: 0, positioning: 1.2 },
 };
 
-const SUBTYPE_WEIGHTS: Record<string, Record<string, number>> = {
+const SUBTYPE_WEIGHTS: Record<Subtype, Record<AttributeKey, number>> = {
   CB:  { speed: 1.2, stamina: 1.4, passing: 0.8, finishing: 0, tackling: 3.5, dribbling: 0, vision: 0, positioning: 3.0 },
   FB:  { speed: 2.8, stamina: 2.0, passing: 1.8, finishing: 0, tackling: 1.8, dribbling: 1.2, vision: 0, positioning: 1.0 },
   CDM: { speed: 0.8, stamina: 2.0, passing: 2.0, finishing: 0, tackling: 2.5, dribbling: 1.0, vision: 1.8, positioning: 1.5 },
@@ -63,7 +66,7 @@ export function playerOvr(p: Player): number {
 
 /** Auto-detect the most likely subtype from the player's attributes.
  *  Uses FIFA-style heuristics: speed+dribbling → winger/fullback, tackling+positioning → CB/CDM, etc. */
-function detectSubtype(p: Player): string | null {
+function detectSubtype(p: Player): Subtype | null {
   const { speed: sp, stamina: st, passing: pa, finishing: fi, tackling: ta, dribbling: dr, vision: vi, positioning: po } = p.attributes;
 
   switch (p.position) {
@@ -98,7 +101,7 @@ function detectSubtype(p: Player): string | null {
 
 /** Calcula OVR usando pesos específicos do subtipo de posição (CB, FB, CDM, CM, CAM, W, ST).
  *  Fallback para os pesos padrão da posição se o subtipo não for reconhecido. */
-export function playerOvrBySubtype(p: Player, subtype: string): number {
+export function playerOvrBySubtype(p: Player, subtype: Subtype): number {
   const w = SUBTYPE_WEIGHTS[subtype] ?? WEIGHTS[p.position] ?? WEIGHTS['MID'];
   const total = TOTALS[subtype] ?? TOTALS[p.position] ?? TOTALS['MID'];
   return computeOvr(p.attributes, w, total);

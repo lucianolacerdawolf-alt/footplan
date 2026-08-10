@@ -7,6 +7,7 @@ import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
 import { allLeagues } from '../data/leagues';
 import TacticLabel from './TacticLabel';
 import styles from './OnlineLobbyScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
@@ -266,7 +267,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
                 onClick={() => !isOpponentPick && selectMyTeam(team.id)}
                 disabled={isOpponentPick}
               >
-                <img className="tile-crest" src={team.logoUrl} alt={team.name} />
+                <img className="tile-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
                 <span className="tile-name">{team.name}</span>
                 <span className="tile-ovr">{isMyPick ? '✓' : getAvgOvr(team)}</span>
               </button>
@@ -309,7 +310,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
       {myTeam && myStrategy && (
         <div className={`${'halftime-inner'} ${styles.tacticsPanel}`}>
           <div className={styles.tacticsTitle}>
-            <img src={myTeam.logoUrl} alt={myTeam.name} className={styles.tacticsTitleImg} />
+            <img src={crestSrc(myTeam.logoUrl)} alt={myTeam.name} className={styles.tacticsTitleImg} />
             <strong className={styles.tacticsTitleStrong} style={{ color: myColor }}>
               {myTeam.name} — Seu Time
             </strong>
@@ -399,7 +400,7 @@ function renderSlot(
     >
       {team ? (
         <>
-          <img className="slot-crest" src={team.logoUrl} alt={team.name} />
+          <img className="slot-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
           <span className="slot-name">{team.name}</span>
         </>
       ) : (

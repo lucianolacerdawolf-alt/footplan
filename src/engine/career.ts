@@ -458,10 +458,11 @@ export function progressPlayer(player: Player, rng: () => number = Math.random):
   const scale = newTargetOvr / currentOvr;
   const scaleAttr = (v: number) => Math.max(1, Math.min(99, Math.round(v * scale)));
   return {
-    id: player.id,
-    name: player.name,
-    number: player.number,
-    position: player.position,
+    // Spread preserva TODOS os campos — inclusive os de gestão da carreira
+    // (contractGoal, lastRenewedSeasonYear, suspensões, cartões, nacionalidade),
+    // que reconstruir o objeto campo a campo descartava silenciosamente: a cláusula
+    // de performance nunca pagava bônus e o cooldown de renovação era burlável.
+    ...player,
     currentFatigue: 0,
     attributes: {
       speed: scaleAttr(player.attributes.speed),
@@ -474,10 +475,6 @@ export function progressPlayer(player: Player, rng: () => number = Math.random):
       positioning: scaleAttr(player.attributes.positioning),
     },
     age: age + 1,
-    // Campos opcionais que representam identidade/gestão da carreira precisam
-    // sobreviver à evolução — senão contractSeasonsLeft sumiria a cada temporada
-    // (marketValue/weeklyWage são re-aplicados depois por assignMarketValues).
-    contractSeasonsLeft: player.contractSeasonsLeft,
   };
 }
 
@@ -488,11 +485,16 @@ export function shouldRetire(age: number, rng: () => number = Math.random): bool
   return rng() < chance;
 }
 
+/** Contador de reposições — garante unicidade do id mesmo com rng determinístico
+ *  (dois `rng()` iguais seguidos geravam o mesmo sufixo, colidindo entre reposições
+ *  da mesma temporada). */
+let replacementSeq = 0;
+
 /** Gera um jovem substituto (18-20 anos) pra ocupar a vaga de um jogador aposentado. */
 export function generateReplacementPlayer(retiring: Player, rng: () => number = Math.random): Player {
   const youngAge = 18 + Math.floor(rng() * 3);
   const targetOvr = Math.max(45, Math.min(70, playerOvr(retiring) - 10 + Math.floor(rng() * 10)));
-  const id = `${retiring.id}-yng-${Math.floor(rng() * 1e6)}`;
+  const id = `${retiring.id}-yng-${replacementSeq++}-${Math.floor(rng() * 1e6)}`;
   const name = generateRandomName(rng);
   return {
     ...generatePlayer(id, name, retiring.number, retiring.position, targetOvr),

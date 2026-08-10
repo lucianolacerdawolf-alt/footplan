@@ -315,10 +315,23 @@ describe('Fadiga e cartões pós-partida (Modo Carreira)', () => {
     const starterId = result.current.careerState!.season.league.teams
       .find(t => t.id === userTeamId)!.squad.find(p => p.position !== 'GK')!.id;
 
+    // Fluxo real do jogo: 1 partida por rodada + avanço entre elas (uma partida já
+    // registrada não pode ser re-registrada — guarda anti duplo resultado).
     for (let i = 0; i < 3; i++) {
       playUserFixtureWithEvents(result, userTeamId, [
         { minute: 20, type: 'yellowCard', description: 'Cartão', teamId: userTeamId, playerId: starterId },
       ]);
+      if (i < 2) {
+        // applyPostMatchInjuries tem chance aleatória de gerar mensagem obrigatória
+        // (relatório de lesão) — marca tudo como lido antes de avançar, senão o avanço
+        // é bloqueado e este teste dependeria de sorte.
+        act(() => {
+          result.current.handleMarkAllInboxRead();
+        });
+        act(() => {
+          result.current.handleNextCareerLeagueRound();
+        });
+      }
     }
 
     const suspendedTeam = result.current.careerState!.season.league.teams.find(t => t.id === userTeamId)!;
@@ -327,9 +340,6 @@ describe('Fadiga e cartões pós-partida (Modo Carreira)', () => {
     expect(suspendedPlayer.isSuspended).toBe(true);
     expect(suspendedPlayer.suspendedRounds).toBe(1);
 
-    // applyPostMatchInjuries tem chance aleatória de gerar mensagem obrigatória
-    // (relatório de lesão) nas 3 partidas acima — marca tudo como lido antes de
-    // avançar pra não depender de sorte pra este teste passar.
     act(() => {
       result.current.handleMarkAllInboxRead();
     });

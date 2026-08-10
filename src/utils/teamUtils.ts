@@ -9,6 +9,9 @@ export function cloneTeam(team: Team, preserveFatigue = false): Team {
     squad: team.squad.map(p => ({
       ...p,
       attributes: { ...p.attributes },
+      // contractGoal é objeto — sem clonar, mutação num time clonado vazava pro original
+      // (mesma referência compartilhada entre o elenco "de trabalho" e o persistido).
+      contractGoal: p.contractGoal ? { ...p.contractGoal } : undefined,
       currentFatigue: preserveFatigue ? p.currentFatigue : 0,
     })),
   };

@@ -14,8 +14,19 @@ export function resolveShot(
 ): { result: 'goal' | 'post' | 'save' | 'miss'; scorer: Player; goalkeeper: Player } {
   const rng = makeRng(random);
   const modAtk = MENTALITY_MODIFIERS[attackingStrategy];
-  const gk = getGoalkeeper(getActiveStarters(defendingTeam, cards));
-  if (!gk) return { result: 'goal', scorer: attacker, goalkeeper: attacker };
+  const starters = getActiveStarters(defendingTeam, cards);
+  let gk = getGoalkeeper(starters);
+
+  // Goleiro expulso ou elenco sem GK (time sintético incompleto): usa o titular com
+  // melhor "positioning" como goleiro improvisado. Antes retornava o ATACANTE como
+  // "goleiro" — o comentário de defesa ("X defende!") citava o jogador do time atacante.
+  if (!gk) {
+    const emergency = starters
+      .filter(p => p.position !== 'GK')
+      .sort((a, b) => b.attributes.positioning - a.attributes.positioning)[0];
+    gk = emergency ?? attacker;
+  }
+
   const gkFatigue = fatigueDef.get(gk.id) ?? 0;
   const atkFatigue = fatigueAtk.get(attacker.id) ?? 0;
 

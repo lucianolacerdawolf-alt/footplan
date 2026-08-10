@@ -21,6 +21,7 @@ import ConversationsPanel from './ConversationsPanel';
 import PreMatchPrepCard from './PreMatchPrepCard';
 import SocialFeedCard from './SocialFeedCard';
 import styles from './CareerHubScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   state: CareerState;
@@ -92,7 +93,10 @@ function determineNextMatch(state: CareerState): NextMatch {
     if (userMatch) {
       const homeTeam = cc.teams.find(t => t.id === userMatch.homeTeamId);
       const awayTeam = cc.teams.find(t => t.id === userMatch.awayTeamId);
-      const opponentTeamId = userMatch.homeTeamId === userId ? userMatch.awayTeamId! : userMatch.homeTeamId!;
+      const opponentTeamId = userMatch.homeTeamId === userId ? userMatch.awayTeamId : userMatch.homeTeamId;
+      if (!opponentTeamId) {
+        return null;
+      }
       return {
         type: 'continental',
         homeName: homeTeam?.name ?? '???',
@@ -115,7 +119,10 @@ function determineNextMatch(state: CareerState): NextMatch {
     if (userMatch) {
       const homeTeam = cup.teams.find(t => t.id === userMatch.homeTeamId);
       const awayTeam = cup.teams.find(t => t.id === userMatch.awayTeamId);
-      const opponentTeamId = userMatch.homeTeamId === userId ? userMatch.awayTeamId! : userMatch.homeTeamId!;
+      const opponentTeamId = userMatch.homeTeamId === userId ? userMatch.awayTeamId : userMatch.homeTeamId;
+      if (!opponentTeamId) {
+        return null;
+      }
       return {
         type: 'cup',
         homeName: homeTeam?.name ?? '???',
@@ -257,7 +264,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onViewContin
       {userTeam && (
         <div className={styles.clubHero}>
           <div className={styles.clubCrest}>
-            <img src={userTeam.logoUrl} alt={userTeam.name} className={styles.crestImg} />
+            <img src={crestSrc(userTeam.logoUrl)} alt={userTeam.name} className={styles.crestImg} />
           </div>
           <div className={styles.clubInfo}>
             <h1 className={styles.clubName}>{userTeam.name}</h1>
@@ -327,8 +334,8 @@ export default function CareerHubScreen({ state, league, onViewCup, onViewContin
       </div>
 
       {state.season.continentalCup && state.season.continentalCupDef && (() => {
-        const cc = state.season.continentalCup!;
-        const ccDef = state.season.continentalCupDef!;
+        const cc = state.season.continentalCup;
+        const ccDef = state.season.continentalCupDef;
         const label = cc.stage === 'champion'
           ? (cc.championId === state.season.league.userTeamId ? '🏆 Campeão!' : 'Eliminado')
           : (CUP_STAGE_LABELS[cc.stage] ?? cc.stage);
@@ -463,7 +470,7 @@ export default function CareerHubScreen({ state, league, onViewCup, onViewContin
           pressDone={!!pressDone}
           opponentName={opponentTeam.name}
           onTraining={onApplyTraining}
-          onOpenPress={() => onOpenPressConference!(opponentTeam)}
+          onOpenPress={() => onOpenPressConference(opponentTeam)}
           pressQuestion={pressQuestion ?? null}
           onAnswerPress={onAnswerPressConference ?? (() => {})}
           onClosePress={onClosePressConference ?? (() => {})}

@@ -5,6 +5,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { computeStandings } from '../engine/tournament';
 import TopScorersTable from './TopScorersTable';
 import styles from './LeagueTableScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 function getRecentForm(teamId: string, fixtures: LeagueFixture[][]): ('W' | 'D' | 'L')[] {
   const results: ('W' | 'D' | 'L')[] = [];
@@ -62,13 +63,13 @@ export function StandingsTable({ standings, teams, userTeamId, league, fixtures 
           const team = teamById(teams, s.teamId);
           const isUser = s.teamId === userTeamId;
           const sg = s.goalsFor - s.goalsAgainst;
-          const form = showForm ? getRecentForm(s.teamId, fixtures!) : null;
+          const form = fixtures ? getRecentForm(s.teamId, fixtures) : null;
           return (
             <tr key={s.teamId} className={`${styles.row} ${isUser ? styles.rowUser : ''}`}>
               <td className={styles.tdZone} style={{ background: getZoneColor(pos, league) }} />
               <td className={styles.tdPos}>{pos}</td>
               <td className={styles.tdTeam}>
-                <img src={team.logoUrl} alt={team.abbreviation} className={styles.tableCrest} />
+                <img src={crestSrc(team.logoUrl)} alt={team.abbreviation} className={styles.tableCrest} />
                 <span className={styles.teamName}>{team.name}</span>
               </td>
               <td className={styles.tdPts}>{s.points}</td>
@@ -79,9 +80,9 @@ export function StandingsTable({ standings, teams, userTeamId, league, fixtures 
               <td>{s.goalsFor}</td>
               <td>{s.goalsAgainst}</td>
               <td className={sg >= 0 ? styles.sgPos : styles.sgNeg}>{sg > 0 ? '+' : ''}{sg}</td>
-              {showForm && (
+              {showForm && form && (
                 <td className={styles.tdForm}>
-                  {form!.map((r, idx) => (
+                  {form.map((r, idx) => (
                     <span key={idx} className={`${styles.formDot} ${r === 'W' ? styles.formWin : r === 'D' ? styles.formDraw : styles.formLoss}`}>
                       {r}
                     </span>

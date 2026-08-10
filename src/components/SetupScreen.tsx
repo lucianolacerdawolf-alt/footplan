@@ -94,6 +94,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { fireClick } from '../utils/fireClick';
 import { getContractSeasonsLeft, renewPlayerContract, canRenewContract, type ContractRenewalOptions } from '../engine/career';
 import ContractRenewalModal from './ContractRenewalModal';
+import { crestSrc } from '../utils/crest';
 
 export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview, onRenewContract, currentSeasonYear, budget }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
@@ -312,7 +313,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
     <div className={`setup-team-card ${side} ${disabled ? 'locked' : ''}`} style={{ borderTopColor: team.color }}>
       <div className="setup-team-header">
         <div className="setup-team-crest">
-          <img src={team.logoUrl} alt={team.name} className="crest-img" />
+          <img src={crestSrc(team.logoUrl)} alt={team.name} className="crest-img" />
         </div>
         <div style={{ flex: 1 }}>
           <h2>{team.name}</h2>

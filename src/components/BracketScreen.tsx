@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Team } from '../engine/types';
 import type { BracketState, BracketMatch, PlayableStage } from '../engine/tournament';
 import styles from './BracketScreen.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   state: BracketState;
@@ -57,7 +58,7 @@ function MatchCard({
     <div className={`${styles.matchCard} ${isUserMatch ? styles.matchCardUser : ''} ${match.played ? styles.matchCardDone : ''}`}>
       <div className={styles.matchTeams}>
         <div className={`${styles.matchTeam} ${match.winnerId === match.homeTeamId ? styles.winner : match.played ? styles.loser : ''}`}>
-          {home ? <img src={home.logoUrl} alt={home.abbreviation} className={styles.matchCrest} /> : <span className={styles.tbd}>—</span>}
+          {home ? <img src={crestSrc(home.logoUrl)} alt={home.abbreviation} className={styles.matchCrest} /> : <span className={styles.tbd}>—</span>}
           <span style={home ? { color: home.color } : undefined}>{home?.abbreviation ?? '?'}</span>
         </div>
         <div className={styles.matchMiddle}>
@@ -67,7 +68,7 @@ function MatchCard({
         </div>
         <div className={`${styles.matchTeam} ${styles.matchTeamAway} ${match.winnerId === match.awayTeamId ? styles.winner : match.played ? styles.loser : ''}`}>
           <span style={away ? { color: away.color } : undefined}>{away?.abbreviation ?? '?'}</span>
-          {away ? <img src={away.logoUrl} alt={away.abbreviation} className={styles.matchCrest} /> : <span className={styles.tbd}>—</span>}
+          {away ? <img src={crestSrc(away.logoUrl)} alt={away.abbreviation} className={styles.matchCrest} /> : <span className={styles.tbd}>—</span>}
         </div>
       </div>
       {canPlay && isUserMatch && (
@@ -108,12 +109,12 @@ export default function BracketScreen({ state, onPlayMatch, onSimulateMatch, onS
         )}
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
-          <img src={champion.logoUrl} alt={champion.name} className={styles.championCrest} />
+          <img src={crestSrc(champion.logoUrl)} alt={champion.name} className={styles.championCrest} />
           <div className={styles.championName} style={{ color: champion.color }}>{champion.name}</div>
           <div className={styles.championSub}>Campeão da {state.cupName}</div>
           {!userWon && (
             <div className={styles.userEliminated}>
-              <img src={userTeam.logoUrl} className={styles.smallCrest} alt="" />
+              <img src={crestSrc(userTeam.logoUrl)} className={styles.smallCrest} alt="" />
               <span>{userTeam.name} foi eliminado</span>
             </div>
           )}
