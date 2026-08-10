@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { Team, Player } from '../engine/types';
 import { getAvgOvr } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
@@ -8,7 +8,10 @@ import { crestSrc } from '../utils/crest';
 
 interface Props {
   userTeam: Team;
-  opponentTeams: Team[];
+  /** Elenco inteiro da liga do usuário (fatia estável do estado). Os adversários
+   *  são derivados aqui dentro — antes vinha um `.filter()` inline do screenMap,
+   *  novo array a cada render, o que furava o React.memo desta tela. */
+  leagueRoster: Team[];
   budget: number;
   onBack: () => void;
   onPropose: (offeredPlayerId: string, opponentTeamId: string, requestedPlayerId: string, cashOffered?: number) => { accepted: boolean; reason: string };
@@ -42,7 +45,11 @@ function PlayerRow({ player, selected, onClick }: { player: Player; selected: bo
   );
 }
 
-export default function TradeProposalScreen({ userTeam, opponentTeams, budget, onBack, onPropose }: Props) {
+function TradeProposalScreen({ userTeam, leagueRoster, budget, onBack, onPropose }: Props) {
+  const opponentTeams = useMemo(
+    () => leagueRoster.filter(t => t.id !== userTeam.id),
+    [leagueRoster, userTeam.id],
+  );
   const [opponentId, setOpponentId] = useState<string | null>(null);
   const [offeredPlayerId, setOfferedPlayerId] = useState<string | null>(null);
   const [requestedPlayerId, setRequestedPlayerId] = useState<string | null>(null);
@@ -181,3 +188,5 @@ export default function TradeProposalScreen({ userTeam, opponentTeams, budget, o
     </div>
   );
 }
+
+export default memo(TradeProposalScreen);

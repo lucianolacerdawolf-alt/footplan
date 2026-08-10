@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import type { CareerSeasonHistoryEntry, ClubFinances, TransferRecord, TransferRecordType } from '../engine/career';
 import { getContractSeasonsLeft, canRenewContract } from '../engine/career';
 import type { ContractRenewalOptions } from '../engine/career';
@@ -93,7 +93,7 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: 'var(--negative)' };
 }
 
-export default function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
+function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const [renewingPlayer, setRenewingPlayer] = useState<Player | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
@@ -397,3 +397,25 @@ export default function TrophyRoomScreen({ history, finances, transfers, current
     </div>
   );
 }
+
+/** Comparador do memo. Todos os props são estáveis por referência (fatias do
+ *  estado, handlers useCallback, primitivos/strings) EXCETO `currentSeason`, que
+ *  o screenMap remonta a cada render como objeto novo — comparado aqui campo a
+ *  campo por valor. Os demais entram no shallow-equal padrão. */
+function arePropsEqual(a: Props, b: Props): boolean {
+  const keys = Object.keys(a) as (keyof Props)[];
+  if (keys.length !== Object.keys(b).length) return false;
+  for (const k of keys) {
+    if (k === 'currentSeason') continue;
+    if (a[k] !== b[k]) return false;
+  }
+  const ca = a.currentSeason, cb = b.currentSeason;
+  if (ca === cb) return true;
+  if (!ca || !cb) return false;
+  return ca.leagueName === cb.leagueName && ca.position === cb.position
+    && ca.round === cb.round && ca.totalRounds === cb.totalRounds
+    && ca.wins === cb.wins && ca.draws === cb.draws && ca.losses === cb.losses
+    && ca.cupStageLabel === cb.cupStageLabel;
+}
+
+export default memo(TrophyRoomScreen, arePropsEqual);
