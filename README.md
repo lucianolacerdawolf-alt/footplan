@@ -176,8 +176,8 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 |--------|-------|
 | **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Testes** | Vitest 3 (393 testes) + Testing Library (componentes) |
-| **Estilo** | CSS Modules + App.css/index.css globais |
+| **Testes** | Vitest 3 (573 testes) + Testing Library (componentes) |
+| **Estilo** | CSS Modules + tokens semânticos (`index.css`) + primitivos em `components/ui/` (Button/Card/StatTile/Icon) + App.css global |
 | **Renderização** | HTML/CSS (partida é 100% texto); SVG só na escalação visual do Modo Carreira |
 | **Estado** | React Hooks |
 | **Persistência** | localStorage via `useLocalStorage` / `usePersistedState` |
@@ -229,6 +229,7 @@ src/
 │   └── rosterSync.ts            # Casa time estático × time remoto por nome (scoreMatch +
 │                                 # atribuição gulosa), mescla elenco, cache 7 dias
 ├── components/
+│   ├── ui/                       Primitivos de UI: Button (variantes + glow), Card, StatTile, Icon (SVG)
 │   ├── HomeScreen                Menu principal
 │   ├── LeagueSelectScreen        Escolha de liga (Campeonatos / Partida Única)
 │   ├── CupSelectScreen           Escolha de copa
