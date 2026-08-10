@@ -1,7 +1,7 @@
 {
   "name": "footplan",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,6 +11,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
+    "generate:publish-assets": "node scripts/generate-publish-assets.mjs",
     "rosters:sync": "vite-node scripts/populate-rosters.ts",
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name=footplan",
     "build:native": "tsc -b && vite build --mode native",

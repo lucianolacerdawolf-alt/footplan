@@ -222,3 +222,19 @@
   .modeDesc { font-size: 11px; }
   .difficultyBar { flex-direction: column; gap: 6px; }
 }
+
+.footer {
+  display: flex;
+  justify-content: center;
+  padding-top: 4px;
+  margin-top: auto;
+}
+
+.version {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.55;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
