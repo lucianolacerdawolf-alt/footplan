@@ -107,6 +107,10 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
           ))}
         </div>
       </div>
+
+      <footer className={styles.footer}>
+        <span className={styles.version}>v{__APP_VERSION__}</span>
+      </footer>
     </div>
   );
 }

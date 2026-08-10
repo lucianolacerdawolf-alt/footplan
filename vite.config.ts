@@ -1,7 +1,13 @@
 import path from 'path'
+import { readFileSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+
+// Versão do app (package.json) exposta ao bundle como __APP_VERSION__ — usada na
+// Home pra usuários reportarem bugs com a versão exata. Sem import de JSON: lida
+// direto do arquivo pra não depender de resolveJsonModule no tsconfig.
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
 
 // `--mode native` (build do Capacitor) em vez de env var: funciona igual em
 // cmd.exe e em shell POSIX, sem depender de cross-env. O `.env` normal continua
@@ -39,6 +45,9 @@ export default defineConfig(({ mode }) => ({
       },
     }),
   ].filter(Boolean),
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   base: './',
   resolve: {
     alias: { '@': path.resolve(__dirname, 'src') },
