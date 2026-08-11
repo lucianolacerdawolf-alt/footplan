@@ -1,7 +1,21 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Peer, type DataConnection } from 'peerjs';
+import { Peer, type DataConnection, type PeerOptions } from 'peerjs';
 
 export type ConnectionState = 'idle' | 'connecting' | 'connected' | 'error';
+
+// Sem VITE_PEER_HOST, usa o broker público da PeerJS (0.peerjs.com) — sem SLA,
+// pode throttlar sob tráfego. Pra produção de verdade, suba um PeerServer próprio
+// (ver GUIA_PRODUCAO.md) e configure VITE_PEER_HOST/PORT/PATH/SECURE no .env do build.
+function peerServerOptions(): PeerOptions | undefined {
+  const host = import.meta.env.VITE_PEER_HOST as string | undefined;
+  if (!host) return undefined;
+  return {
+    host,
+    port: Number(import.meta.env.VITE_PEER_PORT ?? 443),
+    path: (import.meta.env.VITE_PEER_PATH as string | undefined) ?? '/',
+    secure: ((import.meta.env.VITE_PEER_SECURE as string | undefined) ?? 'true') === 'true',
+  };
+}
 
 /** Traduz tipos de erro do PeerJS (err.type) pra mensagens acionáveis em PT.
  *  Sem isso, o usuário via "Erro: peer-unavailable" — técnico e em inglês, não
@@ -100,7 +114,8 @@ export function usePeerConnection(): UsePeerConnectionReturn {
     ).join('');
     const peerId = `fp-${code}`;
 
-    const peer = new Peer(peerId);
+    const opts = peerServerOptions();
+    const peer = opts ? new Peer(peerId, opts) : new Peer(peerId);
     peerRef.current = peer;
 
     peer.on('open', () => {
@@ -177,7 +192,8 @@ export function usePeerConnection(): UsePeerConnectionReturn {
 
     const peerId = hostId.includes('-') ? hostId : `fp-${hostId.toUpperCase()}`;
 
-    const peer = new Peer();
+    const opts = peerServerOptions();
+    const peer = opts ? new Peer(opts) : new Peer();
     peerRef.current = peer;
 
     peer.on('open', () => {

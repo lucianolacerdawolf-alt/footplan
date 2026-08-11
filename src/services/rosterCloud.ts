@@ -1,4 +1,5 @@
 import type { Team } from '../engine/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { ensureAuth } from './supabaseClient';
 
 // =============================================================================
@@ -10,7 +11,13 @@ import { ensureAuth } from './supabaseClient';
 // vez de bater na API a cada sessão. A API só é chamada quando o usuário pede
 // explicitamente ("Atualizar Elencos via API"), pra não estourar o limite dos tiers.
 //
-// Schema (rodar no Supabase SQL editor):
+// PUBLICAR o snapshot é operação de admin (script `npm run rosters:sync` com a
+// service role key): com a URL pública do site, write anônimo no snapshot deixaria
+// qualquer usuário sobrescrever o elenco global de todos. Por isso o RLS é
+// read-aberto + write só pra service role (que bypassa RLS).
+//
+// Schema (rodar no Supabase SQL editor — ver scripts/sql/harden-rls-roster-snapshots.sql
+// pra endurecer uma instalação que já tinha write aberto):
 //
 //   CREATE TABLE roster_snapshots (
 //     id TEXT PRIMARY KEY,
@@ -21,10 +28,8 @@ import { ensureAuth } from './supabaseClient';
 //   ALTER TABLE roster_snapshots ENABLE ROW LEVEL SECURITY;
 //   CREATE POLICY "read global snapshot"
 //     ON roster_snapshots FOR SELECT USING (true);
-//   CREATE POLICY "write global snapshot"
-//     ON roster_snapshots FOR ALL
-//     USING (auth.role() = 'authenticated')
-//     WITH CHECK (auth.role() = 'authenticated');
+//   -- sem política de INSERT/UPDATE/DELETE: anon/authenticated não escrevem;
+//   -- a service role (rosters:sync) bypassa RLS e publica o snapshot.
 
 export interface RosterSnapshot {
   rosters: Record<string, Team[]>;
@@ -64,11 +69,14 @@ export async function loadRosterSnapshot(): Promise<RosterSnapshot | null> {
   }
 }
 
-/** Grava (upsert) o snapshot global completo das 12 ligas. Lança em erro — o chamador decide o fallback. */
-export async function saveRosterSnapshot(rosters: Record<string, Team[]>): Promise<void> {
+/** Grava (upsert) o snapshot global completo das 12 ligas. Lança em erro — o chamador
+ *  decide o fallback. Exige um client com privilégio de escrita (service role, usado
+ *  pelo script `rosters:sync`): o RLS de produção fecha write pra anon/authenticated,
+ *  então chamar sem client admin falha com 403 — comportamento esperado no browser. */
+export async function saveRosterSnapshot(rosters: Record<string, Team[]>, sb?: SupabaseClient): Promise<void> {
   if (!hasRosterCloud()) return;
-  const sb = await ensureAuth();
-  const { error } = await sb
+  const client = sb ?? await ensureAuth();
+  const { error } = await client
     .from('roster_snapshots')
     .upsert({
       id: GLOBAL_ID,

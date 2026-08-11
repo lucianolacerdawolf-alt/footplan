@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import type { ReactNode } from 'react';
+import { recordCrash } from '../utils/crashReport';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +23,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   override componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('FootPlan crash:', error, info.componentStack);
+    recordCrash(`${error.message}${info.componentStack ? ` | stack: ${info.componentStack}` : ''}`, 'boundary');
   }
 
   override render() {
@@ -43,6 +44,17 @@ export default class ErrorBoundary extends Component<Props, State> {
           >
             Recarregar página
           </button>
+          <div style={{ marginTop: 12, fontSize: 11, opacity: 0.5, fontFamily: 'var(--mono)' }}>
+            v{__APP_VERSION__} ·{' '}
+            <a
+              href="https://github.com/lucianolacerdawolf-alt/footplan/issues"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: 'inherit' }}
+            >
+              reportar problema
+            </a>
+          </div>
           <details style={{ marginTop: 16, fontSize: 11, opacity: 0.4, fontFamily: 'var(--mono)', maxWidth: 480, textAlign: 'left', margin: '16px auto 0' }}>
             <summary style={{ cursor: 'pointer' }}>Detalhes técnicos</summary>
             <pre style={{ whiteSpace: 'pre-wrap', marginTop: 8 }}>{this.state.error?.message}</pre>

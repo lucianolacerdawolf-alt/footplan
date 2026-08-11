@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { safeSetItem } from '../utils/storage';
 
 /**
  * useState que persiste em localStorage e dispara onChange a partir
@@ -38,7 +39,7 @@ export function usePersistedState<T>(
       if (value === null || value === undefined) {
         localStorage.removeItem(key);
       } else {
-        localStorage.setItem(key, JSON.stringify(value));
+        safeSetItem(key, JSON.stringify(value));
       }
     } catch { /* noop */ }
     if (didMount.current && onPersist && value !== null && value !== undefined) {

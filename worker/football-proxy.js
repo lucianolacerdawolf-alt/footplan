@@ -47,6 +47,32 @@ const RAPIDAPI_ROUTES = {
 // segurar o cliente.
 const UPSTREAM_TIMEOUT_MS = 10_000;
 
+// Rate limit por IP (janela deslizante simples, em memória por instância do Worker).
+// Por que: com o site publicado, qualquer script fora do navegador pode chamar o
+// proxy direto (CORS não bloqueia cliente não-browser) e queimar a cota das APIs
+// upstream (football-data.org free = 10 req/min). 20 req/min por IP folga pro uso
+// legítimo (sync manual das 12 ligas = ~12 req de uma vez) e segura abuso casual.
+// Pra abuso coordenado, upgrade pro binding `ratelimits` do Cloudflare (ver README).
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_PER_IP = 20;
+const rateBuckets = new Map();
+
+function isRateLimited(ip) {
+  const now = Date.now();
+  let bucket = rateBuckets.get(ip);
+  if (!bucket || now - bucket.start >= RATE_WINDOW_MS) {
+    bucket = { start: now, count: 0 };
+    rateBuckets.set(ip, bucket);
+    if (rateBuckets.size > 10_000) {
+      for (const [key, b] of rateBuckets) {
+        if (now - b.start >= RATE_WINDOW_MS) rateBuckets.delete(key);
+      }
+    }
+  }
+  bucket.count += 1;
+  return bucket.count > RATE_MAX_PER_IP;
+}
+
 // Ajuste pra incluir o domínio real onde o FootPlan fica publicado.
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
@@ -81,6 +107,11 @@ export default {
     }
     if (request.method !== 'GET') {
       return json({ error: 'Método não permitido.' }, 405, headers);
+    }
+
+    const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
+    if (isRateLimited(ip)) {
+      return json({ error: 'Muitas requisições. Tente novamente em instantes.' }, 429, { ...headers, 'Retry-After': '60' });
     }
 
     const url = new URL(request.url);

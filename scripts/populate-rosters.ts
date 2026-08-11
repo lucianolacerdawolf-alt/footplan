@@ -8,6 +8,11 @@
  *
  * Requer .env com VITE_FOOTBALL_PROXY_URL / VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
  * e a tabela `roster_snapshots` criada no Supabase (ver PLANO_CLOUD_MERCADO.md).
+ *
+ * PUBLICAR o snapshot exige SUPABASE_SERVICE_ROLE_KEY no .env (sem prefixo VITE_,
+ * nunca vai pro bundle do browser): o RLS de produção fecha write pra anon — só a
+ * service role publica. Sem ela, o script sincroniza e grava cache local, mas o
+ * snapshot global fica sem atualizar (aviso impresso no final).
  */
 
 // Node não tem localStorage — polyfill em memória (basta pro cache de sessão/roster do script).
@@ -25,11 +30,25 @@ if (typeof globalThis.localStorage === 'undefined') {
 }
 
 import { syncAllLeagueRosters } from '../src/services/rosterSync';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { loadEnv } from 'vite';
 
 async function main() {
   console.log('🔄 Buscando elencos ao vivo das 12 ligas e gravando no Supabase…\n');
 
-  const result = await syncAllLeagueRosters({ force: true });
+  // loadEnv com prefixo '' lê também vars sem VITE_ (a service role key não pode
+  // ter prefixo VITE_ — tudo que é VITE_ vai pro bundle público do browser).
+  const env = loadEnv('production', process.cwd(), '');
+  let admin: SupabaseClient | undefined;
+  if (env.VITE_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY) {
+    admin = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false },
+    });
+  } else {
+    console.warn('⚠ SUPABASE_SERVICE_ROLE_KEY ausente no .env — o snapshot global NÃO será publicado (RLS de produção só aceita service role).\n');
+  }
+
+  const result = await syncAllLeagueRosters({ force: true, supabase: admin });
 
   const bySource: Record<string, number> = {};
   for (const src of Object.values(result.sources)) {

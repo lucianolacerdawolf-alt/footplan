@@ -24,6 +24,7 @@ import { renderScreen, type AppScreensProps } from './components/AppScreens';
 import Toast from './components/Toast';
 import CareerTabBar from './components/CareerTabBar';
 import { CAREER_TAB_SCREENS, getCareerTabForScreen } from './utils/careerTabs';
+import { onStorageFailure } from './utils/storage';
 import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
@@ -35,6 +36,12 @@ function App() {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const notifySave = useCallback(() => setToastMsg('✓ Progresso salvo'), []);
   const dismissToast = useCallback(() => setToastMsg(null), []);
+
+  // Falha de persistência (quota cheia/modo privado) não pode ser silenciosa: o
+  // usuário perderia o progresso no reload sem nunca saber por quê. Throttle no util.
+  useEffect(() => onStorageFailure(() => {
+    setToastMsg('⚠ Não foi possível salvar o progresso neste dispositivo');
+  }), []);
   const [pendingResumeSnapshot, setPendingResumeSnapshot] = useState<LiveMatchSnapshot | null>(null);
   const [pendingCareerStart, setPendingCareerStart] = useState<{ userTeam: Team; managerName: string } | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>(() => {
@@ -400,7 +407,7 @@ function App() {
           onEscritorio={() => setScreen('career-league')}
         />
       )}
-      <Toast message={toastMsg} onDismiss={dismissToast} />
+      <Toast message={toastMsg} duration={toastMsg?.startsWith('⚠') ? 6000 : 2000} onDismiss={dismissToast} />
       {resumePrompt && (
         <div className="resume-overlay" onClick={() => setResumePrompt(null)} role="presentation">
           <div className="resume-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="resume-title">

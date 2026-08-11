@@ -21,6 +21,11 @@ coverage
 !.dev.vars.example
 .wrangler/
 
+# Assinatura de release Android - nunca commitar (ver GUIA_PRODUCAO.md)
+android/keystore.properties
+*.keystore
+*.jks
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
