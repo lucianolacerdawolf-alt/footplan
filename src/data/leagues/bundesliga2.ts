@@ -32,7 +32,7 @@ export const bundesliga2: LeagueDefinition = {
   name: '2. Bundesliga',
   country: 'Alemanha',
   cupName: 'DFB-Pokal',
-  cupLogo: 'https://crests.football-data.org/dfb.png',
+  cupLogo: 'https://crests.football-data.org/DFB_CUP.png',
   flag: '🇩🇪',
   color: '#ce1724',
   logo: 'https://crests.football-data.org/BL2.png',
