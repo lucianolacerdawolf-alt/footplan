@@ -44,6 +44,25 @@ O script busca as 12 ligas ao vivo, grava o cache local de cada uma e sobrescrev
 
 ---
 
+## 🚀 Produção — checklist do GUIA_PRODUCAO.md
+
+Itens de infra externa que o [GUIA_PRODUCAO.md](GUIA_PRODUCAO.md) lista pro lançamento. Estado marcado conforme **verificável pelo repositório**; o que depende de console/servidor externo fica como "a verificar" com o passo exato.
+
+| # | Item | Estado | Como verificar / o que fazer |
+|---|------|--------|------------------------------|
+| 1 | **Supabase: fechar RLS de `roster_snapshots`** | 🟡 A verificar | Rodar [`scripts/sql/harden-rls-roster-snapshots.sql`](scripts/sql/harden-rls-roster-snapshots.sql) no SQL Editor. Script idempotente; ao final deve sobrar só a política de SELECT. Verificação externa: `SELECT policy_name, cmd FROM pg_policies WHERE tablename = 'roster_snapshots';` |
+| 2 | **Re-sync global dos elencos (5 segundas divisões)** | 🟡 Pendente | Ver item "Re-sincronizar elencos no Supabase" acima — mesmo esforço. `SUPABASE_SERVICE_ROLE_KEY=... npm run rosters:sync` |
+| 3 | **Worker: secrets** | 🟡 Parcial | `.env` documenta que `RAPIDAPI_KEY` já foi setada (`npx wrangler secret put RAPIDAPI_KEY`). **`FOOTBALL_API_KEY` a confirmar** (`npx wrangler secret put FOOTBALL_API_KEY`). Verificação externa: `npx wrangler secret list` |
+| 4 | **Worker: rate limit em produção** | 🟡 Pendente de deploy | O código do rate limit (20 req/min por IP) **já está** em `worker/football-proxy.js`. Falta o `npx wrangler deploy` pra valer. Verificação externa: bater no proxy >20x/min e ver 429 |
+| 5 | **PeerServer próprio (multiplayer)** | 🔴 Pendente | `.env` **sem** `VITE_PEER_*` → jogo ainda usa o broker público `0.peerjs.com` (sem SLA). Subir servidor (Render/Fly/Railway ou docker) + rebuild do site com as 4 vars |
+| 6 | **Android: keystore de release + AAB** | 🔴 Pendente | `android/keystore.properties` **não existe** (`Test-Path` = False). Sem ele o build.gradle só gera debug. Criar keystore, preencher o properties, `gradlew bundleRelease`, bump de `versionCode`/`versionName` |
+| 7 | **Play Store: URL de política de privacidade** | ✅ Pronto | `public/privacy.html` + `public/terms.html` existem e estão linkados na Home (`HomeScreen.tsx:114`). Só falta a URL no formulário de publicação |
+| 8 | **Visibilidade de crash** | ✅ Pronto | `ErrorBoundary` com versão + link de issue; `fp:lastCrash` persistido; logs globais com versão (descrito no GUIA_PRODUCAO §5, já em código) |
+
+> **Como manter atualizado:** a cada item concluído, marcar aqui e não reabrir depois. Itens 5 e 6 são os únicos bloqueados por trabalho real (infra nova + keystore/Play).
+
+---
+
 ## 🏗️ Saúde do código
 
 ### ✅ Refatoração de UI, fluxo e design — 2026-08-10 (concluída)

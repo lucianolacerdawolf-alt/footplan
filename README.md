@@ -176,7 +176,7 @@ DefesaGK = PosicionamentoGK × RNG(0.65–1.35) + BASE_GK
 |--------|-------|
 | **Frontend** | React 19 + TypeScript (strict mode) |
 | **Build** | Vite 8 |
-| **Testes** | Vitest 3 (573 testes) + Testing Library (componentes) |
+| **Testes** | Vitest 3 (587 testes) + Testing Library (componentes) |
 | **Estilo** | CSS Modules + tokens semânticos (`index.css`) + primitivos em `components/ui/` (Button/Card/StatTile/Icon) + App.css global |
 | **Renderização** | HTML/CSS (partida é 100% texto); SVG só na escalação visual do Modo Carreira |
 | **Estado** | React Hooks |
@@ -284,7 +284,7 @@ worker/
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # gera dist/
-npm run test     # 393 testes
+npm run test     # 587 testes
 ```
 
 ### Sincronização de elenco ao vivo (opcional)
@@ -300,7 +300,7 @@ cp .env.example .env
 
 ## 🧪 Testes
 
-**393 testes** cobrindo:
+**587 testes** cobrindo:
 - `matchEngine.test.ts` — invariantes, determinismo, cartões/expulsões, OVR
 - `calibration.test.ts` — média de gols (5.000 partidas), dominância OVR, empates, mando de campo
 - `tournament.test.ts` — fadiga, lesões, calendário, chaveamento, classificação
@@ -314,7 +314,8 @@ cp .env.example .env
 - `useMatchSimulation.test.ts` — qual janela de pausa está ativa em cada momento da partida (substituições)
 - `career.test.ts` / `useCareerManager.test.ts` — progressão de jogador, avaliação de troca (RNG determinístico), reputação, avanço de temporada, fadiga/cartões pós-jogo, finanças/inbox (incluindo o bloqueio real de "Avançar Rodada"), fechamento de temporada
 - `squadUtils.test.ts` / `fitness.test.ts` / `discipline.test.ts` / `transferMarket.test.ts` / `inbox.test.ts` / `seasonClosure.test.ts` — lógica pura do Modo Carreira
-- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, dia de jogo da liga (LeagueScreen) e classificação (LeagueTableScreen) como telas separadas, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão), hub e sala de troféus da carreira
+- Componentes (`@testing-library/react` + `jsdom`, isolado por arquivo): 3 telas de seleção de time, dia de jogo da liga (LeagueScreen) e classificação (LeagueTableScreen) como telas separadas, tela de estatísticas pós-jogo, chaveamento de copa (partida do usuário, simular outros, fase de campeão), hub e sala de troféus da carreira, barra de abas da carreira, troféus, renovação de contrato, botões de navegação, botão voltar Android e foco de modais
+- Suítes mais novas do Modo Carreira: `continentalCups.test.ts` (qualificação, bracket, prize money), `freeAgentPool.test.ts`, `jobMarket.test.ts`, `contracts.test.ts`, `playerConversations.test.ts`, `subSuggestions.test.ts`, `preMatch.test.ts`, `careerStats.test.ts`, `sponsorsRivalries.test.ts`, `boardObjectives.test.ts`, `cupProgress.test.ts`, `useCareerCloudReconciliation.test.ts` (conciliação cloud × local), `saveMigration.test.ts` (versionamento de save) e utilitários (`crest`, `countryFlags`, `formatMoney`, `storage`)
 
 ---
 
