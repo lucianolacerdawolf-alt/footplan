@@ -30,13 +30,6 @@ import BracketScreen from './BracketScreen';
 import OnlineLobbyScreen from './OnlineLobbyScreen';
 import LeagueSelectScreen from './LeagueSelectScreen';
 import CupSelectScreen from './CupSelectScreen';
-import CareerHubScreen from './CareerHubScreen';
-import TradeProposalScreen from './TradeProposalScreen';
-import SeasonEndScreen from './SeasonEndScreen';
-import TrophyRoomScreen from './TrophyRoomScreen';
-import TransferMarketScreen from './TransferMarketScreen';
-import JobMarketScreen from './JobMarketScreen';
-import MatchdayScreen from './MatchdayScreen';
 import { getLeague } from '../data/leagues';
 
 function getResumableSaves(): ResumableSave[] {
@@ -67,10 +60,20 @@ function getResumableSaves(): ResumableSave[] {
   return results;
 }
 
-// Lazy imports — same pattern as App.tsx
+// Lazy imports — same pattern as App.tsx. Envoltos pelo <Suspense> em App.tsx.
 const MatchScreen = React.lazy(() => import('./MatchScreen'));
 const MatchStatsScreen = React.lazy(() => import('./MatchStatsScreen'));
 const AchievementsScreen = React.lazy(() => import('./AchievementsScreen'));
+
+// Cluster do modo carreira — só alcançado dentro da carreira, então sai do chunk
+// principal (index) pra um bundle próprio, carregado sob demanda.
+const CareerHubScreen = React.lazy(() => import('./CareerHubScreen'));
+const TradeProposalScreen = React.lazy(() => import('./TradeProposalScreen'));
+const SeasonEndScreen = React.lazy(() => import('./SeasonEndScreen'));
+const TrophyRoomScreen = React.lazy(() => import('./TrophyRoomScreen'));
+const TransferMarketScreen = React.lazy(() => import('./TransferMarketScreen'));
+const JobMarketScreen = React.lazy(() => import('./JobMarketScreen'));
+const MatchdayScreen = React.lazy(() => import('./MatchdayScreen'));
 
 export interface AppScreensProps {
   // ── Team state ──
