@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { safeSetItem } from '../utils/storage';
 
 export function useLocalStorage<T>(key: string, initial: T): [T, (val: T | ((prev: T) => T)) => void] {
   const [value, setValue] = useState<T>(() => {
@@ -13,7 +14,7 @@ export function useLocalStorage<T>(key: string, initial: T): [T, (val: T | ((pre
   const setStored = (val: T | ((prev: T) => T)) => {
     setValue(prev => {
       const next = typeof val === 'function' ? (val as (prev: T) => T)(prev) : val;
-      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      safeSetItem(key, JSON.stringify(next));
       return next;
     });
   };

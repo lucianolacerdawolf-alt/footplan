@@ -80,7 +80,7 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
         <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
         <header className="app-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           {isCup && league.cupLogo ? (
-            <img src={league.cupLogo} alt={league.cupName} style={{ width: 52, height: 52, objectFit: 'contain' }} />
+            <img src={crestSrc(league.cupLogo)} alt={league.cupName} style={{ width: 52, height: 52, objectFit: 'contain' }} />
           ) : (
             <h1>FootPlan</h1>
           )}

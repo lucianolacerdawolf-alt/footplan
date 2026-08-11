@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="index, follow" />
+  <title>Política de Privacidade — FootPlan</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #060b14; color: #dfe7f2;
+      font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+    main { max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 1.75rem; margin: 0 0 .25rem; color: #fff; }
+    h2 { font-size: 1.15rem; margin: 2rem 0 .5rem; color: #9ec1ff; }
+    p, li { color: #cdd8e8; }
+    a { color: #7fb0ff; }
+    .muted { color: #8194ad; font-size: .9rem; }
+    .card { background: #0d1626; border: 1px solid #1c2b45; border-radius: 12px; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+    code { background: #12203a; padding: .1rem .35rem; border-radius: 5px; font-size: .9em; }
+    footer { margin-top: 3rem; }
+    a.back { display: inline-block; margin-top: 2rem; color: #7fb0ff; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Política de Privacidade</h1>
+    <p class="muted">FootPlan — Simulador Tático de Futebol · Última atualização: 11 de agosto de 2026</p>
+
+    <div class="card">
+      <strong>Resumo:</strong> o FootPlan foi feito para respeitar sua privacidade.
+      Não exigimos cadastro, não coletamos nome, e-mail ou telefone, não exibimos
+      anúncios e não usamos rastreadores de terceiros. Seus dados de jogo ficam,
+      por padrão, apenas no seu próprio dispositivo.
+    </div>
+
+    <h2>1. Quem somos</h2>
+    <p>
+      O FootPlan é um jogo/simulador de futebol gratuito, disponível como aplicativo
+      web (PWA) e Android. Esta política explica quais dados o jogo trata e por quê.
+    </p>
+
+    <h2>2. Dados que o jogo trata</h2>
+    <p><strong>2.1. Progresso do jogo (no seu dispositivo).</strong>
+      Suas carreiras, ligas, elencos, táticas e conquistas são salvos localmente no
+      armazenamento do seu navegador/dispositivo (<code>localStorage</code>). Esses
+      dados não saem do seu aparelho, a menos que você ative o Save na Nuvem.</p>
+
+    <p><strong>2.2. Save na Nuvem (opcional).</strong>
+      Se você optar por sincronizar sua carreira entre dispositivos, usamos o serviço
+      <a href="https://supabase.com" rel="noopener">Supabase</a> com
+      <em>autenticação anônima</em>: é gerado um identificador aleatório para vincular
+      seu save, <strong>sem</strong> pedir e-mail, senha ou qualquer dado pessoal.
+      Guardamos apenas o conteúdo do save (dados de jogo). Esse identificador fica
+      no seu dispositivo; se você limpar os dados do navegador, perde o acesso àquele
+      save na nuvem.</p>
+
+    <p><strong>2.3. Dados de futebol ao vivo (opcional).</strong>
+      Para atualizar elencos reais, o jogo pode consultar a API pública
+      <a href="https://www.football-data.org" rel="noopener">football-data.org</a>
+      através de um servidor intermediário (proxy) nosso. Nessas requisições
+      trafegam apenas pedidos por dados públicos de futebol — nenhum dado seu é
+      enviado.</p>
+
+    <p><strong>2.4. Multiplayer online (opcional).</strong>
+      As partidas online usam conexão direta entre jogadores (P2P/WebRTC, via PeerJS).
+      Como em qualquer conexão direta pela internet, os dispositivos participantes
+      trocam entre si seus endereços de rede (IP) para estabelecer a conexão — isso é
+      inerente à tecnologia e necessário para o jogo funcionar. Não guardamos esses
+      endereços nem o conteúdo das partidas online.</p>
+
+    <h2>3. O que NÃO fazemos</h2>
+    <ul>
+      <li>Não coletamos nome, e-mail, telefone ou localização.</li>
+      <li>Não exibimos anúncios.</li>
+      <li>Não usamos ferramentas de rastreamento ou perfis de publicidade.</li>
+      <li>Não vendemos nem compartilhamos seus dados com terceiros para fins comerciais.</li>
+      <li>Não usamos cookies para rastreamento (o armazenamento local serve apenas para o jogo funcionar).</li>
+    </ul>
+
+    <h2>4. Serviços de terceiros</h2>
+    <p>
+      Os serviços opcionais acima (Supabase, football-data.org, Cloudflare, PeerJS)
+      têm suas próprias políticas de privacidade. Eles são acionados apenas quando
+      você usa os recursos correspondentes.
+    </p>
+
+    <h2>5. Crianças</h2>
+    <p>
+      O jogo não coleta dados pessoais de nenhum usuário, incluindo crianças. Não há
+      cadastro nem perfis pessoais.
+    </p>
+
+    <h2>6. Seus direitos e como apagar seus dados</h2>
+    <p>
+      Como não coletamos dados pessoais identificáveis, não há perfil a ser
+      solicitado ou excluído. Para apagar seu progresso local, use a opção de
+      reiniciar dentro do jogo ou limpe os dados do site no seu navegador. Para
+      dúvidas sobre o Save na Nuvem, use o contato abaixo.
+    </p>
+    <p class="muted">
+      Dependendo da sua localidade, você pode ter direitos previstos em leis como a
+      LGPD (Brasil) ou o GDPR (União Europeia). Como não tratamos dados pessoais
+      identificáveis, esses direitos geralmente não se aplicam — mas estamos à
+      disposição pelo contato abaixo.
+    </p>
+
+    <h2>7. Marcas de terceiros</h2>
+    <p>
+      Nomes de clubes, jogadores, escudos e logotipos porventura exibidos pertencem
+      aos seus respectivos titulares e são usados apenas para identificação. O
+      FootPlan é um projeto não oficial, sem afiliação ou endosso das entidades
+      representadas.
+    </p>
+
+    <h2>8. Alterações</h2>
+    <p>
+      Podemos atualizar esta política. A data de "Última atualização" no topo
+      indica a versão vigente.
+    </p>
+
+    <h2>9. Contato</h2>
+    <p>
+      Dúvidas sobre privacidade: <a href="mailto:lucianolacerdawolf@gmail.com">lucianolacerdawolf@gmail.com</a>.
+    </p>
+
+    <footer>
+      <a class="back" href="./">← Voltar ao FootPlan</a>
+    </footer>
+  </main>
+</body>
+</html>

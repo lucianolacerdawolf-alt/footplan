@@ -65,7 +65,10 @@
       "Bash(git check-ignore *)",
       "WebFetch(domain:www.football-data.org)",
       "Read(//tmp/**)",
-      "Bash(rtk npx tsx -e ' *)"
+      "Bash(rtk npx tsx -e ' *)",
+      "Bash(git rm *)",
+      "Bash(git restore *)",
+      "Bash(git merge *)"
     ]
   }
 }

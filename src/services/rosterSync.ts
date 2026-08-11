@@ -16,6 +16,7 @@
 //    de partida é o próprio elenco ao vivo, não precisa de nenhum caso especial.
 
 import type { Team, Player, Position } from '../engine/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { fetchCompetitionTeams, hasApiKey, COMPETITION_CODES, type RemoteTeam, type RemotePlayer } from './footballApi';
 import { fetchSportApiLeague, hasSportApiAccess, isSportApiLeagueMapped } from './sportApi';
@@ -342,7 +343,7 @@ export interface AllRostersResult {
   liveCount: number;
 }
 
-export async function syncAllLeagueRosters(opts?: { force?: boolean }): Promise<AllRostersResult> {
+export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: SupabaseClient }): Promise<AllRostersResult> {
   const rosters: Record<string, Team[]> = {};
   const sources: Record<string, RosterSource> = {};
   let liveCount = 0;
@@ -361,10 +362,18 @@ export async function syncAllLeagueRosters(opts?: { force?: boolean }): Promise<
 
   if (opts?.force) {
     updatedAt = new Date().toISOString();
-    try {
-      await saveRosterSnapshot(rosters);
-    } catch {
-      updatedAt = null; // sem cloud, segue com cache local
+    // Publicar o snapshot global é operação de admin: só tenta quando um client com
+    // privilégio de escrita (service role) é injetado pelo script `rosters:sync`. No
+    // browser (botão "Atualizar Elencos") o RLS de produção nega write pra anon — o
+    // usuário segue com o cache local atualizado, que é o que importa pra ele.
+    if (opts.supabase) {
+      try {
+        await saveRosterSnapshot(rosters, opts.supabase);
+      } catch {
+        updatedAt = null; // sem cloud, segue com cache local
+      }
+    } else {
+      updatedAt = null;
     }
   } else {
     updatedAt = snapshot?.updatedAt ?? null;

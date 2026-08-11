@@ -36,7 +36,7 @@ export const laliga2: LeagueDefinition = {
   name: 'La Liga 2',
   country: 'Espanha',
   cupName: 'Copa del Rey',
-  cupLogo: 'https://crests.football-data.org/cdr.png',
+  cupLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Copa_del_Rey_logo_%282021%29.svg/250px-Copa_del_Rey_logo_%282021%29.svg.png',
   flag: '🇪🇸',
   color: '#b99b3c',
   logo: 'https://crests.football-data.org/PD.png',

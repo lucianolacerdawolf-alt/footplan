@@ -32,7 +32,7 @@ export const ligaPortugal2: LeagueDefinition = {
   name: 'Liga Portugal 2',
   country: 'Portugal',
   cupName: 'Taça de Portugal',
-  cupLogo: 'https://crests.football-data.org/tdp.png',
+  cupLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Ta%C3%A7a_de_Portugal_Trophy.svg/250px-Ta%C3%A7a_de_Portugal_Trophy.svg.png',
   flag: '🇵🇹',
   color: '#e31e25',
   logo: 'https://crests.football-data.org/PPL.png',

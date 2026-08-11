@@ -32,7 +32,7 @@ export const ligue2: LeagueDefinition = {
   name: 'Ligue 2',
   country: 'França',
   cupName: 'Coupe de France',
-  cupLogo: 'https://crests.football-data.org/cdf.png',
+  cupLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Coupe_de_France_trophy.png/250px-Coupe_de_France_trophy.png',
   flag: '🇫🇷',
   color: '#1d428a',
   logo: 'https://crests.football-data.org/FL2.png',

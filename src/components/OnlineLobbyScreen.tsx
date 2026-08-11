@@ -246,7 +246,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
                   color: 'var(--text-primary)',
                 } : undefined}
               >
-                <img src={l.logo} alt={l.name} style={{ width: 16, height: 16, objectFit: 'contain' }} />
+                <img src={crestSrc(l.logo)} alt={l.name} style={{ width: 16, height: 16, objectFit: 'contain' }} />
                 {l.name}
               </button>
             );

@@ -34,7 +34,7 @@ export const serieB: LeagueDefinition = {
   name: 'Serie B',
   country: 'Itália',
   cupName: 'Coppa Italia',
-  cupLogo: 'https://crests.football-data.org/cit.png',
+  cupLogo: 'https://crests.football-data.org/CIT.png',
   flag: '🇮🇹',
   color: '#2f5c8e',
   logo: 'https://crests.football-data.org/SB.png',

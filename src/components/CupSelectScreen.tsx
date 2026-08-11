@@ -1,5 +1,6 @@
 import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
+import { crestSrc } from '../utils/crest';
 import styles from './CupSelectScreen.module.css';
 
 interface Props {
@@ -29,7 +30,7 @@ export default function CupSelectScreen({ onSelect, onBack }: Props) {
             <div className={styles.cardStripe} />
             <div className={styles.cardBody}>
               <img
-                src={league.cupLogo}
+                src={crestSrc(league.cupLogo)}
                 alt={league.cupName}
                 className={styles.badge}
               />

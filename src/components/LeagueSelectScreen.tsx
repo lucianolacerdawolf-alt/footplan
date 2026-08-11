@@ -1,5 +1,6 @@
 import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
+import { crestSrc } from '../utils/crest';
 import styles from './LeagueSelectScreen.module.css';
 
 const LEAGUE_ORDER: Record<string, number> = {
@@ -74,7 +75,7 @@ export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack, r
               </div>
               <div className={styles.cardBody}>
                 <img
-                  src={league.logo}
+                  src={crestSrc(league.logo)}
                   alt={league.name}
                   className={styles.badge}
                 />

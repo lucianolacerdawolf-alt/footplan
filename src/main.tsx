@@ -3,6 +3,14 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { initNativeShell } from './services/native'
+import { installCrashReporting } from './utils/crashReport'
+import { runSaveMigrations } from './utils/saveMigration'
+
+installCrashReporting();
+
+// Antes de qualquer render/leitura de save: migra saves de esquemas antigos e
+// carimba a versão atual. Não lança — se falhar, o app segue normalmente.
+runSaveMigrations();
 
 document.documentElement.style.setProperty('--bg-image', `url(${import.meta.env.BASE_URL}fundo.webp)`);
 
