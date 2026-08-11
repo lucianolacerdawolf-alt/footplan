@@ -8,9 +8,11 @@ Também mantém sua chave da API fora do bundle JS público do site.
 
 ## Deploy
 
-Precisa de uma conta Cloudflare gratuita.
+Precisa de uma conta Cloudflare gratuita. Rode os comandos a partir desta pasta
+(`worker/`), onde fica o `wrangler.toml` do worker:
 
 ```bash
+cd worker
 npx wrangler login
 npx wrangler secret put FOOTBALL_API_KEY
 # cola sua chave da football-data.org quando pedir
@@ -31,6 +33,7 @@ do build de produção (ex: GitHub Actions secrets, se o deploy for automatizado
 ## Testar localmente
 
 ```bash
+cd worker
 cp .dev.vars.example .dev.vars
 # edita .dev.vars com sua chave
 npx wrangler dev

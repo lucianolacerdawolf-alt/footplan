@@ -1,5 +1,5 @@
 name = "footplan-football-proxy"
-main = "worker/football-proxy.js"
+main = "football-proxy.js"
 compatibility_date = "2026-07-01"
 account_id = "0365127deee4d2908efe7d0a8127129a"
 
