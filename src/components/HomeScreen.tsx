@@ -110,6 +110,11 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
 
       <footer className={styles.footer}>
         <span className={styles.version}>v{__APP_VERSION__}</span>
+        <nav className={styles.legalLinks}>
+          <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener noreferrer">Privacidade</a>
+          <span className={styles.legalSep}>·</span>
+          <a href={`${import.meta.env.BASE_URL}terms.html`} target="_blank" rel="noopener noreferrer">Termos</a>
+        </nav>
       </footer>
     </div>
   );

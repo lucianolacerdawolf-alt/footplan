@@ -225,7 +225,9 @@
 
 .footer {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   padding-top: 4px;
   margin-top: auto;
 }
@@ -237,4 +239,27 @@
   opacity: 0.55;
   letter-spacing: 0.5px;
   user-select: none;
+}
+
+.legalLinks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.legalLinks a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.legalLinks a:hover {
+  text-decoration: underline;
+  opacity: 0.9;
+}
+
+.legalSep {
+  color: var(--text-secondary);
+  opacity: 0.5;
 }
