@@ -267,6 +267,22 @@ interface RemoteSource {
   fetch: () => Promise<RemoteTeam[]>;
 }
 
+/**
+ * O escudo é asset estático/bundlado (ver crestSrc + crests:download), NÃO dado de elenco
+ * ao vivo. Cache e snapshot cloud guardam a logoUrl de quando foram gravados — que pode ser
+ * uma URL remota hotlinkada (football-data/API-Football) que quebra no navegador ou sombreia
+ * um escudo local mais novo. Re-aplica o escudo estático atual por id, então o crest bundlado
+ * sempre vence sem precisar republicar o snapshot. Times que só existem ao vivo (ex: promovido
+ * ausente do estático) mantêm o escudo que vieram.
+ */
+function applyStaticCrests(teams: Team[], league: LeagueDefinition): Team[] {
+  const staticCrest = new Map(league.teams.filter(t => t.logoUrl).map(t => [t.id, t.logoUrl]));
+  return teams.map(t => {
+    const crest = staticCrest.get(t.id);
+    return crest && crest !== t.logoUrl ? { ...t, logoUrl: crest } : t;
+  });
+}
+
 export async function syncLeagueRoster(
   league: LeagueDefinition,
   opts?: { force?: boolean },
@@ -275,14 +291,15 @@ export async function syncLeagueRoster(
   if (!opts?.force) {
     const cached = readCache(league);
     if (cached) {
-      return { league: { ...league, teams: cached.teams }, source: 'cache', stats: [] };
+      return { league: { ...league, teams: applyStaticCrests(cached.teams, league) }, source: 'cache', stats: [] };
     }
     // `snapshot` é injetado por syncAllLeagueRosters pra não disparar 12 cargas de
     // cloud em sequência; quando ausente (chamada avulsa), carrega aqui mesmo.
     const cloudTeams = (snapshot ?? await loadRosterSnapshot())?.rosters[league.id];
     if (cloudTeams && Array.isArray(cloudTeams) && cloudTeams.length > 0) {
-      writeCache(league.id, cloudTeams, league.teams.map(t => t.id));
-      return { league: { ...league, teams: cloudTeams }, source: 'cloud', stats: [] };
+      const teams = applyStaticCrests(cloudTeams, league);
+      writeCache(league.id, teams, league.teams.map(t => t.id));
+      return { league: { ...league, teams }, source: 'cloud', stats: [] };
     }
     return { league, source: 'static', stats: [], error: 'Sem elenco salvo. Use "Atualizar Elencos via API" para buscar dados ao vivo.' };
   }

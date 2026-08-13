@@ -87,6 +87,37 @@ describe('syncLeagueRoster', () => {
     expect(result.error).toBeTruthy();
   });
 
+  it('escudo estático vence a logoUrl antiga/remota gravada no snapshot cloud', async () => {
+    // O escudo é asset estático/bundlado (crests:download), não dado de elenco. Um snapshot
+    // publicado quando o time ainda não tinha escudo guardou uma URL remota que hoje quebra
+    // ou está desatualizada — applyStaticCrests re-aplica o escudo estático por id.
+    const league = makeLeague();
+    league.teams[0].logoUrl = 'crests/local-abc.png'; // escudo bundlado atual
+    mockSnapshot.value = {
+      rosters: { pl: [{ ...league.teams[0], logoUrl: 'https://crests.football-data.org/999.png' }] },
+      updatedAt: '2024-01-01T00:00:00.000Z',
+    };
+
+    const result = await syncLeagueRoster(league);
+
+    expect(result.source).toBe('cloud');
+    expect(result.league.teams[0].logoUrl).toBe('crests/local-abc.png');
+  });
+
+  it('time que só existe no snapshot (sem estático) mantém o escudo que veio', async () => {
+    const league = makeLeague();
+    league.teams[0].logoUrl = 'crests/local-abc.png';
+    mockSnapshot.value = {
+      rosters: { pl: [{ ...makeTeam('promovido', 'Promovido FC', 'PRO'), logoUrl: 'https://x/y.png' }] },
+      updatedAt: '2024-01-01T00:00:00.000Z',
+    };
+
+    const result = await syncLeagueRoster(league);
+
+    expect(result.source).toBe('cloud');
+    expect(result.league.teams[0].logoUrl).toBe('https://x/y.png'); // sem estático por id → intocado
+  });
+
   it('com proxy configurado, chama o proxy em vez da API direta (sem X-Auth-Token)', async () => {
     vi.stubEnv('VITE_FOOTBALL_PROXY_URL', 'https://footplan-proxy.example.workers.dev');
     const fetchMock = vi.fn().mockResolvedValue({

@@ -37,10 +37,11 @@ function sanitizeManagerName(raw: string): string {
 export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, onStart, onRosterSynced }: Props) {
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
   const [managerName, setManagerName] = useState('');
-  const { syncing, lastSource, lastError, lastUpdatedAt, sync, syncAll, loadSyncInfo } = useLiveRoster();
+  const { syncing, lastSource, lastError, lastUpdatedAt, sync, loadSyncInfo } = useLiveRoster();
 
-  // No mount, carrega o que já está salvo (cache local → Supabase → estático) SEM bater na
-  // API — a política é "só puxar da API quando o usuário pedir" (botão abaixo).
+  // No mount, carrega o elenco salvo (cache local → snapshot no Supabase → estático) SEM
+  // bater na API. O jogo NÃO sincroniza ao vivo — o snapshot é atualizado fora do jogo pelo
+  // admin (`npm run rosters:sync`); aqui é só leitura.
   useEffect(() => {
     sync(league).then(updated => {
       if (updated !== league) onRosterSynced?.(updated);
@@ -48,14 +49,6 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
     loadSyncInfo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [league.id]);
-
-  const handleManualSync = async () => {
-    const result = await syncAll({ force: true });
-    if (result) {
-      const updated = result.rosters[league.id];
-      if (updated) onRosterSynced?.({ ...league, teams: updated });
-    }
-  };
 
   const handleStart = () => {
     if (!userTeamId) return;
@@ -91,16 +84,10 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
 
       <div className="roster-sync-row">
         {syncing && (
-          <span className="roster-sync-status ok">🔄 Sincronizando elencos...</span>
+          <span className="roster-sync-status ok">🔄 Carregando elencos...</span>
         )}
-        {!syncing && lastSource === 'live' && (
-          <span className="roster-sync-status ok">✓ Elencos atualizados via API</span>
-        )}
-        {!syncing && lastSource === 'cloud' && (
-          <span className="roster-sync-status ok">✓ Elencos carregados da nuvem</span>
-        )}
-        {!syncing && lastSource === 'cache' && (
-          <span className="roster-sync-status ok">✓ Elencos carregados do cache</span>
+        {!syncing && (lastSource === 'cloud' || lastSource === 'cache') && (
+          <span className="roster-sync-status ok">✓ Elencos carregados</span>
         )}
         {!syncing && (lastSource === 'static' || lastSource === 'error') && (
           <span className="roster-sync-status warn" title={lastError ?? undefined}>
@@ -109,17 +96,9 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
         )}
         {lastUpdatedAt && !syncing && (
           <span className="roster-sync-status dim">
-            Última atualização: {new Date(lastUpdatedAt).toLocaleDateString('pt-BR')} {new Date(lastUpdatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            Atualizados em {new Date(lastUpdatedAt).toLocaleDateString('pt-BR')}
           </span>
         )}
-        <button
-          className="slot-nav-btn slot-nav-btn-primary roster-sync-btn"
-          onClick={handleManualSync}
-          disabled={syncing}
-          title="Buscar elencos atualizados na API (pode gastar requisições do seu limite)"
-        >
-          {syncing ? 'Sincronizando...' : '🔄 Atualizar Elencos via API'}
-        </button>
       </div>
 
       {mode === 'career' && (

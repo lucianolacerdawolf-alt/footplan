@@ -1,6 +1,7 @@
 import type { Team, Position, Formation } from '@/engine/types';
 import { FORMATION_COUNTS } from '@/engine/constants';
 import { generatePlayerWithSubtype, generateRandomName } from './generateTeam';
+import { SECOND_DIVISION_CRESTS } from '../secondDivisionCrests';
 
 function starOvr(teamOvr: number, slot: number): number {
   if (slot >= 11) {
@@ -113,7 +114,10 @@ export function makeSecondDivisionTeam(
   );
   return {
     id, name, abbreviation: abbr, color, secondaryColor: secondary,
-    logoUrl: '',
+    // Badge real do TheSportsDB (ver scripts/fetch-secondary-crests.ts), servido local
+    // após crests:download. Vazio pros poucos sem match — nesse caso o sync ao vivo ainda
+    // pode preencher (guarda em rosterSync: só sobrescreve logoUrl vazio).
+    logoUrl: SECOND_DIVISION_CRESTS[id] ?? '',
     squad: [...xi, ...bench],
     strategy: { formation, mentality: 'counter-attack', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
   };

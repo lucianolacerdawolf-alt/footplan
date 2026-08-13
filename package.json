@@ -13,6 +13,7 @@
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
     "generate:publish-assets": "node scripts/generate-publish-assets.mjs",
     "rosters:sync": "vite-node scripts/populate-rosters.ts",
+    "crests:secondary": "vite-node scripts/fetch-secondary-crests.ts",
     "crests:download": "vite-node scripts/download-crests.ts",
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name=footplan",
     "build:native": "tsc -b && vite build --mode native",

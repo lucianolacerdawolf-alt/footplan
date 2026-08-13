@@ -63,9 +63,8 @@ interface Props {
   onViewLeague: () => void;
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
   blockAdvanceReason?: string;
-  /** Atualiza os elencos das 12 ligas via API (busca ao vivo + grava no Supabase). */
-  onSyncRosters?: () => void;
-  rosterSyncing?: boolean;
+  /** Data da última atualização dos elencos (snapshot no Supabase, atualizado fora do jogo
+   *  via `npm run rosters:sync`). Só exibição — não há ação de sync no cliente. */
   rosterLastUpdatedAt?: string | null;
   /** Estado do backup na nuvem (Supabase). `undefined`/`idle` = sem nuvem configurada. */
   cloudStatus?: CloudStatus;
@@ -156,7 +155,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, onSyncRosters, rosterSyncing, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
+function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
   const inbox = getInbox(state);
   const finances = getFinances(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
@@ -501,30 +500,15 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
         </div>
       )}
 
-      {/* Sincronização de elencos: ação global/admin (12 ligas), fora do fluxo de
-          jogo. Recolhida por padrão pra não competir com as ações da partida. */}
-      {onSyncRosters && (
-        <details className={styles.advanced}>
-          <summary className={styles.advancedSummary}>Ajustes avançados</summary>
-          <div className={styles.rosterSyncCard}>
-            <div className={styles.rosterSyncInfo}>
-              <span className={styles.rosterSyncLabel}><Icon name="refresh" size={13} /> Elencos</span>
-              {rosterLastUpdatedAt && (
-                <span className={styles.rosterSyncMeta}>
-                  Última atualização: {new Date(rosterLastUpdatedAt).toLocaleDateString('pt-BR')}
-                </span>
-              )}
-            </div>
-            <Button
-              variant="secondary" size="sm"
-              onClick={onSyncRosters}
-              disabled={rosterSyncing}
-              title="Buscar elencos atualizados das 12 ligas na API e salvar na nuvem"
-            >
-              {rosterSyncing ? 'Sincronizando...' : 'Atualizar Elencos via API'}
-            </Button>
-          </div>
-        </details>
+      {/* Elencos vêm do snapshot no Supabase (atualizado fora do jogo via
+          `npm run rosters:sync`). Só exibe a data — sem ação de sync no cliente. */}
+      {rosterLastUpdatedAt && (
+        <div className={styles.rosterSyncInfo}>
+          <span className={styles.rosterSyncLabel}><Icon name="refresh" size={13} /> Elencos</span>
+          <span className={styles.rosterSyncMeta}>
+            Atualizados em {new Date(rosterLastUpdatedAt).toLocaleDateString('pt-BR')}
+          </span>
+        </div>
       )}
 
       <div className={styles.newCareerRow}>
