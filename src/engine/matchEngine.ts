@@ -408,8 +408,13 @@ function resolveCycleFoulsAndCards(
       const taker = penaltyTakers[0];
       const gk = getGoalkeeper(getActiveStarters(foulerTeam, state.cards, state.injured));
       if (gk) {
-        const shotPwr = effective(taker.attributes.finishing, state.fatigueHome.get(taker.id) ?? state.fatigueAway.get(taker.id) ?? 0) * makeRng(random)(0.7, 1.3);
-        const savePwr = effective(gk.attributes.positioning, state.fatigueHome.get(gk.id) ?? state.fatigueAway.get(gk.id) ?? 0) * makeRng(random)(0.8, 1.2);
+        // Fadiga do mapa do time correto — antes buscava nos dois mapas com `??`,
+        // o que só funcionava porque ids de jogador são únicos entre times; se um
+        // dia colidirem, o pênalti usaria a fadiga do time errado.
+        const takerFatigue = otherTeam.id === home.id ? state.fatigueHome : state.fatigueAway;
+        const gkFatigue = foulerTeam.id === home.id ? state.fatigueHome : state.fatigueAway;
+        const shotPwr = effective(taker.attributes.finishing, takerFatigue.get(taker.id) ?? 0) * makeRng(random)(0.7, 1.3);
+        const savePwr = effective(gk.attributes.positioning, gkFatigue.get(gk.id) ?? 0) * makeRng(random)(0.8, 1.2);
         const scored = shotPwr * 1.35 > savePwr;
         if (scored && random() < goalTimingMultiplier(minute)) {
           // Pênalti convertido é um GOL: com type 'penalty' ele não entrava na
@@ -741,7 +746,18 @@ function simularPenaltisInterno(home: Team, away: Team, cards: Map<string, 'yell
   const homeGK = getGoalkeeper(getActiveStarters(home, cards, injured));
   const awayGK = getGoalkeeper(getActiveStarters(away, cards, injured));
 
-  const kicks: Array<{ teamId: string; scored: boolean }> = [];
+  // Guarda: se um time ficou sem jogadores de linha (expulsões em massa), não há
+  // cobradores — `i % 0` viraria NaN e `takePenalty(undefined)` crasharia em
+  // `shooter.attributes`. O time sem cobradores perde por W.O. (não pode cobrar).
+  if (homeShooters.length === 0 || awayShooters.length === 0) {
+    return {
+      homeScore: 0, awayScore: 0,
+      winner: homeShooters.length === 0 ? 'away' : 'home',
+      kicks: [],
+    };
+  }
+
+  const kicks: Array<{ teamId: string; scored: boolean; shooterId: string }> = [];
   let homeScore = 0, awayScore = 0;
 
   const takePenalty = (shooter: Player, gk: Player | null, teamId: string): boolean => {
@@ -750,7 +766,7 @@ function simularPenaltisInterno(home: Team, away: Team, cards: Map<string, 'yell
     const scored = shot * 1.35 > save; // ~75% base conversion
     if (teamId === home.id) homeScore += scored ? 1 : 0;
     else awayScore += scored ? 1 : 0;
-    kicks.push({ teamId, scored });
+    kicks.push({ teamId, scored, shooterId: shooter.id });
     return scored;
   };
 
@@ -812,10 +828,9 @@ export function resolveKnockoutTiebreak(
     description: generatePenaltyWin(winner.name, penaltyResult.homeScore, penaltyResult.awayScore),
     teamId: winner.id,
   });
-  penaltyResult.kicks.forEach((kick, idx) => {
+  penaltyResult.kicks.forEach((kick) => {
     const teamObj = kick.teamId === home.id ? home : away;
-    const shooters = getShooters(teamObj, state.cards, state.injured);
-    const shooter = shooters[Math.floor(idx / 2) % shooters.length];
+    const shooter = getActiveStarters(teamObj, state.cards, state.injured).find(p => p.id === kick.shooterId);
     if (shooter) {
       state.events.push({
         minute: 120, type: 'penaltyKick',

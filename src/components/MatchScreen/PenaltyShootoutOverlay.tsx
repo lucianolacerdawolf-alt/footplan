@@ -25,6 +25,7 @@ interface KickResult {
   shooterCorner: Corner;
   gkCorner: Corner;
   shooterName: string;
+  shooterId: string;
   gkName: string;
 }
 
@@ -79,6 +80,7 @@ export default function PenaltyShootoutOverlay({
       shooterCorner: currentIsUserKick ? userCorner : cpuCorner,
       gkCorner: currentIsUserKick ? cpuCorner : userCorner,
       shooterName: currentShooter?.name ?? '?',
+      shooterId: currentShooter?.id ?? '',
       gkName: currentGK?.name ?? '?',
     };
 
@@ -117,7 +119,7 @@ export default function PenaltyShootoutOverlay({
         const result: PenaltyResult = {
           homeScore: h, awayScore: a,
           winner: h > a ? 'home' : 'away',
-          kicks: currentKicks.map(k => ({ teamId: k.teamId, scored: k.scored })),
+          kicks: currentKicks.map(k => ({ teamId: k.teamId, scored: k.scored, shooterId: k.shooterId })),
         };
         onDoneRef.current(result);
         return;

@@ -183,7 +183,10 @@ export interface PenaltyResult {
   homeScore: number;
   awayScore: number;
   winner: 'home' | 'away';
-  kicks: Array<{ teamId: string; scored: boolean }>;
+  /** Cada cobrança registra o id do cobrador — o log de eventos usa esse id pra
+   *  narrar quem chutou, em vez de recomputar o índice (que divergia na morte
+   *  súbita, onde a rodada continua de 5 em diante). */
+  kicks: Array<{ teamId: string; scored: boolean; shooterId: string }>;
 }
 
 export interface MatchResult {

@@ -301,6 +301,54 @@ describe('resolveKnockoutTiebreak', () => {
       expect(result.extraTimeAwayScore).toBeDefined();
     }
   });
+
+  it('narrated penalty kickers match the simulated shooters (incl. sudden death)', () => {
+    // Regressão: o log de eventos recomputava o cobrador com `Math.floor(idx/2) % len`,
+    // que diverge da simulação na morte súbita (a rodada continua de 5 em diante) —
+    // o feed narrava um jogador diferente do que realmente chutou.
+    let checked = false;
+    for (let seed = 0; seed < 200 && !checked; seed++) {
+      const home = makeTeam('h', 'Home');
+      const away = makeTeam('a', 'Away');
+      const state = createMatchState(home, away);
+      state.homeScore = 0;
+      state.awayScore = 0;
+      const result = resolveKnockoutTiebreak(home, away, state, seededRng(seed));
+      if (!result.penaltyResult) continue;
+      checked = true;
+
+      const kickEvents = state.events.filter(e => e.type === 'penaltyKick');
+      expect(kickEvents.length).toBe(result.penaltyResult.kicks.length);
+
+      // Cada evento narrado deve citar o cobrador registrado na simulação.
+      result.penaltyResult.kicks.forEach((kick, idx) => {
+        const evt = kickEvents[idx];
+        const shooter = [...home.squad, ...away.squad].find(p => p.id === kick.shooterId);
+        expect(shooter).toBeDefined();
+        expect(evt.description).toContain(shooter!.name);
+      });
+    }
+    expect(checked).toBe(true);
+  });
+
+  it('penalty shootout survives a team with no outfield players (no crash)', () => {
+    // Regressão: com todos os jogadores de linha expulsos, `i % 0` virava NaN e
+    // `takePenalty(undefined)` crashava em `shooter.attributes`. O importante é
+    // não lançar exceção; se chegar aos pênaltis, o time sem cobradores perde.
+    const home = makeTeam('h', 'Home');
+    const away = makeTeam('a', 'Away');
+    const state = createMatchState(home, away);
+    state.homeScore = 0;
+    state.awayScore = 0;
+    // Expulsa todos os jogadores de linha do mandante.
+    home.squad.filter(p => p.position !== 'GK').forEach(p => state.cards.set(p.id, 'red'));
+    let result: ReturnType<typeof resolveKnockoutTiebreak>;
+    expect(() => { result = resolveKnockoutTiebreak(home, away, state, seededRng(1)); }).not.toThrow();
+    if (result!.penaltyResult) {
+      expect(result!.penaltyResult!.winner).toBe('away');
+      expect(result!.penaltyResult!.kicks.length).toBe(0);
+    }
+  });
 });
 
 describe('simularPartidaRapida', () => {
