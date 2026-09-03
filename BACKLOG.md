@@ -8,6 +8,15 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
+### ✅ Pênaltis: narração fora de ordem + crash potencial + lookup de fadiga frágil — CORRIGIDO (2026-09)
+
+**O que era:** três defeitos no fluxo de pênaltis do `matchEngine.ts`:
+1. **Narração não batia com a simulação** — o log de eventos recomputava o cobrador com `Math.floor(idx/2) % len`, que diverge da simulação na morte súbita (a rodada continua de 5 em diante). O feed narrava um jogador diferente do que realmente chutou.
+2. **Crash potencial** — com todos os jogadores de linha expulsos, `i % 0` virava NaN e `takePenalty(undefined)` crashava em `shooter.attributes`.
+3. **Lookup de fadiga frágil** — o pênalti durante o jogo buscava fadiga em `fatigueHome.get(id) ?? fatigueAway.get(id)` em vez do mapa do time correto (só funcionava porque ids de jogador são únicos entre times).
+
+**Correção.** `PenaltyResult.kicks` agora registra o `shooterId` de cada cobrança (simulação e overlay interativo), e o log de eventos usa esse id em vez de recomputar o índice. Guarda no início de `simularPenaltisInterno` para time sem cobradores (perde por W.O., sem crash). Fadiga do pênalti em jogo usa o mapa do time correto. 2 testes de regressão novos em `matchEngine.test.ts` (cobrador narrado = cobrador simulado, incl. morte súbita; e sobrevivência sem jogadores de linha). Suíte: 591 testes, 0 falhas.
+
 ### ✅ Cloud Save falha em silêncio absoluto — CORRIGIDO (2026-08-04)
 
 **Por que sobrou:** encontrado na revisão de docs de 2026-07-31, ao investigar uma contradição entre `BACKLOG.md` e `STATE.md` sobre a tabela Supabase.
@@ -105,6 +114,8 @@ Cliente Supabase com auth anônimo, save/load automático em segundo plano, cach
 **Por que sobrou:** cota mensal gratuita da SportAPI7 (RapidAPI) estourou durante desenvolvimento. Faltam os `uniqueTournament` IDs de La Liga 2, 2. Bundesliga, Serie B e Liga Portugal 2.
 
 **O que envolve:** quando a cota resetar (**1º de agosto de 2026**), descobrir os IDs via `GET /category/{N}/scheduled-events/2026-04-26` e preencher `LEAGUE_MAP` em `src/services/sportApi.ts`.
+
+**Já feito (2026-09):** a rota de discovery `category/{N}/scheduled-events/{date}` foi liberada no allowlist do worker proxy (`worker/football-proxy.js`) — agora dá pra descobrir os IDs via proxy (que tem a chave RapidAPI) em vez de depender de console externo. Falta só: `npx wrangler deploy` do worker + descobrir os IDs + preencher `LEAGUE_MAP`.
 
 **Posso retomar quando:** a partir de 1º de agosto de 2026 — 10 minutos pra resolver.
 
