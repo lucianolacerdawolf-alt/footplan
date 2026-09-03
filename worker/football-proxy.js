@@ -28,12 +28,19 @@ const ALLOWED_CODES = new Set(['PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'ELC', 'BL
 // podia apontar endpoints pagos arbitrários pro proxy e queimar a cota RapidAPI).
 // Agora só o que o FootPlan realmente usa (ver src/services/sportApi.ts e apiFootball.ts):
 //   sportapi7:  unique-tournament/{ut}/season/{season}/standings/total  e  team/{id}/players
+//   + rota de discovery category/{N}/scheduled-events/{date} — usada pra descobrir os
+//   uniqueTournament/season IDs de ligas ainda não mapeadas (ver TODO em sportApi.ts).
+//   É leitura pública da Sofascore; liberar só essa rota não expõe endpoint pago.
 //   apifootball: teams?...  e  players?...  (paginação via ?page=)
 const RAPIDAPI_ROUTES = {
   sportapi7: {
     host: 'sportapi7.p.rapidapi.com',
     base: 'https://sportapi7.p.rapidapi.com/api/v1',
-    allowed: [/^unique-tournament\/\d+\/season\/\d+\/standings\/total$/, /^team\/\d+\/players$/],
+    allowed: [
+      /^unique-tournament\/\d+\/season\/\d+\/standings\/total$/,
+      /^team\/\d+\/players$/,
+      /^category\/\d+\/scheduled-events\/\d{4}-\d{2}-\d{2}$/,
+    ],
   },
   apifootball: {
     host: 'api-football-v1.p.rapidapi.com',
