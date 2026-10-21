@@ -40,3 +40,6 @@ android/keystore.properties
 
 # Continue extension (config local do editor)
 .continue/
+
+# Configuracoes locais do Claude Code (permissoes da maquina, nao versionar)
+.claude/settings.local.json
