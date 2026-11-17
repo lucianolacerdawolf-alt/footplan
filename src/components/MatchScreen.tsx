@@ -33,6 +33,7 @@ import { playerOvr } from '../utils/playerOvr';
 import TopBar from './MatchScreen/TopBar';
 import HalftimePanel from './MatchScreen/HalftimePanel';
 import MatchPitch from './MatchScreen/MatchPitch';
+import { trackDailyMatch } from '../engine/dailyGoals';
 import PenaltyShootoutOverlay from './MatchScreen/PenaltyShootoutOverlay';
 import SquadSwapPanel from './MatchScreen/SquadSwapPanel';
 
@@ -212,10 +213,12 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
     if (isKnockout) {
       const final = simularMataMataCompleto(h, a, rngFn);
+      trackDailyMatch(final.homeScore + final.awayScore, false);
       addMatch(final);
       onViewStats(final);
     } else {
       const result = simularPartida(h, a, rngFn);
+      trackDailyMatch(result.homeScore + result.awayScore, false);
       addMatch(result);
       onViewStats(result);
     }
@@ -330,6 +333,14 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   homeRef.current = home;
   awayRef.current = away;
   isKnockoutRef.current = isKnockout;
+
+  // Metas do dia: conta cada partida ao vivo uma vez só (o effect abaixo pode rodar de novo).
+  const dailyTrackedRef = useRef<MatchResult | null>(null);
+  useEffect(() => {
+    if (phase !== 'done' || !result || dailyTrackedRef.current === result) return;
+    dailyTrackedRef.current = result;
+    trackDailyMatch(result.homeScore + result.awayScore, true);
+  }, [phase, result]);
 
   useEffect(() => {
     if (phase !== 'done' || !result) return;

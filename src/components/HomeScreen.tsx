@@ -1,6 +1,7 @@
 import type { Difficulty } from '../engine/matchConfig';
 import { getDifficultyLabel } from '../engine/matchConfig';
 import styles from './HomeScreen.module.css';
+import DailyGoalsCard from './DailyGoalsCard';
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
 
@@ -24,6 +25,8 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         <span className={styles.titleLine} />
         <p className={styles.subtitle}>Simulador Tático</p>
       </header>
+
+      <DailyGoalsCard />
 
       <div className={styles.modes}>
         <button className={`${styles.modeCard} ${styles.quickPlayCard}`} onClick={onQuickPlay}>
