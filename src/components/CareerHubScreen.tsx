@@ -1,4 +1,4 @@
-import { memo, useMemo, type CSSProperties } from 'react';
+import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { CareerState } from '../engine/career';
 import { getInbox, getSponsorName, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory } from '../engine/career';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
@@ -62,6 +62,8 @@ interface Props {
   pressDone?: boolean;
   /** Abre o Escritório (tela da liga) — usado quando ainda faltam jogos da rodada. */
   onViewLeague: () => void;
+  /** Simula os jogos restantes da rodada (mesmo handler do "Simular Todos" do Escritório). */
+  onSimulateRound?: (roundIndex: number) => void;
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
   blockAdvanceReason?: string;
   /** Data da última atualização dos elencos (snapshot no Supabase, atualizado fora do jogo
@@ -160,7 +162,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
+function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onSimulateRound, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
   const inbox = getInbox(state);
   const finances = getFinances(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
@@ -176,6 +178,23 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
   const currentRoundFixtures = state.season.league.fixtures[state.season.league.currentRound];
   const roundComplete = currentRoundFixtures?.every(f => f.played) ?? false;
   const awaitingRound = !nextMatch && !seasonReady && state.season.league.phase !== 'done';
+
+  // "Avançar" único (estilo FM): simula o resto da rodada e, quando o estado já mostra a
+  // rodada completa, avança — antes eram duas telas (Escritório → Simular Todos → voltar
+  // → Avançar Rodada). Reusa os handlers existentes; com mensagem obrigatória pendente,
+  // só simula e para no aviso de sempre.
+  const [pendingAdvance, setPendingAdvance] = useState(false);
+  useEffect(() => {
+    if (!pendingAdvance || !roundComplete) return;
+    setPendingAdvance(false);
+    if (!blockAdvanceReason) onNextRound();
+  }, [pendingAdvance, roundComplete, blockAdvanceReason, onNextRound]);
+  const handleAdvance = () => {
+    if (roundComplete) { onNextRound(); return; }
+    if (!onSimulateRound) { onViewLeague(); return; }
+    setPendingAdvance(true);
+    onSimulateRound(state.season.league.currentRound);
+  };
   const sponsorName = getSponsorName(state);
   const boardObj = getObjectives(state);
   const cupProgress = deriveCupProgress(state.season.cup, state.season.league.userTeamId);
@@ -343,8 +362,8 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                   {blockAdvanceReason && <div className={styles.advanceStatus}><Icon name="bell" size={13} /> {blockAdvanceReason}</div>}
                 </>
               ) : (
-                <Button block variant="secondary" onClick={onViewLeague}>
-                  Simular resto da rodada no Escritório →
+                <Button block onClick={handleAdvance}>
+                  Avançar →
                 </Button>
               )}
             </div>

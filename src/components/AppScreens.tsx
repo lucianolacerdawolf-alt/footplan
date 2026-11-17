@@ -504,6 +504,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onRejectTransferOffer={p.career.handleRejectTransferOffer}
         onNextRound={p.career.handleNextCareerLeagueRound}
         onViewLeague={p.nav.toCareerLeague}
+        onSimulateRound={p.career.handleSimulateCareerLeagueRound}
         onOpenJobMarket={p.nav.toCareerJobMarket}
         jobOfferCount={getJobOffers(p.career.careerState).length}
         onRespondConversation={p.career.handleRespondConversation}
