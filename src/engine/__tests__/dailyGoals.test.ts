@@ -31,3 +31,18 @@ describe('metas do dia', () => {
     expect(todayKey(new Date(2026, 0, 5))).toBe('2026-01-05');
   });
 });
+
+describe('recompensa da sequência', () => {
+  it('próxima conquista: 3 → 7 → 30 → nenhuma', async () => {
+    const { nextStreakReward } = await import('../dailyGoals');
+    expect(nextStreakReward(0)?.days).toBe(3);
+    expect(nextStreakReward(3)?.days).toBe(7);
+    expect(nextStreakReward(12)?.days).toBe(30);
+    expect(nextStreakReward(30)).toBeNull();
+  });
+  it('as conquistas de sequência existem na lista de conquistas', async () => {
+    const { STREAK_ACHIEVEMENTS } = await import('../dailyGoals');
+    const { ACHIEVEMENTS } = await import('../achievements');
+    for (const a of STREAK_ACHIEVEMENTS) expect(ACHIEVEMENTS.some(x => x.id === a.id)).toBe(true);
+  });
+});

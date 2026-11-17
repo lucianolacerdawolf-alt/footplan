@@ -131,6 +131,10 @@ function computeLeagueStreaks(
 // ── Achievements list ────────────────────────────────────────────────────────
 
 export const ACHIEVEMENTS: Achievement[] = [
+  // Metas do dia (ver dailyGoals.ts) — recompensa da sequência, sem efeito econômico.
+  { id: 'streak_3', name: 'Embalado', description: 'Complete as metas do dia 3 dias seguidos', icon: '🔥', hint: 'Metas do dia por 3 dias seguidos', category: 'marcos' },
+  { id: 'streak_7', name: 'Semana Perfeita', description: 'Complete as metas do dia 7 dias seguidos', icon: '📅', hint: 'Metas do dia por 7 dias seguidos', category: 'marcos' },
+  { id: 'streak_30', name: 'Lenda do Vestiário', description: 'Complete as metas do dia 30 dias seguidos', icon: '👑', hint: 'Metas do dia por 30 dias seguidos', category: 'marcos' },
   {
     id: 'debut',
     name: 'Estreia',

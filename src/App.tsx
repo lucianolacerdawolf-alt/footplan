@@ -24,6 +24,7 @@ import { renderScreen, type AppScreensProps } from './components/AppScreens';
 import Toast from './components/Toast';
 import CareerTabBar from './components/CareerTabBar';
 import { preloadAllRosters } from './services/rosterSync';
+import { loadDaily, STREAK_ACHIEVEMENTS } from './engine/dailyGoals';
 import { CAREER_TAB_SCREENS, getCareerTabForScreen } from './utils/careerTabs';
 import { onStorageFailure } from './utils/storage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -82,6 +83,15 @@ function App() {
     const ach = achievements.unlockById(id);
     if (ach) setToastMsg(`🏆 Conquista desbloqueada: ${ach.name}`);
   }, [achievements]);
+
+  // Conquistas de sequência das metas do dia: checa a cada troca de tela (a sequência
+  // sobe no fim de uma partida; unlockById ignora as já destravadas).
+  useEffect(() => {
+    const { streak } = loadDaily();
+    const reached = STREAK_ACHIEVEMENTS.filter(a => streak >= a.days && !achievements.isUnlocked(a.id));
+    if (reached.length > 0) unlockAchievement(reached[reached.length - 1].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen]);
 
   const {
     leagueState, setLeagueState,

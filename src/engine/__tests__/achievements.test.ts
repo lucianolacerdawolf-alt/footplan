@@ -266,8 +266,8 @@ describe('achievements', () => {
     expect(unlocked.length).toBe(0);
   });
 
-  it('all 20 achievements are defined', () => {
-    expect(ACHIEVEMENTS.length).toBe(20);
+  it('all 23 achievements are defined (20 + 3 de sequência das metas do dia)', () => {
+    expect(ACHIEVEMENTS.length).toBe(23);
   });
 });
 

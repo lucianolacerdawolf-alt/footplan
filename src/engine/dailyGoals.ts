@@ -107,3 +107,15 @@ export function saveDaily(state: DailyState): void {
 export function trackDailyMatch(totalGoals: number, live: boolean): void {
   saveDaily(recordMatch(loadDaily(), totalGoals, live));
 }
+
+/** Conquistas por sequência de dias (destravadas pelo App ao ver a sequência). */
+export const STREAK_ACHIEVEMENTS: Array<{ days: number; id: string }> = [
+  { days: 3, id: 'streak_3' },
+  { days: 7, id: 'streak_7' },
+  { days: 30, id: 'streak_30' },
+];
+
+/** Próxima conquista de sequência ainda não alcançada (pra mostrar no card). */
+export function nextStreakReward(streak: number): { days: number; id: string } | null {
+  return STREAK_ACHIEVEMENTS.find(a => streak < a.days) ?? null;
+}

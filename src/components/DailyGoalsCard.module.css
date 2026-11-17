@@ -13,3 +13,4 @@
 .done .check, .done .count { color: var(--positive); }
 .done .label { color: var(--text-h); }
 .footer { margin: 8px 0 0; font-size: 12px; color: var(--positive); }
+.reward { margin: 6px 0 0; font-size: 11px; color: var(--text-secondary); }

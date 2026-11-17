@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { goalsFor, loadDaily, isComplete } from '../engine/dailyGoals';
+import { goalsFor, loadDaily, isComplete, nextStreakReward } from '../engine/dailyGoals';
 import styles from './DailyGoalsCard.module.css';
 
 /** Metas do dia na tela inicial — lê do localStorage a cada render da Home. */
@@ -27,6 +27,10 @@ export default function DailyGoalsCard() {
         })}
       </ul>
       {done && <p className={styles.footer}>Tudo feito hoje! Volte amanhã pra manter a sequência.</p>}
+      {(() => {
+        const next = nextStreakReward(state.streak);
+        return next ? <p className={styles.reward}>Próxima conquista: {next.days} dias seguidos ({state.streak}/{next.days})</p> : null;
+      })()}
     </section>
   );
 }
