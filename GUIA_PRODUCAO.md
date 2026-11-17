@@ -31,7 +31,7 @@ npm run rosters:sync
 ```
 
 **Sync automático (desde 2026-11-17):** tarefa do Agendador de Tarefas do Windows
-"FootPlan - Sync de elencos", diária às 09:00 (roda assim que o PC ligar se estava
+"FootPlan - Sync de elencos", diária às 10:00 (roda assim que o PC ligar se estava
 desligado; só com o usuário logado). Chama [`scripts/scheduled-roster-sync.cmd`](scripts/scheduled-roster-sync.cmd),
 que roda `npm run rosters:sync` e anexa a saída em `logs/roster-sync.log` (gitignorado).
 Liga que falhar mantém o elenco que já estava no snapshot, então rodar todo dia é seguro.
