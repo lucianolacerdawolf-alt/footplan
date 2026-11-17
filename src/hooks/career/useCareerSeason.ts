@@ -9,7 +9,7 @@ import { determineUserContinentalCup, getContinentalPrizeMoney, getQualifiedTeam
 import { CUP_RESULT_LABELS } from '@/engine/careerLabels';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/engine/seasonClosure';
 import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, computeMerchRevenue } from '@/engine/sponsors';
-import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
+import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, pairedDivisionId, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
 import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage, createContinentalQualificationMessage, createContinentalResultMessage } from '@/engine/inbox';
 import { generateJobOffers } from '@/engine/jobMarket';
 import type { Screen } from '@/types/navigation';
@@ -100,7 +100,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       evolvedRosters[careerState.leagueId] = evolvedRosters[careerState.leagueId].map(t =>
         t.id === evolvedUserTeam.id ? nextUserTeam : t
       );
-      const { league: nextLeague, cup: nextCup } = createCareerSeason(nextUserTeam, evolvedRosters[careerState.leagueId], leagueDef);
+      const { league: nextLeague, cup: nextCup } = createCareerSeason(nextUserTeam, evolvedRosters[careerState.leagueId], leagueDef, Math.random, evolvedRosters[pairedDivisionId(careerState.leagueId) ?? ''] ?? []);
 
       // Sponsor upgrade/downgrade baseado na reputação final da temporada
       let nextSponsorTier: SponsorTier = (getSponsorTier(careerState) as SponsorTier);

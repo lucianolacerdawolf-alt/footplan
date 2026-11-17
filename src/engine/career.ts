@@ -532,20 +532,42 @@ export function progressAllLeagues(rosters: Record<string, Team[]>, rng: () => n
  * por handleStartLeague/handleStartBracket — garante estruturalmente que liga e
  * copa nascem juntas toda temporada (D-13), nunca uma sem a outra.
  */
+/** Outra divisão do mesmo país — a copa nacional mistura as duas, como na vida real. */
+const DIVISION_PAIR: Record<string, string> = {
+  pl: 'championship', championship: 'pl',
+  laliga: 'laliga2', laliga2: 'laliga',
+  bundesliga: 'bundesliga2', bundesliga2: 'bundesliga',
+  serieA: 'serieB', serieB: 'serieA',
+  ligue1: 'ligue2', ligue2: 'ligue1',
+  ligaPortugal: 'ligaPortugal2', ligaPortugal2: 'ligaPortugal',
+};
+
+export function pairedDivisionId(leagueId: string): string | undefined {
+  return DIVISION_PAIR[leagueId];
+}
+
+/** Clubes da copa nacional: 10 da própria liga + 5 da outra divisão do país (completa
+ *  com a própria liga se faltar). Antes eram só 15 clubes sorteados da própria liga. */
+export const CUP_OTHER_DIVISION_SLOTS = 5;
+
 export function createCareerSeason(
   userTeam: Team,
   leagueTeams: Team[],
   leagueDef: LeagueDefinition,
-  rng: () => number = Math.random
+  rng: () => number = Math.random,
+  otherDivisionTeams: Team[] = [],
 ): { league: LeagueState; cup: BracketState } {
   const rest = leagueTeams.filter(t => t.id !== userTeam.id).map(t => cloneTeam(t));
   const teams = [cloneTeam(userTeam), ...rest];
   const fixtures = generateLeagueSchedule(teams);
   const league: LeagueState = { teams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' };
 
-  const others = shuffle(leagueTeams.filter(t => t.id !== userTeam.id), rng)
-    .slice(0, 15)
-    .map(t => cloneTeam(t));
+  const leagueIds = new Set(leagueTeams.map(t => t.id));
+  const fromOther = shuffle(otherDivisionTeams.filter(t => !leagueIds.has(t.id) && t.id !== userTeam.id), rng)
+    .slice(0, CUP_OTHER_DIVISION_SLOTS);
+  const fromOwn = shuffle(leagueTeams.filter(t => t.id !== userTeam.id), rng)
+    .slice(0, 15 - fromOther.length);
+  const others = [...fromOwn, ...fromOther].map(t => cloneTeam(t));
   const cup = createBracket(cloneTeam(userTeam), others, leagueDef.cupName, leagueDef.id, rng);
 
   return { league, cup };

@@ -35,3 +35,14 @@ export function isCupStageOpen(
   if (leagueDone || stage === 'champion') return true;
   return currentRound >= cupStageOpensAtRound(stage, totalRounds, kind);
 }
+
+/** Aviso pra tela da copa quando a fase atual ainda não abriu; undefined = liberada. */
+export function cupLockMessage(
+  stage: BracketStage,
+  league: { currentRound: number; fixtures: unknown[]; phase: string },
+  kind: 'domestic' | 'continental' = 'domestic',
+): string | undefined {
+  const total = league.fixtures.length;
+  if (isCupStageOpen(stage, league.currentRound, total, league.phase === 'done', kind)) return undefined;
+  return `Esta fase abre depois da rodada ${cupStageOpensAtRound(stage, total, kind)} da liga.`;
+}

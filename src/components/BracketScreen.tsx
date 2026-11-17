@@ -24,6 +24,10 @@ interface Props {
   /** Cor de branding da competição (copa continental UCL/UEL/UECL) — tinge o título
    *  pra diferenciar visualmente da copa doméstica. Ausente = estilo padrão. */
   cupColor?: string;
+  /** Fase ainda fechada no calendário da temporada (ver cupSchedule): mostra o aviso
+   *  e esconde Jogar/Simular — antes dava pra jogar a copa inteira pela tela da copa
+   *  antes da hora, furando o calendário da Central. */
+  lockedMessage?: string;
 }
 
 function teamById(teams: Team[], id: string | null): Team | null {
@@ -50,7 +54,7 @@ function MatchCard({
   match: BracketMatch;
   teams: Team[];
   userTeamId: string;
-  onPlay: () => void;
+  onPlay?: () => void;
   onSimulate?: () => void;
 }) {
   const home = teamById(teams, match.homeTeamId);
@@ -76,7 +80,7 @@ function MatchCard({
           {away ? <img src={crestSrc(away.logoUrl)} alt={away.abbreviation} className={styles.matchCrest} /> : <span className={styles.tbd}>—</span>}
         </div>
       </div>
-      {canPlay && isUserMatch && (
+      {canPlay && isUserMatch && onPlay && (
         <div className={styles.matchActions}>
           <button className={styles.playBtn} onClick={onPlay}>Jogar</button>
           {onSimulate && (
@@ -93,7 +97,7 @@ function MatchCard({
   );
 }
 
-function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onSimulateToEnd, eliminated, onEditTactics, onBack, hideTopNav, cupColor }: Props) {
+function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, onSimulateToEnd, eliminated, onEditTactics, onBack, hideTopNav, cupColor, lockedMessage }: Props) {
   const { teams, userTeamId, roundOf16, quarterFinals, semiFinals, final, stage, championId } = state;
   const [simulating, setSimulating] = useState(false);
   const runSimOthers = () => {
@@ -142,7 +146,7 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
     matches: BracketMatch[],
     isActive: boolean
   ) => {
-    const othersPending = matches.some(m => !m.played && m.homeTeamId !== userTeamId && m.awayTeamId !== userTeamId);
+    const othersPending = !lockedMessage && matches.some(m => !m.played && m.homeTeamId !== userTeamId && m.awayTeamId !== userTeamId);
     return (
       <div className={`${styles.stageBlock} ${isActive ? styles.stageBlockActive : ''}`}>
         <div className={styles.stageLabelRow}>
@@ -159,13 +163,13 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
             match={m}
             teams={teams}
             userTeamId={userTeamId}
-            onPlay={() => {
+            onPlay={lockedMessage ? undefined : () => {
               const home = teamById(teams, m.homeTeamId)!;
               const away = teamById(teams, m.awayTeamId)!;
               const matchIdx = getStageMatches(state).findIndex(x => x.id === m.id);
               onPlayMatch(m, home, away, state.stage as PlayableStage, matchIdx);
             }}
-            onSimulate={isActive ? () => onSimulateMatch(state.stage as PlayableStage, idx) : undefined}
+            onSimulate={isActive && !lockedMessage ? () => onSimulateMatch(state.stage as PlayableStage, idx) : undefined}
           />
         ))}
       </div>
@@ -186,6 +190,9 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
         )}
       </header>
 
+      {lockedMessage && (
+        <div className={styles.lockedNote} role="status">🗓️ {lockedMessage}</div>
+      )}
       {stage === 'roundOf16'    && renderStage('Oitavas de Final', roundOf16,     true)}
       {stage === 'quarterfinals' && renderStage('Quartas de Final', quarterFinals, true)}
       {stage === 'semifinals'    && renderStage('Semifinais',       semiFinals,    true)}

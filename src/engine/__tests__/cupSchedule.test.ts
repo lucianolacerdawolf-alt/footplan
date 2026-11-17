@@ -26,3 +26,13 @@ describe('calendário das copas', () => {
     expect(isCupStageOpen('final', 0, 38, true)).toBe(true);
   });
 });
+
+describe('cupLockMessage', () => {
+  it('fase fechada: diz a rodada em que abre; aberta: sem aviso', async () => {
+    const { cupLockMessage } = await import('../cupSchedule');
+    const league = (currentRound: number) => ({ currentRound, fixtures: new Array(38), phase: 'playing' });
+    expect(cupLockMessage('roundOf16', league(0))).toBe('Esta fase abre depois da rodada 7 da liga.');
+    expect(cupLockMessage('roundOf16', league(7))).toBeUndefined();
+    expect(cupLockMessage('final', { ...league(3), phase: 'done' })).toBeUndefined();
+  });
+});

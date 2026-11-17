@@ -1,6 +1,6 @@
 import type { Team } from './types';
 import {
-  createCareerSeason, isValidCareerState,
+  createCareerSeason, isValidCareerState, pairedDivisionId,
   type CareerState, type JobOffer,
 } from './career';
 import { getAvgOvr } from '../utils/teamUtils';
@@ -80,7 +80,7 @@ export function applyClubChange(state: CareerState, offer: JobOffer): CareerStat
   const newUserTeam = roster?.find(t => t.id === offer.clubId);
   if (!leagueDef || !newUserTeam) return null;
 
-  const { league, cup } = createCareerSeason(newUserTeam, roster, leagueDef);
+  const { league, cup } = createCareerSeason(newUserTeam, roster, leagueDef, Math.random, state.rosters[pairedDivisionId(offer.leagueId) ?? ''] ?? []);
   const budget = initialBudget(offer.leagueId);
   const startingTier = getStartingTier(offer.leagueId);
   const sponsor = generateSponsor(offer.leagueId, offer.clubId, startingTier);

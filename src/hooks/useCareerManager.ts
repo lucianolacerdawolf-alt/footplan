@@ -11,7 +11,7 @@ import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { getRosterSyncInfo } from '../services/rosterSync';
 import { generateSponsor, getStartingTier, getSponsorMultiplier } from '../engine/sponsors';
-import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, type CareerState } from '../engine/career';
+import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, pairedDivisionId, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
 import { useTransferManager } from './career/useTransferManager';
 import { useCareerSeason } from './career/useCareerSeason';
@@ -132,7 +132,7 @@ export function useCareerManager({
     // bater com nenhum id estático da liga (ex: fixture de teste), ainda assim
     // segue — só não fica "achatado" com os valores de mercado dos outros times.
     const userTeamWithValues = rosters[leagueDef.id].find(t => t.id === userTeam.id) ?? assignInitialContracts([assignMarketValues(cloneTeam(userTeam))])[0];
-    const { league, cup } = createCareerSeason(userTeamWithValues, rosters[leagueDef.id], leagueDef);
+    const { league, cup } = createCareerSeason(userTeamWithValues, rosters[leagueDef.id], leagueDef, Math.random, rosters[pairedDivisionId(leagueDef.id) ?? ''] ?? []);
     const budget = initialBudget(leagueDef.id);
     const trimmedName = managerName.trim().slice(0, 24) || 'Técnico';
     const startingTier = getStartingTier(leagueDef.id);

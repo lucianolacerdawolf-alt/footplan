@@ -31,6 +31,7 @@ import OnlineLobbyScreen from './OnlineLobbyScreen';
 import LeagueSelectScreen from './LeagueSelectScreen';
 import CupSelectScreen from './CupSelectScreen';
 import { getLeague } from '../data/leagues';
+import { cupLockMessage } from '../engine/cupSchedule';
 
 function getResumableSaves(): ResumableSave[] {
   const results: ResumableSave[] = [];
@@ -644,6 +645,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onEditTactics={p.career.handleEditCareerBracketTactics}
         onBack={p.nav.toHub}
         hideTopNav
+        lockedMessage={cupLockMessage(cup.stage, p.career.careerState.season.league, 'domestic')}
       />
     );
   },
@@ -663,6 +665,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onEditTactics={p.career.handleEditContinentalTactics}
         onBack={p.nav.toHub}
         hideTopNav
+        lockedMessage={p.career.careerState ? cupLockMessage(cc.stage, p.career.careerState.season.league, 'continental') : undefined}
       />
     );
   },

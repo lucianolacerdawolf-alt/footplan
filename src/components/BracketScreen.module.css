@@ -103,3 +103,9 @@
   .playBtn, .simBtn { font-size: 12px; padding: 6px 14px; }
   .title { font-size: 18px; }
 }
+
+.lockedNote {
+  margin: 8px 12px; padding: 10px 12px; border-radius: 8px;
+  border: 1px dashed var(--border); color: var(--text-secondary);
+  font-size: 13px; text-align: center;
+}
