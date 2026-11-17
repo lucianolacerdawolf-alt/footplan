@@ -14,6 +14,13 @@ describe('copa nacional com as duas divisões', () => {
     expect(fromCh).toHaveLength(CUP_OTHER_DIVISION_SLOTS);
     expect(new Set(cup.teams.map(t => t.id)).size).toBe(16);
     expect(cup.teams[0].id).toBe(user.id);
+    // fase preliminar: 5 confrontos entre clubes da Championship; os vencedores estão na copa
+    expect(cup.preliminary).toHaveLength(CUP_OTHER_DIVISION_SLOTS);
+    const names = new Set(cup.teams.map(t => t.name));
+    for (const tie of cup.preliminary!) {
+      expect(names.has(tie.winnerName)).toBe(true);
+      expect([tie.homeName, tie.awayName]).toContain(tie.winnerName);
+    }
   });
 
   it('sem a outra divisão disponível, continua com 16 da própria liga', () => {

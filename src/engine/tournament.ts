@@ -68,6 +68,20 @@ export interface BracketState {
   championId?: string;
   cupName: string;
   leagueId: string;
+  /** Fase preliminar (copa nacional da carreira): clubes da outra divisão que disputaram
+   *  as vagas das oitavas, já simulada no início da temporada. Só exibição. */
+  preliminary?: PreliminaryTie[];
+}
+
+export interface PreliminaryTie {
+  homeName: string;
+  awayName: string;
+  homeAbbr: string;
+  awayAbbr: string;
+  homeScore: number;
+  awayScore: number;
+  penalties?: { home: number; away: number };
+  winnerName: string;
 }
 
 // =============================================================================

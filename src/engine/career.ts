@@ -1,5 +1,5 @@
 import type { Player, Position, Team, ContractGoal } from './types';
-import type { LeagueState, BracketState, BracketMatch } from './tournament';
+import type { LeagueState, BracketState, BracketMatch, PreliminaryTie } from './tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
 // type-only: boardObjectives importa CareerState de volta, mas imports de tipo
 // são apagados na compilação — não há ciclo em runtime.
@@ -12,6 +12,7 @@ import { calculateMarketValue, calculateWeeklyWage, computeWageBill, renewalCost
 import { formatMoney } from '../utils/formatMoney';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
+import { simularKnockout } from './matchEngine';
 import { getStartingTier, generateSponsor } from './sponsors';
 
 // =============================================================================
@@ -553,8 +554,31 @@ export function pairedDivisionId(leagueId: string): string | undefined {
 }
 
 /** Clubes da copa nacional: 10 da própria liga + 5 da outra divisão do país (completa
- *  com a própria liga se faltar). Antes eram só 15 clubes sorteados da própria liga. */
+ *  com a própria liga se faltar). Antes eram só 15 clubes sorteados da própria liga.
+ *  As 5 vagas da outra divisão saem de uma fase preliminar entre 10 clubes dela. */
 export const CUP_OTHER_DIVISION_SLOTS = 5;
+
+/** Fase preliminar: pareia 2×slots clubes e devolve os vencedores + os placares. */
+export function playCupPreliminary(candidates: Team[], slots: number, rng: () => number): { winners: Team[]; ties: PreliminaryTie[] } {
+  const pool = candidates.slice(0, slots * 2);
+  if (pool.length < slots * 2) return { winners: pool.slice(0, slots), ties: [] };
+  const winners: Team[] = [];
+  const ties: PreliminaryTie[] = [];
+  for (let i = 0; i < slots; i++) {
+    const home = pool[i * 2];
+    const away = pool[i * 2 + 1];
+    const r = simularKnockout(cloneTeam(home), cloneTeam(away), rng);
+    const winner = r.winner === 'home' ? home : away;
+    winners.push(winner);
+    ties.push({
+      homeName: home.name, awayName: away.name, homeAbbr: home.abbreviation, awayAbbr: away.abbreviation,
+      homeScore: r.homeScore, awayScore: r.awayScore,
+      penalties: r.penaltyResult ? { home: r.penaltyResult.homeScore, away: r.penaltyResult.awayScore } : undefined,
+      winnerName: winner.name,
+    });
+  }
+  return { winners, ties };
+}
 
 export function createCareerSeason(
   userTeam: Team,
@@ -569,12 +593,13 @@ export function createCareerSeason(
   const league: LeagueState = { teams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' };
 
   const leagueIds = new Set(leagueTeams.map(t => t.id));
-  const fromOther = shuffle(otherDivisionTeams.filter(t => !leagueIds.has(t.id) && t.id !== userTeam.id), rng)
-    .slice(0, CUP_OTHER_DIVISION_SLOTS);
+  const otherCandidates = shuffle(otherDivisionTeams.filter(t => !leagueIds.has(t.id) && t.id !== userTeam.id), rng);
+  const { winners: fromOther, ties: preliminary } = playCupPreliminary(otherCandidates, CUP_OTHER_DIVISION_SLOTS, rng);
   const fromOwn = shuffle(leagueTeams.filter(t => t.id !== userTeam.id), rng)
     .slice(0, 15 - fromOther.length);
   const others = [...fromOwn, ...fromOther].map(t => cloneTeam(t));
   const cup = createBracket(cloneTeam(userTeam), others, leagueDef.cupName, leagueDef.id, rng);
+  if (preliminary.length > 0) cup.preliminary = preliminary;
 
   return { league, cup };
 }

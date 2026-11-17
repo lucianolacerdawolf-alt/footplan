@@ -194,6 +194,20 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
         <div className={styles.lockedNote} role="status">🗓️ {lockedMessage}</div>
       )}
       {stage === 'roundOf16'    && renderStage('Oitavas de Final', roundOf16,     true)}
+      {state.preliminary && state.preliminary.length > 0 && stage === 'roundOf16' && (
+        <details className={styles.prelim}>
+          <summary>Fase preliminar · {state.preliminary.length} vagas da outra divisão</summary>
+          <ul>
+            {state.preliminary.map((t, i) => (
+              <li key={i}>
+                <span className={t.winnerName === t.homeName ? styles.prelimWinner : undefined}>{t.homeAbbr}</span>
+                {' '}<strong>{t.homeScore}–{t.awayScore}</strong>{t.penalties ? ` (pên. ${t.penalties.home}–${t.penalties.away})` : ''}{' '}
+                <span className={t.winnerName === t.awayName ? styles.prelimWinner : undefined}>{t.awayAbbr}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {stage === 'quarterfinals' && renderStage('Quartas de Final', quarterFinals, true)}
       {stage === 'semifinals'    && renderStage('Semifinais',       semiFinals,    true)}
       {stage === 'final'         && renderStage('Final',            [final],       true)}
