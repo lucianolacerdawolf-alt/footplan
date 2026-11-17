@@ -355,6 +355,8 @@ export async function syncLeagueRoster(
 export interface AllRostersResult {
   rosters: Record<string, Team[]>;
   sources: Record<string, RosterSource>;
+  /** Mensagem de erro por liga que não veio ao vivo (só ligas com erro aparecem). */
+  errors: Record<string, string>;
   updatedAt: string | null;
   leagueCount: number;
   liveCount: number;
@@ -363,6 +365,7 @@ export interface AllRostersResult {
 export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: SupabaseClient }): Promise<AllRostersResult> {
   const rosters: Record<string, Team[]> = {};
   const sources: Record<string, RosterSource> = {};
+  const errors: Record<string, string> = {};
   let liveCount = 0;
   let updatedAt: string | null = null;
 
@@ -372,8 +375,18 @@ export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: 
 
   for (const league of allLeagues) {
     const result = await syncLeagueRoster(league, opts, snapshot);
-    rosters[league.id] = result.league.teams;
-    sources[league.id] = result.source;
+    if (result.error) errors[league.id] = result.error;
+    // Num sync forçado, liga que falhou ao vivo voltaria com o elenco ESTÁTICO e,
+    // publicada, sobrescreveria um elenco melhor que já estava no snapshot cloud.
+    // Mantém o que o snapshot tinha pra essa liga (com escudos estáticos reaplicados).
+    const previous = snapshot?.rosters[league.id];
+    if (opts?.force && result.source !== 'live' && Array.isArray(previous) && previous.length > 0) {
+      rosters[league.id] = applyStaticCrests(previous, league);
+      sources[league.id] = 'cloud';
+    } else {
+      rosters[league.id] = result.league.teams;
+      sources[league.id] = result.source;
+    }
     if (result.source === 'live') liveCount++;
   }
 
@@ -396,7 +409,7 @@ export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: 
     updatedAt = snapshot?.updatedAt ?? null;
   }
 
-  return { rosters, sources, updatedAt, leagueCount: allLeagues.length, liveCount };
+  return { rosters, sources, errors, updatedAt, leagueCount: allLeagues.length, liveCount };
 }
 
 /** Informação de quando os elencos foram atualizados pela última vez (pra exibir na UI). */

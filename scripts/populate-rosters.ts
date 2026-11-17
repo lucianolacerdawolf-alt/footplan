@@ -59,9 +59,12 @@ async function main() {
   console.log(`✔ Ao vivo (API): ${result.liveCount}/${result.leagueCount}`);
   console.log(`✔ Snapshot gravado no Supabase em: ${result.updatedAt ?? 'n/a'}`);
 
-  const failed = Object.entries(result.sources).filter(([, s]) => s === 'static' || s === 'error');
+  const failed = Object.entries(result.sources).filter(([, s]) => s !== 'live');
   if (failed.length > 0) {
-    console.log(`\n⚠ Liga(s) sem dados ao vivo (estático/erro): ${failed.map(([id]) => id).join(', ')}`);
+    console.log('\n⚠ Liga(s) sem dados ao vivo (mantido o que já estava no snapshot, ou estático):');
+    for (const [id, src] of failed) {
+      console.log(`   - ${id} [${src}]: ${result.errors[id] ?? 'sem detalhe'}`);
+    }
   } else {
     console.log('\n✅ Todas as 12 ligas sincronizadas ao vivo.');
   }

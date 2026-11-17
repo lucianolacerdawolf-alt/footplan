@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { syncLeagueRoster, syncAllLeagueRosters, getRosterSyncInfo, clearRosterCache } from '../rosterSync';
 import type { LeagueDefinition } from '@/data/leagues/types';
+import { allLeagues } from '@/data/leagues';
 import type { Team } from '@/engine/types';
 
 // Mock do rosterCloud: isola a lógica de cache do Supabase sem precisar de backend.
@@ -511,6 +512,20 @@ describe('syncAllLeagueRosters', () => {
     expect(Object.keys(result.rosters).length).toBe(12);
     // Sem fontes configuradas, cada liga cai pra estática — nunca null.
     expect(Object.values(result.rosters).every(teams => Array.isArray(teams) && teams.length > 0)).toBe(true);
+  });
+
+  it('com force, liga que falha ao vivo mantém o elenco do snapshot cloud (não regride pro estático)', async () => {
+    const cloudPl = allLeagues.find(l => l.id === 'pl')!.teams.map(t => ({ ...t, name: `${t.name} (cloud)` }));
+    mockSnapshot.value = { rosters: { pl: cloudPl }, updatedAt: '2026-08-10T00:00:00Z' };
+
+    const result = await syncAllLeagueRosters({ force: true });
+
+    expect(result.sources.pl).toBe('cloud');
+    expect(result.rosters.pl[0].name).toMatch(/\(cloud\)$/);
+    expect(result.errors.pl).toBeTruthy();
+    // Liga sem nada no snapshot continua caindo pro estático.
+    expect(result.sources.laliga).not.toBe('live');
+    expect(result.rosters.laliga[0].name).not.toMatch(/\(cloud\)$/);
   });
 });
 
