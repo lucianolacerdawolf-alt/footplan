@@ -1,4 +1,5 @@
 import type { LeagueDefinition } from './types';
+import ligaPortugal2Logo from '@/assets/leagues/ligaportugal2.svg';
 import type { Team } from '@/engine/types';
 import { makeSecondDivisionTeam } from './divisionHelpers';
 
@@ -35,7 +36,8 @@ export const ligaPortugal2: LeagueDefinition = {
   cupLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Ta%C3%A7a_de_Portugal_Trophy.svg/250px-Ta%C3%A7a_de_Portugal_Trophy.svg.png',
   flag: '🇵🇹',
   color: '#e31e25',
-  logo: 'https://crests.football-data.org/PPL.png',
+  // Emblema próprio: o anterior era o logo da Liga Portugal (1ª divisão).
+  logo: ligaPortugal2Logo,
   totalRounds: 34,
   teams,
   europeanSlots: { championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },

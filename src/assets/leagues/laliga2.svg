@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" role="img" aria-label="LALIGA 2">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c9a845"/>
+      <stop offset="1" stop-color="#7a5f1c"/>
+    </linearGradient>
+  </defs>
+  <path d="M60 4 L112 18 V70 C112 104 88 124 60 136 C32 124 8 104 8 70 V18 Z" fill="url(#g)"/>
+  <path d="M60 11 L105 23 V70 C105 99 85 117 60 128 C35 117 15 99 15 70 V23 Z" fill="none" stroke="#ffffff" stroke-width="2.5" opacity="0.9"/>
+  <g transform="translate(60 52)">
+    <circle r="18" fill="#ffffff"/>
+    <path d="M0 -7 L6.7 -2.2 L4.1 5.7 H-4.1 L-6.7 -2.2 Z" fill="#1a1a1a"/>
+    <path d="M0 -7 V-17.5 M6.7 -2.2 L16.6 -5.4 M4.1 5.7 L10.3 14.2 M-4.1 5.7 L-10.3 14.2 M-6.7 -2.2 L-16.6 -5.4" stroke="#1a1a1a" stroke-width="1.6"/>
+  </g>
+  <text x="60" y="90" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="16" fill="#ffffff" letter-spacing="0.5">LALIGA</text>
+  <text x="60" y="107" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="15" fill="#ffffff">2</text>
+  <text x="60" y="121" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" font-size="7.5" fill="#ffffff" opacity="0.85" letter-spacing="1.2">ESPANHA</text>
+</svg>

@@ -1,4 +1,5 @@
 import type { LeagueDefinition } from './types';
+import championshipLogo from '@/assets/leagues/championship.svg';
 import type { Team } from '@/engine/types';
 import { makeSecondDivisionTeam } from './divisionHelpers';
 
@@ -41,7 +42,8 @@ export const championship: LeagueDefinition = {
   cupLogo: 'https://crests.football-data.org/fa_cup.png',
   flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
   color: '#1c355e',
-  logo: 'https://crests.football-data.org/ELC.png',
+  // Emblema próprio: o anterior trazia a marca Sky Bet (patrocinador de apostas).
+  logo: championshipLogo,
   totalRounds: 46,
   teams,
   europeanSlots: { championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },
