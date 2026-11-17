@@ -8,6 +8,37 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
+### Rodada de melhorias de jogo 2026-11-17 (noite)
+
+**✅ Entregue:**
+- **Posse de bola** proporcional à força do meio-campo (era "vencedor leva tudo"): posse do dominante mediana 73% → 58%, jogos acima de 75% 45% → 4%; gols/jogo e vitória do mandante praticamente iguais.
+- **Notas calibradas por liga** (`ratingCalibration.ts`): Haaland 98 → 90, Van Dijk 94 → 87; níveis em ordem (2ªs divisões abaixo das 1ªs). Idempotente por jogador.
+- **Campo 2D** mostra quem está com a bola (anel) e o nome citado no lance.
+- **Copa nacional** com fase preliminar entre 10 clubes da outra divisão (5 vagas).
+- **Metas do dia**: conquistas por sequência (3, 7 e 30 dias) + próxima recompensa no card.
+- **Estatísticas de partida avulsa**: "Jogar de novo" e "Menu principal" (o botão antigo dizia "Escolher Times" e ia pro menu).
+- **IDs SportAPI7** das 2ªs divisões conferidos no Sofascore (54, 44, 53, 239).
+- **Sem internet** o jogo usa os elencos atuais (`public/rosters-snapshot.json` no precache do PWA; `npm run rosters:bundle`).
+
+**⛔ Item 10 (notificações) — bloqueado, precisa da sua decisão:** o módulo de lembretes locais no Android (`@capacitor/local-notifications`: lembrete das metas às 19h e de rodada nova da Liga entre Amigos, com chave liga/desliga) foi **bloqueado pelo sistema de permissões do Claude Code** como ação indesejada (o app passaria a pedir permissão e agendar notificações no aparelho). Nada ficou pela metade no código. Pra fazer: aprovar essa edição, `npm i @capacitor/local-notifications@8.3.1`, módulo `src/services/reminders.ts` com `schedule: { on: { hour, minute } }` (repete todo dia), `npx cap sync android`. No PWA/navegador, notificar com o app fechado exige servidor de push (Web Push + VAPID + Edge Function do Supabase).
+
+**📝 Itens 5–8 (Liga entre Amigos v2) — documentados, não feitos por decisão sua:**
+
+- **5. Conta de verdade (não anônima).** Hoje o login anônimo fica preso ao aparelho: trocar de celular ou limpar o navegador perde a vaga na liga e o save na nuvem.
+  - *Como:* Supabase Auth com Google e/ou link mágico por e-mail. Usar `linkIdentity` (ou `updateUser({ email })`) no usuário anônimo atual pra **promover** a conta sem perder dados — o `user_id` continua o mesmo, então `careers` e `friend_league_members` seguem valendo.
+  - *Telas:* "Salvar minha conta" na Central/Liga entre Amigos; "Entrar" em outro aparelho.
+  - *Pré-requisito pra:* sync das metas do dia entre aparelhos e push por usuário (item 10 web).
+
+- **6. Notificação de rodada nova.** Depende do item 10. No Android, lembrete local às 00:05 UTC convertido pro fuso local (desenho pronto acima); na web, Web Push disparado por uma Edge Function agendada (cron) que roda à meia-noite UTC.
+
+- **7. Resultado conferido no servidor.** Hoje qualquer membro grava a rodada (o cliente simula). Entre amigos é aceitável; aberto ao público, não.
+  - *Como:* Edge Function `settle-friend-round` (Deno) que importa a engine (`simulateFriendRound` é pura e determinística), roda por cron à meia-noite UTC e grava com a service role; trocar a política "members record rounds" por **só service role**. O cliente para de gravar e só lê.
+  - *Alternativa mais barata:* manter o cliente gravando, mas a Edge Function recalcula e confere; se divergir, sobrescreve e registra.
+
+- **8. Elenco e escalação dentro da liga.** Hoje cada um só escolhe a tática (preset); o elenco é o congelado na criação.
+  - *Como:* `friend_league_members.lineup jsonb` (11 titulares + formação) e, opcionalmente, uma janela de trocas entre membros (`friend_league_trades`, aceite das duas partes). A simulação usa o lineup do membro no lugar de `squad.slice(0, 11)`.
+  - *Cuidado:* a regra de "semente fixa" continua valendo — o lineup vigente no momento do prazo entra na rodada.
+
 ### Rodada "faz tudo" 2026-11-17 (tarde)
 
 **✅ Entregue:**
