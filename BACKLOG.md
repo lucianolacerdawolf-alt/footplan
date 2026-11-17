@@ -15,8 +15,9 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - **Overlays `position: fixed` (pausa, intervalo, modais) fora da tela no celular.** `.screen-fade` tinha `will-change: transform` permanente, que vira containing block dos `fixed`; o overlay ficava com a altura da página e o painel abaixo da dobra.
 
 **🔴 Pendentes — dados:**
-- Composição das ligas congelada em 2024/25: sync só atualiza jogadores de clubes já existentes (promovidos somem, rebaixados ficam com elenco velho). **Ipswich está na PL e na Championship ao mesmo tempo.**
-- Notas infladas/comprimidas (quase todo time da PL entre 84 e 90; McNeil 90). Jogador novo do sync ganha atributos genéricos pela média do time, sem olhar posição (goleiro reserva com finalização 72, €19,5M).
+- ✅ ~~Composição das ligas congelada em 2024/25; Ipswich na PL e na Championship ao mesmo tempo.~~ Corrigido (`defd86e`): `buildLeagueFromRemote` troca rebaixados por promovidos quando a resposta é a liga inteira. Sync de 2026-11-17 aplicou nas 7 ligas da football-data (PL ganhou Coventry, Hull, Leeds, Sunderland…; West Ham e Wolves foram pra Championship; Ipswich só numa liga). As 5 segundas divisões da API-Football atualizam quando a cota permitir. *Fallback offline (dados estáticos) continua 2024/25.*
+- ✅ ~~Notas infladas/comprimidas; jogador novo do sync com atributos genéricos (goleiro reserva com finalização 72, titular por acaso).~~ Corrigido: jogador real desconhecido nasce abaixo da média conforme perfil (base −7/−12, goleiro extra −4) e com variação ±3 (era ±9, inventava craques); goleiro gerado com atributos de goleiro. PL passou de 84–90 pra 71–89; Henderson voltou a titular do Palace.
+  - 🟡 Ainda pendente: calibração dos jogadores **conhecidos** no estático ainda puxa pra cima (Sarr 88). Recalibrar exige uma fonte de nota real por jogador.
 - Estádio inventado e incoerente: pré-jogo "Crystal Palace Stadium · 53.000", tela da partida "Crystal Palace Arena · 29.000".
 
 **🟡 Pendentes — bugs:**

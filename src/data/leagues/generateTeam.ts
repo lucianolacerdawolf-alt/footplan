@@ -33,7 +33,12 @@ function pick<T>(arr: readonly T[]): T {
 /** Exportado pra ser reaproveitado pela sincronização de elenco via API (src/services) —
  *  gera atributos calibrados pra jogadores novos que a API traz mas que a gente ainda
  *  não tem dados reais (ex: uma transferência recente). */
-export function generatePlayer(id: string, name: string, number: number, pos: Player['position'], ovr: number, age?: number): Player {
+/**
+ * @param spreadOverride variação máxima por atributo. O padrão (até ±10) gera elencos
+ *   estáticos variados, mas faz o OVR final oscilar ±9 em torno do alvo — pro jogador
+ *   REAL desconhecido vindo do sync isso inventava craques (reserva mirado em 77 saía 86).
+ */
+export function generatePlayer(id: string, name: string, number: number, pos: Player['position'], ovr: number, age?: number, spreadOverride?: number): Player {
   // playerOvr() pondera só os atributos relevantes da posição e depois aplica um boost
   // em cima da média (ver utils/playerOvr.ts) — essa correção inverte esse efeito ANTES
   // de gerar os atributos, pra playerOvr(gerado) ≈ ovr de novo. Recalibrado empiricamente
@@ -45,7 +50,7 @@ export function generatePlayer(id: string, name: string, number: number, pos: Pl
   // dentro de attr()/boost() (ex: "78.26086956521739" aparecendo na tela em vez de 78).
   const calibratedOvr = Math.round(ovr / 1.1);
   const base = calibratedOvr - 7;
-  const spread = Math.min(10, Math.floor(ovr / 8));
+  const spread = spreadOverride ?? Math.min(10, Math.floor(ovr / 8));
   const attr = () => Math.max(1, Math.min(99, base + rand(-spread, spread)));
   const boost = (n: number) => Math.max(1, Math.min(99, attr() + n));
 
@@ -55,9 +60,12 @@ export function generatePlayer(id: string, name: string, number: number, pos: Pl
       speed: pos === 'FWD' || pos === 'DEF' ? boost(8) : attr(),
       stamina: boost(2),
       passing: pos === 'MID' ? boost(10) : attr(),
-      finishing: pos === 'FWD' ? boost(12) : pos === 'MID' ? boost(4) : attr(),
-      tackling: pos === 'DEF' ? boost(12) : pos === 'MID' ? boost(4) : attr(),
-      dribbling: pos === 'FWD' || pos === 'MID' ? boost(6) : attr(),
+      // Goleiro com atributos de linha no nível do time aparecia com "finalização 72".
+      // Esses três não entram no OVR de GK (ver WEIGHTS em playerOvr.ts), então baixar
+      // não muda a força dele — só deixa o perfil coerente.
+      finishing: pos === 'FWD' ? boost(12) : pos === 'MID' ? boost(4) : pos === 'GK' ? boost(-30) : attr(),
+      tackling: pos === 'DEF' ? boost(12) : pos === 'MID' ? boost(4) : pos === 'GK' ? boost(-25) : attr(),
+      dribbling: pos === 'FWD' || pos === 'MID' ? boost(6) : pos === 'GK' ? boost(-25) : attr(),
       vision: pos === 'MID' ? boost(8) : pos === 'FWD' ? boost(4) : attr(),
       positioning: pos === 'GK' ? boost(14) : boost(4),
     },

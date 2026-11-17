@@ -602,3 +602,27 @@ describe('buildLeagueFromRemote — acesso e rebaixamento', () => {
     expect(promoted.logoUrl).toBe(leeds.logoUrl);
   });
 });
+
+describe('jogador desconhecido vindo do sync', () => {
+  it('base e goleiro extra nascem abaixo da média e não roubam a titularidade', async () => {
+    const { playerOvr } = await import('@/utils/playerOvr');
+    const lg: LeagueDefinition = { ...makeLeague(), id: 'test-depth', teams: [makeTeam('a', 'Alpha Town', 'ALP')] };
+    // Elenco estático: 'Old Keeper' é o goleiro conhecido (OVR ~75 em todos os atributos).
+    const remoteSquad = [
+      { id: 1, name: 'Old Keeper', position: 'Goalkeeper', dateOfBirth: '1995-01-01', nationality: 'England', shirtNumber: 1 },
+      { id: 2, name: 'Third Keeper', position: 'Goalkeeper', dateOfBirth: '1994-01-01', nationality: 'England', shirtNumber: 40 },
+      { id: 3, name: 'Academy Kid', position: 'Midfield', dateOfBirth: '2008-06-01', nationality: 'England', shirtNumber: 60 },
+      { id: 4, name: 'Old Defender', position: 'Defence', dateOfBirth: '1996-01-01', nationality: 'England', shirtNumber: 2 },
+    ];
+    const r = buildLeagueFromRemote(lg, [{ id: 9, name: 'Alpha Town', shortName: 'Alpha Town', tla: 'ALP', crest: '', squad: remoteSquad }] as never);
+    const team = r.teams[0];
+    const byName = (n: string) => team.squad.find(p => p.name === n)!;
+    const known = byName('Old Keeper');
+    const extra = byName('Third Keeper');
+    const kid = byName('Academy Kid');
+    expect(playerOvr(extra)).toBeLessThan(playerOvr(known));
+    expect(team.squad[0].name).toBe('Old Keeper'); // titular continua o conhecido
+    expect(playerOvr(kid)).toBeLessThan(playerOvr(byName('Old Defender')));
+    expect(extra.attributes.finishing).toBeLessThan(extra.attributes.positioning - 20);
+  });
+});

@@ -29,6 +29,8 @@ import { loadRosterSnapshot, saveRosterSnapshot, hasRosterCloud, type RosterSnap
 import { mapRemotePosition } from './positionMapping';
 
 const CACHE_PREFIX = 'fp:rosterCache:';
+/** Variação por atributo do jogador real desconhecido (ver generatePlayer): OVR ±3 em vez de ±9. */
+const UNKNOWN_PLAYER_SPREAD = 3;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias
 // Versão do schema do cache. Bumpar quando o formato mudar — caches gravados com
 // versão anterior (ou sem versão) são descartados por readCache, evitando que
@@ -159,6 +161,18 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[], targetOv
 
   const targetOvr = targetOvrOverride ?? starterOvr(staticTeam);
 
+  // Jogador desconhecido (fora do estático) nascia com o OVR médio do time inteiro:
+  // garoto da base e 3º goleiro viravam titulares no corte por OVR. Agora parte abaixo
+  // da média conforme o perfil provável (idade; goleiro extra quando já há um conhecido).
+  const knownGk = remoteSquad.some(rp => mapRemotePosition(rp.position) === 'GK' && byName.has(normalizeName(rp.name)));
+  const unknownTarget = (position: Position, age: number | undefined): number => {
+    let penalty = 3;
+    if (age !== undefined && age <= 19) penalty = 12;
+    else if (age !== undefined && age <= 21) penalty = 7;
+    if (position === 'GK' && knownGk) penalty += 4;
+    return Math.max(40, targetOvr - penalty);
+  };
+
   const grouped: Record<Position, Player[]> = { GK: [], DEF: [], MID: [], FWD: [] };
   remoteSquad.forEach((rp, i) => {
     const position = mapRemotePosition(rp.position);
@@ -172,7 +186,7 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[], targetOv
       grouped[position].push(updated);
     } else {
       added++;
-      const generated = generatePlayer(`${staticTeam.id}-live-${rp.id}`, rp.name, rp.shirtNumber ?? (90 + i), position, targetOvr, age);
+      const generated = generatePlayer(`${staticTeam.id}-live-${rp.id}`, rp.name, rp.shirtNumber ?? (90 + i), position, unknownTarget(position, age), age, UNKNOWN_PLAYER_SPREAD);
       if (rp.nationality) generated.nationality = rp.nationality;
       grouped[position].push(generated);
     }
