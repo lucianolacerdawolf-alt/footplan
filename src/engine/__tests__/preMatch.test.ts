@@ -160,6 +160,18 @@ describe('generateSocialFeed', () => {
     }
   });
 
+  it('sem jogo da liga ainda, não fala de posição na tabela (com 0 jogos todo mundo "está em 1º")', () => {
+    const posts = generateSocialFeed({
+      userTeam: makeTeam('user', 70),
+      opponentName: 'Time B',
+      userPosition: 1,
+      totalTeams: 20,
+      seasonYear: 1,
+    });
+    expect(posts.some(p => /lugar|posição|tabela/i.test(p.content))).toBe(false);
+    expect(posts.length).toBeGreaterThan(0);
+  });
+
   it('inclui post de contratação quando marqueeSigning existe', () => {
     const posts = generateSocialFeed({
       userTeam: makeTeam('user', 70),

@@ -8,6 +8,7 @@ import type { LeagueFixture } from '../engine/tournament';
 import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
+import { isCupStageOpen } from '../engine/cupSchedule';
 import { playerOvr } from '../utils/playerOvr';
 import { getStarterCount } from '../engine/squadUtils';
 import { generateSocialFeed } from '../engine/socialFeed';
@@ -83,9 +84,13 @@ function determineNextMatch(state: CareerState): NextMatch {
   const { league, cup } = season;
   const userId = league.userTeamId;
 
-  // Prioridade: copa continental → copa doméstica → liga.
+  // Prioridade: copa continental → copa doméstica → liga, mas cada fase de copa só
+  // abre depois de uma fração da liga (ver cupSchedule) — antes a copa vinha sempre
+  // primeiro e o 1º jogo da temporada era das oitavas, antes da rodada 1.
+  const totalRounds = league.fixtures.length;
+  const leagueDone = league.phase === 'done';
   const cc = season.continentalCup;
-  if (cc && cc.stage !== 'champion') {
+  if (cc && cc.stage !== 'champion' && isCupStageOpen(cc.stage, league.currentRound, totalRounds, leagueDone, 'continental')) {
     const stageMatches = getStageMatches(cc);
     const userMatch = stageMatches.find(m =>
       !m.played && (m.homeTeamId === userId || m.awayTeamId === userId));
@@ -109,7 +114,7 @@ function determineNextMatch(state: CareerState): NextMatch {
     }
   }
 
-  if (cup.stage !== 'champion') {
+  if (cup.stage !== 'champion' && isCupStageOpen(cup.stage, league.currentRound, totalRounds, leagueDone)) {
     const stageMatches = getStageMatches(cup);
     const userMatch = stageMatches.find(m =>
       !m.played &&
@@ -372,7 +377,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
         <div className={styles.secondaryCol}>
           {/* Quick Stats Row */}
           <div className={styles.quickStats}>
-            <StatTile value={gamesPlayed} label="Jogos" />
+            <StatTile value={gamesPlayed} label="Jogos na liga" />
             <StatTile value={record.wins} label="Vitórias" tone="win" />
             <StatTile value={record.draws} label="Empates" tone="draw" />
             <StatTile value={record.losses} label="Derrotas" tone="loss" />
@@ -390,7 +395,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                 <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
               </div>
               <div className={styles.progressFooter}>
-                <span>{userPosition}º lugar · {userTeam ? `OVR titular médio: ${avgOvr}` : ''}</span>
+                <span>{gamesPlayed > 0 ? `${userPosition}º lugar` : 'Pré-temporada'} · {userTeam ? `OVR titular médio: ${avgOvr}` : ''}</span>
                 {topScorer && <span>⚽ Artilheiro: {topScorer[0]} ({topScorer[1]} gols)</span>}
               </div>
             </div>

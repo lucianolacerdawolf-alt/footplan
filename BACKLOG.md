@@ -24,7 +24,8 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - ✅ ~~Pênaltis invisíveis: 1-1 na copa vira "DERROTA" sem mostrar a disputa.~~ Corrigido: o SIMULAR em mata-mata descartava prorrogação/pênaltis e **dava a vaga sempre ao visitante** nos pênaltis. Lógica movida pra `simularMataMataCompleto` (engine) com teste.
 - ✅ ~~Placar do jogo (1-1) diferente do ticker da rodada (0-1); posse 8% × 91%.~~ Corrigido: o ticker **inventava** placares (Math.random, inclusive pro jogo do usuário) que não eram os gravados; agora mostra só resultado real e some se não houver. Posse ao vivo/intervalo contava linhas de narração; agora usa a posse da engine (`possessionPct`). *Ideia de feature:* ticker com placares ao vivo de verdade (pré-simular a rodada e revelar no relógio, estilo FM).
 - ✅ ~~Ícone ⚡ do treino mostra delta de **fadiga** mas lê como energia.~~ Corrigido: agora "Fadiga +25 · Moral +3", por extenso, verde/vermelho conforme bom/ruim.
-- Primeiro jogo da temporada é a copa (oitavas, só 16 times da liga); com 0 jogos o time aparece "1º lugar" e o feed comemora; jogo de copa não conta em JOGOS.
+- ✅ ~~Primeiro jogo da temporada é a copa; com 0 jogos o time aparece "1º lugar" e o feed comemora; jogo de copa não conta em JOGOS.~~ Corrigido: fases das copas espalhadas pela temporada (`cupSchedule.ts`: na PL, oitavas após a rodada 7, final após a 30; continental meio passo antes); "Pré-temporada" até o 1º jogo; feed sem post de tabela antes disso; tile "Jogos na liga".
+  - 🟡 Ainda pendente: a copa doméstica só tem os 16 primeiros times da própria liga (sem 2ª divisão, sem fases anteriores). Pela tela da copa dá pra jogar a fase antes de ela "abrir" no calendário.
 - 4 cliques pra começar uma partida (Jogar → Confirmar → Iniciar Partida → JOGAR).
 - PT-PT misturado ("noutra liga"); botões de time sem nome acessível.
 

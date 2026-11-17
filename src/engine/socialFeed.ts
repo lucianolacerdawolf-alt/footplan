@@ -65,9 +65,11 @@ export function generateSocialFeed(input: SocialFeedInput): SocialPost[] {
           });
   }
 
-  // 2. Posição na tabela.
-  const topThird = input.userPosition <= third;
-  const bottomThird = input.userPosition > input.totalTeams - third;
+  // 2. Posição na tabela — só depois do 1º jogo da liga. Antes, com 0 jogos, a ordem
+  // alfabética punha o time "em 1º lugar" e o feed comemorava a posição.
+  const hasTable = !!input.lastResult;
+  const topThird = hasTable && input.userPosition <= third;
+  const bottomThird = hasTable && input.userPosition > input.totalTeams - third;
   if (topThird) {
     posts.push({
       id: 's-table-top',
@@ -84,7 +86,7 @@ export function generateSocialFeed(input: SocialFeedInput): SocialPost[] {
       content: `Situação delicada: ${input.userTeam.name} aparece na ${input.userPosition}ª posição. A pressão aumenta sobre o técnico. ${tag}`,
       likes: 1260,
     });
-  } else {
+  } else if (hasTable) {
     posts.push({
       id: 's-table-mid',
       author: 'Tabela e Contexto',
