@@ -3,8 +3,17 @@ import { describe, it, expect } from 'vitest';
 import { getStartingTier, generateSponsor } from '../sponsors';
 import { isDerby, getDerbyName } from '../rivalries';
 
-const ITALIAN_POOL = ['Pirelli', 'Ferrero', 'TIM', 'Barilla', 'Mediolanum', 'Eni', 'Mapei', 'Kappa', 'Sisal', 'Nutella'];
-const PORTUGUESE_POOL = ['Super Bock', 'Sagres', 'MEO', 'Caixa Geral', 'Galp', 'NOS', 'Millennium', 'Placard', 'Betano', 'Vitalis'];
+const ITALIAN_POOL = ['Banca Tirrena', 'Pastificio Aurora', 'Vespina', 'Assicurazioni Duomo', 'Caffè Leone', 'Energia Ligure', 'Scommesse Sole', 'Telecom Adria', 'Moto Riviera', 'Gelati Fiore'];
+const PORTUGUESE_POOL = ['Cerveja Atlântica', 'Banco Lusitano', 'Tejo Telecom', 'Seguros Douro', 'Energia Minho', 'Apostas Galo', 'Conservas Mar Azul', 'Voa Açores', 'Café Barlavento', 'Auto Algarve'];
+
+describe('sponsors — marcas fictícias', () => {
+  it('nenhum patrocinador gerado é marca real conhecida', () => {
+    const real = /emirates|bet365|adidas|nike|puma|santander|sky|betano|rakuten|allianz|pirelli|orange|renault/i;
+    for (const lg of ['pl', 'championship', 'laliga', 'bundesliga', 'serieA', 'ligue1', 'ligaPortugal']) {
+      for (let i = 0; i < 40; i++) expect(generateSponsor(lg, `team-${i}`, 'global').name).not.toMatch(real);
+    }
+  });
+});
 
 describe('sponsors — chaves de liga (regressão)', () => {
   it('Serie A (id serieA) começa em global e usa pool italiano', () => {

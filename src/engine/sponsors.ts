@@ -25,13 +25,17 @@ export function getSponsorMinReputation(tier: SponsorTier): number {
   return TIER_CONFIG[tier].minReputation;
 }
 
+// Marcas FICTÍCIAS com sabor local. Antes eram marcas reais (Fly Emirates, Bet365,
+// Adidas, Santander…) estampando a camisa do clube do usuário — sugere patrocínio que
+// não existe (risco de marca registrada) sem ganho de jogo. Saves antigos mantêm o
+// nome que já tinham (sponsorName fica gravado no CareerState).
 const SPONSOR_POOLS: Record<string, string[]> = {
-  england:   ['Fly Emirates', 'Barclays', 'Umbro', 'Ladbrokes', 'Carlsberg', 'Standard Chartered', 'Vodafone', 'Nike UK', 'Bet365', 'Sky Sports'],
-  spain:     ['Iberdrola', 'CaixaBank', 'Movistar', 'Estrella Galicia', 'Rakuten', 'Banco Santander', 'Mahou', 'Adeslas', 'Bwin', 'Joma'],
-  germany:   ['Allianz', 'Adidas', 'Volkswagen', 'Lufthansa', 'Deutsche Bank', 'Telekom', 'Puma', 'SAP', 'Rewe', 'Evonik'],
-  italy:     ['Pirelli', 'Ferrero', 'TIM', 'Barilla', 'Mediolanum', 'Eni', 'Mapei', 'Kappa', 'Sisal', 'Nutella'],
-  france:    ['Orange', 'Renault', 'Air France', 'Lacoste', 'BNP Paribas', 'Canal+', 'TotalEnergies', 'Le Coq Sportif', 'Groupama', 'Accor'],
-  portugal:  ['Super Bock', 'Sagres', 'MEO', 'Caixa Geral', 'Galp', 'NOS', 'Millennium', 'Placard', 'Betano', 'Vitalis'],
+  england:   ['Thames Air', 'Crown & Kettle', 'Northgate Bank', 'Ravenswood Ales', 'Albion Mobile', 'Penrose Insurance', 'Kingsbet', 'Harbourline', 'Whitcombe Motors', 'Brightwater Energy'],
+  spain:     ['Iberluz', 'Banco Meseta', 'Cervezas Alhambrilla', 'Telmar', 'Seguros Duero', 'Azahar Energía', 'Apuestas Brava', 'Viajes Solano', 'Olivar Foods', 'Cantabria Motor'],
+  germany:   ['Rheinwerk', 'Nordbank', 'Hansa Versicherung', 'Bergbräu', 'Elbe Mobil', 'Kraftstrom', 'Alpenluft Air', 'Schwarzwald Auto', 'Tipp24x', 'Eichel Logistik'],
+  italy:     ['Banca Tirrena', 'Pastificio Aurora', 'Vespina', 'Assicurazioni Duomo', 'Caffè Leone', 'Energia Ligure', 'Scommesse Sole', 'Telecom Adria', 'Moto Riviera', 'Gelati Fiore'],
+  france:    ['Banque Lumière', 'Aéro Provence', 'Énergie Loire', 'Fromagerie Mont-Blanc', 'Assurances Seine', 'Télécom Azur', 'Paris Pronos', 'Autos Garonne', 'Vins Bordelune', 'Rail Atlantique'],
+  portugal:  ['Cerveja Atlântica', 'Banco Lusitano', 'Tejo Telecom', 'Seguros Douro', 'Energia Minho', 'Apostas Galo', 'Conservas Mar Azul', 'Voa Açores', 'Café Barlavento', 'Auto Algarve'],
 };
 
 // Chaves precisam bater com os LeagueDefinition.id reais (serieA, serieB,
