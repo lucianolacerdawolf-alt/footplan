@@ -30,8 +30,20 @@ SUPABASE_SERVICE_ROLE_KEY=...
 npm run rosters:sync
 ```
 
-> Rode o sync antes do lançamento: as 5 segundas divisões estão com elencos
-> estáticos (limite diário da API-Football estourou em 2026-08-03).
+**Sync automático (desde 2026-11-17):** tarefa do Agendador de Tarefas do Windows
+"FootPlan - Sync de elencos", diária às 09:00 (roda assim que o PC ligar se estava
+desligado; só com o usuário logado). Chama [`scripts/scheduled-roster-sync.cmd`](scripts/scheduled-roster-sync.cmd),
+que roda `npm run rosters:sync` e anexa a saída em `logs/roster-sync.log` (gitignorado).
+Liga que falhar mantém o elenco que já estava no snapshot, então rodar todo dia é seguro.
+
+```powershell
+Start-ScheduledTask -TaskName 'FootPlan - Sync de elencos'      # rodar agora
+Get-ScheduledTaskInfo -TaskName 'FootPlan - Sync de elencos'    # último resultado / próxima
+Unregister-ScheduledTask -TaskName 'FootPlan - Sync de elencos' # remover
+```
+
+> Não dispare o sync duas vezes no mesmo minuto: a football-data.org tem limite de
+> 10 req/min e a segunda rodada perde as ligas dela (ficam com o elenco anterior).
 
 ---
 
