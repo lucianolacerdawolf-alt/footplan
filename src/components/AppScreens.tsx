@@ -82,6 +82,7 @@ export interface AppScreensProps {
   gameMode: GameMode;
   lastResult: MatchResult | null;
   pendingResumeSnapshot: LiveMatchSnapshot | null;
+  matchAutoStart: 'live' | 'fast' | null;
 
   // ── Navigation / shell ──
   matchContext: MatchContext;
@@ -108,6 +109,7 @@ export interface AppScreensProps {
   setTournamentMode: (m: TournamentMode) => void;
   setReturnScreen: (s: Screen | null) => void;
   setPendingResumeSnapshot: (s: LiveMatchSnapshot | null) => void;
+  setMatchAutoStart: (m: 'live' | 'fast' | null) => void;
   setResumePrompt: (p: 'league' | 'bracket' | null) => void;
   setIsCareerMode: (v: boolean) => void;
 
@@ -399,6 +401,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         userSide={userSide}
         resumeSnapshot={p.pendingResumeSnapshot}
         onResumeConsumed={() => p.setPendingResumeSnapshot(null)}
+        autoStart={p.matchAutoStart}
+        onAutoStartConsumed={() => p.setMatchAutoStart(null)}
         gameMode={p.gameMode}
         roundFixtures={tickerFixtures}
         teams={tickerTeams}
@@ -437,7 +441,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         awayTeam={p.awayTeam}
         contextLabel={contextLabel}
         roundLabel={roundLabel}
-        onPlay={() => p.setScreen('match')}
+        onPlay={(mode) => { p.setMatchAutoStart(mode); p.setScreen('match'); }}
         onBack={() => p.setScreen('setup')}
       />
     );

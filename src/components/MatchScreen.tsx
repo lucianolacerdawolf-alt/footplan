@@ -46,6 +46,9 @@ interface Props {
   continueLabel?: string;
   /** Recebe o resultado final: quem passa o handler é responsável por gravá-lo. */
   onContinue?: (result: MatchResult) => void;
+  /** Modo escolhido na pré-partida — a partida começa sozinha nele. */
+  autoStart?: 'live' | 'fast' | null;
+  onAutoStartConsumed?: () => void;
   matchContext?: 'regular' | 'league' | 'bracket' | 'online';
   userSide?: 'home' | 'away';
   resumeSnapshot?: LiveMatchSnapshot | null;
@@ -56,7 +59,7 @@ interface Props {
   teams?: Team[];
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed, gameMode, roundFixtures, teams }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed, gameMode, roundFixtures, teams, autoStart, onAutoStartConsumed }: Props) {
   const [home, setHome] = useState<Team>(() => {
     if (resumeSnapshot) return resumeSnapshot.home;
     const t = cloneTeam(initialHome);
@@ -214,6 +217,29 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       onViewStats(result);
     }
   }, [home, away, isKnockout, rng, addMatch, onViewStats]);
+
+  const handleStartLive = useCallback(() => {
+    if (online?.isHost) online.send({ type: 'start-simulate' });
+    knockoutResolvedRef.current = false;
+    setKnockoutResult(null);
+    setSubsHome(0); setSubsAway(0);
+    setSubWindowsHome(ZERO_SUB_WINDOWS); setSubWindowsAway(ZERO_SUB_WINDOWS);
+    setInjuredIds([]);
+    runFirstHalf(home, away);
+  }, [online, home, away, runFirstHalf]);
+
+  // Modo já escolhido na pré-partida: começa direto (sem o clique extra em JOGAR/SIMULAR).
+  // Agendado com cleanup em vez de guardado num ref: no duplo-mount do StrictMode o
+  // unmount simulado limpa os timers da simulação, e um ref impedia a 2ª tentativa —
+  // a partida ficava parada em 00:00. Partida retomada (F5) não auto-inicia.
+  useEffect(() => {
+    if (!autoStart || started || resumeSnapshot) return;
+    const id = setTimeout(() => {
+      onAutoStartConsumed?.();
+      if (autoStart === 'fast') handleFastSim(); else handleStartLive();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [autoStart, started, resumeSnapshot, onAutoStartConsumed, handleFastSim, handleStartLive]);
 
   const handleOnlinePause = useCallback(() => {
     if (pausesRemaining <= 0) return;
@@ -762,7 +788,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
               online && !online.isHost
                 ? <span style={{ fontSize: 12, opacity: 0.55, fontFamily: 'var(--mono)' }}>Aguardando host simular...</span>
                 : <>
-                    <button className="simulate-btn" onClick={() => { if (online?.isHost) online.send({ type: 'start-simulate' }); knockoutResolvedRef.current = false; setKnockoutResult(null); setSubsHome(0); setSubsAway(0); setSubWindowsHome(ZERO_SUB_WINDOWS); setSubWindowsAway(ZERO_SUB_WINDOWS); setInjuredIds([]); runFirstHalf(home, away); }} disabled={simulating}>
+                    <button className="simulate-btn" onClick={handleStartLive} disabled={simulating}>
                       JOGAR
                     </button>
                     <button className="simulate-btn" onClick={handleFastSim} disabled={simulating}>

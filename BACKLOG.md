@@ -26,7 +26,7 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - ✅ ~~Ícone ⚡ do treino mostra delta de **fadiga** mas lê como energia.~~ Corrigido: agora "Fadiga +25 · Moral +3", por extenso, verde/vermelho conforme bom/ruim.
 - ✅ ~~Primeiro jogo da temporada é a copa; com 0 jogos o time aparece "1º lugar" e o feed comemora; jogo de copa não conta em JOGOS.~~ Corrigido: fases das copas espalhadas pela temporada (`cupSchedule.ts`: na PL, oitavas após a rodada 7, final após a 30; continental meio passo antes); "Pré-temporada" até o 1º jogo; feed sem post de tabela antes disso; tile "Jogos na liga".
   - 🟡 Ainda pendente: a copa doméstica só tem os 16 primeiros times da própria liga (sem 2ª divisão, sem fases anteriores). Pela tela da copa dá pra jogar a fase antes de ela "abrir" no calendário.
-- 4 cliques pra começar uma partida (Jogar → Confirmar → Iniciar Partida → JOGAR).
+- ✅ ~~4 cliques pra começar uma partida (Jogar → Confirmar → Iniciar Partida → JOGAR).~~ Agora 3: a pré-partida tem "⚡ Simular" e "▶ Jogar ao vivo" e a partida começa sozinha no modo escolhido. *Próximo passo possível:* um "Avançar" único estilo FM que pula a tela de táticas quando nada mudou.
 - PT-PT misturado ("noutra liga"); botões de time sem nome acessível.
 
 ### ✅ Pênaltis: narração fora de ordem + crash potencial + lookup de fadiga frágil — CORRIGIDO (2026-09)

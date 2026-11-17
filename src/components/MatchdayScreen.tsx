@@ -14,7 +14,8 @@ interface Props {
   homeTeam: Team;
   awayTeam: Team;
   contextLabel: string;
-  onPlay: () => void;
+  /** 'live' = partida ao vivo com pausas; 'fast' = resultado direto. */
+  onPlay: (mode: 'live' | 'fast') => void;
   onBack: () => void;
   roundLabel?: string;
 }
@@ -189,8 +190,12 @@ export default function MatchdayScreen({ homeTeam, awayTeam, contextLabel, onPla
 
       <div className={styles.actions}>
         <button className={styles.backBtn} onClick={onBack}>Voltar</button>
-        <button className={styles.playBtn} onClick={onPlay}>
-          Iniciar Partida
+        {/* Escolha de modo aqui mesmo: antes era Iniciar Partida → (outra tela) → JOGAR/SIMULAR. */}
+        <button className={styles.simBtn} onClick={() => onPlay('fast')}>
+          ⚡ Simular
+        </button>
+        <button className={styles.playBtn} onClick={() => onPlay('live')}>
+          ▶ Jogar ao vivo
         </button>
       </div>
     </div>

@@ -43,6 +43,8 @@ function App() {
     setToastMsg('⚠ Não foi possível salvar o progresso neste dispositivo');
   }), []);
   const [pendingResumeSnapshot, setPendingResumeSnapshot] = useState<LiveMatchSnapshot | null>(null);
+  // Modo escolhido na pré-partida (Jogar ao vivo / Simular): a tela da partida já começa nele.
+  const [matchAutoStart, setMatchAutoStart] = useState<'live' | 'fast' | null>(null);
   const [pendingCareerStart, setPendingCareerStart] = useState<{ userTeam: Team; managerName: string } | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>(() => {
     try {
@@ -318,6 +320,7 @@ function App() {
     gameMode,
     lastResult,
     pendingResumeSnapshot,
+    matchAutoStart,
     matchContext,
     isKnockout,
     tournamentMode,
@@ -337,6 +340,7 @@ function App() {
     setTournamentMode,
     setReturnScreen,
     setPendingResumeSnapshot,
+    setMatchAutoStart,
     setResumePrompt,
     setIsCareerMode,
     goHome,
