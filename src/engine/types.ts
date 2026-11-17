@@ -71,6 +71,8 @@ export interface Player {
   /** OVR máximo que um jovem da base pode atingir — ESCONDIDO do usuário (a tela mostra
    *  só a estimativa do olheiro, ver youthAcademy.scoutEstimate). Só jogadores da base. */
   potential?: number;
+  /** Nota já passou pela calibração por liga (ratingCalibration.ts) — não recalibrar. */
+  ratingCalibrated?: boolean;
 }
 
 /** Meta de contrato (cláusula de performance): atingir `target` gols na temporada

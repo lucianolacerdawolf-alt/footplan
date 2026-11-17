@@ -84,7 +84,10 @@ describe('syncLeagueRoster', () => {
     const league = makeLeague();
     const result = await syncLeagueRoster(league);
     expect(result.source).toBe('static');
-    expect(result.league).toBe(league);
+    // mesma liga e mesmos clubes; as notas voltam calibradas por liga (ratingCalibration)
+    expect(result.league.id).toBe(league.id);
+    expect(result.league.teams.map(t => t.id)).toEqual(league.teams.map(t => t.id));
+    expect(result.league.teams.every(t => t.squad.every(p => p.ratingCalibrated))).toBe(true);
     expect(result.error).toBeTruthy();
   });
 
@@ -376,7 +379,10 @@ describe('syncLeagueRoster', () => {
     const result = await syncLeagueRoster(league, { force: true });
 
     expect(result.source).toBe('error');
-    expect(result.league).toBe(league);
+    // mesma liga e mesmos clubes; as notas voltam calibradas por liga (ratingCalibration)
+    expect(result.league.id).toBe(league.id);
+    expect(result.league.teams.map(t => t.id)).toEqual(league.teams.map(t => t.id));
+    expect(result.league.teams.every(t => t.squad.every(p => p.ratingCalibrated))).toBe(true);
     expect(result.error).toContain('network down');
   });
 

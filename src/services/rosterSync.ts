@@ -27,6 +27,7 @@ import { rebalanceForFormation } from '../engine/squadUtils';
 import { allLeagues } from '../data/leagues';
 import { loadRosterSnapshot, saveRosterSnapshot, hasRosterCloud, type RosterSnapshot } from './rosterCloud';
 import { mapRemotePosition } from './positionMapping';
+import { calibrateLeagueTeams } from '../engine/ratingCalibration';
 
 const CACHE_PREFIX = 'fp:rosterCache:';
 /** Variação por atributo do jogador real desconhecido (ver generatePlayer): OVR ±3 em vez de ±9. */
@@ -394,7 +395,20 @@ export function buildLeagueFromRemote(league: LeagueDefinition, remoteTeams: Rem
   return { teams: [...merged.values()], stats };
 }
 
+/** Elenco de uma liga (ao vivo/nuvem/cache/estático) já com as notas calibradas por
+ *  liga (ratingCalibration.ts — idempotente, então reler um snapshot calibrado é no-op). */
 export async function syncLeagueRoster(
+  league: LeagueDefinition,
+  opts?: { force?: boolean },
+  snapshot?: RosterSnapshot | null,
+): Promise<RosterSyncResult> {
+  const r = await syncLeagueRosterRaw(league, opts, snapshot);
+  const teams = calibrateLeagueTeams(r.league.teams, league.id);
+  if (teams !== r.league.teams) loadedLeagueTeams.set(league.id, teams);
+  return { ...r, league: { ...r.league, teams } };
+}
+
+async function syncLeagueRosterRaw(
   league: LeagueDefinition,
   opts?: { force?: boolean },
   snapshot?: RosterSnapshot | null,
@@ -496,7 +510,7 @@ export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: 
     // Mantém o que o snapshot tinha pra essa liga (com escudos estáticos reaplicados).
     const previous = snapshot?.rosters[league.id];
     if (opts?.force && result.source !== 'live' && Array.isArray(previous) && previous.length > 0) {
-      rosters[league.id] = applyStaticCrests(previous, league);
+      rosters[league.id] = calibrateLeagueTeams(applyStaticCrests(previous, league), league.id);
       sources[league.id] = 'cloud';
     } else {
       rosters[league.id] = result.league.teams;
