@@ -474,6 +474,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         result={p.lastResult}
         history={isTournament ? [] : p.history}
         onMenu={p.goHome}
+        onPlayAgain={p.matchContext === 'regular' ? (p.returnScreen === 'home' ? p.handleQuickPlay : () => p.setScreen('select')) : undefined}
         onClearHistory={p.clearHistory}
         onContinue={isTournament ? p.handleContinueTournament : p.matchContext === 'online' ? () => p.setScreen('online-lobby') : undefined}
         continueLabel={p.matchContext === 'online' ? 'Voltar ao Lobby' : p.matchContext === 'league' ? (p.selectedLeague ? `Continuar ${p.selectedLeague.name}` : 'Continuar Liga') : p.matchContext === 'bracket' ? `Continuar ${p.bracketState?.cupName ?? 'Copa'}` : undefined}

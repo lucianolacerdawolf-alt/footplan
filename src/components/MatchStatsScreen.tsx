@@ -12,6 +12,8 @@ interface Props {
   result: MatchResult;
   history: MatchRecord[];
   onMenu: () => void;
+  /** Partida avulsa: joga de novo (Jogo Rápido sorteia outra; Partida Única volta à escolha). */
+  onPlayAgain?: () => void;
   onClearHistory: () => void;
   onContinue?: () => void;
   continueLabel?: string;
@@ -113,7 +115,7 @@ function ratingColor(r: number): string {
   return '#ef4444';
 }
 
-export default function MatchStatsScreen({ result, history, onMenu, onClearHistory, onContinue, continueLabel, isTitleWin, userTeamId }: Props) {
+export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain, onClearHistory, onContinue, continueLabel, isTitleWin, userTeamId }: Props) {
   const { homeTeam, awayTeam, homeScore, awayScore, homePossession, awayPossession, homeStats, awayStats, events } = result;
   const ratings = useMemo(() => calculateRatings(result), [result]);
   const motm = useMemo(() => manOfTheMatch(ratings), [ratings]);
@@ -290,9 +292,15 @@ export default function MatchStatsScreen({ result, history, onMenu, onClearHisto
 
       {/* Actions */}
       <div className={styles.actions}>
+        {/* O botão antigo dizia "Escolher Times" mas levava ao menu principal. */}
         {onContinue
           ? <Button glow onClick={onContinue}>{continueLabel ?? 'Continuar'}</Button>
-          : <Button glow onClick={onMenu}>Escolher Times</Button>
+          : (
+            <>
+              {onPlayAgain && <Button glow onClick={onPlayAgain}>Jogar de novo</Button>}
+              <Button variant={onPlayAgain ? 'secondary' : 'primary'} glow={!onPlayAgain} onClick={onMenu}>Menu principal</Button>
+            </>
+          )
         }
       </div>
 

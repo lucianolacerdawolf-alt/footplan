@@ -56,16 +56,19 @@ describe('MatchStatsScreen', () => {
     expect(screen.getByText('10')).toBeInTheDocument(); // chutes do time da casa
   });
 
-  it('sem onContinue, mostra "Escolher Times" e aciona onMenu', () => {
+  it('sem onContinue, "Menu principal" aciona onMenu e "Jogar de novo" aciona onPlayAgain', () => {
     const onMenu = vi.fn();
+    const onPlayAgain = vi.fn();
     render(
-      <MatchStatsScreen result={makeResult()} history={[]} onMenu={onMenu} onClearHistory={vi.fn()} />
+      <MatchStatsScreen result={makeResult()} history={[]} onMenu={onMenu} onPlayAgain={onPlayAgain} onClearHistory={vi.fn()} />
     );
-    fireEvent.click(screen.getByText('Escolher Times'));
+    fireEvent.click(screen.getByText('Menu principal'));
     expect(onMenu).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText('Jogar de novo'));
+    expect(onPlayAgain).toHaveBeenCalledTimes(1);
   });
 
-  it('com onContinue, usa o continueLabel customizado em vez de "Escolher Times"', () => {
+  it('com onContinue, usa o continueLabel customizado em vez do "Menu principal"', () => {
     const onContinue = vi.fn();
     render(
       <MatchStatsScreen
@@ -73,7 +76,7 @@ describe('MatchStatsScreen', () => {
         onContinue={onContinue} continueLabel="Próxima Rodada →"
       />
     );
-    expect(screen.queryByText('Escolher Times')).not.toBeInTheDocument();
+    expect(screen.queryByText('Menu principal')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Próxima Rodada →'));
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
