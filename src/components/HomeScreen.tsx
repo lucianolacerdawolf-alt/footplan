@@ -2,6 +2,14 @@ import type { Difficulty } from '../engine/matchConfig';
 import { getDifficultyLabel } from '../engine/matchConfig';
 import styles from './HomeScreen.module.css';
 import DailyGoalsCard from './DailyGoalsCard';
+import { crestSrc } from '../utils/crest';
+
+export interface CareerResume {
+  teamName: string;
+  crest?: string;
+  /** Ex.: "Premier League · Temporada 1 · Rodada 4" */
+  detail: string;
+}
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
 
@@ -16,9 +24,11 @@ interface Props {
   onFriendLeague?: () => void;
   difficulty: Difficulty;
   onSetDifficulty: (d: Difficulty) => void;
+  /** Carreira salva: vira o card de destaque no topo. */
+  careerResume?: CareerResume | null;
 }
 
-export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, onFriendLeague, difficulty, onSetDifficulty }: Props) {
+export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, onFriendLeague, difficulty, onSetDifficulty, careerResume }: Props) {
   return (
     <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
@@ -26,6 +36,18 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         <span className={styles.titleLine} />
         <p className={styles.subtitle}>Simulador Tático</p>
       </header>
+
+      {careerResume && (
+        <button className={styles.resumeCard} onClick={onCareer}>
+          <img src={crestSrc(careerResume.crest)} alt="" className={styles.resumeCrest} />
+          <div className={styles.modeText}>
+            <span className={styles.resumeKicker}>Continuar carreira</span>
+            <span className={styles.resumeTeam}>{careerResume.teamName}</span>
+            <span className={styles.modeDesc}>{careerResume.detail}</span>
+          </div>
+          <span className={styles.resumePlay} aria-hidden="true">▶</span>
+        </button>
+      )}
 
       <DailyGoalsCard />
 
@@ -81,7 +103,7 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
           <span className={styles.modeIcon}>👔</span>
           <div className={styles.modeText}>
             <span className={styles.modeName}>Modo Carreira</span>
-            <span className={styles.modeDesc}>Progrida por temporadas com seu elenco, transferências e reputação de técnico</span>
+            <span className={styles.modeDesc}>{careerResume ? `Sua carreira com o ${careerResume.teamName}` : 'Progrida por temporadas com seu elenco, transferências e reputação de técnico'}</span>
           </div>
           <span className={styles.modeArrow}>›</span>
         </button>

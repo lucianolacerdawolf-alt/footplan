@@ -20,7 +20,7 @@ import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
 
-import HomeScreen from './HomeScreen';
+import HomeScreen, { type CareerResume } from './HomeScreen';
 import TeamSelectionScreen from './TeamSelectionScreen';
 import SetupScreen from './SetupScreen';
 import TournamentSetupScreen from './TournamentSetupScreen';
@@ -745,9 +745,25 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 };
 
+/** Resumo da carreira salva pro card "Continuar carreira" da tela inicial. */
+export function careerResumeInfo(cs: UseCareerManagerReturn['careerState']): CareerResume | null {
+  if (!cs) return null;
+  const lg = cs.season.league;
+  const team = lg.teams.find(t => t.id === lg.userTeamId);
+  if (!team) return null;
+  const leagueName = getLeague(cs.leagueId)?.name;
+  const step = lg.phase === 'done' ? 'Liga encerrada' : `Rodada ${lg.currentRound + 1}`;
+  return {
+    teamName: team.name,
+    crest: team.logoUrl,
+    detail: [leagueName, `Temporada ${cs.currentSeasonYear}`, step].filter(Boolean).join(' · '),
+  };
+}
+
 function renderHome(props: AppScreensProps): React.ReactNode {
   return (
     <HomeScreen
+      careerResume={careerResumeInfo(props.career.careerState)}
       onSingleMatch={() => { props.setReturnScreen('select'); props.setScreen('league-select'); }}
       onQuickPlay={props.handleQuickPlay}
       onLeague={props.handleLeagueFromHome}
