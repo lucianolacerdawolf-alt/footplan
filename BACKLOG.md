@@ -8,6 +8,27 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
+### Rodada "faz tudo" 2026-11-17 (tarde)
+
+**✅ Entregue:**
+- Patrocinadores fictícios (eram 60 marcas reais); online com ligas atualizadas, time inteiro no protocolo e sem SIMULAR.
+- Worker: allowlist publicado (antes repassava qualquer rota pra API paga) + cache de 6h na borda (o rate limit nativo/em memória não segura; o cache protege a cota).
+- Copa nacional com as duas divisões do país e travada pelo calendário; as 12 ligas da carreira com elencos atualizados.
+- SportAPI7 descobre a temporada atual sozinho e mapeia as 6 segundas divisões.
+- Botão "Avançar" único na Central; ticker com placares ao vivo (reais) dos outros jogos; campo 2D na partida.
+- Categorias de base com potencial escondido + estimativa do olheiro; metas do dia com sequência 🔥.
+- Liga entre Amigos assíncrona (uma rodada por dia, Supabase com RLS).
+
+**⏳ Pendente (depende de você ou de cota):**
+- **AAB:** instalar o Android SDK (não existe na máquina) e gerar a keystore; usar JDK 21 (ver GUIA §4).
+- **SportAPI7:** cota MENSAL estourada (plano BASIC) — os ut de LaLiga 2 (54), 2. Bundesliga (44), Serie B (53) e Liga Portugal 2 (239) ainda não foram confirmados.
+- **Repositório GitHub público** com licença proprietária — decidir se fica privado.
+- **E-mail pessoal** nas páginas de privacidade/termos.
+- **Projeto antigo do Supabase** (`avpxvmiausfqyscomocg`) ainda ativo com escrita aberta.
+- **Posse da engine** às vezes extrema (80–87% pra um lado) — calibração do motor.
+- **Liga entre Amigos v1:** login anônimo por aparelho (trocar de celular perde a vaga); resultado gravado por qualquer membro sem verificação no servidor; sem notificação push de rodada nova.
+- Tela de estatísticas do Jogo Rápido sem botão de voltar ao menu.
+
 ### Playtest mobile 2026-11-17 (Modo Carreira, Crystal Palace, 375px)
 
 **✅ Corrigidos no mesmo dia:**
