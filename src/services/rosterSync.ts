@@ -403,6 +403,9 @@ export async function syncLeagueRoster(
       writeCache(league.id, teams, league.teams.map(t => t.id));
       return { league: { ...league, teams }, source: 'cloud', stats: [] };
     }
+    if (cached) {
+      return { league: { ...league, teams: applyStaticCrests(cached.teams, league) }, source: 'cache', stats: [] };
+    }
     return { league, source: 'static', stats: [], error: 'Sem elenco salvo. Use "Atualizar Elencos via API" para buscar dados ao vivo.' };
   }
 

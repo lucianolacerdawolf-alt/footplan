@@ -626,3 +626,39 @@ describe('jogador desconhecido vindo do sync', () => {
     expect(extra.attributes.finishing).toBeLessThan(extra.attributes.positioning - 20);
   });
 });
+
+describe('cache local × snapshot publicado', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', makeMemoryStorage());
+    vi.unstubAllEnvs();
+    vi.stubEnv('VITE_FOOTBALL_API_KEY', '');
+    vi.stubEnv('VITE_FOOTBALL_PROXY_URL', '');
+    mockSnapshot.value = null;
+  });
+  afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
+
+  const renamed = (suffix: string) => makeLeague().teams.map(t => ({ ...t, name: `${t.name} ${suffix}` }));
+
+  it('snapshot publicado DEPOIS do cache vence (sync diário chega a quem já abriu o jogo)', async () => {
+    const league = makeLeague();
+    mockSnapshot.value = { rosters: { [league.id]: renamed('v1') }, updatedAt: new Date(Date.now() - 60_000).toISOString() };
+    const first = await syncLeagueRoster(league);           // grava cache a partir do v1
+    expect(first.league.teams[0].name).toMatch(/v1$/);
+    mockSnapshot.value = { rosters: { [league.id]: renamed('v2') }, updatedAt: new Date(Date.now() + 60_000).toISOString() };
+    const second = await syncLeagueRoster(league);
+    expect(second.source).toBe('cloud');
+    expect(second.league.teams[0].name).toMatch(/v2$/);
+  });
+
+  it('snapshot mais velho que o cache não sobrescreve; sem nuvem, usa o cache', async () => {
+    const league = makeLeague();
+    mockSnapshot.value = { rosters: { [league.id]: renamed('v1') }, updatedAt: new Date(Date.now() - 60_000).toISOString() };
+    await syncLeagueRoster(league);
+    const again = await syncLeagueRoster(league);
+    expect(again.source).toBe('cache');
+    mockSnapshot.value = null;
+    const offline = await syncLeagueRoster(league);
+    expect(offline.source).toBe('cache');
+    expect(offline.league.teams[0].name).toMatch(/v1$/);
+  });
+});
