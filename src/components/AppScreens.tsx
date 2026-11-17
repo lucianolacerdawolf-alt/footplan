@@ -10,7 +10,7 @@ import type { UseAchievementsReturn } from '../hooks/useAchievements';
 import type { LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import type { Difficulty } from '../engine/matchConfig';
 import type { UseCareerManagerReturn } from '../hooks/useCareerManager';
-import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers, getSponsorTier, getSponsorName } from '../engine/career';
+import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers, getSponsorTier, getSponsorName, getYouthPool } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, getSponsorMultiplier, getSponsorMinReputation, type SponsorTier } from '../engine/sponsors';
 import { getTicketRevenue } from '../engine/transferMarket';
 import { hasMandatoryUnread } from '../engine/inbox';
@@ -30,6 +30,7 @@ import BracketScreen from './BracketScreen';
 import OnlineLobbyScreen from './OnlineLobbyScreen';
 import LeagueSelectScreen from './LeagueSelectScreen';
 import CupSelectScreen from './CupSelectScreen';
+import YouthAcademyScreen from './YouthAcademyScreen';
 import { getLeague } from '../data/leagues';
 import { cupLockMessage } from '../engine/cupSchedule';
 
@@ -508,6 +509,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onNextRound={p.career.handleNextCareerLeagueRound}
         onViewLeague={p.nav.toCareerLeague}
         onSimulateRound={p.career.handleSimulateCareerLeagueRound}
+        onViewYouth={p.nav.toCareerYouth}
         onOpenJobMarket={p.nav.toCareerJobMarket}
         jobOfferCount={getJobOffers(p.career.careerState).length}
         onRespondConversation={p.career.handleRespondConversation}
@@ -544,6 +546,20 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onSignFreeAgent={p.career.handleSignFreeAgent}
         onRosterSynced={p.career.handleMarketRosterSynced}
         onProposeTrade={p.nav.toTradePropose}
+      />
+    );
+  },
+
+  'career-youth-academy': (p) => {
+    const cs = p.career.careerState;
+    if (!cs) return null;
+    const userTeam = cs.rosters[cs.leagueId]?.find(t => t.id === cs.season.league.userTeamId);
+    return (
+      <YouthAcademyScreen
+        youthPlayers={getYouthPool(cs)}
+        squadSize={userTeam?.squad.length ?? 0}
+        onPromote={p.career.handlePromoteYouthPlayer}
+        onBack={p.nav.toHub}
       />
     );
   },

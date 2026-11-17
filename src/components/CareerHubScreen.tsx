@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, getSponsorName, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory } from '../engine/career';
+import { getInbox, getSponsorName, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory, getYouthPool } from '../engine/career';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -9,6 +9,7 @@ import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import { isCupStageOpen } from '../engine/cupSchedule';
+import { canPromote } from '../engine/youthAcademy';
 import { playerOvr } from '../utils/playerOvr';
 import { getStarterCount } from '../engine/squadUtils';
 import { generateSocialFeed } from '../engine/socialFeed';
@@ -62,6 +63,8 @@ interface Props {
   pressDone?: boolean;
   /** Abre o Escritório (tela da liga) — usado quando ainda faltam jogos da rodada. */
   onViewLeague: () => void;
+  /** Abre as Categorias de Base. */
+  onViewYouth?: () => void;
   /** Simula os jogos restantes da rodada (mesmo handler do "Simular Todos" do Escritório). */
   onSimulateRound?: (roundIndex: number) => void;
   /** Motivo pra bloquear o avanço de rodada (ex: mensagem obrigatória não lida). */
@@ -162,7 +165,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onSimulateRound, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
+function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onSimulateRound, onViewYouth, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
   const inbox = getInbox(state);
   const finances = getFinances(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
@@ -178,6 +181,8 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
   const currentRoundFixtures = state.season.league.fixtures[state.season.league.currentRound];
   const roundComplete = currentRoundFixtures?.every(f => f.played) ?? false;
   const awaitingRound = !nextMatch && !seasonReady && state.season.league.phase !== 'done';
+  const youthPool = getYouthPool(state);
+  const youthReady = youthPool.filter(canPromote).length;
 
   // "Avançar" único (estilo FM): simula o resto da rodada e, quando o estado já mostra a
   // rodada completa, avança — antes eram duas telas (Escritório → Simular Todos → voltar
@@ -493,6 +498,17 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
             </span>
             <span className={styles.jobMarketChevron}><Icon name="chevron-right" size={16} /></span>
           </button>
+
+          {onViewYouth && (
+            <button className={styles.jobMarketCard} onClick={onViewYouth}>
+              <span className={styles.jobMarketIcon} aria-hidden="true">🌱</span>
+              <span className={styles.jobMarketLabel}>
+                Categorias de Base
+                {youthPool.length > 0 && <span className={styles.jobMarketBadge}>{youthPool.length} jove{youthPool.length > 1 ? 'ns' : 'm'}{youthReady > 0 ? ` · ${youthReady} pronto${youthReady > 1 ? 's' : ''}` : ''}</span>}
+              </span>
+              <span className={styles.jobMarketChevron}><Icon name="chevron-right" size={16} /></span>
+            </button>
+          )}
 
           {socialPosts.length > 0 && <SocialFeedCard posts={socialPosts} />}
         </div>

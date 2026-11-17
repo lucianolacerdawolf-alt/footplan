@@ -1,0 +1,35 @@
+.screen { padding: 12px 16px 96px; max-width: 640px; margin: 0 auto; }
+.header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.backBtn {
+  min-height: 40px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-secondary); cursor: pointer; font-weight: 600;
+}
+.title { font-size: 20px; margin: 0; }
+.intro { color: var(--text-secondary); font-size: 13px; margin: 4px 0 12px; }
+.empty { color: var(--text-secondary); text-align: center; padding: 24px 0; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.card { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--code-bg); }
+.cardReady { border-color: var(--positive); }
+.row { display: flex; align-items: center; gap: 8px; }
+.pos {
+  font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 6px;
+  border-radius: 4px; background: var(--border); color: var(--text-h);
+}
+.name { flex: 1; font-weight: 700; color: var(--text-h); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.age { color: var(--text-secondary); font-size: 12px; }
+.ovr { font-family: var(--mono); font-weight: 800; font-size: 16px; color: var(--accent); min-width: 28px; text-align: right; }
+.attrs { color: var(--text-secondary); font-size: 12px; margin: 4px 0 6px; }
+.potentialRow { display: flex; align-items: center; gap: 8px; }
+.potLabel { font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+.potBar { position: relative; flex: 1; height: 8px; border-radius: 4px; background: var(--border); overflow: hidden; }
+.potNow { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); opacity: 0.85; }
+.potRange { position: absolute; top: 0; bottom: 0; background: var(--positive); opacity: 0.55; }
+.potValue { font-family: var(--mono); font-size: 12px; color: var(--text-h); min-width: 44px; text-align: right; }
+.footer { margin-top: 8px; }
+.hint { font-size: 12px; color: var(--text-secondary); }
+.modalBackdrop {
+  position: fixed; inset: 0; background: rgba(3, 6, 12, 0.7); display: flex;
+  align-items: center; justify-content: center; padding: 16px; z-index: 1000;
+}
+.modal { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 16px; max-width: 360px; }
+.modalActions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }

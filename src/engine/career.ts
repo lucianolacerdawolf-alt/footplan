@@ -138,6 +138,8 @@ export interface CareerState {
   finances?: ClubFinances;
   inbox?: InboxMessage[];
   freeAgentPool?: Player[];
+  /** Categorias de base: jovens 15-19 anos com potencial escondido (ver youthAcademy.ts). */
+  youthPool?: Player[];
   transferHistory?: TransferRecord[];
   // Jogadores que o usuário colocou à venda — a cada rodada com a janela aberta,
   // qualquer time do jogo pode fazer uma oferta (ver handleNextCareerLeagueRound).
@@ -160,6 +162,10 @@ export interface CareerState {
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };
+
+export function getYouthPool(state: CareerState): Player[] {
+  return state.youthPool ?? [];
+}
 
 export function getFreeAgentPool(state: CareerState): Player[] {
   return state.freeAgentPool ?? [];

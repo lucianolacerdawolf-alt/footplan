@@ -382,7 +382,9 @@ describe('Finanças e Inbox (Modo Carreira)', () => {
     expect(state.finances!.wageBill).toBeGreaterThan(0); // elenco já tem weeklyWage atribuído
     expect(state.finances!.weeklyIncome).toBeGreaterThan(0);
 
-    expect(state.inbox).toHaveLength(2); // welcome + board objectives
+    expect(state.inbox).toHaveLength(3); // welcome + board objectives + captação da base
+    expect(state.inbox!.some(m => m.subject.includes('Captação da Base'))).toBe(true);
+    expect(state.youthPool!.length).toBeGreaterThanOrEqual(3);
     expect(state.inbox!.some(m => m.type === 'BOARD_UPDATE' && m.subject.includes('Bem-vindo'))).toBe(true);
     expect(state.inbox!.some(m => m.subject.includes('Objetivos'))).toBe(true);
     expect(state.inbox![0].isRead).toBe(false);

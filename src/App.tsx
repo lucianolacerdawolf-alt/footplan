@@ -308,6 +308,7 @@ function App() {
     toCareerBracket: () => setScreen('career-bracket'),
     toCareerContinental: () => setScreen('career-continental'),
     toCareerJobMarket: () => setScreen('career-job-market'),
+    toCareerYouth: () => setScreen('career-youth-academy'),
     toTransferMarket: () => setScreen('transfer-market'),
     toTradePropose: () => setScreen('trade-propose'),
   }), [setScreen, setIsCareerMode, goHome]);

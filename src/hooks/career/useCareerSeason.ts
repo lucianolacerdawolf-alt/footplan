@@ -4,13 +4,14 @@ import { computeStandings, type BracketState } from '@/engine/tournament';
 import { assignMarketValues, computeWageBill, computeWeeklyIncome, getLeaguePrizeMoney, getCupPrizeMoney } from '@/engine/transferMarket';
 import { generateBoardObjectives, evaluateBoardObjectives, createBoardObjectivesInboxMessage, createBoardObjectivesResultMessage } from '@/engine/boardObjectives';
 import { refreshFreeAgentPool } from '@/engine/freeAgentPool';
+import { refreshYouthPool, generateYouthIntake, canPromote } from '@/engine/youthAcademy';
 import { getLeague, allLeagues } from '@/data/leagues';
 import { determineUserContinentalCup, getContinentalPrizeMoney, getQualifiedTeams, createContinentalBracket } from '@/engine/continentalCups';
 import { CUP_RESULT_LABELS } from '@/engine/careerLabels';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/engine/seasonClosure';
 import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, computeMerchRevenue } from '@/engine/sponsors';
-import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, pairedDivisionId, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
-import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage, createContinentalQualificationMessage, createContinentalResultMessage } from '@/engine/inbox';
+import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, pairedDivisionId, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getYouthPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
+import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage, createContinentalQualificationMessage, createContinentalResultMessage, createYouthIntakeMessage, createYouthReadyMessage, createYouthReleasedMessage } from '@/engine/inbox';
 import { generateJobOffers } from '@/engine/jobMarket';
 import type { Screen } from '@/types/navigation';
 
@@ -180,6 +181,17 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         objectiveMessages.push(createContractExpiringMessage(expiringSoon.map(p => p.name), `Temporada ${careerState.currentSeasonYear + 1}`));
       }
 
+      // Categorias de base: evolui quem está lá, dispensa quem chegou aos 20 e recebe a
+      // captação do ano. O usuário decide quem promover (tela Categorias de Base).
+      const nextSeasonLabel = `Temporada ${careerState.currentSeasonYear + 1}`;
+      const { remaining: youthRemaining, released: youthReleased } = refreshYouthPool(getYouthPool(careerState));
+      const youthIntake = generateYouthIntake(careerState.currentSeasonYear + 1);
+      const nextYouthPool = [...youthRemaining, ...youthIntake];
+      objectiveMessages.push(createYouthIntakeMessage(youthIntake.map(p => p.name), nextSeasonLabel));
+      const youthReady = youthRemaining.filter(canPromote);
+      if (youthReady.length > 0) objectiveMessages.push(createYouthReadyMessage(youthReady.map(p => p.name), nextSeasonLabel));
+      if (youthReleased.length > 0) objectiveMessages.push(createYouthReleasedMessage(youthReleased.map(p => p.name), nextSeasonLabel));
+
       // Fase 2 — Mercado de Treinador: sondagens pro novo ciclo, com a reputação final.
       const jobOffers = generateJobOffers({
         rosters: evolvedRosters,
@@ -210,6 +222,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
           finances: { budget: finances.budget + leaguePrize + cupPrize + goalBonuses + continentalPrize, wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
           inbox: [...(prev.inbox ?? []), ...objectiveMessages],
           freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(prev), prev.currentSeasonYear + 1, Math.random, departures),
+          youthPool: nextYouthPool,
           sponsorTier: nextSponsorTier,
           sponsorName: nextSponsorName,
           boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },

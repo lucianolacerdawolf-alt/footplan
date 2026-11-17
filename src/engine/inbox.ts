@@ -146,3 +146,27 @@ export function hasMandatoryUnread(inbox: InboxMessage[]): boolean {
 export function countUnread(inbox: InboxMessage[]): number {
   return inbox.filter(m => !m.isRead).length;
 }
+
+export function createYouthIntakeMessage(names: string[], date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `🌱 Captação da Base — ${names.length} jovens`,
+    body: `Chegaram às categorias de base: ${names.join(', ')}. O olheiro já mandou a estimativa de potencial — veja em Meu Clube → Categorias de Base.`,
+  });
+}
+
+export function createYouthReadyMessage(names: string[], date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `🎓 Prontos pra subir — ${names.length} da base`,
+    body: `${names.join(', ')} já ${names.length > 1 ? 'podem' : 'pode'} ser promovido${names.length > 1 ? 's' : ''} ao profissional (18+ anos e OVR 55+).`,
+  });
+}
+
+export function createYouthReleasedMessage(names: string[], date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `👋 Dispensados da base — ${names.length}`,
+    body: `${names.join(', ')} chegaram aos 20 anos sem ser promovidos e deixaram o clube.`,
+  });
+}

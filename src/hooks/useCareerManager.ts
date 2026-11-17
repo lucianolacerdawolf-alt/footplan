@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { assignMarketValues, computeWageBill, initialBudget, computeWeeklyIncome } from '../engine/transferMarket';
-import { createWelcomeMessage } from '../engine/inbox';
+import { createWelcomeMessage, createYouthIntakeMessage } from '../engine/inbox';
+import { generateYouthIntake, promoteYouthPlayer, canPromote } from '../engine/youthAcademy';
 import { generateFreeAgentPool } from '../engine/freeAgentPool';
 import { generateBoardObjectives, createBoardObjectivesInboxMessage } from '../engine/boardObjectives';
 import { cloneTeam } from '../utils/teamUtils';
@@ -11,7 +12,7 @@ import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { getRosterSyncInfo, getLoadedLeagueTeams } from '../services/rosterSync';
 import { generateSponsor, getStartingTier, getSponsorMultiplier } from '../engine/sponsors';
-import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, pairedDivisionId, type CareerState } from '../engine/career';
+import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, pairedDivisionId, getYouthPool, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
 import { useTransferManager } from './career/useTransferManager';
 import { useCareerSeason } from './career/useCareerSeason';
@@ -145,6 +146,7 @@ export function useCareerManager({
     // pagava como Local (base sem multiplicador). Agora bate com o resto do jogo.
     const weeklyIncome = Math.round(computeWeeklyIncome(leagueDef.id) * getSponsorMultiplier(startingTier));
     const boardObj = generateBoardObjectives(league, 0, 1);
+    const youthIntake = generateYouthIntake(1);
     const newState: CareerState = {
       version: 1,
       leagueId: leagueDef.id,
@@ -154,8 +156,9 @@ export function useCareerManager({
       rosters,
       history: [],
       finances: { budget, wageBill: computeWageBill(userTeamWithValues), weeklyIncome },
-      inbox: [createWelcomeMessage(trimmedName, budget, 'Temporada 1'), createBoardObjectivesInboxMessage(boardObj)],
+      inbox: [createWelcomeMessage(trimmedName, budget, 'Temporada 1'), createBoardObjectivesInboxMessage(boardObj), createYouthIntakeMessage(youthIntake.map(p => p.name), 'Temporada 1')],
       freeAgentPool: generateFreeAgentPool(),
+      youthPool: youthIntake,
       sponsorTier: startingTier,
       sponsorName: sponsor.name,
       boardObjectives: boardObj,
@@ -164,6 +167,31 @@ export function useCareerManager({
     setIsCareerMode(true);
     setScreen('career-hub');
   }, [setCareerState, setIsCareerMode, setScreen]);
+
+  // Categorias de base: promove um jovem pronto (18+ e OVR 55+) ao elenco profissional.
+  const handlePromoteYouthPlayer = useCallback((playerId: string) => {
+    if (!careerState) return;
+    const pool = getYouthPool(careerState);
+    const youth = pool.find(p => p.id === playerId);
+    if (!youth || !canPromote(youth)) return;
+    const userTeamId = careerState.season.league.userTeamId;
+    const leagueTeams = careerState.rosters[careerState.leagueId];
+    const userTeam = leagueTeams.find(t => t.id === userTeamId);
+    if (!userTeam) return;
+    const updatedTeam = promoteYouthPlayer(youth, userTeam);
+    const promoted = updatedTeam.squad[updatedTeam.squad.length - 1];
+    setCareerState(prev => prev ? {
+      ...prev,
+      youthPool: getYouthPool(prev).filter(p => p.id !== playerId),
+      rosters: { ...prev.rosters, [prev.leagueId]: prev.rosters[prev.leagueId].map(t => t.id === userTeamId ? updatedTeam : t) },
+      season: {
+        ...prev.season,
+        league: { ...prev.season.league, teams: prev.season.league.teams.map(t => t.id === userTeamId ? { ...t, squad: [...t.squad, promoted] } : t) },
+      },
+      finances: prev.finances ? { ...prev.finances, wageBill: computeWageBill(updatedTeam) } : prev.finances,
+    } : prev);
+    setToastMsg(`✅ ${youth.name} promovido ao elenco profissional!`);
+  }, [careerState, setCareerState, setToastMsg]);
 
   const conversations = useCareerConversations({ careerState, setCareerState, setToastMsg });
   const preMatch = useCareerPreMatch({ careerState, setCareerState, setToastMsg });
@@ -188,6 +216,7 @@ export function useCareerManager({
   return {
     careerState, setCareerState,
     handleStartCareer,
+    handlePromoteYouthPlayer,
     rosterLastUpdatedAt,
     cloudStatus, retryCloudSave,
     ...matchFlow,

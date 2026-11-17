@@ -68,6 +68,9 @@ export interface Player {
   contractSeasonsLeft?: number;   // temporadas restantes de contrato (Modo Carreira)
   lastRenewedSeasonYear?: number; // temporada em que renovou pela última vez (cooldown de renovação)
   contractGoal?: ContractGoal;    // cláusula de performance assinada na renovação (meta + bônus)
+  /** OVR máximo que um jovem da base pode atingir — ESCONDIDO do usuário (a tela mostra
+   *  só a estimativa do olheiro, ver youthAcademy.scoutEstimate). Só jogadores da base. */
+  potential?: number;
 }
 
 /** Meta de contrato (cláusula de performance): atingir `target` gols na temporada
