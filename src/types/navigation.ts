@@ -3,7 +3,7 @@ export type Screen =
   | 'tournament-setup' | 'league' | 'bracket' | 'achievements' | 'online-lobby'
   | 'career-hub' | 'career-league' | 'career-bracket' | 'trade-propose' | 'season-end'
   | 'league-table' | 'career-league-table' | 'career-trophy-room' | 'transfer-market'
-  | 'career-job-market' | 'career-continental' | 'career-youth-academy';
+  | 'career-job-market' | 'career-continental' | 'career-youth-academy' | 'friend-league';
 
 /** Callbacks de navegação da carreira com identidade estável. Agrupados num
  *  objeto (memoizado no App) para que as telas de carreira React.memo consigam

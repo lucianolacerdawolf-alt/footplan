@@ -13,11 +13,12 @@ interface Props {
   onCup: () => void;
   onAchievements: () => void;
   onOnline: () => void;
+  onFriendLeague?: () => void;
   difficulty: Difficulty;
   onSetDifficulty: (d: Difficulty) => void;
 }
 
-export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, difficulty, onSetDifficulty }: Props) {
+export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, onFriendLeague, difficulty, onSetDifficulty }: Props) {
   return (
     <div className={`${styles.screen} app-screen`}>
       <header className={styles.header}>
@@ -46,6 +47,17 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
           </div>
           <span className={styles.modeArrow}>›</span>
         </button>
+
+        {onFriendLeague && (
+          <button className={styles.modeCard} onClick={onFriendLeague}>
+            <span className={styles.modeIcon}>👥</span>
+            <div className={styles.modeText}>
+              <span className={styles.modeName}>Liga entre Amigos</span>
+              <span className={styles.modeDesc}>Cada um comanda um clube · uma rodada por dia</span>
+            </div>
+            <span className={styles.modeArrow}>›</span>
+          </button>
+        )}
 
         <button className={styles.modeCard} onClick={onSingleMatch}>
           <span className={styles.modeIcon}>⚽</span>

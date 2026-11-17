@@ -27,6 +27,7 @@ export const backTargets: Record<Screen, (c: BackNavContext) => BackTarget> = {
   'cup-select': () => 'home-reset',
   'select': () => 'league-select',
   'online-lobby': () => 'home',
+  'friend-league': () => 'home',
   'tournament-setup': (c) => (c.tournamentMode === 'bracket' ? 'cup-select' : 'league-select'),
 
   'league': () => 'home-reset',

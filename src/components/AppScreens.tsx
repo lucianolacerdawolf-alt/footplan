@@ -31,6 +31,7 @@ import OnlineLobbyScreen from './OnlineLobbyScreen';
 import LeagueSelectScreen from './LeagueSelectScreen';
 import CupSelectScreen from './CupSelectScreen';
 import YouthAcademyScreen from './YouthAcademyScreen';
+import FriendLeagueScreen from './FriendLeagueScreen';
 import { getLeague } from '../data/leagues';
 import { cupLockMessage } from '../engine/cupSchedule';
 
@@ -244,6 +245,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
       onGoHome={() => { localStorage.removeItem('fp:homeId'); localStorage.removeItem('fp:awayId'); p.goHome(); }}
     />
   ),
+
+  'friend-league': (p) => <FriendLeagueScreen onBack={() => p.setScreen('home')} />,
 
   'online-lobby': (p) => (
     <OnlineLobbyScreen peer={p.peer} onStartMatch={p.handleStartOnlineMatch} onBack={() => p.setScreen('home')} onGoHome={p.goHome} />
@@ -750,6 +753,7 @@ function renderHome(props: AppScreensProps): React.ReactNode {
       onCup={props.handleCupFromHome}
       onAchievements={() => props.setScreen('achievements')}
       onOnline={() => props.setScreen('online-lobby')}
+      onFriendLeague={() => props.setScreen('friend-league')}
       difficulty={props.difficulty}
       onSetDifficulty={props.setDifficulty}
     />

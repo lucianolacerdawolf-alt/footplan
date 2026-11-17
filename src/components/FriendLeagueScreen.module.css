@@ -1,0 +1,51 @@
+.screen { padding: 12px 16px 96px; max-width: 680px; margin: 0 auto; }
+.header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.backBtn {
+  min-height: 40px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-secondary); cursor: pointer; font-weight: 600;
+}
+.title { font-size: 20px; margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.subtitle { font-size: 14px; margin: 14px 0 6px; color: var(--text-h); }
+.note { color: var(--text-secondary); font-size: 13px; margin: 6px 0; }
+.error { color: var(--negative); font-size: 13px; margin: 8px 0; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.leagueRow {
+  width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--code-bg); color: inherit; display: flex; flex-direction: column; gap: 2px;
+}
+.leagueName { font-weight: 700; color: var(--text-h); }
+.leagueMeta { font-size: 12px; color: var(--text-secondary); }
+.field { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; font-size: 13px; color: var(--text-secondary); }
+.field input, .field select {
+  min-height: 42px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--code-bg); color: var(--text-h); font-size: 15px;
+}
+.teamGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.teamBtn {
+  display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--code-bg); color: var(--text-h); text-align: left; min-height: 44px;
+}
+.teamBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.teamSelected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.crest { width: 24px; height: 24px; object-fit: contain; flex: 0 0 auto; }
+.teamName { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.teamOvr { font-family: var(--mono); font-size: 12px; color: var(--text-secondary); }
+.stickyAction { position: sticky; bottom: 12px; margin-top: 12px; }
+.codeRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+.code { font-family: var(--mono); font-size: 16px; letter-spacing: 2px; color: var(--accent); }
+.panel { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-top: 10px; background: var(--code-bg); }
+.nextMatch { margin: 6px 0; color: var(--text-h); font-size: 14px; }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.preset {
+  flex: 1; min-height: 40px; border-radius: 8px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-secondary); cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.presetActive { border-color: var(--accent); color: var(--accent); }
+.results { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 4px 12px; font-family: var(--mono); font-size: 12px; color: var(--text-secondary); }
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .table td { padding: 6px 4px; text-align: left; border-bottom: 1px solid var(--border); }
+.table th:not(:nth-child(2)), .table td:not(:nth-child(2)) { text-align: center; width: 36px; }
+.mine td { color: var(--accent); }
+.human td { color: var(--text-h); }
+.owner { color: var(--text-secondary); font-size: 11px; }
