@@ -229,7 +229,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
         <h1 className={styles.title}>🛒 Mercado</h1>
         {activeTab === 'buy' && buyLeagueId && leagueMeta(buyLeagueId) && (
           <span className={styles.leagueBadge} aria-label={`Navegando em ${leagueMeta(buyLeagueId)!.name}`}>
-            <img src={leagueMeta(buyLeagueId)!.logo} alt="" className={styles.leagueBadgeLogo} />
+            <img src={crestSrc(leagueMeta(buyLeagueId)!.logo)} alt="" className={styles.leagueBadgeLogo} />
             <span className={styles.leagueBadgeName}>{leagueMeta(buyLeagueId)!.name}</span>
           </span>
         )}
@@ -332,7 +332,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                 <div className={styles.leagueGrid}>
                   {allLeagues.map(l => (
                     <button key={l.id} className={styles.leagueCard} onClick={() => setBuyLeagueId(l.id)}>
-                      <img src={l.logo} alt={l.name} className={styles.leagueLogo} />
+                      <img src={crestSrc(l.logo)} alt={l.name} className={styles.leagueLogo} />
                       <span className={styles.leagueName}>{l.name}{l.id === userLeagueId ? ' (sua liga)' : ''}</span>
                       <span className={styles.leagueMeta}>{(rosters[l.id] ?? l.teams).length} times</span>
                     </button>
