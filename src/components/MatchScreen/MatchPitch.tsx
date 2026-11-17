@@ -71,11 +71,47 @@ interface Props {
   event: MatchEvent | null;
 }
 
+/** Jogador citado no lance: o artilheiro em gols; senão o 1º nome do elenco do time que
+ *  agiu que aparece no texto da narração (o mais longo primeiro, pra "Bruno Fernandes"
+ *  não virar "Bruno"). */
+export function protagonistName(event: MatchEvent | null, home: Team, away: Team): string | null {
+  if (!event) return null;
+  if (event.type === 'goal' && event.scorer) return event.scorer;
+  const team = event.teamId === home.id ? home : event.teamId === away.id ? away : null;
+  if (!team) return null;
+  const names = team.squad.map(p => p.name).sort((a, b) => b.length - a.length);
+  let best: { name: string; at: number } | null = null;
+  for (const n of names) {
+    const at = event.description.indexOf(n);
+    if (at >= 0 && (!best || at < best.at)) best = { name: n, at };
+  }
+  return best?.name ?? null;
+}
+
+/** Último nome (ou o nome inteiro, se curto) pro rótulo caber no campo. */
+function shortName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return parts.length > 1 && name.length > 12 ? parts[parts.length - 1] : name;
+}
+
 function MatchPitch({ home, away, event }: Props) {
   const ball = useMemo(() => ballFor(event, home.id), [event, home.id]);
   const homeDots = useMemo(() => teamDots(home.strategy.formation, 'home', ball.x), [home.strategy.formation, ball.x]);
   const awayDots = useMemo(() => teamDots(away.strategy.formation, 'away', ball.x), [away.strategy.formation, ball.x]);
   const isGoal = event?.type === 'goal' || (event?.type === 'penalty' && event.description.includes('⚽'));
+  // Quem está com a bola: o jogador do time que agiu mais perto dela (anel), com o nome
+  // de quem a narração citou.
+  const actingHome = event?.teamId === home.id;
+  const actingDots = event?.teamId ? (actingHome ? homeDots : awayDots) : null;
+  const carrier = useMemo(() => {
+    if (!actingDots) return -1;
+    let idx = -1, best = Infinity;
+    actingDots.forEach((d, i) => { const dist = (d.x - ball.x) ** 2 + (d.y - ball.y) ** 2; if (dist < best) { best = dist; idx = i; } });
+    return idx;
+  }, [actingDots, ball.x, ball.y]);
+  const name = protagonistName(event, home, away);
+  const labelX = Math.min(W - 12, Math.max(12, ball.x));
+  const labelY = ball.y < 8 ? ball.y + 6 : ball.y - 3.2;
 
   return (
     <div className={styles.wrap} aria-hidden="true">
@@ -105,7 +141,13 @@ function MatchPitch({ home, away, event }: Props) {
           <circle key={`a${i}`} cx={d.x} cy={d.y} r={d.gk ? 1.9 : 1.7} className={styles.player}
             style={{ fill: d.gk ? away.secondaryColor : away.color, stroke: d.gk ? away.color : away.secondaryColor }} />
         ))}
+        {carrier >= 0 && actingDots && (
+          <circle cx={actingDots[carrier].x} cy={actingDots[carrier].y} r={2.9} className={styles.carrierRing} />
+        )}
         <circle cx={ball.x} cy={ball.y} r={1.1} className={styles.ball} />
+        {name && !isGoal && (
+          <text x={labelX} y={labelY} className={styles.nameLabel} textAnchor="middle">{shortName(name)}</text>
+        )}
       </svg>
       {isGoal && <div className={styles.goalFlash}>GOL!</div>}
     </div>

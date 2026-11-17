@@ -26,6 +26,23 @@
   transition: cx 0.7s ease-in-out, cy 0.7s ease-in-out;
 }
 
+.carrierRing {
+  fill: none;
+  stroke: #fde047;
+  stroke-width: 0.45;
+  transition: cx 0.7s ease-in-out, cy 0.7s ease-in-out;
+}
+
+.nameLabel {
+  font-size: 2.6px;
+  font-weight: 700;
+  fill: #fff;
+  paint-order: stroke;
+  stroke: rgba(0, 0, 0, 0.75);
+  stroke-width: 0.6px;
+  pointer-events: none;
+}
+
 .ball {
   fill: #ffffff;
   stroke: #111;
@@ -58,6 +75,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .player, .ball { transition: none; }
+  .player, .ball, .carrierRing { transition: none; }
   .goalFlash { animation: none; }
 }
