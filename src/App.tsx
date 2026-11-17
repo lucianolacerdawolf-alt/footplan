@@ -212,15 +212,28 @@ function App() {
   // matchContext sozinho não distingue Campeonatos de Modo Carreira (Anti-Pattern 3
   // do RESEARCH.md) — isCareerMode resolve a ambiguidade, checado ANTES dos branches
   // regulares de liga/copa.
-  const handleViewStatsFromMatch = useCallback((result: MatchResult) => {
+  /** Grava o resultado no torneio corrente (carreira ou avulso). Devolve false fora de torneio. */
+  const recordTournamentResult = useCallback((result: MatchResult): boolean => {
     if (isCareerMode && matchContext === 'league') { career.handleCareerLeagueMatchResult(result); }
     else if (isCareerMode && matchContext === 'bracket') { career.handleCareerBracketMatchResult(result); }
     else if (matchContext === 'league') { handleLeagueMatchResult(result); }
     else if (matchContext === 'bracket') { handleBracketMatchResult(result); }
-    else { handleViewStats(result); return; }
+    else return false;
     setLastResult(result);
+    return true;
+  }, [matchContext, isCareerMode, career, handleLeagueMatchResult, handleBracketMatchResult, setLastResult]);
+
+  const handleViewStatsFromMatch = useCallback((result: MatchResult) => {
+    if (!recordTournamentResult(result)) { handleViewStats(result); return; }
     setScreen('stats');
-  }, [matchContext, isCareerMode, career, handleLeagueMatchResult, handleBracketMatchResult, handleViewStats, setLastResult, setScreen]);
+  }, [recordTournamentResult, handleViewStats, setScreen]);
+
+  // "Continuar" no fim de uma partida ao vivo: antes só trocava de tela e o resultado
+  // era descartado (só o botão de Estatísticas gravava). Agora grava e segue pro torneio.
+  const handleContinueFromMatch = useCallback((result: MatchResult) => {
+    recordTournamentResult(result);
+    handleContinueTournament();
+  }, [recordTournamentResult, handleContinueTournament]);
 
   // ── Resume prompt ─────────────────────────────────────────────────────────
   const { resumePrompt, setResumePrompt, handleResumeContinue, handleResumeNew } = useResumePrompt({
@@ -332,6 +345,7 @@ function App() {
     handleStartMatch,
     handleViewStats,
     handleViewStatsFromMatch,
+    handleContinueFromMatch,
     handleLeagueFromHome,
     handleCupFromHome,
     handleCareerFromHome,

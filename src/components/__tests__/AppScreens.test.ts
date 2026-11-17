@@ -45,6 +45,25 @@ describe('screenMap — teste de navegação (P3 #9)', () => {
     expect(orphan, `Chaves no screenMap que não estão no tipo Screen: ${orphan.join(', ')}`).toEqual([]);
   });
 
+  // Regressão: o "Continuar" do fim de partida ao vivo só trocava de tela e o resultado
+  // era descartado (só "Estatísticas" gravava). Em torneio, ele tem que receber o
+  // handler que GRAVA o resultado antes de voltar pro torneio.
+  it.each(['league', 'bracket'] as const)('partida de torneio (%s): Continuar grava o resultado', (matchContext) => {
+    const team = { id: 't1' } as unknown;
+    const p = {
+      homeTeam: team, awayTeam: { id: 't2' }, matchContext, isCareerMode: false,
+      leagueState: null, bracketState: null, career: { careerState: null },
+      onlineRngRef: { current: null }, peer: { state: 'idle' },
+      handleContinueFromMatch: () => {}, handleContinueTournament: () => {},
+      handleViewStatsFromMatch: () => {}, setScreen: () => {}, setPendingResumeSnapshot: () => {},
+    } as unknown as Parameters<typeof screenMap['match']>[0];
+
+    const el = screenMap.match(p) as { props: { onContinue?: unknown } };
+
+    expect(el.props.onContinue).toBe(p.handleContinueFromMatch);
+    expect(el.props.onContinue).not.toBe(p.handleContinueTournament);
+  });
+
   it('cada renderer é uma função (não undefined/null)', () => {
     for (const screen of ALL_SCREENS) {
       const renderer = screenMap[screen];

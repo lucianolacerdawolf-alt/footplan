@@ -120,6 +120,8 @@ export interface AppScreensProps {
   handleStartMatch: (home: Team, away: Team) => void;
   handleViewStats: (result: MatchResult) => void;
   handleViewStatsFromMatch: (result: MatchResult) => void;
+  /** Fim de partida ao vivo em torneio: grava o resultado e volta pro torneio. */
+  handleContinueFromMatch: (result: MatchResult) => void;
 
   // ── Home navigation ──
   handleLeagueFromHome: () => void;
@@ -391,7 +393,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         isKnockout={p.isKnockout}
         rng={onlineRngFn}
         online={onlineProps}
-        onContinue={isTournament ? p.handleContinueTournament : undefined}
+        onContinue={isTournament ? p.handleContinueFromMatch : undefined}
         continueLabel={p.matchContext === 'league' ? (p.selectedLeague ? `Continuar ${p.selectedLeague.name}` : 'Continuar Liga') : p.matchContext === 'bracket' ? `Continuar ${p.bracketState?.cupName ?? 'Copa'}` : undefined}
         matchContext={p.matchContext}
         userSide={userSide}

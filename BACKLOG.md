@@ -8,6 +8,26 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
+### Playtest mobile 2026-11-17 (Modo Carreira, Crystal Palace, 375px)
+
+**✅ Corrigidos no mesmo dia:**
+- **"Continuar" no fim de partida ao vivo descartava o resultado.** Só "📊 Estatísticas" gravava; "Continuar <liga/copa>" chamava `handleContinueTournament`, que só troca de tela. Afetava Carreira, Campeonatos e Copas. Agora `handleContinueFromMatch` grava e segue. Teste em `AppScreens.test.ts`.
+- **Overlays `position: fixed` (pausa, intervalo, modais) fora da tela no celular.** `.screen-fade` tinha `will-change: transform` permanente, que vira containing block dos `fixed`; o overlay ficava com a altura da página e o painel abaixo da dobra.
+
+**🔴 Pendentes — dados:**
+- Composição das ligas congelada em 2024/25: sync só atualiza jogadores de clubes já existentes (promovidos somem, rebaixados ficam com elenco velho). **Ipswich está na PL e na Championship ao mesmo tempo.**
+- Notas infladas/comprimidas (quase todo time da PL entre 84 e 90; McNeil 90). Jogador novo do sync ganha atributos genéricos pela média do time, sem olhar posição (goleiro reserva com finalização 72, €19,5M).
+- Estádio inventado e incoerente: pré-jogo "Crystal Palace Stadium · 53.000", tela da partida "Crystal Palace Arena · 29.000".
+
+**🟡 Pendentes — bugs:**
+- "Simular até o fim" dispara dezenas de `Maximum update depth exceeded` (loop de render) e a narração para no minuto em que se pulou. Já existia antes das correções acima.
+- Pênaltis invisíveis: 1-1 na copa vira "DERROTA" sem mostrar a disputa nem o placar dela.
+- Placar do jogo (1-1) diferente do ticker da rodada (0-1) na mesma tela; posse 8% × 91%.
+- Ícone ⚡ do treino mostra delta de **fadiga** mas lê como energia ("Treino Intenso ⚡+25").
+- Primeiro jogo da temporada é a copa (oitavas, só 16 times da liga); com 0 jogos o time aparece "1º lugar" e o feed comemora; jogo de copa não conta em JOGOS.
+- 4 cliques pra começar uma partida (Jogar → Confirmar → Iniciar Partida → JOGAR).
+- PT-PT misturado ("noutra liga"); botões de time sem nome acessível.
+
 ### ✅ Pênaltis: narração fora de ordem + crash potencial + lookup de fadiga frágil — CORRIGIDO (2026-09)
 
 **O que era:** três defeitos no fluxo de pênaltis do `matchEngine.ts`:

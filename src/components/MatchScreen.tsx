@@ -44,7 +44,8 @@ interface Props {
   rng?: RandomFn;
   online?: OnlineProps;
   continueLabel?: string;
-  onContinue?: () => void;
+  /** Recebe o resultado final: quem passa o handler é responsável por gravá-lo. */
+  onContinue?: (result: MatchResult) => void;
   matchContext?: 'regular' | 'league' | 'bracket' | 'online';
   userSide?: 'home' | 'away';
   resumeSnapshot?: LiveMatchSnapshot | null;
@@ -784,7 +785,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                   {isKnockout && !knockoutResult ? '⏳ Calculando...' : '📊 Estatísticas'}
                 </button>
                 {onContinue && (
-                  <button className="simulate-btn" onClick={onContinue}>
+                  <button className="simulate-btn" onClick={() => onContinue((isKnockout ? knockoutResult : result)!)}>
                     {continueLabel ?? 'Continuar'}
                   </button>
                 )}
