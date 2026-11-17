@@ -20,7 +20,8 @@
     "build:native": "tsc -b && vite build --mode native",
     "android:sync": "npm run build:native && npx cap sync android",
     "android:open": "npx cap open android",
-    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug"
+    "android:apk": "npm run android:sync && cd android && gradlew.bat assembleDebug",
+    "android:aab": "npm run android:sync && cd android && gradlew.bat bundleRelease"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

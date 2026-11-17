@@ -110,8 +110,17 @@ keyAlias=footplan
 keyPassword=...
 
 # 3) AAB pra Play Store (o build.gradle já assina release se o properties existir):
-cd android && gradlew bundleRelease
+npm run android:aab
 ```
+
+**Pré-requisitos verificados em 2026-11-17:**
+- **Android SDK:** não está instalado nesta máquina (`ANDROID_HOME` aponta pra
+  `C:\Users\lucia\AppData\Local\Android\Sdk`, que não existe). Instale o Android Studio
+  (traz o SDK) ou só o command-line tools, e confira que a pasta existe.
+- **Java:** o Gradle 8.14 do projeto roda até o Java 24, e o Java padrão da máquina é o 27
+  (falha). Antes do build, aponte pro JDK 21 que já está instalado:
+  `$env:JAVA_HOME = 'C:\Program Files\Java\jdk-21.0.12'` (PowerShell).
+- O resto (`build:native` + `cap sync`) foi testado e funciona.
 
 O `build.gradle` foi preparado: sem `keystore.properties` nada muda (debug continua
 funcionando); com ele, o release sai assinado.
