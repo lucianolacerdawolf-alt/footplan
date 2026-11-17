@@ -64,7 +64,7 @@ interface ApiPlayer {
 
 interface ApiTeam {
   team: { id: number; name: string; code: string; logo: string };
-  venue: { name: string; city: string };
+  venue: { name: string; city: string; capacity?: number };
 }
 
 interface CachedData {
@@ -172,6 +172,8 @@ export async function fetchApiFootballLeague(leagueId: string, force = false): P
       shortName: t.team.code ?? t.team.name.substring(0, 3).toUpperCase(),
       tla: t.team.code ?? '',
       crest: t.team.logo,
+      venue: t.venue?.name || undefined,
+      venueCapacity: t.venue?.capacity || undefined,
       squad,
     });
   }

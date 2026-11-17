@@ -301,6 +301,12 @@ function applyStaticCrests(teams: Team[], league: LeagueDefinition): Team[] {
   });
 }
 
+/** Estádio real vindo da API (nome sempre que houver; capacidade só quando informada). */
+function withVenue(team: Team, remote: RemoteTeam): Team {
+  if (!remote.venue) return team;
+  return { ...team, stadium: remote.venue, capacity: remote.venueCapacity ?? team.capacity };
+}
+
 /** Time novo a partir só do dado remoto (clube que não existe em nenhuma liga estática). */
 function newTeamFromRemote(remote: RemoteTeam, leagueId: string): Team {
   const name = remote.shortName || remote.name;
@@ -336,7 +342,7 @@ export function buildLeagueFromRemote(league: LeagueDefinition, remoteTeams: Rem
     const { team, stats: teamStats } = mergeTeamRoster(staticTeam, remote.squad);
     stats.push(teamStats);
     if (!team.logoUrl && remote.crest) team.logoUrl = remote.crest;
-    merged.set(staticTeam.id, team);
+    merged.set(staticTeam.id, withVenue(team, remote));
   }
 
   const usedRemote = new Set([...assignments.values()].map(r => r.id));
@@ -368,7 +374,7 @@ export function buildLeagueFromRemote(league: LeagueDefinition, remoteTeams: Rem
     const { team, stats: teamStats } = mergeTeamRoster(base, remote.squad, known ? undefined : floorOvr);
     if (!team.logoUrl && remote.crest) team.logoUrl = remote.crest;
     stats.push(teamStats);
-    merged.set(team.id, team);
+    merged.set(team.id, withVenue(team, remote));
   }
   return { teams: [...merged.values()], stats };
 }
@@ -380,12 +386,18 @@ export async function syncLeagueRoster(
 ): Promise<RosterSyncResult> {
   if (!opts?.force) {
     const cached = readCache(league);
-    if (cached) {
-      return { league: { ...league, teams: applyStaticCrests(cached.teams, league) }, source: 'cache', stats: [] };
-    }
     // `snapshot` é injetado por syncAllLeagueRosters pra não disparar 12 cargas de
     // cloud em sequência; quando ausente (chamada avulsa), carrega aqui mesmo.
-    const cloudTeams = (snapshot ?? await loadRosterSnapshot())?.rosters[league.id];
+    // O cache só vence se for MAIS NOVO que o snapshot publicado (ou se a nuvem não
+    // responder — offline). Antes o cache de 7 dias vencia sempre: com o sync diário,
+    // quem já tinha aberto o jogo ficava até uma semana com elencos/ligas antigos.
+    const snap = snapshot ?? await loadRosterSnapshot();
+    const snapTime = snap?.updatedAt ? Date.parse(snap.updatedAt) : NaN;
+    const cloudIsNewer = !Number.isNaN(snapTime) && (!cached || snapTime > cached.fetchedAt);
+    if (cached && !cloudIsNewer) {
+      return { league: { ...league, teams: applyStaticCrests(cached.teams, league) }, source: 'cache', stats: [] };
+    }
+    const cloudTeams = snap?.rosters[league.id];
     if (cloudTeams && Array.isArray(cloudTeams) && cloudTeams.length > 0) {
       const teams = applyStaticCrests(cloudTeams, league);
       writeCache(league.id, teams, league.teams.map(t => t.id));

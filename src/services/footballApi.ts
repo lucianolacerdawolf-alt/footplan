@@ -45,6 +45,10 @@ export interface RemoteTeam {
   shortName: string;
   tla: string;
   crest: string;
+  /** Nome do estádio (football-data: `venue`; API-Football: `venue.name`). */
+  venue?: string;
+  /** Capacidade — só a API-Football informa. */
+  venueCapacity?: number;
   squad: RemotePlayer[];
 }
 

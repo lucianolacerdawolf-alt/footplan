@@ -3,7 +3,7 @@ import type { Team } from '../engine/types';
 import { MENTALITY_LABELS } from '../engine/types';
 import { useH2H } from '../hooks/useH2H';
 import { playerOvr } from '../utils/playerOvr';
-import { generateStadium } from '../utils/stadiums';
+import { teamStadium } from '../utils/stadiums';
 import { isDerby } from '../engine/rivalries';
 import { generateTacticalComment } from '../engine/tacticalCommentary';
 import { pickHighlights } from '../utils/highlights';
@@ -37,10 +37,7 @@ export default function MatchdayScreen({ homeTeam, awayTeam, contextLabel, onPla
   const h2h = getH2H(homeTeam.id, awayTeam.id);
   const weather = useMemo(() => getWeather(), []);
   const derby = isDerby(homeTeam.id, awayTeam.id);
-  const stadium = useMemo(() => {
-    const sid = (homeTeam.id.charCodeAt(homeTeam.id.length - 1) || 0) + (awayTeam.id.length > 0 ? awayTeam.id.charCodeAt(0) : 0);
-    return generateStadium(homeTeam.name, sid);
-  }, [homeTeam.name, homeTeam.id, awayTeam.id]);
+  const stadium = useMemo(() => teamStadium(homeTeam), [homeTeam]);
 
   const topHome = useMemo(() => pickHighlights(homeTeam.squad), [homeTeam.squad]);
   const topAway = useMemo(() => pickHighlights(awayTeam.squad), [awayTeam.squad]);
@@ -90,7 +87,7 @@ export default function MatchdayScreen({ homeTeam, awayTeam, contextLabel, onPla
             <span className={styles.cardIcon}>🏟️</span>
             <span className={styles.cardLabel}>Estádio</span>
             <span className={styles.cardValue}>{stadium.name}</span>
-            <span className={styles.cardSub}>{stadium.capacity.toLocaleString()} lugares</span>
+            {stadium.capacity ? <span className={styles.cardSub}>{stadium.capacity.toLocaleString('pt-BR')} lugares</span> : null}
           </div>
           <div className={styles.infoCard}>
             <span className={styles.cardIcon}>{weather.icon}</span>
