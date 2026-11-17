@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { safeSetItem } from '../utils/storage';
 
 export function useLocalStorage<T>(key: string, initial: T): [T, (val: T | ((prev: T) => T)) => void] {
@@ -11,13 +11,17 @@ export function useLocalStorage<T>(key: string, initial: T): [T, (val: T | ((pre
     }
   });
 
-  const setStored = (val: T | ((prev: T) => T)) => {
+  // Identidade estável (como o setter do useState). Antes era recriado a cada render,
+  // o que mudava a identidade de quem dependia dele (ex: useMatchHistory.addMatch) e
+  // fazia o effect de fim de partida do MatchScreen rodar em loop — dezenas de
+  // "Maximum update depth exceeded" e o histórico enchendo de cópias da mesma partida.
+  const setStored = useCallback((val: T | ((prev: T) => T)) => {
     setValue(prev => {
       const next = typeof val === 'function' ? (val as (prev: T) => T)(prev) : val;
       safeSetItem(key, JSON.stringify(next));
       return next;
     });
-  };
+  }, [key]);
 
   return [value, setStored];
 }

@@ -457,9 +457,27 @@ export function useMatchSimulation(initialHomeId: string, speedRef?: { current: 
     const home = liveHomeRef.current;
     const away = liveAwayRef.current;
     if (!home || !away) return;
-    const matchResult = buildMatchResult(home, away, engineStateRef.current);
+    // A engine gera eventos sob demanda (produceMoreEvents) conforme o relógio anda.
+    // Antes, pular construía o resultado com o estado DAQUELE minuto: a partida
+    // terminava onde o usuário pulou e a narração parava ali. Agora simula o que
+    // falta do tempo atual e, se pulou no 1º tempo, o 2º tempo inteiro.
+    const state = engineStateRef.current;
+    const rngFn = rngRef.current ?? Math.random;
+    if (isFirstHalfRef.current && nextCycleRef.current < FIRST_HALF_CYCLES) {
+      simularProximoBloco(home, away, state, nextCycleRef.current, FIRST_HALF_CYCLES, true, rngFn);
+      nextCycleRef.current = FIRST_HALF_CYCLES;
+    }
+    if (nextCycleRef.current < TOTAL_CYCLES) {
+      isFirstHalfRef.current = false;
+      simularProximoBloco(home, away, state, Math.max(nextCycleRef.current, FIRST_HALF_CYCLES), TOTAL_CYCLES, false, rngFn);
+      nextCycleRef.current = TOTAL_CYCLES;
+    }
+    const matchResult = buildMatchResult(home, away, state);
     hScoreRef.current = matchResult.homeScore;
     aScoreRef.current = matchResult.awayScore;
+    setReplayEvents(matchResult.events);
+    setCurrentEvent(matchResult.events[matchResult.events.length - 1] ?? null);
+    setFatigueMap(combineFatigue(state.fatigueHome, state.fatigueAway));
     setResult(matchResult);
     setSimulating(false);
     setPhase('done');
