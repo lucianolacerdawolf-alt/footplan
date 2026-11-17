@@ -403,6 +403,9 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         resumeSnapshot={p.pendingResumeSnapshot}
         onResumeConsumed={() => p.setPendingResumeSnapshot(null)}
         autoStart={p.matchAutoStart}
+        onLiveStart={p.matchContext !== 'league' ? undefined : p.isCareerMode
+          ? () => { const lg = p.career.careerState?.season.league; if (lg) p.career.handleSimulateCareerLeagueRound(lg.currentRound); }
+          : () => { if (p.leagueState) p.handleSimulateLeagueRound(p.leagueState.currentRound); }}
         onAutoStartConsumed={() => p.setMatchAutoStart(null)}
         gameMode={p.gameMode}
         roundFixtures={tickerFixtures}

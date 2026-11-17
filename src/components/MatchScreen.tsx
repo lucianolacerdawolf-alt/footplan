@@ -46,6 +46,8 @@ interface Props {
   continueLabel?: string;
   /** Recebe o resultado final: quem passa o handler é responsável por gravá-lo. */
   onContinue?: (result: MatchResult) => void;
+  /** Partida ao vivo começou — o pai simula os outros jogos da rodada (ticker ao vivo). */
+  onLiveStart?: () => void;
   /** Modo escolhido na pré-partida — a partida começa sozinha nele. */
   autoStart?: 'live' | 'fast' | null;
   onAutoStartConsumed?: () => void;
@@ -59,7 +61,7 @@ interface Props {
   teams?: Team[];
 }
 
-export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed, gameMode, roundFixtures, teams, autoStart, onAutoStartConsumed }: Props) {
+export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAway, onBack, onViewStats, isKnockout, rng, online, continueLabel, onContinue, matchContext, userSide, resumeSnapshot, onResumeConsumed, gameMode, roundFixtures, teams, autoStart, onAutoStartConsumed, onLiveStart }: Props) {
   const [home, setHome] = useState<Team>(() => {
     if (resumeSnapshot) return resumeSnapshot.home;
     const t = cloneTeam(initialHome);
@@ -226,7 +228,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     setSubWindowsHome(ZERO_SUB_WINDOWS); setSubWindowsAway(ZERO_SUB_WINDOWS);
     setInjuredIds([]);
     runFirstHalf(home, away);
-  }, [online, home, away, runFirstHalf]);
+    onLiveStart?.();
+  }, [online, home, away, runFirstHalf, onLiveStart]);
 
   // Modo já escolhido na pré-partida: começa direto (sem o clique extra em JOGAR/SIMULAR).
   // Agendado com cleanup em vez de guardado num ref: no duplo-mount do StrictMode o
@@ -477,7 +480,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       </div>
 
       {roundFixtures && teams && matchContext === 'league' && (
-        <LiveScoreTicker fixtures={roundFixtures} teams={teams} userTeamIds={[initialHome.id, initialAway.id]} />
+        <LiveScoreTicker fixtures={roundFixtures} teams={teams} userTeamIds={[initialHome.id, initialAway.id]} clockSeconds={phase === 'done' ? undefined : clockSeconds} />
       )}
 
       {/* Momentum indicator */}
