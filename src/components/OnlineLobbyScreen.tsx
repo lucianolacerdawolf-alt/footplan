@@ -266,8 +266,10 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
                 style={(isHostPick || isGuestPick) ? { borderColor: team.color, background: team.color + '10' } : undefined}
                 onClick={() => !isOpponentPick && selectMyTeam(team.id)}
                 disabled={isOpponentPick}
+                aria-label={`${team.name}, força ${getAvgOvr(team)}${isOpponentPick ? ', escolhido pelo adversário' : ''}`}
+                aria-pressed={isMyPick}
               >
-                <img className="tile-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
+                <img className="tile-crest" src={crestSrc(team.logoUrl)} alt="" />
                 <span className="tile-name">{team.name}</span>
                 <span className="tile-ovr">{isMyPick ? '✓' : getAvgOvr(team)}</span>
               </button>

@@ -93,8 +93,9 @@ function TradeProposalScreen({ userTeam, leagueRoster, budget, onBack, onPropose
                     key={team.id}
                     className="team-tile"
                     onClick={() => setOpponentId(team.id)}
+                    aria-label={`${team.name}, força ${getAvgOvr(team)}`}
                   >
-                    <img className="tile-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
+                    <img className="tile-crest" src={crestSrc(team.logoUrl)} alt="" />
                     <span className="tile-name">{team.name}</span>
                     <span className="tile-ovr">{getAvgOvr(team)}</span>
                   </button>

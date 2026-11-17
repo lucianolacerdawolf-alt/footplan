@@ -160,8 +160,10 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
               className={`team-tile ${isSelected ? 'picked-home selected' : ''}`}
               style={isSelected ? { borderColor: team.color, background: team.color + '10' } : undefined}
               onClick={() => setUserTeamId(isSelected ? null : team.id)}
+              aria-label={`${team.name}, força ${getAvgOvr(team)}`}
+              aria-pressed={isSelected}
             >
-              <img className="tile-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
+              <img className="tile-crest" src={crestSrc(team.logoUrl)} alt="" />
               <span className="tile-name">{team.name}</span>
               <span className="tile-ovr">{getAvgOvr(team)}</span>
             </button>

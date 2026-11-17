@@ -176,8 +176,10 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
               style={isSelected ? { borderColor: color, background: color + '10' } : undefined}
               onClick={() => handleTeamClick(team.id)}
               disabled={!!homeId && !!awayId && !isSelected}
+              aria-label={`${team.name}, força ${getAvgOvr(team)}${isHome ? ', mandante' : isAway ? ', visitante' : ''}`}
+              aria-pressed={isSelected}
             >
-              <img className="tile-crest" src={crestSrc(team.logoUrl)} alt={team.name} />
+              <img className="tile-crest" src={crestSrc(team.logoUrl)} alt="" />
               <span className="tile-name">{team.name}</span>
               <span className="tile-ovr">{getAvgOvr(team)}</span>
             </button>

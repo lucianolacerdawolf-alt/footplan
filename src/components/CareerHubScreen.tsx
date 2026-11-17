@@ -518,7 +518,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
 
       <div className={styles.newCareerRow}>
         <button className={styles.newCareerBtn} onClick={onNewCareer}>
-          Começar nova carreira noutra liga
+          Começar nova carreira em outra liga
         </button>
       </div>
     </div>
