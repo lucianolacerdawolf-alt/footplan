@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
-import type { Team, Player, Strategy, Mentality, Intensity, Formation, DefensiveLine, Width } from '../engine/types';
+import type { Team, Player, Strategy, Mentality, Intensity, DefensiveLine, Width } from '../engine/types';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
-import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
+import { MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 import { isPlayerUnavailable, rebalanceForFormation, getStarterCount } from '../engine/squadUtils';
 import { Button } from './ui';
 import { FORMATION_BONUS, getTacticalHardCounter } from '../engine/matchConfig';
@@ -12,6 +12,7 @@ import { useH2H } from '../hooks/useH2H';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import TutorialOverlay from './TutorialOverlay';
 import OpponentAnalysisModal from './OpponentAnalysisModal';
+import FormationPitch from './FormationPitch';
 
 function getTacticalInsight(home: Team, away: Team): string {
   const hf = home.strategy.formation;
@@ -300,11 +301,6 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
     );
   };
 
-  const countByPos = (team: Team, pos: string) => {
-    const starterCount = getStarterCount(team.strategy.formation);
-    return team.squad.slice(0, starterCount).filter(p => p.position === pos).length;
-  };
-
   const avgOvr = (team: Team) => {
     const starters = team.squad.slice(0, getStarterCount(team.strategy.formation));
     return Math.round(starters.reduce((s, p) => s + playerOvr(p), 0) / starters.length);
@@ -322,12 +318,14 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         </div>
       </div>
 
-      <div className="setup-squad-badges">
-        <span className="squad-badge gk">GK {countByPos(team, 'GK')}</span>
-        <span className="squad-badge def">DEF {countByPos(team, 'DEF')}</span>
-        <span className="squad-badge mid">MID {countByPos(team, 'MID')}</span>
-        <span className="squad-badge fwd">FWD {countByPos(team, 'FWD')}</span>
-      </div>
+      <FormationPitch
+        team={team}
+        selectedId={side === 'away' ? awaySelected : homeSelected}
+        onSelect={side === 'away' ? setAwaySelected : setHomeSelected}
+        onSwap={side === 'away' ? handleSwapAway : handleSwapHome}
+        onFormation={f => onStrategy({ ...team.strategy, formation: f })}
+        disabled={disabled}
+      />
 
       <div className="setup-presets">
         <label>Táticas Predefinidas</label>
@@ -335,12 +333,6 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       </div>
 
       <div className="setup-controls">
-        <div className="setup-select">
-          <TacticLabel tacticKey="formation" />
-          <select value={team.strategy.formation} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, formation: e.target.value as Formation })}>
-            {FORMATIONS.map(f => <option key={f} value={f}>{f}</option>)}
-          </select>
-        </div>
         <div className="setup-select">
           <TacticLabel tacticKey="mentality" />
           <select value={team.strategy.mentality} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, mentality: e.target.value as Mentality })}>
