@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { syncLeagueRoster, syncAllLeagueRosters, getRosterSyncInfo, clearRosterCache } from '../rosterSync';
+import { syncLeagueRoster, syncAllLeagueRosters, getRosterSyncInfo, clearRosterCache, buildLeagueFromRemote } from '../rosterSync';
 import type { LeagueDefinition } from '@/data/leagues/types';
 import { allLeagues } from '@/data/leagues';
 import type { Team } from '@/engine/types';
@@ -556,5 +556,49 @@ describe('getRosterSyncInfo', () => {
     await saveRosterSnapshot({ [league.id]: league.teams });
     const info = await getRosterSyncInfo();
     expect(info.updatedAt).toBeTypeOf('string');
+  });
+});
+
+describe('buildLeagueFromRemote — acesso e rebaixamento', () => {
+  const rp = (id: number, name: string, position: string) =>
+    ({ id, name, position, dateOfBirth: '1998-01-01', nationality: 'England', shirtNumber: id % 99 });
+  const squad = (base: number) => [
+    rp(base + 1, `Keeper ${base}`, 'Goalkeeper'), rp(base + 2, `Back ${base}`, 'Defence'),
+    rp(base + 3, `Mid ${base}`, 'Midfield'), rp(base + 4, `Striker ${base}`, 'Offence'),
+  ];
+  const remote = (id: number, name: string, tla: string) => ({ id, name, shortName: name, tla, crest: `https://crest/${id}.png`, squad: squad(id * 10) });
+  const league = (): LeagueDefinition => ({
+    ...makeLeague(),
+    id: 'test-league',
+    teams: [makeTeam('a', 'Alpha Town', 'ALP'), makeTeam('b', 'Bravo City', 'BRA'), makeTeam('c', 'Charlie Rovers', 'CHA')],
+  });
+
+  it('rebaixado sai e promovido entra quando a resposta é a liga inteira', () => {
+    const r = buildLeagueFromRemote(league(), [
+      remote(1, 'Alpha Town', 'ALP'), remote(2, 'Bravo City', 'BRA'), remote(3, 'Zeta Athletic', 'ZET'),
+    ] as never);
+    const names = r.teams.map(t => t.name).sort();
+    expect(names).toEqual(['Alpha Town', 'Bravo City', 'Zeta Athletic']);
+    const zeta = r.teams.find(t => t.name === 'Zeta Athletic')!;
+    expect(zeta.squad.length).toBe(4);
+    expect(zeta.logoUrl).toBe('https://crest/3.png');
+    expect(r.teams).toHaveLength(3);
+  });
+
+  it('resposta parcial nunca apaga clube', () => {
+    const r = buildLeagueFromRemote(league(), [remote(1, 'Alpha Town', 'ALP'), remote(2, 'Bravo City', 'BRA')] as never);
+    expect(r.teams.map(t => t.id).sort()).toEqual(['a', 'b', 'c']);
+  });
+
+  it('promovido que existe em outra liga estática reaproveita o clube (id, cores, escudo)', () => {
+    const leeds = allLeagues.flatMap(l => l.teams).find(t => /leeds/i.test(t.name))!;
+    expect(leeds).toBeDefined();
+    const r = buildLeagueFromRemote(league(), [
+      remote(1, 'Alpha Town', 'ALP'), remote(2, 'Bravo City', 'BRA'), remote(4, 'Leeds United', 'LEE'),
+    ] as never);
+    const promoted = r.teams.find(t => /leeds/i.test(t.name))!;
+    expect(promoted.id).toBe(leeds.id);
+    expect(promoted.color).toBe(leeds.color);
+    expect(promoted.logoUrl).toBe(leeds.logoUrl);
   });
 });

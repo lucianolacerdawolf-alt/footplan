@@ -145,15 +145,19 @@ export interface MergeStats {
   removed: number;
 }
 
-function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[]): { team: Team; stats: MergeStats } {
+function starterOvr(team: Team): number {
+  const starterSample = team.squad.slice(0, Math.min(11, team.squad.length));
+  return starterSample.length > 0
+    ? Math.round(starterSample.reduce((s, p) => s + playerOvr(p), 0) / starterSample.length)
+    : 70;
+}
+
+function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[], targetOvrOverride?: number): { team: Team; stats: MergeStats } {
   const byName = new Map(staticTeam.squad.map(p => [normalizeName(p.name), p]));
   let matched = 0;
   let added = 0;
 
-  const starterSample = staticTeam.squad.slice(0, Math.min(11, staticTeam.squad.length));
-  const targetOvr = starterSample.length > 0
-    ? Math.round(starterSample.reduce((s, p) => s + playerOvr(p), 0) / starterSample.length)
-    : 70;
+  const targetOvr = targetOvrOverride ?? starterOvr(staticTeam);
 
   const grouped: Record<Position, Player[]> = { GK: [], DEF: [], MID: [], FWD: [] };
   remoteSquad.forEach((rp, i) => {
@@ -283,6 +287,78 @@ function applyStaticCrests(teams: Team[], league: LeagueDefinition): Team[] {
   });
 }
 
+/** Time novo a partir só do dado remoto (clube que não existe em nenhuma liga estática). */
+function newTeamFromRemote(remote: RemoteTeam, leagueId: string): Team {
+  const name = remote.shortName || remote.name;
+  return {
+    id: `${leagueId}-live-${remote.id}`,
+    name,
+    abbreviation: (remote.tla || name.slice(0, 3)).toUpperCase(),
+    color: '#4b5563',
+    secondaryColor: '#ffffff',
+    logoUrl: remote.crest ?? '',
+    squad: [],
+    strategy: { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
+  };
+}
+
+/**
+ * Monta a liga a partir da resposta remota. Além de atualizar o elenco dos clubes já
+ * conhecidos, acompanha acesso/rebaixamento — antes a composição ficava congelada no
+ * estático (2024/25): promovidos sumiam e rebaixados seguiam com elenco antigo.
+ *
+ * Só mexe na composição quando a resposta parece a liga INTEIRA (mesmo nº de clubes e
+ * mesmo nº de entradas/saídas), pra uma resposta parcial nunca apagar clube. Promovido
+ * reaproveita o clube de outra liga estática quando existe (id, cores, escudo local e
+ * atributos calibrados); senão nasce do dado remoto com força de fim de tabela.
+ */
+export function buildLeagueFromRemote(league: LeagueDefinition, remoteTeams: RemoteTeam[]): { teams: Team[]; stats: MergeStats[] } {
+  const assignments = assignRemoteTeams(league.teams, remoteTeams);
+  const stats: MergeStats[] = [];
+  const merged = new Map<string, Team>();
+  for (const staticTeam of league.teams) {
+    const remote = assignments.get(staticTeam.id);
+    if (!remote) { merged.set(staticTeam.id, staticTeam); continue; }
+    const { team, stats: teamStats } = mergeTeamRoster(staticTeam, remote.squad);
+    stats.push(teamStats);
+    if (!team.logoUrl && remote.crest) team.logoUrl = remote.crest;
+    merged.set(staticTeam.id, team);
+  }
+
+  const usedRemote = new Set([...assignments.values()].map(r => r.id));
+  const promoted = remoteTeams.filter(r => !usedRemote.has(r.id) && (r.squad?.length ?? 0) > 0);
+  const relegated = league.teams.filter(t => !assignments.has(t.id));
+  const completeLeague = remoteTeams.length === league.teams.length;
+  if (!completeLeague || promoted.length === 0 || promoted.length !== relegated.length) {
+    return { teams: [...merged.values()], stats };
+  }
+
+  // Força de referência pra quem sobe sem dado calibrado: média dos 3 mais fracos que ficaram.
+  const stayed = [...merged.values()].filter(t => assignments.has(t.id)).map(starterOvr).sort((a, b) => a - b);
+  const floorOvr = stayed.length > 0
+    ? Math.round(stayed.slice(0, 3).reduce((s, v) => s + v, 0) / Math.min(3, stayed.length))
+    : 70;
+
+  const otherTeams = allLeagues.filter(l => l.id !== league.id).flatMap(l => l.teams);
+  const fromOtherLeague = assignRemoteTeams(otherTeams, promoted);
+  const baseByRemote = new Map<number, Team>();
+  for (const [staticId, remote] of fromOtherLeague) {
+    const base = otherTeams.find(t => t.id === staticId);
+    if (base) baseByRemote.set(remote.id, base);
+  }
+
+  for (const t of relegated) merged.delete(t.id);
+  for (const remote of promoted) {
+    const known = baseByRemote.get(remote.id);
+    const base = known ?? newTeamFromRemote(remote, league.id);
+    const { team, stats: teamStats } = mergeTeamRoster(base, remote.squad, known ? undefined : floorOvr);
+    if (!team.logoUrl && remote.crest) team.logoUrl = remote.crest;
+    stats.push(teamStats);
+    merged.set(team.id, team);
+  }
+  return { teams: [...merged.values()], stats };
+}
+
 export async function syncLeagueRoster(
   league: LeagueDefinition,
   opts?: { force?: boolean },
@@ -329,18 +405,7 @@ export async function syncLeagueRoster(
       continue;
     }
 
-    const assignments = assignRemoteTeams(league.teams, remoteTeams);
-    const stats: MergeStats[] = [];
-    const mergedTeams = league.teams.map(staticTeam => {
-      const remote = assignments.get(staticTeam.id);
-      if (!remote) return staticTeam;
-      const { team, stats: teamStats } = mergeTeamRoster(staticTeam, remote.squad);
-      stats.push(teamStats);
-      if (!team.logoUrl && remote.crest) {
-        team.logoUrl = remote.crest;
-      }
-      return team;
-    });
+    const { teams: mergedTeams, stats } = buildLeagueFromRemote(league, remoteTeams);
 
     writeCache(league.id, mergedTeams, league.teams.map(t => t.id));
     return { league: { ...league, teams: mergedTeams }, source: 'live', stats };
