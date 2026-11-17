@@ -419,10 +419,13 @@ describe('possessionPct', () => {
       const away = makeTeam('a', 'Away');
       const { state } = simularPrimeiroTempo(home, away, seededRng(seed));
       const r = simularSegundoTempo(home, away, state, seededRng(seed + 1000));
-      expect(possessionPct(state)).toBe(r.homePossession);
+      expect(Math.abs(possessionPct(state) - r.homePossession)).toBeLessThanOrEqual(3);
       expect(r.homePossession).toBeGreaterThan(20);
       expect(r.homePossession).toBeLessThan(80);
     }
     expect(possessionPct(null)).toBe(50);
+    // início de jogo: poucas disputas não viram 100% × 0%
+    const early = { homePossessionWins: 3, awayPossessionWins: 0 } as never;
+    expect(possessionPct(early)).toBeLessThan(65);
   });
 });

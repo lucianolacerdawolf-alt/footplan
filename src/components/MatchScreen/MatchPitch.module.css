@@ -1,0 +1,63 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  margin: 8px auto 4px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.pitch { display: block; width: 100%; height: auto; }
+
+.stripeA { fill: #1f6b3a; }
+.stripeB { fill: #237540; }
+
+.lines rect, .lines line, .lines circle {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 0.35;
+}
+
+.goal { fill: rgba(255, 255, 255, 0.85); }
+
+.player {
+  stroke-width: 0.45;
+  transition: cx 0.7s ease-in-out, cy 0.7s ease-in-out;
+}
+
+.ball {
+  fill: #ffffff;
+  stroke: #111;
+  stroke-width: 0.25;
+  transition: cx 0.55s ease-out, cy 0.55s ease-out;
+  filter: drop-shadow(0 0 0.6px rgba(0, 0, 0, 0.6));
+}
+
+.goalFlash {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--display, inherit);
+  font-size: clamp(28px, 9vw, 56px);
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.18);
+  animation: goalPulse 1.2s ease-out;
+  pointer-events: none;
+}
+
+@keyframes goalPulse {
+  from { transform: scale(0.6); opacity: 0; }
+  40% { transform: scale(1.1); opacity: 1; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player, .ball { transition: none; }
+  .goalFlash { animation: none; }
+}

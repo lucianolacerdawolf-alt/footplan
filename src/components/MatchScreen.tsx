@@ -32,6 +32,7 @@ import CommentaryFeed from './CommentaryFeed';
 import { playerOvr } from '../utils/playerOvr';
 import TopBar from './MatchScreen/TopBar';
 import HalftimePanel from './MatchScreen/HalftimePanel';
+import MatchPitch from './MatchScreen/MatchPitch';
 import PenaltyShootoutOverlay from './MatchScreen/PenaltyShootoutOverlay';
 import SquadSwapPanel from './MatchScreen/SquadSwapPanel';
 
@@ -823,6 +824,8 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           </div>
         )}
       </div>
+
+      {started && <MatchPitch home={home} away={away} event={currentEvent} />}
 
       <CommentaryFeed events={replayEvents} homeTeamId={initialHome.id} />
 

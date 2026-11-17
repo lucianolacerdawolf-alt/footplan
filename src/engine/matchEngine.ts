@@ -662,11 +662,14 @@ export function beginMatchState(home: Team, away: Team, random: RandomFn = Math.
 }
 
 /** Monta o MatchResult final a partir do state acumulado — reaproveitável pelo fluxo em blocos. */
-/** % de posse do mandante até agora (mesma conta do MatchResult). 50 sem dados. */
+/** % de posse do mandante ao vivo. Parte de 50% e converge pra conta real do MatchResult
+ *  conforme as disputas acumulam (prior de 4 disputas de cada lado) — sem isso, nos
+ *  primeiros minutos 3 disputas viravam "100% × 0%" na barra. */
 export function possessionPct(state: MatchState | null | undefined): number {
   if (!state) return 50;
+  const PRIOR = 4;
   const total = state.homePossessionWins + state.awayPossessionWins;
-  return total > 0 ? Math.round((state.homePossessionWins / total) * 100) : 50;
+  return Math.round(((state.homePossessionWins + PRIOR) / (total + 2 * PRIOR)) * 100);
 }
 
 export function buildMatchResult(home: Team, away: Team, state: MatchState): MatchResult {
