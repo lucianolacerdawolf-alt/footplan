@@ -8,6 +8,38 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
+### Revisão de coerência entre telas (2026-11-17, celular 375px)
+
+Passei por: inicial, Online, Liga entre Amigos, escolha de liga/time/copa, táticas, partida, estatísticas, conquistas, e na carreira Central, Elenco, Transferências, Meu Clube, Escritório, Classificação, Copa e Base.
+
+**A. Dados que não batem entre telas**
+- 🟡 Partida Única / Campeonatos / Copas usam os elencos estáticos 2024-25 (Leicester, Southampton, Man City 91), enquanto a carreira usa os sincronizados 2026-27 (Coventry, Hull, Ipswich, notas calibradas). Usar `syncLeagueRoster` em todos os modos.
+- 🟢 "OVR" tem três significados: Palace 83 na escolha de time (estático), 82 na Central (titulares) e 78 no Meu Clube (elenco todo). Rotular "Titulares" / "Elenco".
+- 🟢 Posse no fim da partida 66%, e nas Estatísticas 69%. Usar a mesma fonte (`possessionPct`).
+- 🟢 Estádio genérico "Arsenal Ground" fora da carreira, enquanto a carreira mostra "Selhurst Park".
+- 🟢 "Continuar · Copa Liga Portugal": a copa se chama Taça de Portugal.
+- 🟢 Na Partida Única aparecem "Continuar · La Liga — rodada 1" e "Continuar · Copa", que são saves de outro modo.
+
+**B. Linguagem visual**
+- 🟡 Cabeçalhos em 4 estilos: logo FOOTPLAN central (Online, seleção, táticas), título inline com emoji (Liga entre Amigos, Base), ícone + título (Meu Clube, Mercado) e "nome da liga + título" (Escritório, Classificação). Criar um `ScreenHeader` único.
+- 🟢 Voltar em 4 formatos ("← Voltar", só "←", "Voltar" com ícone SVG) + "Menu Principal" repetindo o Voltar no Online e na escolha de times.
+- 🟢 Siglas misturadas:
+  - posições GK/MID/FWD em todo o jogo, mas GOL/MEI na Base;
+  - forma W/D na Classificação, V/E/D no raio-x e no H2H;
+  - "HOME/AWAY" na escolha de time.
+- 🟢 Siglas de time pintadas com a cor do clube ficam ilegíveis no fundo escuro (CRY, NEW, LEE, TOT, AVL) no Escritório e na Copa.
+- 🟢 Emoji como ícone na inicial, no Mercado e no Meu Clube; SVG na Central.
+- 🟡 Campinho das táticas vertical com camisas numeradas; o da partida é horizontal e só tem bolinhas.
+
+**C. Layout no celular**
+- 🟡 Classificação: a tabela tem 743px num espaço de 335px, então só aparece Pts e J/V/E/D/SG ficam escondidos na rolagem lateral; a linha do seu time não tem fundo de destaque. Mostrar J · SG · Pts e expandir ao tocar.
+- 🟢 Online: sem respiro no topo, placeholder grande cortado ("CÓDIGO (4 LETRA") e nenhuma explicação do que é.
+- 🟢 Pré-jogo da partida: metade da tela vazia antes do apito e placar sem escudos.
+- 🟢 Aba "Escritório" mostra a rodada da liga; o nome não diz o que tem (Liga / Calendário).
+- (já anotado abaixo) Caixa "Análise tática" quebrando em 3 linhas; cabeçalho das táticas espremido.
+
+**D. Economia** (já anotado abaixo): o Palace começa com patrocínio "Global ×2.5 — nível máximo" e +€810K por semana.
+
 ### Sugestões do playtest de estética, fluxo e mecânica (2026-11-17, fim do dia)
 
 **✅ Corrigido no mesmo teste:** emblemas próprios pra Championship (tinha Sky Bet), LaLiga 2 (era o logo da LaLiga com Santander) e Liga Portugal 2 (era o logo da 1ª divisão); logos do mercado usavam o endereço remoto (Liga Portugal 404).
