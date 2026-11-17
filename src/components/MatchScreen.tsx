@@ -23,7 +23,7 @@ function formatSubWindows(w: Record<SubWindow, number>): string {
     .map(k => `${SUB_WINDOW_LABELS[k]} ${w[k]}`).join(' · ');
 }
 
-import { resolveKnockoutExtraTime, getShooters, buildMatchResult, type MatchState, simularPartida, simularPrimeiroTempo, simularSegundoTempo, resolveKnockoutTiebreak } from '../engine/matchEngine';
+import { resolveKnockoutExtraTime, getShooters, buildMatchResult, type MatchState, simularPartida, simularMataMataCompleto } from '../engine/matchEngine';
 import { useMatchSimulation, getSubWindow } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
 import { useMatchOnlineSync, type OnlineProps, ZERO_SUB_WINDOWS } from '../hooks/useMatchOnlineSync';
@@ -205,18 +205,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
     const rngFn = rng ?? (() => Math.random());
 
     if (isKnockout) {
-      const { state } = simularPrimeiroTempo(h, a, rngFn);
-      const regulationResult = simularSegundoTempo(h, a, state, rngFn);
-      if (regulationResult.homeScore !== regulationResult.awayScore) {
-        const winner = regulationResult.homeScore > regulationResult.awayScore ? h : a;
-        addMatch({ ...regulationResult, wentToExtraTime: false, winner });
-        onViewStats({ ...regulationResult, wentToExtraTime: false, winner });
-        return;
-      }
-      resolveKnockoutTiebreak(h, a, state, rngFn);
-      const enriched = buildMatchResult(h, a, state);
-      const winner = enriched.homeScore > enriched.awayScore ? h : a;
-      const final: MatchResult = { ...enriched, winner };
+      const final = simularMataMataCompleto(h, a, rngFn);
       addMatch(final);
       onViewStats(final);
     } else {

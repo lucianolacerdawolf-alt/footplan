@@ -889,6 +889,26 @@ export function simularPartidaRapida(home: Team, away: Team, random: RandomFn = 
 }
 
 // ---------------------------------------------------------------------------
+// Mata-mata do usuário no modo rápido (botão SIMULAR): MatchResult completo, com
+// prorrogação/pênaltis preservados e vencedor da disputa — antes essa lógica vivia
+// no MatchScreen, descartava o retorno do desempate e, nos pênaltis (placar
+// empatado), dava a vaga SEMPRE ao visitante.
+// ---------------------------------------------------------------------------
+export function simularMataMataCompleto(home: Team, away: Team, random: RandomFn = Math.random): MatchResult & { winner: Team } {
+  const { state } = simularPrimeiroTempo(home, away, random);
+  const regulation = simularSegundoTempo(home, away, state, random);
+  if (regulation.homeScore !== regulation.awayScore) {
+    return { ...regulation, wentToExtraTime: false, winner: regulation.homeScore > regulation.awayScore ? home : away };
+  }
+  const tiebreak = resolveKnockoutTiebreak(home, away, state, random);
+  const enriched = buildMatchResult(home, away, state);
+  const winnerSide = tiebreak.penaltyResult
+    ? tiebreak.penaltyResult.winner
+    : (enriched.homeScore > enriched.awayScore ? 'home' : 'away');
+  return { ...enriched, ...tiebreak, winner: winnerSide === 'home' ? home : away };
+}
+
+// ---------------------------------------------------------------------------
 // Simula mata-mata completo (90min + prorrogação + pênaltis se necessário)
 // ---------------------------------------------------------------------------
 export function simularKnockout(home: Team, away: Team, random: RandomFn = Math.random): {

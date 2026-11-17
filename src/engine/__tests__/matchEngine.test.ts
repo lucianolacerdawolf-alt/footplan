@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { simularPartida, simularPrimeiroTempo, simularSegundoTempo, resolveKnockoutTiebreak, simularPartidaRapida, simularKnockout, createMatchState } from '../matchEngine';
+import { simularPartida, simularPrimeiroTempo, simularSegundoTempo, resolveKnockoutTiebreak, simularPartidaRapida, simularKnockout, createMatchState, simularMataMataCompleto } from '../matchEngine';
 import type { Team, Player } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -382,5 +382,32 @@ describe('simularKnockout', () => {
       }
     }
     expect(foundET).toBe(true);
+  });
+});
+
+describe('simularMataMataCompleto (botão SIMULAR em mata-mata)', () => {
+  // Regressão: o caminho rápido descartava o retorno do desempate e escolhia o
+  // vencedor por `homeScore > awayScore` — nos pênaltis (empatado) era SEMPRE o
+  // visitante, e a tela de stats nunca mostrava a disputa.
+  it('pênaltis: preserva a disputa e classifica quem venceu ela (mandante incluso)', () => {
+    let shootouts = 0;
+    let homeWonShootout = 0;
+    for (let seed = 1; seed <= 400; seed++) {
+      const home = makeTeam('h', 'Home');
+      const away = makeTeam('a', 'Away');
+      const r = simularMataMataCompleto(home, away, seededRng(seed));
+      if (r.homeScore !== r.awayScore) {
+        expect(r.winner.id).toBe(r.homeScore > r.awayScore ? 'h' : 'a');
+        continue;
+      }
+      shootouts++;
+      expect(r.wentToExtraTime).toBe(true);
+      expect(r.penaltyResult, `seed ${seed}: empate sem disputa de pênaltis`).toBeDefined();
+      const expected = r.penaltyResult!.winner === 'home' ? 'h' : 'a';
+      expect(r.winner.id, `seed ${seed}`).toBe(expected);
+      if (expected === 'h') homeWonShootout++;
+    }
+    expect(shootouts).toBeGreaterThan(0);
+    expect(homeWonShootout).toBeGreaterThan(0);
   });
 });
