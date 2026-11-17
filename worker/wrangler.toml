@@ -5,3 +5,11 @@ account_id = "0365127deee4d2908efe7d0a8127129a"
 
 # O secret NÃO vai aqui (esse arquivo é commitado). Configure depois do primeiro deploy:
 #   npx wrangler secret put FOOTBALL_API_KEY
+
+# Rate limit nativo do Cloudflare (contador compartilhado entre instâncias).
+# O Map em memória do código vale por instância — com o tráfego espalhado entre
+# isolates ele não segurava nada (25 requisições seguidas passaram sem 429).
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }

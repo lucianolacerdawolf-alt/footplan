@@ -117,7 +117,12 @@ export default {
     }
 
     const ip = request.headers.get('CF-Connecting-IP') ?? 'unknown';
-    if (isRateLimited(ip)) {
+    // Binding nativo (compartilhado entre instâncias) quando configurado no wrangler.toml;
+    // o Map em memória fica de reserva (dev local / binding ausente).
+    const limited = env.RATE_LIMITER
+      ? !(await env.RATE_LIMITER.limit({ key: ip })).success
+      : isRateLimited(ip);
+    if (limited) {
       return json({ error: 'Muitas requisições. Tente novamente em instantes.' }, 429, { ...headers, 'Retry-After': '60' });
     }
 
