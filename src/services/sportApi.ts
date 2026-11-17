@@ -30,16 +30,16 @@ const PER_TEAM_DELAY_MS = 150;
  *  antes o seasonId era hardcoded (ex: 77347) e a liga parava de atualizar na virada de
  *  temporada. Agora `currentSeasonId` pergunta a temporada atual em
  *  `unique-tournament/{ut}/seasons` (1ª da lista) e guarda por 24h.
- *  championship/ligue2 já funcionaram com esses ut. Os outros 4 ainda NÃO foram
- *  confirmados contra a API (cota mensal da RapidAPI estourada em 2026-11-17) — se algum
- *  estiver errado, a liga só falha e mantém o elenco que já tinha no snapshot. */
+ *  IDs conferidos em 2026-11-17 pelas URLs públicas do Sofascore (mesma base da
+ *  SportAPI7): sofascore.com/football/tournament/<país>/<liga>/<ut>. A cota mensal da
+ *  RapidAPI estava estourada, então a chamada em si ainda não rodou com eles. */
 const LEAGUE_MAP: Record<string, { ut: number }> = {
   championship: { ut: 18 },    // England
   ligue2: { ut: 182 },         // France
-  laliga2: { ut: 54 },         // Spain — a confirmar
-  bundesliga2: { ut: 44 },     // Germany — a confirmar
-  serieB: { ut: 53 },          // Italy — a confirmar
-  ligaPortugal2: { ut: 239 },  // Portugal — a confirmar
+  laliga2: { ut: 54 },         // Spain (sofascore …/spain/laliga-2/54)
+  bundesliga2: { ut: 44 },     // Germany (…/germany/2-bundesliga/44)
+  serieB: { ut: 53 },          // Italy (…/italy/serie-b/53)
+  ligaPortugal2: { ut: 239 },  // Portugal (…/portugal/liga-portugal-2/239)
 };
 
 const SEASON_CACHE_PREFIX = 'fp:sportapi:season:';
