@@ -21,7 +21,7 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - ✅ Tela inicial: 8 modos com o mesmo peso; o Modo Carreira (carro-chefe) é o 6º, abaixo da dobra. Sugestão: card de destaque "Continuar carreira — Crystal Palace · Rodada 4" no topo e os outros modos agrupados. *Feito: card de destaque com escudo, liga, temporada e rodada no topo (só aparece com carreira salva); agrupar os outros modos ficou pra depois.*
 - ✅ Táticas como 5 menus de lista: trocar por um campinho com a formação e os titulares (tocar pra trocar). *Feito: campinho com camisa/nome/nota, chips de formação no lugar do menu, toque no titular lista os reservas da posição com a diferença de nota. Mentalidade/intensidade/linha/largura seguem em menus.*
 - Caixa "Análise tática · 4-3-3 é ofensivo" quebra em 3 linhas no celular; cabeçalho espreme "FOOTPLAN / MODO CARREIRA" entre dois botões.
-- Elenco: botão laranja "Renovar" nas 29 linhas — destacar só contratos acabando e renovar pelo detalhe do jogador.
+- ✅ Elenco: botão laranja "Renovar" nas 29 linhas — destacar só contratos acabando. *Feito: botão só em quem vence ao fim da temporada; nos demais o próprio badge "📋 N temp." abre a renovação.*
 - Emblemas próprios ficam miúdos no card pequeno — versão compacta só com o escudo.
 
 **🧭 Fluxo:**
