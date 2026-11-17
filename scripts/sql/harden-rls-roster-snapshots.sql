@@ -17,13 +17,13 @@ DO $$
 DECLARE pol RECORD;
 BEGIN
   FOR pol IN
-    SELECT policy_name
+    SELECT policyname
     FROM pg_policies
     WHERE schemaname = 'public'
       AND tablename = 'roster_snapshots'
       AND cmd <> 'SELECT'
   LOOP
-    EXECUTE format('DROP POLICY %I ON public.roster_snapshots', pol.policy_name);
+    EXECUTE format('DROP POLICY %I ON public.roster_snapshots', pol.policyname);
   END LOOP;
 END $$;
 
@@ -35,7 +35,7 @@ CREATE POLICY "read global snapshot"
   USING (true);
 
 -- 3) Confere: deve sobrar APENAS a política de SELECT
--- SELECT policy_name, cmd FROM pg_policies WHERE tablename = 'roster_snapshots';
+-- SELECT policyname, cmd FROM pg_policies WHERE tablename = 'roster_snapshots';
 
 -- OBS: a tabela `careers` já usa o modelo certo ("own career": user_id = auth.uid()).
 -- Não mexa nela.

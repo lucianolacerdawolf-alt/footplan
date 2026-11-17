@@ -35,21 +35,24 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 **Posso retomar quando:** só se virar incômodo real. Os dois defeitos *internos* que existiam já foram corrigidos (`cc0e8ec`, `d14d70b`).
 
-### 🟡 Re-sincronizar elencos no Supabase — 5 segundas divisões (limite diário API-Football)
+### 🟡 Re-sincronizar elencos no Supabase — 4 segundas divisões (API-Football)
 
-**Por que sobrou:** em 2026-08-03, o `npm run rosters:sync` gravou o snapshot global das 12 ligas em `roster_snapshots` (`id = 'global'`), mas só **7** vieram ao vivo (football-data.org): pl, laliga, ligue1, serieA, bundesliga, championship, ligaPortugal. As outras 5 (laliga2, bundesliga2, serieB, ligue2, ligaPortugal2) dependem da **API-Football**, que estourou o **limite diário de 100 requisições** (e `laliga2` respondeu 403) — entraram como elencos **estáticos**.
+**Estado em 2026-11-17:** `npm run rosters:sync` publicou o snapshot no projeto novo (`dqilznggmhgtonnccsws`) com **8/12 ao vivo**: pl, laliga, serieA, bundesliga, ligue1, ligaPortugal, championship e **ligue2** (antes estática). As outras 4 mantiveram o elenco anterior do snapshot (sintético, 18 por time):
 
-**O que envolve:** quando o limite diário da API-Football resetar (dia seguinte), rodar de novo:
+- `bundesliga2`, `serieB`: **limite diário** da API-Football (100/dia). Uma rodada sem a service role mais cedo no mesmo dia gastou parte da cota.
+- `laliga2`, `ligaPortugal2`: **403** da API-Football — restrição do plano/conta pra essas competições; esperar não resolve.
+
+**Correção junto (2026-11-17):** num sync forçado, liga que falhava ao vivo voltava com o elenco **estático** e, publicada, sobrescrevia um elenco melhor que já estava no snapshot. Agora `syncAllLeagueRosters` mantém o que o snapshot tinha pra essa liga (`source: 'cloud'`) e devolve `errors` por liga; o script imprime o motivo de cada falha. Teste de regressão em `rosterSync.test.ts`.
+
+**O que envolve:** no dia seguinte (cota reseta), rodar de novo **uma vez só**, com `SUPABASE_SERVICE_ROLE_KEY` no `.env`:
 
 ```bash
 npm run rosters:sync
 ```
 
-O script busca as 12 ligas ao vivo, grava o cache local de cada uma e sobrescreve o snapshot no Supabase (`roster_snapshots`, linha `global`). Nada mais muda — o app já lê do Supabase antes de bater na API.
+Pras duas com 403: mapear `laliga2`/`ligaPortugal2` na SportAPI7 (ver item "SportAPI7 — Mapeamento pendente") ou aceitar elenco sintético nelas.
 
-**Como confirmar que deu certo:** `npx vite-node scripts/read-rosters.ts` deve mostrar as 5 ligas (laliga2, bundesliga2, serieB, ligue2, ligaPortugal2) com jogadores reais (ex: nomes de atletas conhecidos), em vez dos gerados sinteticamente. Se `laliga2` seguir com 403, é restrição da conta naquela competição — registrar e seguir.
-
-**Posso retomar quando:** a partir do dia seguinte à última execução (o limite diário reseta), ~1 minuto pra rodar.
+**Posso retomar quando:** a partir de 2026-11-18, ~1 minuto.
 
 ---
 
@@ -59,9 +62,9 @@ Itens de infra externa que o [GUIA_PRODUCAO.md](GUIA_PRODUCAO.md) lista pro lan�
 
 | # | Item | Estado | Como verificar / o que fazer |
 |---|------|--------|------------------------------|
-| 1 | **Supabase: fechar RLS de `roster_snapshots`** | 🟡 A verificar | Rodar [`scripts/sql/harden-rls-roster-snapshots.sql`](scripts/sql/harden-rls-roster-snapshots.sql) no SQL Editor. Script idempotente; ao final deve sobrar só a política de SELECT. Verificação externa: `SELECT policy_name, cmd FROM pg_policies WHERE tablename = 'roster_snapshots';` |
-| 2 | **Re-sync global dos elencos (5 segundas divisões)** | 🟡 Pendente | Ver item "Re-sincronizar elencos no Supabase" acima — mesmo esforço. `SUPABASE_SERVICE_ROLE_KEY=... npm run rosters:sync` |
-| 3 | **Worker: secrets** | 🟡 Parcial | `.env` documenta que `RAPIDAPI_KEY` já foi setada (`npx wrangler secret put RAPIDAPI_KEY`). **`FOOTBALL_API_KEY` a confirmar** (`npx wrangler secret put FOOTBALL_API_KEY`). Verificação externa: `npx wrangler secret list` |
+| 1 | **Supabase: fechar RLS de `roster_snapshots`** | ✅ Resolvido (2026-11-17) | Migrado pro projeto `dqilznggmhgtonnccsws` com `scripts/sql/setup-supabase.sql`: só leitura pública no snapshot, escrita anônima testada e bloqueada. Ver GUIA_PRODUCAO.md §1. |
+| 2 | **Re-sync global dos elencos** | 🟡 8/12 ao vivo (2026-11-17) | Faltam bundesliga2/serieB (cota diária) e laliga2/ligaPortugal2 (403). Ver item "Re-sincronizar elencos no Supabase" acima. |
+| 3 | **Worker: secrets** | ✅ Confirmado (2026-11-17) | O sync de 2026-11-17 trouxe 7 ligas pela football-data.org e respostas da API-Football via proxy — as duas chaves (`FOOTBALL_API_KEY`, `RAPIDAPI_KEY`) estão setadas no Worker. |
 | 4 | **Worker: rate limit em produção** | 🟡 Pendente de deploy | O código do rate limit (20 req/min por IP) **já está** em `worker/football-proxy.js`. Falta o `npx wrangler deploy` pra valer. Verificação externa: bater no proxy >20x/min e ver 429 |
 | 5 | **PeerServer próprio (multiplayer)** | 🔴 Pendente | `.env` **sem** `VITE_PEER_*` → jogo ainda usa o broker público `0.peerjs.com` (sem SLA). Subir servidor (Render/Fly/Railway ou docker) + rebuild do site com as 4 vars |
 | 6 | **Android: keystore de release + AAB** | 🔴 Pendente | `android/keystore.properties` **não existe** (`Test-Path` = False). Sem ele o build.gradle só gera debug. Criar keystore, preencher o properties, `gradlew bundleRelease`, bump de `versionCode`/`versionName` |

@@ -6,18 +6,23 @@ implementados — este guia cobre só o que depende de infra externa.
 
 ---
 
-## 1. Supabase — fechar o RLS do snapshot de elencos (segurança)
+## 1. Supabase
 
-**Problema:** a instalação original deixa qualquer usuário autenticado (inclusive
-auth anônimo) **escrever** na linha global de `roster_snapshots`. Publicado, qualquer
-um pode corromper o elenco de todos os jogadores.
+**Projeto de produção (desde 2026-11-17):** `dqilznggmhgtonnccsws` ("FootPlan", us-east-1),
+em conta própria do jogo. O projeto antigo (`avpxvmiausfqyscomocg`) foi aposentado.
+Ele tinha uma política `write global snapshot` aberta a qualquer usuário autenticado;
+o script de hardening nunca rodou porque lia uma coluna errada (`policy_name`).
 
-**Fix (1 minuto):** abra o SQL Editor do Supabase e rode
-[`scripts/sql/harden-rls-roster-snapshots.sql`](scripts/sql/harden-rls-roster-snapshots.sql).
-O script é idempotente: remove toda política de write e mantém só a de leitura
-aberta. A `careers` já usa o modelo certo ("own career") — não mexa.
+Estado verificado em 2026-11-17: tabelas `careers` e `roster_snapshots` criadas por
+[`scripts/sql/setup-supabase.sql`](scripts/sql/setup-supabase.sql), RLS só com
+"own career" (authenticated) + leitura pública do snapshot. Escrita anônima no snapshot
+testada e bloqueada. Snapshot das 12 ligas copiado do projeto antigo.
 
-Depois disso, **publicar** o snapshot passa a exigir a service role key:
+**Pré-requisito no painel:** Authentication > Sign In / Providers > *Allow anonymous
+sign-ins* ligado. Sem isso o app não loga e o cloud save fica sempre "offline".
+
+Projeto novo do zero? Rode `setup-supabase.sql` no SQL Editor, ligue o anônimo e popule
+os elencos com `npm run rosters:copy -- --export/--import` (copia de outro projeto) ou:
 
 ```bash
 # no .env local (SEM prefixo VITE_ — nunca vai pro bundle do browser)
@@ -25,11 +30,8 @@ SUPABASE_SERVICE_ROLE_KEY=...
 npm run rosters:sync
 ```
 
-O botão "Atualizar Elencos" dentro do jogo continua funcionando pro usuário final:
-atualiza o cache **local** dele; só a publicação global vira operação de admin.
-
-> Aproveite e rode o sync antes do lançamento: as 5 segundas divisões estão com
-> elencos estáticos (limite diário da API-Football estourou em 2026-08-03).
+> Rode o sync antes do lançamento: as 5 segundas divisões estão com elencos
+> estáticos (limite diário da API-Football estourou em 2026-08-03).
 
 ---
 
@@ -122,7 +124,7 @@ A cada release: bump de `versionCode`/`versionName` em `android/app/build.gradle
 
 ## Ordem sugerida no dia do lançamento
 
-1. Rode o SQL de RLS (seção 1)
+1. Confira que o login anônimo está ligado no Supabase (seção 1)
 2. `SUPABASE_SERVICE_ROLE_KEY=... npm run rosters:sync` (confira as 12 ligas ao vivo)
 3. `npx wrangler deploy` (rate limit ativo)
 4. Suba o PeerServer e rebuild do site com `VITE_PEER_*` (seção 3)
