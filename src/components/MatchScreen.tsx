@@ -791,9 +791,13 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     <button className="simulate-btn" onClick={handleStartLive} disabled={simulating}>
                       JOGAR
                     </button>
-                    <button className="simulate-btn" onClick={handleFastSim} disabled={simulating}>
-                      SIMULAR
-                    </button>
+                    {/* Online não tem SIMULAR: o caminho rápido não manda nada pro outro lado
+                        e o guest ficava preso em "Aguardando host simular". */}
+                    {!online && (
+                      <button className="simulate-btn" onClick={handleFastSim} disabled={simulating}>
+                        SIMULAR
+                      </button>
+                    )}
                   </>
             ) : phase === 'done' && (isKnockout ? knockoutResult : result) ? (
               <>

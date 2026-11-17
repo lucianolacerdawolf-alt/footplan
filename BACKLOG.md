@@ -21,6 +21,12 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - ✅ ~~Estádio inventado e incoerente entre telas.~~ Corrigido: sync grava o estádio real (`venue` da football-data; nome + capacidade da API-Football) e as duas telas usam `teamStadium`. Sem dado real: nome estável por clube, sem capacidade inventada. 7 ligas já com estádio real (Selhurst Park, Emirates…); capacidade só virá das 5 segundas divisões (API-Football).
 - ✅ **Achado no caminho: cache local de 7 dias vencia o snapshot publicado.** Quem já tinha aberto o jogo ficava até uma semana com ligas/elencos antigos (e com sync diário, o cache sempre ganhava). Agora o cache só vence se for mais novo que o snapshot, ou offline. Testes em `rosterSync.test.ts`.
 
+**Teste dos outros modos (2026-11-17):** Campeonatos e Copas OK (resultado ao vivo gravado; pênaltis aparecem como "a.e.t. · Pên. 7–6"). Online corrigido:
+- ✅ Online usava as ligas estáticas de 2024/25 e trocava só o id do time — com snapshots de dias diferentes cada lado simulava com elenco diferente. Agora o lobby usa as ligas atualizadas, guarda o objeto do time escolhido e o `start` leva os times do host.
+- ✅ "SIMULAR" no online não avisava o guest (ficava preso em "Aguardando host simular"). Removido do online.
+- 🟡 Posse da engine às vezes extrema (80%×20% em Arsenal × Chelsea). Calibração do motor, não de exibição.
+- 🟡 Logo da Championship traz a marca Sky Bet (patrocinador). Trocar exige outra imagem.
+
 **🟡 Pendentes — bugs:**
 - ✅ ~~"Simular até o fim" dispara dezenas de `Maximum update depth exceeded` e a narração para no minuto em que se pulou.~~ Corrigido (`a7698df`): era pior que parecia — pular **encerrava a partida no minuto do clique** (engine gera eventos sob demanda). Agora simula o resto; o loop vinha do setter instável do `useLocalStorage` (histórico enchia de cópias).
 - ✅ ~~Pênaltis invisíveis: 1-1 na copa vira "DERROTA" sem mostrar a disputa.~~ Corrigido: o SIMULAR em mata-mata descartava prorrogação/pênaltis e **dava a vaga sempre ao visitante** nos pênaltis. Lógica movida pra `simularMataMataCompleto` (engine) com teste.

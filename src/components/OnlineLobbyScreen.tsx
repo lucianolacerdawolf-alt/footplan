@@ -5,6 +5,7 @@ import { FORMATIONS, MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS } from '../engi
 import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import type { UsePeerConnectionReturn } from '../hooks/usePeerConnection';
 import { allLeagues } from '../data/leagues';
+import { syncLeagueRoster } from '../services/rosterSync';
 import TacticLabel from './TacticLabel';
 import styles from './OnlineLobbyScreen.module.css';
 import { crestSrc } from '../utils/crest';
@@ -16,22 +17,31 @@ interface Props {
   peer: UsePeerConnectionReturn;
 }
 
+// `team` / `homeTeam` / `awayTeam` levam o time inteiro: cada lado podia ter um
+// snapshot de elencos de dia diferente, e com só o id cada um simulava com o SEU
+// elenco — partida dessincronizada. O guest usa os times enviados pelo host no start.
 type PeerMessage =
-  | { type: 'host-team'; teamId: string }
-  | { type: 'guest-team'; teamId: string }
+  | { type: 'host-team'; teamId: string; team?: Team }
+  | { type: 'guest-team'; teamId: string; team?: Team }
   | { type: 'confirm-tactics'; strategy: Strategy }
-  | { type: 'start'; seed: number; homeTeamId: string; awayTeamId: string; homeStrategy: Strategy; awayStrategy: Strategy };
+  | { type: 'start'; seed: number; homeTeamId: string; awayTeamId: string; homeStrategy: Strategy; awayStrategy: Strategy; homeTeam?: Team; awayTeam?: Team };
 
+/** Times conhecidos por id: estático de base + ligas atualizadas + times recebidos do outro lado. */
 const allTeamsMap = new Map<string, Team>(
   allLeagues.flatMap(l => l.teams.map(t => [t.id, t]))
 );
+const registerTeams = (teams: Team[]) => { for (const t of teams) allTeamsMap.set(t.id, t); };
 
 export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer }: Props) {
   const [joinCode, setJoinCode] = useState('');
   const [copyLabel, setCopyLabel] = useState('Copiar');
 
-  const [hostTeamId, setHostTeamId] = useState<string | null>(null);
-  const [guestTeamId, setGuestTeamId] = useState<string | null>(null);
+  // Guarda o OBJETO do time escolhido (o que está na tela), não só o id: lookup por id
+  // num mapa global podia devolver outra versão do clube (estático × atualizado).
+  const [hostTeam, setHostTeam] = useState<Team | null>(null);
+  const [guestTeam, setGuestTeam] = useState<Team | null>(null);
+  const hostTeamId = hostTeam?.id ?? null;
+  const guestTeamId = guestTeam?.id ?? null;
 
   const [filterLeagueId, setFilterLeagueId] = useState<string>(allLeagues[0].id);
 
@@ -41,9 +51,25 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
   const [opponentConfirmed, setOpponentConfirmed] = useState(false);
   const [opponentStrategy, setOpponentStrategy] = useState<Strategy | null>(null);
 
+  // Ligas atualizadas (cache/snapshot do sync) — antes o online usava só o estático
+  // de 2024/25 (Leicester, Southampton na PL…), diferente do resto do jogo.
+  const [liveTeams, setLiveTeams] = useState<Record<string, Team[]>>({});
+  useEffect(() => {
+    const league = allLeagues.find(l => l.id === filterLeagueId);
+    if (!league || liveTeams[league.id]) return;
+    let cancelled = false;
+    syncLeagueRoster(league).then(r => {
+      if (cancelled) return;
+      registerTeams(r.league.teams);
+      setLiveTeams(prev => ({ ...prev, [league.id]: r.league.teams }));
+    }).catch(() => { /* fica no estático */ });
+    return () => { cancelled = true; };
+  }, [filterLeagueId, liveTeams]);
+
   const filteredTeams = useMemo(
-    () => allLeagues.find(l => l.id === filterLeagueId)?.teams ?? [],
-    [filterLeagueId]
+    () => [...(liveTeams[filterLeagueId] ?? allLeagues.find(l => l.id === filterLeagueId)?.teams ?? [])]
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [filterLeagueId, liveTeams]
   );
 
   // Use ref to avoid stale closures in the data handler
@@ -59,18 +85,20 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
       if (!msg || typeof msg !== 'object' || !('type' in msg)) return;
 
       if (msg.type === 'host-team' && !isHostRef.current) {
-        setHostTeamId(msg.teamId);
+        if (msg.team) registerTeams([msg.team]);
+        setHostTeam(msg.team ?? allTeamsMap.get(msg.teamId) ?? null);
       }
       if (msg.type === 'guest-team' && isHostRef.current) {
-        setGuestTeamId(msg.teamId);
+        if (msg.team) registerTeams([msg.team]);
+        setGuestTeam(msg.team ?? allTeamsMap.get(msg.teamId) ?? null);
       }
       if (msg.type === 'confirm-tactics') {
         setOpponentConfirmed(true);
         setOpponentStrategy(msg.strategy);
       }
       if (msg.type === 'start' && !isHostRef.current) {
-        const home = allTeamsMap.get(msg.homeTeamId);
-        const away = allTeamsMap.get(msg.awayTeamId);
+        const home = msg.homeTeam ?? allTeamsMap.get(msg.homeTeamId);
+        const away = msg.awayTeam ?? allTeamsMap.get(msg.awayTeamId);
         if (!home || !away) return;
         const h = cloneTeam(home);
         const a = cloneTeam(away);
@@ -83,20 +111,19 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // stable — reads from refs
 
-  const selectMyTeam = useCallback((teamId: string) => {
-    const team = allTeamsMap.get(teamId);
-    if (!team) return;
+  const selectMyTeam = useCallback((team: Team) => {
+    const teamId = team.id;
     // Reset tactics/confirmation when changing team
     setMyStrategy({ ...team.strategy });
     setMyConfirmed(false);
     setOpponentConfirmed(false);
     setOpponentStrategy(null);
     if (peer.isHost) {
-      setHostTeamId(teamId);
-      peer.send({ type: 'host-team', teamId });
+      setHostTeam(team);
+      peer.send({ type: 'host-team', teamId, team });
     } else {
-      setGuestTeamId(teamId);
-      peer.send({ type: 'guest-team', teamId });
+      setGuestTeam(team);
+      peer.send({ type: 'guest-team', teamId, team });
     }
   }, [peer]);
 
@@ -107,18 +134,17 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
   }, [peer, myStrategy]);
 
   const handleStart = useCallback(() => {
-    if (!hostTeamId || !guestTeamId || !peer.isHost) return;
-    const homeTeam = allTeamsMap.get(hostTeamId);
-    const awayTeam = allTeamsMap.get(guestTeamId);
-    if (!homeTeam || !awayTeam) return;
+    if (!hostTeam || !guestTeam || !peer.isHost) return;
+    const homeTeam = hostTeam;
+    const awayTeam = guestTeam;
     const seed = (Math.random() * 0xFFFFFFFF) >>> 0;
     const h = cloneTeam(homeTeam);
     const a = cloneTeam(awayTeam);
     if (myStrategy) h.strategy = myStrategy;
     if (opponentStrategy) a.strategy = opponentStrategy;
-    peer.send({ type: 'start', seed, homeTeamId: h.id, awayTeamId: a.id, homeStrategy: h.strategy, awayStrategy: a.strategy });
+    peer.send({ type: 'start', seed, homeTeamId: h.id, awayTeamId: a.id, homeStrategy: h.strategy, awayStrategy: a.strategy, homeTeam: homeTeam, awayTeam: awayTeam });
     onStartMatch(h, a, seed);
-  }, [hostTeamId, guestTeamId, myStrategy, opponentStrategy, peer, onStartMatch]);
+  }, [hostTeam, guestTeam, myStrategy, opponentStrategy, peer, onStartMatch]);
 
   const handleCopyRoom = async () => {
     if (!peer.roomId) return;
@@ -127,10 +153,8 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
     setTimeout(() => setCopyLabel('Copiar'), 2000);
   };
 
-  const hostTeam = hostTeamId ? allTeamsMap.get(hostTeamId) ?? null : null;
-  const guestTeam = guestTeamId ? allTeamsMap.get(guestTeamId) ?? null : null;
-  const myTeamId = peer.isHost ? hostTeamId : guestTeamId;
-  const myTeam = myTeamId ? allTeamsMap.get(myTeamId) ?? null : null;
+  const myTeam = peer.isHost ? hostTeam : guestTeam;
+  const myTeamId = myTeam?.id ?? null;
   const bothPicked = hostTeamId !== null && guestTeamId !== null;
 
   const topNav = (disconnect?: boolean) => (
@@ -264,7 +288,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
                 key={team.id}
                 className={`team-tile ${isHostPick ? 'picked-home' : ''} ${isGuestPick ? 'picked-away' : ''} ${(isHostPick || isGuestPick) ? 'selected' : ''}`}
                 style={(isHostPick || isGuestPick) ? { borderColor: team.color, background: team.color + '10' } : undefined}
-                onClick={() => !isOpponentPick && selectMyTeam(team.id)}
+                onClick={() => !isOpponentPick && selectMyTeam(team)}
                 disabled={isOpponentPick}
                 aria-label={`${team.name}, força ${getAvgOvr(team)}${isOpponentPick ? ', escolhido pelo adversário' : ''}`}
                 aria-pressed={isMyPick}
