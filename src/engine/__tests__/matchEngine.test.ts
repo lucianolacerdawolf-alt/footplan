@@ -429,3 +429,24 @@ describe('possessionPct', () => {
     expect(possessionPct(early)).toBeLessThan(65);
   });
 });
+
+describe('distribuição da posse (calibração)', () => {
+  it('time dominante fica em faixas de futebol real (não 85–100%)', async () => {
+    const { allLeagues } = await import('@/data/leagues');
+    const { cloneTeam } = await import('@/utils/teamUtils');
+    const teams = allLeagues.find(l => l.id === 'pl')!.teams;
+    const rng = seededRng(2026);
+    const dominant: number[] = [];
+    for (let i = 0; i < 300; i++) {
+      const a = teams[Math.floor(rng() * teams.length)];
+      const b = teams[(teams.indexOf(a) + 1 + Math.floor(rng() * (teams.length - 1))) % teams.length];
+      const r = simularPartida(cloneTeam(a), cloneTeam(b), rng);
+      dominant.push(Math.max(r.homePossession, r.awayPossession));
+    }
+    dominant.sort((x, y) => x - y);
+    const median = dominant[Math.floor(dominant.length / 2)];
+    const over75 = dominant.filter(p => p > 75).length / dominant.length;
+    expect(median).toBeLessThanOrEqual(64);
+    expect(over75).toBeLessThan(0.12);
+  });
+});

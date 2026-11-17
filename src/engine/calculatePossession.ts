@@ -10,6 +10,9 @@ import {
   makeRng,
 } from './matchHelpers';
 
+/** Quanto a superioridade de meio-campo pesa na disputa de posse (ver calculatePossession). */
+export const POSSESSION_EXPONENT = 2;
+
 export function calculatePossession(
   teamA: Team, teamB: Team,
   fatigueA: Map<string, number>, fatigueB: Map<string, number>,
@@ -31,13 +34,21 @@ export function calculatePossession(
     const f = fatigueA.get(p.id) ?? 0;
     return sum + effective(p.attributes.passing, f) * modA.passing
                + effective(p.attributes.vision, f) * modA.vision;
-  }, 0) * formMultA * dlA * FORMATION_BONUS[teamA.strategy.formation].possession * rng(0.7, 1.3);
+  }, 0) * formMultA * dlA * FORMATION_BONUS[teamA.strategy.formation].possession;
 
   const powerB = midsB.reduce((sum, p) => {
     const f = fatigueB.get(p.id) ?? 0;
     return sum + effective(p.attributes.passing, f) * modB.passing
                + effective(p.attributes.vision, f) * modB.vision;
-  }, 0) * formMultB * dlB * FORMATION_BONUS[teamB.strategy.formation].possession * rng(0.7, 1.3);
+  }, 0) * formMultB * dlB * FORMATION_BONUS[teamB.strategy.formation].possession;
 
-  return powerA >= powerB ? 'A' : 'B';
+  // Disputa PROPORCIONAL à força. Antes era "vencedor leva tudo" com ruído de ±30%:
+  // um meio-campo ~25% mais forte ganhava quase todo ciclo e a posse ia a 85–100%
+  // (mediana do time dominante 73%, 45% dos jogos acima de 75%). Com a chance
+  // proporcional (expoente POSSESSION_EXPONENT) a superioridade ainda aparece, mas
+  // em faixas de futebol real.
+  if (powerA <= 0 && powerB <= 0) return rng(0, 1) < 0.5 ? 'A' : 'B';
+  const a = Math.pow(Math.max(powerA, 1e-6), POSSESSION_EXPONENT);
+  const b = Math.pow(Math.max(powerB, 1e-6), POSSESSION_EXPONENT);
+  return rng(0, 1) < a / (a + b) ? 'A' : 'B';
 }
