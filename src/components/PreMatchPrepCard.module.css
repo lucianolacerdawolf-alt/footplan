@@ -64,10 +64,13 @@
 }
 
 .trainEffect {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-secondary);
   font-weight: 600;
 }
+
+.effectGood { color: var(--positive); }
+.effectBad { color: var(--negative); }
 
 .pressBtn {
   min-height: 40px;

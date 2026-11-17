@@ -23,7 +23,7 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - ✅ ~~"Simular até o fim" dispara dezenas de `Maximum update depth exceeded` e a narração para no minuto em que se pulou.~~ Corrigido (`a7698df`): era pior que parecia — pular **encerrava a partida no minuto do clique** (engine gera eventos sob demanda). Agora simula o resto; o loop vinha do setter instável do `useLocalStorage` (histórico enchia de cópias).
 - ✅ ~~Pênaltis invisíveis: 1-1 na copa vira "DERROTA" sem mostrar a disputa.~~ Corrigido: o SIMULAR em mata-mata descartava prorrogação/pênaltis e **dava a vaga sempre ao visitante** nos pênaltis. Lógica movida pra `simularMataMataCompleto` (engine) com teste.
 - ✅ ~~Placar do jogo (1-1) diferente do ticker da rodada (0-1); posse 8% × 91%.~~ Corrigido: o ticker **inventava** placares (Math.random, inclusive pro jogo do usuário) que não eram os gravados; agora mostra só resultado real e some se não houver. Posse ao vivo/intervalo contava linhas de narração; agora usa a posse da engine (`possessionPct`). *Ideia de feature:* ticker com placares ao vivo de verdade (pré-simular a rodada e revelar no relógio, estilo FM).
-- Ícone ⚡ do treino mostra delta de **fadiga** mas lê como energia ("Treino Intenso ⚡+25").
+- ✅ ~~Ícone ⚡ do treino mostra delta de **fadiga** mas lê como energia.~~ Corrigido: agora "Fadiga +25 · Moral +3", por extenso, verde/vermelho conforme bom/ruim.
 - Primeiro jogo da temporada é a copa (oitavas, só 16 times da liga); com 0 jogos o time aparece "1º lugar" e o feed comemora; jogo de copa não conta em JOGOS.
 - 4 cliques pra começar uma partida (Jogar → Confirmar → Iniciar Partida → JOGAR).
 - PT-PT misturado ("noutra liga"); botões de time sem nome acessível.

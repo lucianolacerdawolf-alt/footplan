@@ -45,8 +45,16 @@ export default function PreMatchPrepCard({
                 title={`${preset.description} (moral ${preset.moraleDelta > 0 ? '+' : ''}${preset.moraleDelta}, fadiga ${preset.fatigueDelta > 0 ? '+' : ''}${preset.fatigueDelta})`}
               >
                 <span className={styles.trainLabel}>{preset.label}</span>
+                {/* Por extenso e com cor de bom/ruim: o "⚡+25" de antes lia como ENERGIA,
+                    mas é fadiga — o Treino Intenso parecia a opção que descansa o elenco. */}
                 <span className={styles.trainEffect}>
-                  ⚡{preset.fatigueDelta > 0 ? '+' : ''}{preset.fatigueDelta} · 😊{preset.moraleDelta > 0 ? '+' : ''}{preset.moraleDelta}
+                  <span className={preset.fatigueDelta > 0 ? styles.effectBad : styles.effectGood}>
+                    Fadiga {preset.fatigueDelta > 0 ? '+' : ''}{preset.fatigueDelta}
+                  </span>
+                  {' · '}
+                  <span className={preset.moraleDelta >= 0 ? styles.effectGood : styles.effectBad}>
+                    Moral {preset.moraleDelta > 0 ? '+' : ''}{preset.moraleDelta}
+                  </span>
                 </span>
               </button>
             );
