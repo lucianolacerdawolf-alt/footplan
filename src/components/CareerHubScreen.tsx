@@ -459,7 +459,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                 // Sem isto tudo ficava "📌 pendente" até o último dia, e o usuário só
                 // descobria que falhou quando já não dava pra reagir.
                 const prog = isPending
-                  ? getObjectiveProgress(obj, userPosition, cupProgress.stage, cupProgress.eliminated, finances.budget)
+                  ? getObjectiveProgress(obj, gamesPlayed > 0 ? userPosition : null, cupProgress.stage, cupProgress.eliminated, finances.budget)
                   : null;
                 const icon = isAchieved ? '✅'
                   : isFailed ? '❌'

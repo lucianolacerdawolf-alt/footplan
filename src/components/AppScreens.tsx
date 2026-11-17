@@ -578,7 +578,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     const record = computeUserSeasonRecord(lg);
     const currentSeason = {
       leagueName: getLeague(cs.leagueId)?.name ?? 'a liga',
-      position: standings.findIndex(s => s.teamId === lg.userTeamId) + 1,
+      // 0 = sem jogo da liga ainda (a ordem alfabética punha o time em "1º"); a tela esconde.
+      position: record.wins + record.draws + record.losses > 0 ? standings.findIndex(s => s.teamId === lg.userTeamId) + 1 : 0,
       round: lg.currentRound,
       totalRounds: lg.fixtures.length,
       wins: record.wins,

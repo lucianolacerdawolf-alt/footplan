@@ -144,7 +144,8 @@ export interface ObjectiveProgress {
  */
 export function getObjectiveProgress(
   obj: BoardObjective,
-  leaguePosition: number,
+  /** null = nenhum jogo da liga ainda (com 0 jogos a ordem alfabética punha o time em 1º). */
+  leaguePosition: number | null,
   cupStage: CupProgressStage,
   cupEliminated: boolean,
   budget: number,
@@ -155,6 +156,7 @@ export function getObjectiveProgress(
     case 'avoid_relegation': {
       // Posição na tabela oscila até o fim, então nunca é "fora" definitivo:
       // ou está dentro da meta agora, ou ainda precisa subir.
+      if (leaguePosition === null) return { status: 'no-caminho', detail: 'Pré-temporada — vale a partir da rodada 1' };
       const dentro = leaguePosition <= obj.target;
       return {
         status: dentro ? 'no-caminho' : 'fora',

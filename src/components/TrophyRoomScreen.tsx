@@ -124,7 +124,7 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
   return (
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.header}>
-        <h1 className={styles.title}>🏆 Sala de Troféus</h1>
+        <h1 className={styles.title}>🏛️ Meu Clube</h1>
       </div>
 
       {/* Identidade do clube */}
@@ -282,7 +282,7 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
               </p>
               <div className={styles.emptyStats}>
                 <div className={styles.emptyStat}>
-                  <span className={styles.emptyStatValue}>{currentSeason.position}º</span>
+                  <span className={styles.emptyStatValue}>{currentSeason.position > 0 ? `${currentSeason.position}º` : '—'}</span>
                   <span className={styles.emptyStatLabel}>na liga</span>
                 </div>
                 <div className={styles.emptyStat}>

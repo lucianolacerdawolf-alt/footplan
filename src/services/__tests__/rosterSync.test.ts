@@ -671,3 +671,13 @@ describe('cache local × snapshot publicado', () => {
     expect(offline.league.teams[0].name).toMatch(/v1$/);
   });
 });
+
+describe('normalizeShirtNumbers', () => {
+  it('mantém números válidos e únicos; troca fora de 1–99 e repetidos pelo primeiro livre', async () => {
+    const { normalizeShirtNumbers } = await import('../rosterSync');
+    const mk = (id: string, number: number) => makePlayer(id, id, 'MID', number);
+    const out = normalizeShirtNumbers([mk('a', 1), mk('b', 116), mk('c', 7), mk('d', 7), mk('e', 0)]);
+    expect(out.map(p => p.number)).toEqual([1, 2, 7, 3, 4]);
+    expect(new Set(out.map(p => p.number)).size).toBe(out.length);
+  });
+});

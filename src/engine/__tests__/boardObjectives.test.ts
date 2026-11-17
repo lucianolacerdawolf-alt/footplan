@@ -145,6 +145,10 @@ describe('getObjectiveProgress', () => {
   const budgetObj = objs.objectives.find(o => o.type === 'budget_positive')!;
 
   it('liga: mostra a posição atual e quantos lugares faltam', () => {
+    // sem jogo da liga ainda: não diz "1º — dentro da meta"
+    const pre = getObjectiveProgress(posObj, null, 'roundOf16', false, 1);
+    expect(pre.status).toBe('no-caminho');
+    expect(pre.detail).toMatch(/Pré-temporada/);
     const dentro = getObjectiveProgress(posObj, 1, 'roundOf16', false, 1);
     expect(dentro.status).toBe('no-caminho');
     expect(dentro.detail).toContain('1º');

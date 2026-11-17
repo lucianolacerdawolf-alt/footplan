@@ -155,6 +155,27 @@ function starterOvr(team: Team): number {
     : 70;
 }
 
+/**
+ * Números de camisa válidos (1–99) e sem repetição. Jogador sem número na API ganhava
+ * "90 + posição na lista" (#116, #117…); repetidos também acontecem entre fontes. Quem
+ * já tem número válido e único mantém; o resto pega o primeiro livre.
+ */
+export function normalizeShirtNumbers(squad: Player[]): Player[] {
+  const used = new Set<number>();
+  const keep = squad.map(p => {
+    const ok = Number.isInteger(p.number) && p.number >= 1 && p.number <= 99 && !used.has(p.number);
+    if (ok) used.add(p.number);
+    return ok;
+  });
+  let next = 1;
+  return squad.map((p, i) => {
+    if (keep[i]) return p;
+    while (used.has(next) && next < 99) next++;
+    used.add(next);
+    return { ...p, number: next };
+  });
+}
+
 function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[], targetOvrOverride?: number): { team: Team; stats: MergeStats } {
   const byName = new Map(staticTeam.squad.map(p => [normalizeName(p.name), p]));
   let matched = 0;
@@ -210,10 +231,10 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[], targetOv
     grouped[pos].sort((a, b) => playerOvr(b) - playerOvr(a));
   });
 
-  const squad = rebalanceForFormation(
+  const squad = normalizeShirtNumbers(rebalanceForFormation(
     { ...staticTeam, squad: [...grouped.GK, ...grouped.DEF, ...grouped.MID, ...grouped.FWD] },
     staticTeam.strategy.formation,
-  ).squad;
+  ).squad);
 
   return {
     // Só substitui o elenco se a API realmente devolveu jogadores pra esse time — um
