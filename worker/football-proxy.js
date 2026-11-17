@@ -39,6 +39,8 @@ const RAPIDAPI_ROUTES = {
     allowed: [
       /^unique-tournament\/\d+\/season\/\d+\/standings\/total$/,
       /^team\/\d+\/players$/,
+      // temporada atual de cada liga (sportApi resolve sozinho em vez de fixar seasonId)
+      /^unique-tournament\/\d+\/seasons$/,
       /^category\/\d+\/scheduled-events\/\d{4}-\d{2}-\d{2}$/,
     ],
   },

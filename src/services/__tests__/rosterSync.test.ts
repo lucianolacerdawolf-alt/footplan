@@ -272,6 +272,9 @@ describe('syncLeagueRoster', () => {
       if (url.includes('/api/football/competitions/')) {
         return Promise.reject(new Error('network down'));
       }
+      if (url.includes('/seasons')) {
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ seasons: [{ id: 999 }] }) });
+      }
       if (url.includes('/standings/total')) {
         return Promise.resolve({
           ok: true,

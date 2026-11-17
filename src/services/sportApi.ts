@@ -26,20 +26,39 @@ const CACHE_VERSION = 1;
  *  buscar o elenco de 18-24 times em sequência. */
 const PER_TEAM_DELAY_MS = 150;
 
-/** Liga interna → { uniqueTournamentId, seasonId }
- *  Para descobrir novos IDs quando a cota resetar:
- *  1. Fetch events: GET /category/{countryCat}/scheduled-events/YYYY-MM-DD
- *  2. Procure pelo torneio desejado nos eventos
- *  3. Extraia: tournament.uniqueTournament.id e season.id */
-const LEAGUE_MAP: Record<string, { ut: number; season: number }> = {
-  championship: { ut: 18, season: 77347 },   // cat 1: England
-  ligue2: { ut: 182, season: 77357 },        // cat 7: France
-  // TODO: descobrir IDs quando cota resetar
-  // laliga2: { ut: ?, season: ? },          // provavelmente cat ?: Spain
-  // bundesliga2: { ut: ?, season: ? },       // provavelmente cat ?: Germany
-  // serieB: { ut: ?, season: ? },            // provavelmente cat ?: Italy
-  // ligaPortugal2: { ut: ?, season: ? },     // provavelmente cat ?: Portugal
+/** Liga interna → uniqueTournamentId (Sofascore). A temporada NÃO fica fixa no código:
+ *  antes o seasonId era hardcoded (ex: 77347) e a liga parava de atualizar na virada de
+ *  temporada. Agora `currentSeasonId` pergunta a temporada atual em
+ *  `unique-tournament/{ut}/seasons` (1ª da lista) e guarda por 24h.
+ *  championship/ligue2 já funcionaram com esses ut. Os outros 4 ainda NÃO foram
+ *  confirmados contra a API (cota mensal da RapidAPI estourada em 2026-11-17) — se algum
+ *  estiver errado, a liga só falha e mantém o elenco que já tinha no snapshot. */
+const LEAGUE_MAP: Record<string, { ut: number }> = {
+  championship: { ut: 18 },    // England
+  ligue2: { ut: 182 },         // France
+  laliga2: { ut: 54 },         // Spain — a confirmar
+  bundesliga2: { ut: 44 },     // Germany — a confirmar
+  serieB: { ut: 53 },          // Italy — a confirmar
+  ligaPortugal2: { ut: 239 },  // Portugal — a confirmar
 };
+
+const SEASON_CACHE_PREFIX = 'fp:sportapi:season:';
+const SEASON_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+async function currentSeasonId(ut: number, proxyBase: string): Promise<number> {
+  try {
+    const raw = localStorage.getItem(SEASON_CACHE_PREFIX + ut);
+    if (raw) {
+      const { id, at } = JSON.parse(raw) as { id: number; at: number };
+      if (id && Date.now() - at < SEASON_CACHE_TTL_MS) return id;
+    }
+  } catch { /* sem cache */ }
+  const data = await spFetch(`unique-tournament/${ut}/seasons`, proxyBase) as { seasons?: Array<{ id: number }> };
+  const id = data.seasons?.[0]?.id;
+  if (!id) throw new Error(`Temporada atual não encontrada pro torneio ${ut} na SportAPI7.`);
+  try { localStorage.setItem(SEASON_CACHE_PREFIX + ut, JSON.stringify({ id, at: Date.now() })); } catch { /* noop */ }
+  return id;
+}
 
 function getProxyBase(): string | null {
   const url = import.meta.env.VITE_FOOTBALL_PROXY_URL as string | undefined;
@@ -131,14 +150,15 @@ export async function fetchSportApiLeague(leagueId: string, force = false): Prom
   const mapping = LEAGUE_MAP[leagueId];
   if (!mapping) throw new Error(`Liga "${leagueId}" não mapeada na SportAPI7.`);
 
-  const cacheKey = `${leagueId}-${mapping.season}`;
+  const season = await currentSeasonId(mapping.ut, proxyBase);
+  const cacheKey = `${leagueId}-${season}`;
   if (!force) {
     const cached = readCache(cacheKey);
     if (cached) return cached.data;
   }
 
   // Step 1: Get standings → team list
-  const standingsData = await spFetch(`unique-tournament/${mapping.ut}/season/${mapping.season}/standings/total`, proxyBase) as { standings: Array<{ rows: StandingsRow[] }> };
+  const standingsData = await spFetch(`unique-tournament/${mapping.ut}/season/${season}/standings/total`, proxyBase) as { standings: Array<{ rows: StandingsRow[] }> };
   const rows = standingsData.standings?.[0]?.rows ?? [];
   if (rows.length === 0) throw new Error('Nenhum time encontrado nas classificações.');
 
