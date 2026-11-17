@@ -97,6 +97,29 @@ function corsHeaders(origin) {
   };
 }
 
+// Cache na borda das respostas 200 do upstream. O rate limit (binding nativo ou Map em
+// memória) é aproximado e por máquina — testado: 60 req/min do mesmo IP passaram. O que
+// precisa de proteção é a COTA das APIs pagas; com cache, repetir a mesma rota volta da
+// borda e não chega no upstream. 6h é folgado pro sync diário (rosters:sync).
+const UPSTREAM_CACHE_SECONDS = 6 * 60 * 60;
+
+async function cachedUpstream(cacheKeyUrl, doFetch, ctx) {
+  const cache = caches.default;
+  const key = new Request(cacheKeyUrl, { method: 'GET' });
+  const hit = await cache.match(key);
+  if (hit) return { status: hit.status, body: await hit.text(), cached: true };
+  const upstream = await doFetch();
+  const body = await upstream.text();
+  if (upstream.status === 200) {
+    const toStore = new Response(body, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `public, max-age=${UPSTREAM_CACHE_SECONDS}` },
+    });
+    ctx?.waitUntil?.(cache.put(key, toStore));
+  }
+  return { status: upstream.status, body, cached: false };
+}
+
 function json(body, status, headers) {
   return new Response(JSON.stringify(body), {
     status,
@@ -105,7 +128,7 @@ function json(body, status, headers) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') ?? '';
     const headers = corsHeaders(origin);
 
@@ -137,18 +160,18 @@ export default {
       if (!env.FOOTBALL_API_KEY) {
         return json({ error: 'FOOTBALL_API_KEY não configurada no Worker (rode: npx wrangler secret put FOOTBALL_API_KEY).' }, 500, headers);
       }
-      let upstream;
+      const upstreamUrl = `https://api.football-data.org/v4/competitions/${code}/teams`;
+      let res;
       try {
-        upstream = await fetch(`https://api.football-data.org/v4/competitions/${code}/teams`, {
+        res = await cachedUpstream(upstreamUrl, () => fetch(upstreamUrl, {
           headers: { 'X-Auth-Token': env.FOOTBALL_API_KEY },
           signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-        });
+        }), ctx);
       } catch (err) {
         console.error('football-data upstream failed:', err);
         return json({ error: 'Falha ao contatar a fonte de dados. Tente novamente em instantes.' }, 502, headers);
       }
-      const body = await upstream.text();
-      return new Response(body, { status: upstream.status, headers: { ...headers, 'Content-Type': 'application/json' } });
+      return new Response(res.body, { status: res.status, headers: { ...headers, 'Content-Type': 'application/json', 'X-Proxy-Cache': res.cached ? 'HIT' : 'MISS' } });
     }
 
     // /api/rapidapi/{sportapi7|apifootball}/{resto do path}?query — repassa o path e a
@@ -163,18 +186,18 @@ export default {
       if (!route.allowed.some(re => re.test(restPath))) {
         return json({ error: `Endpoint "${restPath}" não permitido por esse proxy.` }, 400, headers);
       }
-      let upstream;
+      const upstreamUrl = `${route.base}/${restPath}${url.search}`;
+      let res;
       try {
-        upstream = await fetch(`${route.base}/${restPath}${url.search}`, {
+        res = await cachedUpstream(upstreamUrl, () => fetch(upstreamUrl, {
           headers: { 'x-rapidapi-key': env.RAPIDAPI_KEY, 'x-rapidapi-host': route.host },
           signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-        });
+        }), ctx);
       } catch (err) {
         console.error(`${provider} upstream failed:`, err);
         return json({ error: 'Falha ao contatar a fonte de dados. Tente novamente em instantes.' }, 502, headers);
       }
-      const body = await upstream.text();
-      return new Response(body, { status: upstream.status, headers: { ...headers, 'Content-Type': 'application/json' } });
+      return new Response(res.body, { status: res.status, headers: { ...headers, 'Content-Type': 'application/json', 'X-Proxy-Cache': res.cached ? 'HIT' : 'MISS' } });
     }
 
     return json({ error: 'Rota não encontrada. Use /api/football/competitions/{CODE}/teams ou /api/rapidapi/{sportapi7|apifootball}/{path}' }, 404, headers);
