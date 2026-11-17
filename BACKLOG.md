@@ -20,7 +20,8 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - **IDs SportAPI7** das 2ªs divisões conferidos no Sofascore (54, 44, 53, 239).
 - **Sem internet** o jogo usa os elencos atuais (`public/rosters-snapshot.json` no precache do PWA; `npm run rosters:bundle`).
 
-**⛔ Item 10 (notificações) — bloqueado, precisa da sua decisão:** o módulo de lembretes locais no Android (`@capacitor/local-notifications`: lembrete das metas às 19h e de rodada nova da Liga entre Amigos, com chave liga/desliga) foi **bloqueado pelo sistema de permissões do Claude Code** como ação indesejada (o app passaria a pedir permissão e agendar notificações no aparelho). Nada ficou pela metade no código. Pra fazer: aprovar essa edição, `npm i @capacitor/local-notifications@8.3.1`, módulo `src/services/reminders.ts` com `schedule: { on: { hour, minute } }` (repete todo dia), `npx cap sync android`. No PWA/navegador, notificar com o app fechado exige servidor de push (Web Push + VAPID + Edge Function do Supabase).
+**✅ Item 10 (notificações) — feito no app Android (aprovado pelo usuário):** `src/services/reminders.ts` com `@capacitor/local-notifications`: lembrete das metas às 19h e de rodada nova da Liga entre Amigos (00:05 UTC no fuso local, só pra quem participa de alguma liga). Pede permissão na 1ª abertura; chave "Lembrete diário às 19h" no card das metas (só aparece no app). Plugin registrado no projeto Android (`cap sync`), mas **não testado em aparelho** — o SDK Android não está instalado nesta máquina.
+- 🟡 Pendente: no navegador/PWA, avisar com o app fechado exige servidor de push (Web Push + VAPID + Edge Function do Supabase agendada).
 
 **📝 Itens 5–8 (Liga entre Amigos v2) — documentados, não feitos por decisão sua:**
 

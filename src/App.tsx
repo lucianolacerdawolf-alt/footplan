@@ -25,6 +25,7 @@ import Toast from './components/Toast';
 import CareerTabBar from './components/CareerTabBar';
 import { preloadAllRosters } from './services/rosterSync';
 import { loadDaily, STREAK_ACHIEVEMENTS } from './engine/dailyGoals';
+import { syncReminders } from './services/reminders';
 import { CAREER_TAB_SCREENS, getCareerTabForScreen } from './utils/careerTabs';
 import { onStorageFailure } from './utils/storage';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -170,7 +171,7 @@ function App() {
 
   // ── Elencos atualizados das 12 ligas em segundo plano (cache → nuvem → estático) ──
   // Quem monta tudo de uma vez (criar carreira) lê de getLoadedLeagueTeams.
-  useEffect(() => { void preloadAllRosters(); }, []);
+  useEffect(() => { void preloadAllRosters(); void syncReminders(); }, []);
 
   // ── Restaura partida ao vivo salva (F5) ──────────────────────────────────────
   // Funciona pra todos os modos (regular, league, bracket, career) desde que o

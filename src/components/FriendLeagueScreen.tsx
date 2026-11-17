@@ -9,6 +9,7 @@ import {
 } from '../services/friendLeagueService';
 import { friendSchedule, friendStandings, dueRoundCount, utcToday, msToNextRound } from '../engine/friendLeague';
 import { TACTIC_PRESETS } from '../engine/tacticPresets';
+import { markInFriendLeague, syncReminders } from '../services/reminders';
 import { getAvgOvr } from '../utils/teamUtils';
 import { crestSrc } from '../utils/crest';
 import { Button } from './ui';
@@ -78,7 +79,12 @@ export default function FriendLeagueScreen({ onBack }: Props) {
 
   useEffect(() => {
     if (view.kind !== 'list') return;
-    void run(async () => setMyLeagues(await listMyFriendLeagues()));
+    void run(async () => {
+      const leagues = await listMyFriendLeagues();
+      setMyLeagues(leagues);
+      // Lembrete de rodada nova (app Android) só pra quem está em alguma liga.
+      if (markInFriendLeague(leagues.length > 0)) void syncReminders();
+    });
   }, [view.kind, run]);
 
   const openLeague = useCallback((leagueId: string) => {

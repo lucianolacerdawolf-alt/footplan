@@ -14,3 +14,4 @@
 .done .label { color: var(--text-h); }
 .footer { margin: 8px 0 0; font-size: 12px; color: var(--positive); }
 .reward { margin: 6px 0 0; font-size: 11px; color: var(--text-secondary); }
+.reminder { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--text-secondary); }
