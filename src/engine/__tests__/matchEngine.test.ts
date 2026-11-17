@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { simularPartida, simularPrimeiroTempo, simularSegundoTempo, resolveKnockoutTiebreak, simularPartidaRapida, simularKnockout, createMatchState, simularMataMataCompleto } from '../matchEngine';
+import { simularPartida, simularPrimeiroTempo, simularSegundoTempo, resolveKnockoutTiebreak, simularPartidaRapida, simularKnockout, createMatchState, simularMataMataCompleto, possessionPct } from '../matchEngine';
 import type { Team, Player } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -409,5 +409,20 @@ describe('simularMataMataCompleto (botão SIMULAR em mata-mata)', () => {
     }
     expect(shootouts).toBeGreaterThan(0);
     expect(homeWonShootout).toBeGreaterThan(0);
+  });
+});
+
+describe('possessionPct', () => {
+  it('bate com a posse do MatchResult e fica numa faixa plausível', () => {
+    for (let seed = 1; seed <= 50; seed++) {
+      const home = makeTeam('h', 'Home');
+      const away = makeTeam('a', 'Away');
+      const { state } = simularPrimeiroTempo(home, away, seededRng(seed));
+      const r = simularSegundoTempo(home, away, state, seededRng(seed + 1000));
+      expect(possessionPct(state)).toBe(r.homePossession);
+      expect(r.homePossession).toBeGreaterThan(20);
+      expect(r.homePossession).toBeLessThan(80);
+    }
+    expect(possessionPct(null)).toBe(50);
   });
 });

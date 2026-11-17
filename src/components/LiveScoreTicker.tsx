@@ -1,33 +1,37 @@
 import { useMemo } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueFixture } from '../engine/tournament';
-import { simularFixtureAuto } from '../engine/tournament';
 import styles from './LiveScoreTicker.module.css';
 
 interface Props {
   fixtures: LeagueFixture[];
   teams: Team[];
-  userFixtureId: string;
+  /** Times da partida do usuário — o jogo dele não entra no ticker (o placar real está no topo). */
+  userTeamIds: [string, string];
 }
 
-export default function LiveScoreTicker({ fixtures, teams, userFixtureId }: Props) {
-  const scores = useMemo(() =>
-    fixtures
-      .filter(f => f.id !== userFixtureId)
-      .map(f => {
-        const simulated = simularFixtureAuto(f, teams);
-        const home = teams.find(t => t.id === f.homeTeamId);
-        const away = teams.find(t => t.id === f.awayTeamId);
-        return {
-          homeAbbr: home?.abbreviation ?? '???',
-          awayAbbr: away?.abbreviation ?? '???',
-          homeScore: simulated.homeScore,
-          awayScore: simulated.awayScore,
-          id: f.id,
-        };
-      }),
-    [fixtures, teams, userFixtureId]
-  );
+/**
+ * Placar dos OUTROS jogos da rodada que já foram disputados.
+ *
+ * Antes simulava cada jogo na hora com Math.random: os placares exibidos não eram os
+ * que depois iam pra tabela, e o jogo do próprio usuário aparecia com um placar
+ * inventado (diferente do placar real no topo da tela). Agora mostra só resultado
+ * gravado; se nenhum outro jogo foi disputado ainda, o ticker não aparece.
+ */
+export default function LiveScoreTicker({ fixtures, teams, userTeamIds }: Props) {
+  const scores = useMemo(() => {
+    const byId = new Map(teams.map(t => [t.id, t]));
+    return fixtures
+      .filter(f => f.played && f.homeScore !== undefined && f.awayScore !== undefined)
+      .filter(f => !(userTeamIds.includes(f.homeTeamId) && userTeamIds.includes(f.awayTeamId)))
+      .map(f => ({
+        id: f.id,
+        homeAbbr: byId.get(f.homeTeamId)?.abbreviation ?? '???',
+        awayAbbr: byId.get(f.awayTeamId)?.abbreviation ?? '???',
+        homeScore: f.homeScore!,
+        awayScore: f.awayScore!,
+      }));
+  }, [fixtures, teams, userTeamIds]);
 
   if (scores.length === 0) return null;
 

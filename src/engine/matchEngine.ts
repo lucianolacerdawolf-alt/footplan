@@ -662,6 +662,13 @@ export function beginMatchState(home: Team, away: Team, random: RandomFn = Math.
 }
 
 /** Monta o MatchResult final a partir do state acumulado — reaproveitável pelo fluxo em blocos. */
+/** % de posse do mandante até agora (mesma conta do MatchResult). 50 sem dados. */
+export function possessionPct(state: MatchState | null | undefined): number {
+  if (!state) return 50;
+  const total = state.homePossessionWins + state.awayPossessionWins;
+  return total > 0 ? Math.round((state.homePossessionWins / total) * 100) : 50;
+}
+
 export function buildMatchResult(home: Team, away: Team, state: MatchState): MatchResult {
   const totalCycles = state.homePossessionWins + state.awayPossessionWins;
   const hasHalf = state.events.some(e => e.type === 'halftime');

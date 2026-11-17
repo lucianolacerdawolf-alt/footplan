@@ -23,7 +23,7 @@ function formatSubWindows(w: Record<SubWindow, number>): string {
     .map(k => `${SUB_WINDOW_LABELS[k]} ${w[k]}`).join(' · ');
 }
 
-import { resolveKnockoutExtraTime, getShooters, buildMatchResult, type MatchState, simularPartida, simularMataMataCompleto } from '../engine/matchEngine';
+import { resolveKnockoutExtraTime, getShooters, buildMatchResult, type MatchState, simularPartida, simularMataMataCompleto, possessionPct } from '../engine/matchEngine';
 import { useMatchSimulation, getSubWindow } from '../hooks/useMatchSimulation';
 import { useMatchHistory } from '../hooks/useMatchHistory';
 import { useMatchOnlineSync, type OnlineProps, ZERO_SUB_WINDOWS } from '../hooks/useMatchOnlineSync';
@@ -451,7 +451,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       </div>
 
       {roundFixtures && teams && matchContext === 'league' && (
-        <LiveScoreTicker fixtures={roundFixtures} teams={teams} userFixtureId="" />
+        <LiveScoreTicker fixtures={roundFixtures} teams={teams} userTeamIds={[initialHome.id, initialAway.id]} />
       )}
 
       {/* Momentum indicator */}
@@ -476,9 +476,9 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
       {/* Barra de posse ao vivo */}
       {started && (() => {
-        const totalPoss = replayEvents.filter(e => e.type === 'possession').length;
-        const homePoss = replayEvents.filter(e => e.type === 'possession' && e.teamId === initialHome.id).length;
-        const homePct = totalPoss > 0 ? Math.round((homePoss / totalPoss) * 100) : 50;
+        // Posse real da engine (mesma conta da tela de estatísticas). Antes contava as
+        // linhas de narração do tipo 'possession' — uma amostra do texto, que dava 8%×92%.
+        const homePct = possessionPct(engineStateRef.current);
         const awayPct = 100 - homePct;
         return (
           <div className="possession-section">
@@ -528,6 +528,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           {/* Intervalo */}
           {phase === 'halftime' && (
             <HalftimePanel
+              homePossessionPct={possessionPct(engineStateRef.current)}
               home={home}
               away={away}
               setHome={setHome}

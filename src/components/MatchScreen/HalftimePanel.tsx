@@ -24,6 +24,8 @@ interface Props {
   updateHome: (s: Strategy) => void;
   updateAway: (s: Strategy) => void;
   replayEvents: MatchEvent[];
+  /** % de posse do mandante calculada pela engine (ver possessionPct). */
+  homePossessionPct: number;
   initialHome: Team;
   initialAway: Team;
   online?: OnlineInfo;
@@ -54,7 +56,7 @@ export default function HalftimePanel({
   sendReadyHalftime, subsHome, subsAway, subWindowsHome, subWindowsAway,
   htHomePick, htAwayPick, setHtHomePick, setHtAwayPick,
   swapSquad, fatigueMap, MAX_SUBS,
-  runSecondHalf, subToast, matchContext, userSide, gameMode,
+  runSecondHalf, subToast, matchContext, userSide, gameMode, homePossessionPct,
 }: Props) {
   const [htTab, setHtTab] = useState<'tactics' | 'squad'>('tactics');
   const htEvents = replayEvents;
@@ -62,9 +64,8 @@ export default function HalftimePanel({
   const aShots = htEvents.filter(e => ['goal','miss','post','save'].includes(e.type) && (e.type === 'save' ? e.teamId !== initialAway.id : e.teamId === initialAway.id)).length;
   const hSoT = htEvents.filter(e => (e.type === 'goal' && e.teamId === initialHome.id) || (e.type === 'save' && e.teamId !== initialHome.id)).length;
   const aSoT = htEvents.filter(e => (e.type === 'goal' && e.teamId === initialAway.id) || (e.type === 'save' && e.teamId !== initialAway.id)).length;
-  const totalPoss = htEvents.filter(e => e.type === 'possession').length;
-  const homePoss = htEvents.filter(e => e.type === 'possession' && e.teamId === initialHome.id).length;
-  const homePct = totalPoss > 0 ? Math.round((homePoss / totalPoss) * 100) : 50;
+  // Posse real da engine — antes contava linhas de narração (dava 8%×92%).
+  const homePct = homePossessionPct;
 
   return (
     <div className="halftime-overlay">
