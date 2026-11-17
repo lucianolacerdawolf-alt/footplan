@@ -266,6 +266,25 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
       ?? null;
   }, [nextMatch, state.season.league.teams, state.season.cup.teams, state.season.continentalCup]);
 
+  // Raio-x do adversário pro card do próximo jogo: posição, força dos titulares e os
+  // últimos 5 jogos dele na liga (antes o card só tinha os dois nomes).
+  const opponentInfo = useMemo(() => {
+    if (!opponentTeam) return null;
+    const starters = opponentTeam.squad.slice(0, getStarterCount(opponentTeam.strategy.formation));
+    const ovr = starters.length ? Math.round(starters.reduce((s, p) => s + playerOvr(p), 0) / starters.length) : null;
+    const pos = standings.findIndex(s => s.teamId === opponentTeam.id) + 1;
+    const form: Array<'V' | 'E' | 'D'> = [];
+    const fx = state.season.league.fixtures;
+    for (let r = fx.length - 1; r >= 0 && form.length < 5; r--) {
+      const f = fx[r].find(x => x.played && (x.homeTeamId === opponentTeam.id || x.awayTeamId === opponentTeam.id));
+      if (!f || f.homeScore == null || f.awayScore == null) continue;
+      const mine = f.homeTeamId === opponentTeam.id ? f.homeScore : f.awayScore;
+      const theirs = f.homeTeamId === opponentTeam.id ? f.awayScore : f.homeScore;
+      form.unshift(mine > theirs ? 'V' : mine === theirs ? 'E' : 'D');
+    }
+    return { ovr, pos: pos > 0 && form.length > 0 ? pos : null, form };
+  }, [opponentTeam, standings, state.season.league.fixtures]);
+
   const socialPosts = useMemo(() => {
     if (!userTeam) return [];
     return generateSocialFeed({
@@ -320,18 +339,6 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
       <div className={styles.body}>
         {/* ── Coluna de ação ────────────────────────────────────── */}
         <div className={styles.primaryCol}>
-          {nextMatch && !seasonReady && opponentTeam && onApplyTraining && onOpenPressConference && (
-            <PreMatchPrepCard
-              trainingDone={trainingDone}
-              pressDone={!!pressDone}
-              opponentName={opponentTeam.name}
-              onTraining={onApplyTraining}
-              onOpenPress={() => onOpenPressConference(opponentTeam)}
-              pressQuestion={pressQuestion ?? null}
-              onAnswerPress={onAnswerPressConference ?? (() => {})}
-              onClosePress={onClosePressConference ?? (() => {})}
-            />
-          )}
 
           {nextMatch && !seasonReady && (
             <div className={styles.nextMatchCard}>
@@ -347,6 +354,18 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                 <span className={styles.nextMatchVs}>vs</span>
                 <strong>{nextMatch.awayName}</strong>
               </div>
+              {opponentInfo && (
+                <div className={styles.opponentScout} aria-label="Adversário">
+                  <span>{nextMatch.homeName === userTeam?.name ? '🏠 Em casa' : '✈️ Fora'}</span>
+                  {opponentInfo.pos && <span>{opponentInfo.pos}º na liga</span>}
+                  {opponentInfo.ovr && <span>Força {opponentInfo.ovr}{avgOvr ? (opponentInfo.ovr > avgOvr ? ' ▲' : opponentInfo.ovr < avgOvr ? ' ▼' : '') : ''}</span>}
+                  {opponentInfo.form.length > 0 && (
+                    <span className={styles.formRow} aria-label={`Últimos jogos: ${opponentInfo.form.join(' ')}`}>
+                      {opponentInfo.form.map((r, i) => <span key={i} className={`${styles.formDot} ${r === 'V' ? styles.formW : r === 'E' ? styles.formD : styles.formL}`}>{r}</span>)}
+                    </span>
+                  )}
+                </div>
+              )}
               <Button size="lg" onClick={() => {
                 if (nextMatch.type === 'league') onPlayNext();
                 else if (nextMatch.type === 'continental') onPlayNextContinental();
@@ -355,6 +374,19 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                 <Icon name="play" size={16} /> Jogar
               </Button>
             </div>
+          )}
+
+          {nextMatch && !seasonReady && opponentTeam && onApplyTraining && onOpenPressConference && (
+            <PreMatchPrepCard
+              trainingDone={trainingDone}
+              pressDone={!!pressDone}
+              opponentName={opponentTeam.name}
+              onTraining={onApplyTraining}
+              onOpenPress={() => onOpenPressConference(opponentTeam)}
+              pressQuestion={pressQuestion ?? null}
+              onAnswerPress={onAnswerPressConference ?? (() => {})}
+              onClosePress={onClosePressConference ?? (() => {})}
+            />
           )}
 
           {awaitingRound && (
@@ -378,11 +410,11 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
             <div className={styles.advanceRow}>
               <Button block size="lg" onClick={onAdvanceSeason}>Avançar Temporada →</Button>
             </div>
-          ) : (
-            <div className={styles.advanceStatus}>Termine a liga e a copa pra avançar de temporada</div>
-          )}
+          ) : state.season.league.phase === 'done' ? (
+            <div className={styles.advanceStatus}>Liga encerrada — termine a copa pra avançar de temporada</div>
+          ) : null}
 
-          {onRespondConversation && (
+          {onRespondConversation && getPlayerConversations(state).length > 0 && (
             <ConversationsPanel
               conversations={getPlayerConversations(state)}
               onRespond={onRespondConversation}
@@ -449,8 +481,17 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
           })()}
 
           {boardObj && boardObj.objectives.length > 0 && (
-            <div className={styles.objectivesCard}>
-              <div className={styles.objectivesTitle}>Objetivos da Diretoria</div>
+            <details className={styles.objectivesCard}>
+              <summary className={styles.objectivesTitle}>
+                Objetivos da Diretoria
+                <span className={styles.summaryHint}>
+                  {boardObj.objectives.length} meta{boardObj.objectives.length > 1 ? 's' : ''}
+                  {(() => {
+                    const atRisk = boardObj.objectives.filter(o => o.achieved === undefined && getObjectiveProgress(o, gamesPlayed > 0 ? userPosition : null, cupProgress.stage, cupProgress.eliminated, finances.budget).status === 'fora').length;
+                    return atRisk > 0 ? ` · ${atRisk} em risco` : '';
+                  })()}
+                </span>
+              </summary>
               {boardObj.objectives.map(obj => {
                 const isAchieved = obj.achieved === true;
                 const isFailed = obj.achieved === false;
@@ -487,7 +528,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                   <Icon name="warning" size={12} /> {boardObj.streakBad >= 3 ? 'Última chance: ' : ''}Diretoria insatisfeita ({boardObj.streakBad} temporada{boardObj.streakBad > 1 ? 's' : ''} consecutiva{boardObj.streakBad > 1 ? 's' : ''} abaixo do esperado)
                 </div>
               )}
-            </div>
+            </details>
           )}
 
           <button className={styles.jobMarketCard} onClick={onOpenJobMarket}>
@@ -510,7 +551,12 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
             </button>
           )}
 
-          {socialPosts.length > 0 && <SocialFeedCard posts={socialPosts} />}
+          {socialPosts.length > 0 && (
+            <details className={styles.feedDetails}>
+              <summary className={styles.feedSummary}>📱 FC Hub · {socialPosts.length} posts</summary>
+              <SocialFeedCard posts={socialPosts} />
+            </details>
+          )}
         </div>
       </div>
 

@@ -129,9 +129,9 @@ describe('CareerHubScreen — conversas com atletas', () => {
     expect(screen.queryByText(/Continue assim/)).not.toBeInTheDocument();
   });
 
-  it('sem conversas mostra estado vazio', () => {
+  it('sem conversas o painel nem aparece (Central mais curta)', () => {
     renderHub(makeCareerState());
-    expect(screen.getByText('Nenhuma conversa por enquanto.')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma conversa por enquanto.')).not.toBeInTheDocument();
   });
 });
 

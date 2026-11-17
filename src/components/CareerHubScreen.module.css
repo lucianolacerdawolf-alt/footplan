@@ -251,3 +251,29 @@
   .quickStats { grid-template-columns: repeat(5, 1fr); gap: 4px; }
   .compRow { flex-direction: column; align-items: flex-start; gap: 4px; }
 }
+
+/* Raio-x do adversário no card do próximo jogo */
+.opponentScout {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 6px 12px; margin: 2px 0 10px; font-size: 12px; color: var(--text-secondary);
+}
+.formRow { display: inline-flex; gap: 3px; }
+.formDot {
+  width: 18px; height: 18px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 10px; font-weight: 800; color: #04110a;
+}
+.formW { background: var(--positive); }
+.formD { background: #9ca3af; }
+.formL { background: var(--negative); color: #fff; }
+
+/* Seções recolhíveis (Central mais curta) */
+.objectivesCard > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.objectivesCard > summary::-webkit-details-marker { display: none; }
+.objectivesCard > summary::after { content: '▸'; color: var(--text-secondary); margin-left: 4px; }
+.objectivesCard[open] > summary::after { content: '▾'; }
+.objectivesCard[open] > summary { margin-bottom: 8px; }
+.summaryHint { flex: 1; text-align: right; font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: none; letter-spacing: 0; }
+.feedDetails { border: 1px solid var(--border); border-radius: 10px; background: var(--code-bg); }
+.feedSummary { cursor: pointer; padding: 10px 12px; font-size: 13px; font-weight: 700; color: var(--text-h); list-style: none; }
+.feedSummary::-webkit-details-marker { display: none; }
+.feedDetails[open] .feedSummary { border-bottom: 1px solid var(--border); }

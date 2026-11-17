@@ -12,10 +12,10 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 **✅ Corrigido no mesmo teste:** emblemas próprios pra Championship (tinha Sky Bet), LaLiga 2 (era o logo da LaLiga com Santander) e Liga Portugal 2 (era o logo da 1ª divisão); logos do mercado usavam o endereço remoto (Liga Portugal 404).
 
-**🐛 Bugs pequenos achados:**
-- "1º — dentro da meta" nos objetivos da diretoria e "1º NA LIGA" em Meu Clube com 0 jogos (mesmo caso já corrigido na Central).
-- Números de camisa irreais nos jogadores vindos do sync (#116, #117 — "90 + posição na lista").
-- Aba "Meu Clube" abre uma tela chamada "Sala de Troféus".
+**🐛 Bugs pequenos achados (✅ todos corrigidos):**
+- ✅ "1º — dentro da meta" nos objetivos da diretoria e "1º NA LIGA" em Meu Clube com 0 jogos (mesmo caso já corrigido na Central).
+- ✅ Números de camisa irreais nos jogadores vindos do sync (#116, #117 — "90 + posição na lista").
+- ✅ Aba "Meu Clube" abre uma tela chamada "Sala de Troféus".
 
 **🎨 Estética:**
 - Tela inicial: 8 modos com o mesmo peso; o Modo Carreira (carro-chefe) é o 6º, abaixo da dobra. Sugestão: card de destaque "Continuar carreira — Crystal Palace · Rodada 4" no topo e os outros modos agrupados.
@@ -25,10 +25,10 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - Emblemas próprios ficam miúdos no card pequeno — versão compacta só com o escudo.
 
 **🧭 Fluxo:**
-- Central com ~2200px (3 telas): 12 blocos empilhados. Sugestão: topo fixo com o próximo jogo + "Jogar/Avançar"; o resto em abas ou cards recolhidos.
-- O "Jogar" fica abaixo do bloco de treino/coletiva; inverter (próximo jogo primeiro, preparação logo abaixo, em formato compacto).
-- Card do próximo jogo sem nada do adversário: mostrar posição, força, últimos 5 jogos e o artilheiro dele.
-- Aviso "Termine a liga e a copa pra avançar de temporada" aparece desde a rodada 1.
+- ✅ Central com ~2200px (3 telas): 12 blocos empilhados. Sugestão: topo fixo com o próximo jogo + "Jogar/Avançar"; o resto em abas ou cards recolhidos. *Feito: próximo jogo no topo; objetivos e FC Hub recolhíveis; conversas só aparecem se houver alguma (~1800px com tudo).*
+- ✅ O "Jogar" fica abaixo do bloco de treino/coletiva; inverter (próximo jogo primeiro, preparação logo abaixo, em formato compacto).
+- ✅ (sem o artilheiro) Card do próximo jogo sem nada do adversário: mostrar posição, força, últimos 5 jogos e o artilheiro dele.
+- ✅ Aviso "Termine a liga e a copa pra avançar de temporada" aparece desde a rodada 1.
 - "Confirmar Táticas" aparece na aba Elenco fora da preparação de jogo.
 - "Jogar Online · P2P via WebRTC": trocar por "Jogue ao vivo com um amigo pelo código".
 - Mercado: liga → time → jogador; sugerir reforços pela posição mais fraca do elenco e uma lista de observação.
