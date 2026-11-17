@@ -14,6 +14,7 @@
     "generate:publish-assets": "node scripts/generate-publish-assets.mjs",
     "rosters:sync": "vite-node scripts/populate-rosters.ts",
     "rosters:copy": "vite-node scripts/copy-roster-snapshot.ts",
+    "rosters:bundle": "vite-node scripts/export-roster-bundle.ts",
     "crests:secondary": "vite-node scripts/fetch-secondary-crests.ts",
     "crests:download": "vite-node scripts/download-crests.ts",
     "deploy": "npm run build && npx wrangler pages deploy dist --project-name=footplan",

@@ -32,6 +32,7 @@ if (typeof globalThis.localStorage === 'undefined') {
 import { syncAllLeagueRosters } from '../src/services/rosterSync';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { loadEnv } from 'vite';
+import { writeRosterBundle } from './lib/rosterBundle';
 
 async function main() {
   console.log('🔄 Buscando elencos ao vivo das 12 ligas e gravando no Supabase…\n');
@@ -58,6 +59,9 @@ async function main() {
   console.log(`✔ Fonte por liga: ${JSON.stringify(bySource)}`);
   console.log(`✔ Ao vivo (API): ${result.liveCount}/${result.leagueCount}`);
   console.log(`✔ Snapshot gravado no Supabase em: ${result.updatedAt ?? 'n/a'}`);
+  // Reserva offline do app (sobe no próximo deploy do site).
+  writeRosterBundle(result.rosters, result.updatedAt ?? new Date().toISOString());
+  console.log('✔ public/rosters-snapshot.json atualizado (reserva offline; vai no próximo deploy)');
 
   const failed = Object.entries(result.sources).filter(([, s]) => s !== 'live');
   if (failed.length > 0) {

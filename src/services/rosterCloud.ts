@@ -47,6 +47,26 @@ export function hasRosterCloud(): boolean {
  *  esperado); erro real (rede, auth, consulta) também retorna null — o app segue offline-first —
  *  mas LOGADO via console.warn, pra falhas de cloud não ficarem silenciosas pra sempre. */
 export async function loadRosterSnapshot(): Promise<RosterSnapshot | null> {
+  return (await loadCloudSnapshot()) ?? (await loadBundledSnapshot());
+}
+
+/**
+ * Reserva offline: o snapshot embutido no app (public/rosters-snapshot.json, gerado pelo
+ * rosters:sync / rosters:bundle e guardado no precache do PWA). Antes, sem nuvem e sem
+ * cache local, o jogo caía no estático de 2024/25. Só no navegador; carrega 1x por sessão.
+ */
+let bundledPromise: Promise<RosterSnapshot | null> | null = null;
+export function loadBundledSnapshot(): Promise<RosterSnapshot | null> {
+  if (typeof window === 'undefined' || typeof fetch !== 'function') return Promise.resolve(null);
+  bundledPromise ??= fetch(`${import.meta.env.BASE_URL ?? '/'}rosters-snapshot.json`)
+    .then(r => (r.ok ? r.json() : null))
+    .then((j: { rosters?: Record<string, Team[]>; updatedAt?: string } | null) =>
+      j?.rosters && Object.keys(j.rosters).length > 0 ? { rosters: j.rosters, updatedAt: j.updatedAt ?? '1970-01-01T00:00:00Z' } : null)
+    .catch(() => null);
+  return bundledPromise;
+}
+
+async function loadCloudSnapshot(): Promise<RosterSnapshot | null> {
   if (!hasRosterCloud()) return null;
   try {
     const sb = await ensureAuth();

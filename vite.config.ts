@@ -41,7 +41,8 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
+        // rosters-snapshot.json: elencos atualizados pra jogar sem internet (ver rosterCloud.loadBundledSnapshot)
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}', 'rosters-snapshot.json'],
       },
     }),
   ].filter(Boolean),
