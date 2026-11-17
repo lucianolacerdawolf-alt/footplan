@@ -9,7 +9,7 @@ import { cloneTeam } from '../utils/teamUtils';
 import { allLeagues } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
-import { getRosterSyncInfo } from '../services/rosterSync';
+import { getRosterSyncInfo, getLoadedLeagueTeams } from '../services/rosterSync';
 import { generateSponsor, getStartingTier, getSponsorMultiplier } from '../engine/sponsors';
 import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, pairedDivisionId, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
@@ -125,7 +125,9 @@ export function useCareerManager({
         // usuário (só o time escolhido pelo próprio usuário vinha atualizado).
         rosters[l.id] = assignInitialContracts(assignInitialAges(leagueDef.teams.map(t => t.id === userTeam.id ? cloneTeam(userTeam) : cloneTeam(t))).map(assignMarketValues));
       } else {
-        rosters[l.id] = assignInitialContracts(assignInitialAges(l.teams.map(t => cloneTeam(t))));
+        // Ligas atualizadas já carregadas (preloadAllRosters no App); estático só de reserva.
+        const teams = getLoadedLeagueTeams(l.id) ?? l.teams;
+        rosters[l.id] = assignInitialContracts(assignInitialAges(teams.map(t => cloneTeam(t))));
       }
     }
     // Tolerante ao mesmo jeito que o resto desta função é: se o time do usuário não

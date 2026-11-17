@@ -260,6 +260,21 @@ function writeCache(leagueId: string, teams: Team[], staticIds: string[]): void 
 
 export type RosterSource = 'cache' | 'cloud' | 'live' | 'static' | 'error';
 
+// Ligas já carregadas nesta sessão (cache/nuvem/ao vivo), pra quem precisa delas de forma
+// síncrona — ex.: criar a carreira, que monta as 12 ligas de uma vez. Antes só a liga do
+// usuário vinha atualizada; as outras 11 (mercado, copa, continental, mercado de
+// treinador) eram o estático de 2024/25.
+const loadedLeagueTeams = new Map<string, Team[]>();
+
+export function getLoadedLeagueTeams(leagueId: string): Team[] | undefined {
+  return loadedLeagueTeams.get(leagueId);
+}
+
+/** Carrega as 12 ligas (cache → nuvem → estático, sem bater na API) em segundo plano. */
+export async function preloadAllRosters(): Promise<void> {
+  try { await syncAllLeagueRosters(); } catch { /* offline: fica no estático */ }
+}
+
 export interface RosterSyncResult {
   league: LeagueDefinition;
   source: RosterSource;
@@ -395,16 +410,21 @@ export async function syncLeagueRoster(
     const snapTime = snap?.updatedAt ? Date.parse(snap.updatedAt) : NaN;
     const cloudIsNewer = !Number.isNaN(snapTime) && (!cached || snapTime > cached.fetchedAt);
     if (cached && !cloudIsNewer) {
-      return { league: { ...league, teams: applyStaticCrests(cached.teams, league) }, source: 'cache', stats: [] };
+      const teams = applyStaticCrests(cached.teams, league);
+      loadedLeagueTeams.set(league.id, teams);
+      return { league: { ...league, teams }, source: 'cache', stats: [] };
     }
     const cloudTeams = snap?.rosters[league.id];
     if (cloudTeams && Array.isArray(cloudTeams) && cloudTeams.length > 0) {
       const teams = applyStaticCrests(cloudTeams, league);
       writeCache(league.id, teams, league.teams.map(t => t.id));
+      loadedLeagueTeams.set(league.id, teams);
       return { league: { ...league, teams }, source: 'cloud', stats: [] };
     }
     if (cached) {
-      return { league: { ...league, teams: applyStaticCrests(cached.teams, league) }, source: 'cache', stats: [] };
+      const teams = applyStaticCrests(cached.teams, league);
+      loadedLeagueTeams.set(league.id, teams);
+      return { league: { ...league, teams }, source: 'cache', stats: [] };
     }
     return { league, source: 'static', stats: [], error: 'Sem elenco salvo. Use "Atualizar Elencos via API" para buscar dados ao vivo.' };
   }
@@ -437,6 +457,7 @@ export async function syncLeagueRoster(
     const { teams: mergedTeams, stats } = buildLeagueFromRemote(league, remoteTeams);
 
     writeCache(league.id, mergedTeams, league.teams.map(t => t.id));
+    loadedLeagueTeams.set(league.id, mergedTeams);
     return { league: { ...league, teams: mergedTeams }, source: 'live', stats };
   }
 
