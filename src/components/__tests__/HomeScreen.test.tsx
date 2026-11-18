@@ -34,6 +34,23 @@ describe('HomeScreen — layout', () => {
     expect(onCareer).toHaveBeenCalledOnce();
   });
 
+  it('mostra a posição na tabela e a forma recente', () => {
+    render(<HomeScreen {...base} onCareer={vi.fn()} careerResume={{
+      teamName: 'Arsenal', detail: 'Premier League · Temporada 1 · Rodada 4',
+      position: 3, form: ['W', 'D', 'L'],
+    }} />);
+    expect(screen.getByText('3º na tabela')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Últimos jogos: vitória, empate, derrota' })).toBeInTheDocument();
+  });
+
+  it('antes do primeiro jogo não mostra posição nem forma', () => {
+    render(<HomeScreen {...base} onCareer={vi.fn()} careerResume={{
+      teamName: 'Arsenal', detail: 'Premier League · Temporada 1 · Rodada 1', position: null, form: [],
+    }} />);
+    expect(screen.queryByText(/na tabela/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Últimos jogos/ })).not.toBeInTheDocument();
+  });
+
   it('mostra o próximo jogo com os dois clubes', () => {
     render(<HomeScreen {...base} onCareer={vi.fn()} careerResume={{
       teamName: 'Arsenal', detail: 'Premier League · Temporada 1 · Rodada 4',
@@ -91,6 +108,24 @@ describe('careerResumeInfo', () => {
     const r = careerResumeInfo(state)!;
     expect(r.nextMatch?.home.name).toBe('Chelsea');
     expect(r.nextMatch?.away.name).toBe('Arsenal');
+  });
+
+  it('traz posição e forma a partir dos jogos disputados', () => {
+    const state = {
+      leagueId: 'premier-league',
+      currentSeasonYear: 1,
+      season: { league: {
+        userTeamId: 'ars', currentRound: 2, phase: 'playing',
+        teams: [{ id: 'ars', name: 'Arsenal', logoUrl: '' }, { id: 'che', name: 'Chelsea', logoUrl: '' }],
+        fixtures: [
+          [{ id: 'a', roundIndex: 0, homeTeamId: 'ars', awayTeamId: 'che', homeScore: 2, awayScore: 0, played: true }],
+          [{ id: 'b', roundIndex: 1, homeTeamId: 'che', awayTeamId: 'ars', homeScore: 1, awayScore: 1, played: true }],
+        ],
+      } },
+    } as never;
+    const r = careerResumeInfo(state)!;
+    expect(r.position).toBe(1);
+    expect(r.form).toEqual(['W', 'D']);
   });
 
   it('liga encerrada não tem próximo jogo', () => {

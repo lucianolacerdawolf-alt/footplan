@@ -1,4 +1,5 @@
 import type { Difficulty } from '../engine/matchConfig';
+import type { FormResult } from '../engine/careerSummary';
 import { getDifficultyLabel } from '../engine/matchConfig';
 import styles from './HomeScreen.module.css';
 import DailyGoalsCard from './DailyGoalsCard';
@@ -17,6 +18,10 @@ export interface CareerResume {
   detail: string;
   /** Próximo jogo do clube do usuário na liga; ausente quando a liga acabou. */
   nextMatch?: { home: NextMatchSide; away: NextMatchSide } | null;
+  /** Posição do clube na tabela; ausente/null antes do primeiro jogo. */
+  position?: number | null;
+  /** Últimos resultados (mais antigo → mais recente). */
+  form?: FormResult[];
 }
 
 const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
@@ -56,6 +61,26 @@ function ModeCard({ icon, name, desc, onClick }: ModeCardProps) {
         <span className={styles.modeDesc}>{desc}</span>
       </span>
     </button>
+  );
+}
+
+const FORM_LABEL: Record<FormResult, string> = { W: 'V', D: 'E', L: 'D' };
+const FORM_NAME: Record<FormResult, string> = { W: 'vitória', D: 'empate', L: 'derrota' };
+
+function CareerStats({ position, form }: { position?: number | null; form?: FormResult[] }) {
+  const hasForm = !!form && form.length > 0;
+  if (position == null && !hasForm) return null;
+  return (
+    <div className={styles.careerStats}>
+      {position != null && <span className={styles.positionChip}>{position}º na tabela</span>}
+      {hasForm && (
+        <span className={styles.form} role="img" aria-label={`Últimos jogos: ${form.map(r => FORM_NAME[r]).join(', ')}`}>
+          {form.map((r, i) => (
+            <span key={i} className={`${styles.formDot} ${styles[`form${r}`]}`} aria-hidden="true">{FORM_LABEL[r]}</span>
+          ))}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -108,6 +133,8 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         ) : (
           <p className={styles.careerDesc}>Progrida por temporadas com seu elenco, transferências e reputação de técnico.</p>
         )}
+
+        {careerResume && <CareerStats position={careerResume.position} form={careerResume.form} />}
 
         <button className={styles.careerCta} onClick={onCareer}>
           <Icon name="play" size={16} />
