@@ -21,6 +21,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { fetchCompetitionTeams, hasApiKey, COMPETITION_CODES, type RemoteTeam, type RemotePlayer } from './footballApi';
 import { fetchSportApiLeague, hasSportApiAccess, isSportApiLeagueMapped } from './sportApi';
 import { fetchApiFootballLeague, hasApiFootballAccess, isApiFootballLeagueMapped } from './apiFootball';
+import { fetchWikipediaLeague, isWikipediaLeagueMapped } from './wikipediaRosters';
 import { generatePlayer } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { rebalanceForFormation } from '../engine/squadUtils';
@@ -360,6 +361,11 @@ function newTeamFromRemote(remote: RemoteTeam, leagueId: string): Team {
  * reaproveita o clube de outra liga estática quando existe (id, cores, escudo local e
  * atributos calibrados); senão nasce do dado remoto com força de fim de tabela.
  */
+/** "Sporting CP B", "Real Sociedad B", "Bayern II", "Atlético Madrid U23". */
+export function isReserveTeamName(name: string): boolean {
+  return /\s(B|II|U-?\d{2})$/i.test(name.trim());
+}
+
 export function buildLeagueFromRemote(league: LeagueDefinition, remoteTeams: RemoteTeam[]): { teams: Team[]; stats: MergeStats[] } {
   const assignments = assignRemoteTeams(league.teams, remoteTeams);
   const stats: MergeStats[] = [];
@@ -388,7 +394,9 @@ export function buildLeagueFromRemote(league: LeagueDefinition, remoteTeams: Rem
     : 70;
 
   const otherTeams = allLeagues.filter(l => l.id !== league.id).flatMap(l => l.teams);
-  const fromOtherLeague = assignRemoteTeams(otherTeams, promoted);
+  // Time B/II (Sporting CP B, Real Sociedad B) não é o time principal de outra liga —
+  // sem isto o "Sporting CP B" herdava nome, escudo e força do Sporting da 1ª divisão.
+  const fromOtherLeague = assignRemoteTeams(otherTeams, promoted.filter(r => !isReserveTeamName(r.name)));
   const baseByRemote = new Map<number, Team>();
   for (const [staticId, remote] of fromOtherLeague) {
     const base = otherTeams.find(t => t.id === staticId);
@@ -411,7 +419,7 @@ export function buildLeagueFromRemote(league: LeagueDefinition, remoteTeams: Rem
  *  liga (ratingCalibration.ts — idempotente, então reler um snapshot calibrado é no-op). */
 export async function syncLeagueRoster(
   league: LeagueDefinition,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; wikipedia?: boolean },
   snapshot?: RosterSnapshot | null,
 ): Promise<RosterSyncResult> {
   const r = await syncLeagueRosterRaw(league, opts, snapshot);
@@ -422,7 +430,7 @@ export async function syncLeagueRoster(
 
 async function syncLeagueRosterRaw(
   league: LeagueDefinition,
-  opts?: { force?: boolean },
+  opts?: { force?: boolean; wikipedia?: boolean },
   snapshot?: RosterSnapshot | null,
 ): Promise<RosterSyncResult> {
   if (!opts?.force) {
@@ -459,6 +467,8 @@ async function syncLeagueRosterRaw(
     { name: 'football-data.org', mapped: league.id in COMPETITION_CODES && hasApiKey(), fetch: () => fetchCompetitionTeams(league.id) },
     { name: 'SportAPI7', mapped: isSportApiLeagueMapped(league.id) && hasSportApiAccess(), fetch: () => fetchSportApiLeague(league.id, true) },
     { name: 'API-Football', mapped: isApiFootballLeagueMapped(league.id) && hasApiFootballAccess(), fetch: () => fetchApiFootballLeague(league.id, true) },
+    // Último recurso pras 2ª divisões (APIs sem cota/assinatura): elenco atual da Wikipedia.
+    { name: 'Wikipedia', mapped: !!opts?.wikipedia && isWikipediaLeagueMapped(league.id), fetch: () => fetchWikipediaLeague(league.id, m => console.log(m)) },
   ];
   const usableSources = sources.filter(s => s.mapped);
 
@@ -503,7 +513,7 @@ export interface AllRostersResult {
   liveCount: number;
 }
 
-export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: SupabaseClient; shirtNumbers?: ShirtNumberMap }): Promise<AllRostersResult> {
+export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: SupabaseClient; shirtNumbers?: ShirtNumberMap; wikipedia?: boolean }): Promise<AllRostersResult> {
   const rosters: Record<string, Team[]> = {};
   const sources: Record<string, RosterSource> = {};
   const errors: Record<string, string> = {};

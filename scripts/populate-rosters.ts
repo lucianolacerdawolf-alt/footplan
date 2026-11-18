@@ -57,7 +57,8 @@ async function main() {
   const shirtNumbers = existsSync(shirtsPath) ? JSON.parse(readFileSync(shirtsPath, 'utf8')) as ShirtNumberMap : undefined;
   if (!shirtNumbers) console.warn('⚠ src/data/shirtNumbers.json ausente — rode `npm run shirts:fetch` pra ter os números de camisa.');
 
-  const result = await syncAllLeagueRosters({ force: true, supabase: admin, shirtNumbers });
+  // wikipedia: último recurso pras 2ª divisões quando as APIs estão sem cota/assinatura.
+  const result = await syncAllLeagueRosters({ force: true, supabase: admin, shirtNumbers, wikipedia: true });
 
   const bySource: Record<string, number> = {};
   for (const src of Object.values(result.sources)) {

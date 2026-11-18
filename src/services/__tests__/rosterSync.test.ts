@@ -696,3 +696,14 @@ describe('normalizeShirtNumbers', () => {
     expect(out[0].squad.map(p => p.number)).toEqual([7, 0]);
   });
 });
+
+describe('isReserveTeamName', () => {
+  it('reconhece times B/II/sub-23 e não confunde com o principal', async () => {
+    const { isReserveTeamName } = await import('../rosterSync');
+    expect(isReserveTeamName('Sporting CP B')).toBe(true);
+    expect(isReserveTeamName('Real Sociedad B')).toBe(true);
+    expect(isReserveTeamName('Bayern München II')).toBe(true);
+    expect(isReserveTeamName('Sporting CP')).toBe(false);
+    expect(isReserveTeamName('Real Betis')).toBe(false);
+  });
+});

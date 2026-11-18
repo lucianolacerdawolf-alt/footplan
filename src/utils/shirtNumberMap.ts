@@ -89,7 +89,7 @@ function cleanName(raw: string): string {
 /** Extrai { nome normalizado → número } dos {{Fs player}} do wikitext. */
 export function parseSquad(wikitext: string): Record<string, number> {
   const players: Record<string, number> = {};
-  const re = /\{\{\s*(?:[Ff]s player|[Ff]ootball squad player)\s*\|((?:[^{}]|\{\{[^{}]*\}\})*)\}\}/g;
+  const re = /\{\{\s*(?:fs player|football squad player)\s*\|((?:[^{}]|\{\{[^{}]*\}\})*)\}\}/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(wikitext))) {
     const body = m[1];
@@ -100,4 +100,39 @@ export function parseSquad(wikitext: string): Record<string, number> {
     if (key && players[key] == null) players[key] = Number(no);
   }
   return players;
+}
+
+export interface SquadEntry { no: number | null; pos: string; nat: string; name: string }
+
+const SQUAD_TPL = /\{\{\s*(?:fs player|football squad player)\s*\|((?:[^{}]|\{\{[^{}]*\}\})*)\}\}/gi;
+const SECTION_STOP = /\n=+[^=\n]*(loan|reserve|youth|academy|under-\d|B team|II\b|former|retired|notable)[^=\n]*=+/i;
+
+function templateField(body: string, key: string): string {
+  const m = new RegExp(String.raw`(?:^|\|)\s*${key}\s*=\s*((?:\[\[[^\]]*\]\]|[^|])*)`).exec(body);
+  return m?.[1]?.trim() ?? '';
+}
+
+/** Jogadores do ELENCO ATUAL (para antes da seção de emprestados/base). */
+export function parseSquadEntries(wikitext: string): SquadEntry[] {
+  const start = wikitext.search(/\{\{\s*(?:fs player|football squad player)/i);
+  if (start < 0) return [];
+  let text = wikitext.slice(start);
+  const stop = text.search(SECTION_STOP);
+  if (stop > 0) text = text.slice(0, stop);
+  const out: SquadEntry[] = [];
+  const seen = new Set<string>();
+  for (const m of text.matchAll(SQUAD_TPL)) {
+    const body = m[1];
+    const name = cleanName(templateField(body, 'name'));
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    const rawNo = templateField(body, 'no');
+    out.push({
+      no: /^\d{1,2}$/.test(rawNo) ? Number(rawNo) : null,
+      pos: templateField(body, 'pos').toUpperCase().slice(0, 2),
+      nat: templateField(body, 'nat'),
+      name,
+    });
+  }
+  return out;
 }
