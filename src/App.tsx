@@ -425,7 +425,7 @@ function App() {
   return (
     <>
       <a href="#main-content" className="skip-link">Pular para o conteúdo</a>
-      <div style={showCareerTabs ? { paddingBottom: 64 } : undefined}>
+      <div style={showCareerTabs ? { paddingBottom: 64, '--tabbar-h': '64px' } as React.CSSProperties : undefined}>
         <React.Suspense fallback={<div className="lazy-loading">Carregando…</div>}>
           <ErrorBoundary>
             <div ref={screenWrapperRef} tabIndex={-1} id="main-content" className="screen-fade" key={screen}>{content}</div>

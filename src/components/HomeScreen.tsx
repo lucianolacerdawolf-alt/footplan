@@ -49,11 +49,7 @@ interface ModeCardProps {
 function ModeCard({ icon, name, desc, onClick }: ModeCardProps) {
   return (
     <button className={styles.modeCard} onClick={onClick}>
-      <Icon name={icon} size={84} className={styles.modeArt} />
-      <span className={styles.modeTop}>
-        <span className={styles.modeIcon} aria-hidden="true"><Icon name={icon} size={22} /></span>
-        <Icon name="chevron-right" size={18} className={styles.modeArrow} />
-      </span>
+      <span className={styles.modeIcon} aria-hidden="true"><Icon name={icon} size={22} /></span>
       <span className={styles.modeText}>
         <span className={styles.modeName}>{name}</span>
         <span className={styles.modeDesc}>{desc}</span>
@@ -159,38 +155,19 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
 
       <DailyGoalsCard />
 
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Modos de jogo</h2>
-        </div>
+      <section className={styles.section} aria-label="Modos de jogo">
+        <h2 className={styles.sectionTitle}>Jogar</h2>
         <div className={styles.grid}>
-          <ModeCard icon="ball" name="Partida Única" desc="Escolha dois times" onClick={onSingleMatch} />
-          <ModeCard icon="calendar" name="Campeonatos" desc="Pontos corridos" onClick={onLeague} />
-          <ModeCard icon="bolt" name="Jogo Rápido" desc="Times aleatórios" onClick={onQuickPlay} />
-          <ModeCard icon="trophy" name="Copas" desc="Mata-mata e pênaltis" onClick={onCup} />
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <div className={styles.sectionHead}>
-          <h2 className={styles.sectionTitle}>Com amigos</h2>
-        </div>
-        <div className={styles.grid}>
-          <ModeCard icon="globe" name="Jogar online" desc="Partida ao vivo pelo código da sala" onClick={onOnline} />
+          <ModeCard icon="ball" name="Partida" desc="Amistoso" onClick={onSingleMatch} />
+          <ModeCard icon="calendar" name="Campeonato" desc="Pontos corridos" onClick={onLeague} />
+          <ModeCard icon="trophy" name="Copa" desc="Mata-mata" onClick={onCup} />
+          <ModeCard icon="bolt" name="Rápido" desc="Times aleatórios" onClick={onQuickPlay} />
+          <ModeCard icon="globe" name="Online" desc="Com um amigo" onClick={onOnline} />
           {onFriendLeague && (
-            <ModeCard icon="users" name="Liga de amigos" desc="Cada um comanda um clube" onClick={onFriendLeague} />
+            <ModeCard icon="users" name="Liga amigos" desc="1 rodada/dia" onClick={onFriendLeague} />
           )}
         </div>
       </section>
-
-      <footer className={styles.footer}>
-        <span className={styles.version}>v{__APP_VERSION__}</span>
-        <nav className={styles.legalLinks}>
-          <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener noreferrer">Privacidade</a>
-          <span className={styles.legalSep}>·</span>
-          <a href={`${import.meta.env.BASE_URL}terms.html`} target="_blank" rel="noopener noreferrer">Termos</a>
-        </nav>
-      </footer>
     </div>
   );
 }

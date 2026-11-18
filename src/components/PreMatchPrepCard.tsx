@@ -25,49 +25,42 @@ export default function PreMatchPrepCard({
 
   return (
     <div className={styles.card}>
-      <div className={styles.title}>🎙️ Preparação Pré-Jogo</div>
-
-      <div className={styles.section}>
-        <div className={styles.sectionLabel}>
-          Treino · {trainingDone ? '✓ Feito' : 'Escolha como preparar o elenco'}
-        </div>
-        <div className={styles.trainRow}>
-          {CHOICES.map(choice => {
-            const preset = TRAINING_PRESETS[choice];
-            const selected = trainingDone && choice === 'intense' ? false : false;
-            void selected;
-            return (
-              <button
-                key={choice}
-                className={styles.trainBtn}
-                disabled={trainingDone}
-                onClick={() => onTraining(choice)}
-                title={`${preset.description} (moral ${preset.moraleDelta > 0 ? '+' : ''}${preset.moraleDelta}, fadiga ${preset.fatigueDelta > 0 ? '+' : ''}${preset.fatigueDelta})`}
-              >
-                <span className={styles.trainLabel}>{preset.label}</span>
-                {/* Por extenso e com cor de bom/ruim: o "⚡+25" de antes lia como ENERGIA,
-                    mas é fadiga — o Treino Intenso parecia a opção que descansa o elenco. */}
-                <span className={styles.trainEffect}>
-                  <span className={preset.fatigueDelta > 0 ? styles.effectBad : styles.effectGood}>
-                    Fadiga {preset.fatigueDelta > 0 ? '+' : ''}{preset.fatigueDelta}
-                  </span>
-                  {' · '}
-                  <span className={preset.moraleDelta >= 0 ? styles.effectGood : styles.effectBad}>
-                    Moral {preset.moraleDelta > 0 ? '+' : ''}{preset.moraleDelta}
-                  </span>
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      <div className={styles.title}>
+        <span>Preparação</span>
+        <span className={styles.status}>
+          {trainingDone ? '✓ Treino' : 'Treino pendente'} · {pressDone ? '✓ Coletiva' : 'Coletiva pendente'}
+        </span>
       </div>
-
-      <div className={styles.section}>
-        <div className={styles.sectionLabel}>
-          Coletiva de Imprensa · {pressDone ? '✓ Feita' : `Fale com a imprensa antes de enfrentar ${opponentName}`}
-        </div>
-        <button className={styles.pressBtn} disabled={pressDone} onClick={onOpenPress}>
-          🎤 Conceder Coletiva {pressDone ? '(já feita)' : '→'}
+      <div className={styles.trainRow}>
+        {CHOICES.map(choice => {
+          const preset = TRAINING_PRESETS[choice];
+          return (
+            <button
+              key={choice}
+              className={styles.trainBtn}
+              disabled={trainingDone}
+              onClick={() => onTraining(choice)}
+              title={`${preset.description} (moral ${preset.moraleDelta > 0 ? '+' : ''}${preset.moraleDelta}, fadiga ${preset.fatigueDelta > 0 ? '+' : ''}${preset.fatigueDelta})`}
+            >
+              <span className={styles.trainLabel}>{preset.label}</span>
+              {/* Por extenso e com cor de bom/ruim: "⚡+25" lia como energia, mas é fadiga. */}
+              <span className={preset.fatigueDelta > 0 ? styles.effectBad : styles.effectGood}>
+                Fadiga {preset.fatigueDelta > 0 ? '+' : ''}{preset.fatigueDelta}
+              </span>
+              <span className={preset.moraleDelta >= 0 ? styles.effectGood : styles.effectBad}>
+                Moral {preset.moraleDelta > 0 ? '+' : ''}{preset.moraleDelta}
+              </span>
+            </button>
+          );
+        })}
+        <button
+          className={`${styles.trainBtn} ${styles.pressBtn}`}
+          disabled={pressDone}
+          onClick={onOpenPress}
+          title={`Fale com a imprensa antes de enfrentar ${opponentName}`}
+        >
+          <span className={styles.trainLabel}>🎤 Coletiva</span>
+          <span className={styles.effectNeutral}>{pressDone ? 'Feita' : 'Moral ±'}</span>
         </button>
       </div>
 

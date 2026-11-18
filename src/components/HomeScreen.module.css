@@ -2,8 +2,8 @@
   max-width: 520px;
   min-height: 100dvh;
   justify-content: center;
-  padding: 32px 20px 56px;
-  gap: 20px;
+  padding: 16px 16px 20px;
+  gap: 12px;
   position: relative;
   isolation: isolate;
 }
@@ -260,8 +260,8 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
 }
 
 /* ── Cards de modo ── */
@@ -270,8 +270,10 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 12px 6px;
   border-radius: 14px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -415,10 +417,10 @@ button.modeCard:active { border-color: var(--accent); background: var(--surface-
 }
 
 @media (max-width: 400px) {
-  .screen { padding: 24px 14px 40px; }
+  .screen { padding: 16px 14px 20px; }
   .title { font-size: 38px; }
   .grid { gap: 8px; }
-  .modeCard { padding: 10px; }
+  .modeCard { padding: 10px 4px; }
   .modeDesc { font-size: 11px; }
 }
 
@@ -463,3 +465,7 @@ button.modeCard:active { border-color: var(--accent); background: var(--surface-
   color: var(--text-secondary);
   opacity: 0.5;
 }
+
+.modeCard .modeText { align-items: center; }
+.modeCard .modeName { font-size: 14px; }
+.modeCard .modeDesc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }

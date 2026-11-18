@@ -140,7 +140,7 @@ describe('CareerHubScreen — preparação pré-jogo (Fase 3)', () => {
     const onApplyTraining = vi.fn();
     renderHub(makeCareerState(), vi.fn(), vi.fn(), { onApplyTraining });
 
-    expect(screen.getByText('🎙️ Preparação Pré-Jogo')).toBeInTheDocument();
+    expect(screen.getByText('Preparação')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Treino Intenso'));
     expect(onApplyTraining).toHaveBeenCalledWith('intense');
     fireEvent.click(screen.getByText('Descanso'));
@@ -171,7 +171,7 @@ describe('CareerHubScreen — preparação pré-jogo (Fase 3)', () => {
       onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion,
     });
 
-    expect(screen.getByText('🎤 Conceder Coletiva →')).toBeInTheDocument();
+    expect(screen.getByText('🎤 Coletiva')).toBeInTheDocument();
     // A pergunta ativa é renderizada no modal.
     expect(screen.getByText('Como o elenco chega?')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Confiante'));
@@ -184,8 +184,8 @@ describe('CareerHubScreen — preparação pré-jogo (Fase 3)', () => {
       onOpenPressConference, pressDone: true,
     });
 
-    const btn = screen.getByText(/Conceder Coletiva/);
-    expect(btn).toBeDisabled();
+    const btn = screen.getByText('🎤 Coletiva');
+    expect(btn.closest('button')).toBeDisabled();
   });
 });
 
@@ -228,6 +228,7 @@ describe('CareerHubScreen — status do backup na nuvem', () => {
 
   it('mostra confirmação discreta quando o backup está em dia', () => {
     renderWithCloud('saved');
+    fireEvent.click(screen.getByRole('tab', { name: /Clube/ }));
     expect(screen.getByText(/Backup na nuvem em dia/)).toBeInTheDocument();
   });
 

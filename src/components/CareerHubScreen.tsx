@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { CareerState } from '../engine/career';
-import { getInbox, getSponsorName, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory, getYouthPool } from '../engine/career';
+import { getInbox, getFinances, deriveCupProgress, getPlayerConversations, getPreMatchDoneRound, getTransferHistory, getYouthPool } from '../engine/career';
 import { getObjectives, getObjectiveProgress } from '../engine/boardObjectives';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -189,6 +189,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
   // → Avançar Rodada). Reusa os handlers existentes; com mensagem obrigatória pendente,
   // só simula e para no aviso de sempre.
   const [pendingAdvance, setPendingAdvance] = useState(false);
+  const [hubTab, setHubTab] = useState<'inbox' | 'season' | 'club'>('inbox');
   useEffect(() => {
     if (!pendingAdvance || !roundComplete) return;
     setPendingAdvance(false);
@@ -200,7 +201,6 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
     setPendingAdvance(true);
     onSimulateRound(state.season.league.currentRound);
   };
-  const sponsorName = getSponsorName(state);
   const boardObj = getObjectives(state);
   const cupProgress = deriveCupProgress(state.season.cup, state.season.league.userTeamId);
 
@@ -298,47 +298,27 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
     });
   }, [userTeam, opponentTeam, userPosition, state.season.league.teams.length, lastUserResult, marqueeSigning, state.currentSeasonYear]);
 
-  return (
-    <div className={`${styles.screen} app-screen`}>
-      <div className={styles.header}>
-        <Button variant="ghost" size="sm" onClick={onBack} aria-label="Voltar">
-          <Icon name="arrow-left" size={14} /> Voltar
-        </Button>
-      </div>
+  const unreadCount = inbox.filter(m => !m.isRead).length;
+  const convCount = onRespondConversation ? getPlayerConversations(state).length : 0;
 
-      {/* Club Identity Hero */}
+  return (
+    <div className={`${styles.screen} app-screen fit-screen`}>
+      {/* Topo compacto: voltar + identidade do clube numa linha. Estádio e patrocínio
+          ficam no Meu Clube — aqui só o que orienta a decisão de agora. */}
       {userTeam && (
-        <div className={styles.clubHero}>
-          <div className={styles.clubCrest}>
-            <img src={crestSrc(userTeam.logoUrl)} alt={userTeam.name} className={styles.crestImg} />
-          </div>
-          <div className={styles.clubInfo}>
+        <div className={styles.topBar}>
+          <Button variant="ghost" size="sm" onClick={onBack} aria-label="Voltar">
+            <Icon name="arrow-left" size={14} />
+          </Button>
+          <img src={crestSrc(userTeam.logoUrl)} alt="" className={styles.topCrest} />
+          <div className={styles.topInfo}>
             <h1 className={styles.clubName}>{userTeam.name}</h1>
-            <div className={styles.clubMeta}>
-              <span>{league.flag} {league.name}</span>
-              <span>·</span>
-              <span>Temporada {state.currentSeasonYear}</span>
-              {userTeam.stadium && <><span>·</span><span className={styles.metaIcon}><Icon name="stadium" size={12} /> {userTeam.stadium}</span></>}
-            </div>
-            <div className={styles.managerRow}>
-              <span className={styles.managerName}><Icon name="manager" size={13} /> {state.manager.name}</span>
-              <span className={styles.managerRep}>
-                <Icon name="star" size={13} /> {state.manager.reputation} rep
-              </span>
-              <span className={styles.sponsorBadge}>
-                <Icon name="shirt" size={12} /> {sponsorName}
-              </span>
-            </div>
+            <span className={styles.clubMeta}>
+              {league.name} · T{state.currentSeasonYear} · <Icon name="star" size={11} /> {state.manager.reputation} rep
+            </span>
           </div>
         </div>
       )}
-
-      {/* Corpo em duas colunas no desktop: AÇÃO (o que fazer agora) à esquerda,
-          INFORMAÇÃO (contexto do clube/mundo) à direita. Em telas estreitas as
-          colunas empilham e a ação vem primeiro. */}
-      <div className={styles.body}>
-        {/* ── Coluna de ação ────────────────────────────────────── */}
-        <div className={styles.primaryCol}>
 
           {nextMatch && !seasonReady && (
             <div className={styles.nextMatchCard}>
@@ -414,6 +394,36 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
             <div className={styles.advanceStatus}>Liga encerrada — termine a copa pra avançar de temporada</div>
           ) : null}
 
+
+      {/* Falha de backup fica fora das abas: é aviso que precisa ser visto. */}
+      {cloudStatus === 'offline' && (
+        <div className={styles.cloudSaveRow} role="status" aria-live="polite">
+          <span className={styles.cloudSaveOffline}>
+            <Icon name="cloud-off" size={13} /> Backup na nuvem falhou — progresso salvo só neste dispositivo
+          </span>
+          {onRetryCloudSave && (
+            <Button variant="secondary" size="sm" onClick={onRetryCloudSave}>Tentar de novo</Button>
+          )}
+        </div>
+      )}
+
+      {/* O resto em abas internas: a tela não rola, só a lista da aba ativa. */}
+      <div className={styles.hubTabs} role="tablist" aria-label="Central">
+        {([
+          ['inbox', 'Mensagens', unreadCount + convCount],
+          ['season', 'Temporada', 0],
+          ['club', 'Clube', jobOfferCount],
+        ] as const).map(([id, label, badge]) => (
+          <button key={id} role="tab" aria-selected={hubTab === id}
+            className={`${styles.hubTab} ${hubTab === id ? styles.hubTabOn : ''}`} onClick={() => setHubTab(id)}>
+            {label}{badge > 0 && <span className={styles.hubBadge}>{badge}</span>}
+          </button>
+        ))}
+      </div>
+
+      <div className={`${styles.hubPanel} fit-scroll`} role="tabpanel">
+        {hubTab === 'inbox' && (
+          <>
           {onRespondConversation && getPlayerConversations(state).length > 0 && (
             <ConversationsPanel
               conversations={getPlayerConversations(state)}
@@ -427,10 +437,10 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
             onAcceptTransferOffer={onAcceptTransferOffer}
             onRejectTransferOffer={onRejectTransferOffer}
           />
-        </div>
-
-        {/* ── Coluna de informação ──────────────────────────────── */}
-        <div className={styles.secondaryCol}>
+          </>
+        )}
+        {hubTab === 'season' && (
+          <>
           {/* Quick Stats Row */}
           <div className={styles.quickStats}>
             <StatTile value={gamesPlayed} label="Jogos na liga" />
@@ -531,6 +541,16 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
             </details>
           )}
 
+          {socialPosts.length > 0 && (
+            <details className={styles.feedDetails}>
+              <summary className={styles.feedSummary}>📱 FC Hub · {socialPosts.length} posts</summary>
+              <SocialFeedCard posts={socialPosts} />
+            </details>
+          )}
+          </>
+        )}
+        {hubTab === 'club' && (
+          <>
           <button className={styles.jobMarketCard} onClick={onOpenJobMarket}>
             <span className={styles.jobMarketIcon}><Icon name="briefcase" size={18} /></span>
             <span className={styles.jobMarketLabel}>
@@ -551,37 +571,13 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
             </button>
           )}
 
-          {socialPosts.length > 0 && (
-            <details className={styles.feedDetails}>
-              <summary className={styles.feedSummary}>📱 FC Hub · {socialPosts.length} posts</summary>
-              <SocialFeedCard posts={socialPosts} />
-            </details>
-          )}
-        </div>
-      </div>
-
-      {/* Status do backup na nuvem — antes falhava 100% em silêncio (o hook expunha
-          `status`/`retry`, mas nenhuma tela lia). `idle`/`loading` = nada a reportar
-          (sem nuvem configurada ou ainda carregando). */}
-      {(cloudStatus === 'saving' || cloudStatus === 'saved' || cloudStatus === 'offline') && (
+      {(cloudStatus === 'saving' || cloudStatus === 'saved') && (
         <div className={styles.cloudSaveRow} role="status" aria-live="polite">
           {cloudStatus === 'saving' && (
             <span className={styles.cloudSaveMuted}><Icon name="cloud" size={13} /> Salvando na nuvem…</span>
           )}
           {cloudStatus === 'saved' && (
             <span className={styles.cloudSaveMuted}><Icon name="cloud" size={13} /> Backup na nuvem em dia</span>
-          )}
-          {cloudStatus === 'offline' && (
-            <>
-              <span className={styles.cloudSaveOffline}>
-                <Icon name="cloud-off" size={13} /> Backup na nuvem falhou — progresso salvo só neste dispositivo
-              </span>
-              {onRetryCloudSave && (
-                <Button variant="secondary" size="sm" onClick={onRetryCloudSave}>
-                  Tentar de novo
-                </Button>
-              )}
-            </>
           )}
         </div>
       )}
@@ -601,6 +597,9 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
         <button className={styles.newCareerBtn} onClick={onNewCareer}>
           Começar nova carreira em outra liga
         </button>
+      </div>
+          </>
+        )}
       </div>
     </div>
   );

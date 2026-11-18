@@ -11,6 +11,24 @@
   width: 100%;
 }
 
+/* ── Tela que cabe na altura do celular ─────────────────────────────
+   A página não rola: o cabeçalho e as ações ficam fixos e só a área marcada com
+   .fit-scroll (uma lista, uma aba) rola por dentro. --tabbar-h vem do App quando a
+   barra de abas da carreira está visível. */
+.fit-screen {
+  height: calc(100dvh - var(--tabbar-h, 0px));
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 8px !important;
+}
+.fit-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* --- Top nav (back button no topo-esquerdo, start no topo-direito) --- */
 .top-nav {
   display: flex; align-items: center; justify-content: space-between;
@@ -1072,3 +1090,41 @@
   font-family: var(--display); font-size: 22px; color: var(--text-secondary);
 }
 .prematch-stadium { text-align: center; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+
+/* ── Táticas compactas (cabem na altura do celular) ── */
+.setup-screen.fit-screen { display: flex; flex-direction: column; gap: 8px; max-width: 560px; padding: 12px 14px 8px; }
+.setup-screen.fit-screen > header { margin-bottom: 0; }
+.setup-info {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  padding: 8px 10px; border-radius: 10px; background: var(--accent-bg); border: 1px solid var(--accent-border);
+}
+.setup-info-text {
+  flex: 1; min-width: 0; margin: 0; font-size: 12px; font-weight: 600; line-height: 1.3; color: var(--text-h);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.setup-morale { flex-shrink: 0; padding: 3px 7px; border-radius: 6px; font-size: 11px; font-weight: 800; }
+.setup-morale.up { color: var(--win); background: color-mix(in srgb, var(--win) 14%, transparent); }
+.setup-morale.down { color: var(--loss); background: color-mix(in srgb, var(--loss) 14%, transparent); }
+
+.setup-side-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex-shrink: 0; }
+.setup-side {
+  display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 40px; padding: 6px 10px;
+  border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-secondary); font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.setup-side img { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
+.setup-side span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.setup-side.on { border-color: var(--accent); color: var(--text-primary); background: var(--accent-bg); }
+
+.setup-tabs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; flex-shrink: 0;
+  padding: 3px; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--border);
+}
+.setup-tab {
+  min-height: 36px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--text-secondary); font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.setup-tab.on { background: var(--surface); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent); }
+.setup-panel { display: flex; flex-direction: column; gap: 8px; }
+.setup-lineup-sub { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+.setup-style { display: flex; flex-direction: column; gap: 12px; }

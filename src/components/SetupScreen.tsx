@@ -97,7 +97,6 @@ import { fireClick } from '../utils/fireClick';
 import { getContractSeasonsLeft, renewPlayerContract, canRenewContract, type ContractRenewalOptions } from '../engine/career';
 import ContractRenewalModal from './ContractRenewalModal';
 import { crestSrc } from '../utils/crest';
-import { teamTextColor } from '../utils/teamTextColor';
 
 export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview, onRenewContract, currentSeasonYear, budget }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
@@ -115,10 +114,10 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   const [awaySelected, setAwaySelected] = useState<string | null>(null);
   const { get: getH2H } = useH2H();
   const [showOpponentAnalysis, setShowOpponentAnalysis] = useState(false);
-  const h2h = getH2H(initialHome.id, initialAway.id);
   const [tutorialSeen] = useLocalStorage<string>('fp:tutorialSeen', '');
   const [showTutorial, setShowTutorial] = useState(!tutorialSeen);
-  const [setupTab, setSetupTab] = useState<'tactics' | 'squad'>('tactics');
+  const [setupTab, setSetupTab] = useState<'lineup' | 'style' | 'squad'>('lineup');
+  const [editSide, setEditSide] = useState<'home' | 'away'>('home');
 
   // Em modo solo (lockAway), o time do usuário pode ser home OU away — o calendário do
   // torneio/carreira decide quem manda em cada rodada, não é sempre "home". Centraliza
@@ -317,54 +316,44 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
     return Math.round(starters.reduce((s, p) => s + playerOvr(p), 0) / starters.length);
   };
 
-  const renderCard = (team: Team, onStrategy: (s: Strategy) => void, side: 'home' | 'away', disabled = false) => (
-    <div className={`setup-team-card ${side} ${disabled ? 'locked' : ''}`} style={{ borderTopColor: team.color }}>
-      <div className="setup-team-header">
-        <div className="setup-team-crest">
-          <img src={crestSrc(team.logoUrl)} alt={team.name} className="crest-img" />
-        </div>
-        <div style={{ flex: 1 }}>
-          <h2>{team.name}</h2>
-          <span className="setup-team-sub">{team.strategy.formation} · {avgOvr(team)} OVR {disabled ? '🔒 CPU' : ''}</span>
-        </div>
-      </div>
+  // Lado sendo editado: no modo solo é sempre o do usuário; com dois times (Partida
+  // Única / 2 jogadores) um seletor no topo alterna Casa/Fora — antes os dois cartões
+  // ficavam empilhados e a tela passava de 2.000px no celular.
+  const editing: 'home' | 'away' = lockAway ? mySide : editSide;
+  const editTeam = editing === 'away' ? awayTeam : homeTeam;
+  const editStrategy = editing === 'away' ? updateAway : updateHome;
+  const editSelected = editing === 'away' ? awaySelected : homeSelected;
+  const setEditSelected = editing === 'away' ? setAwaySelected : setHomeSelected;
+  const editSwap = editing === 'away' ? handleSwapAway : handleSwapHome;
 
-      <FormationPitch
-        team={team}
-        selectedId={side === 'away' ? awaySelected : homeSelected}
-        onSelect={side === 'away' ? setAwaySelected : setHomeSelected}
-        onSwap={side === 'away' ? handleSwapAway : handleSwapHome}
-        onFormation={f => onStrategy({ ...team.strategy, formation: f })}
-        disabled={disabled}
-      />
-
+  const renderStyle = (team: Team, onStrategy: (s: Strategy) => void) => (
+    <div className="setup-style">
       <div className="setup-presets">
-        <label>Táticas Predefinidas</label>
+        <label>Táticas predefinidas</label>
         <TacticPresets onApply={onStrategy} currentStrategy={team.strategy} />
       </div>
-
       <div className="setup-controls">
         <div className="setup-select">
           <TacticLabel tacticKey="mentality" />
-          <select value={team.strategy.mentality} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, mentality: e.target.value as Mentality })}>
+          <select value={team.strategy.mentality} onChange={e => onStrategy({ ...team.strategy, mentality: e.target.value as Mentality })}>
             {MENTALITIES.map(m => <option key={m} value={m}>{MENTALITY_LABELS[m]}</option>)}
           </select>
         </div>
         <div className="setup-select">
           <TacticLabel tacticKey="intensity" />
-          <select value={team.strategy.intensity} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, intensity: e.target.value as Intensity })}>
+          <select value={team.strategy.intensity} onChange={e => onStrategy({ ...team.strategy, intensity: e.target.value as Intensity })}>
             {INTENSITIES.map(i => <option key={i} value={i}>{INTENSITY_LABELS[i]}</option>)}
           </select>
         </div>
         <div className="setup-select">
           <TacticLabel tacticKey="defensiveLine" />
-          <select value={team.strategy.defensiveLine} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, defensiveLine: e.target.value as DefensiveLine })}>
+          <select value={team.strategy.defensiveLine} onChange={e => onStrategy({ ...team.strategy, defensiveLine: e.target.value as DefensiveLine })}>
             {DEF_LINES.map(d => <option key={d} value={d}>{DEFENSIVE_LINE_LABELS[d]}</option>)}
           </select>
         </div>
         <div className="setup-select">
           <TacticLabel tacticKey="width" />
-          <select value={team.strategy.width} disabled={disabled} onChange={e => onStrategy({ ...team.strategy, width: e.target.value as Width })}>
+          <select value={team.strategy.width} onChange={e => onStrategy({ ...team.strategy, width: e.target.value as Width })}>
             {WIDTHS.map(w => <option key={w} value={w}>{WIDTH_LABELS[w]}</option>)}
           </select>
         </div>
@@ -372,12 +361,14 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
     </div>
   );
 
+  const morale = lockAway ? (myTeam.morale ?? 0) : 0;
+
   return (
-    <div className="setup-screen">
+    <div className="setup-screen app-screen fit-screen">
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
       <ScreenHeader
         onBack={onBack}
-        kicker={mode === 'league' ? 'Campeonato' : mode === 'cup' ? 'Mata-mata' : mode === 'career' ? 'Modo Carreira' : mode === 'online' ? 'Online' : 'Partida Única'}
+        kicker={mode === 'league' ? 'Campeonato' : mode === 'cup' ? 'Mata-mata' : mode === 'career' ? 'Carreira' : mode === 'online' ? 'Online' : 'Partida Única'}
         title="Táticas"
         right={
           <Button size="sm" glow className="setup-confirm-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
@@ -386,107 +377,54 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
         }
       />
 
-      {(() => {
-        const moraleTeam = lockAway ? myTeam : null; // só mostra em torneios, do lado do usuário
-        const m = moraleTeam?.morale ?? 0;
-        if (!moraleTeam || m === 0) return null;
-        const icon = m >= 6 ? '😄' : m >= 2 ? '😊' : m <= -6 ? '😟' : m <= -2 ? '😕' : '😐';
-        const color = m > 0 ? 'var(--win)' : 'var(--loss)';
-        return (
-          <div className="morale-strip">
-            <span className="morale-label">Moral do time</span>
-            <span className="morale-value" style={{ color }}>
-              {icon} {m > 0 ? '+' : ''}{m}
-            </span>
-            <span className="morale-hint">{m > 0 ? 'Em alta' : 'Em baixa'} · afeta ataque em {Math.abs(m)}%</span>
-          </div>
-        );
-      })()}
+      {/* Uma linha de contexto: moral + leitura do confronto + análise completa no modal
+          (que também traz o histórico de confrontos). */}
+      <div className="setup-info">
+        {morale !== 0 && (
+          <span className={`setup-morale ${morale > 0 ? 'up' : 'down'}`} title={`Moral ${morale > 0 ? 'em alta' : 'em baixa'} · afeta ataque em ${Math.abs(morale)}%`}>
+            Moral {morale > 0 ? '+' : ''}{morale}
+          </span>
+        )}
+        <p className="setup-info-text">{getTacticalInsight(lockAway ? myTeam : homeTeam, lockAway ? theirTeam : awayTeam)}</p>
+        <Button size="sm" variant="secondary" onClick={() => setShowOpponentAnalysis(true)}>Oponente</Button>
+      </div>
 
-      {h2h && (h2h.wins + h2h.draws + h2h.losses) > 0 && (
-        <details className="h2h-details">
-          <summary className="h2h-strip">
-            <span className="h2h-label">Histórico {initialHome.abbreviation} vs {initialAway.abbreviation}</span>
-            <span className="h2h-record">
-              <span className="h2h-w">{h2h.wins}V</span> · <span className="h2h-d">{h2h.draws}E</span> · <span className="h2h-l">{h2h.losses}D</span>
-            </span>
-            <span className="h2h-label">Gols {h2h.gf}–{h2h.ga}</span>
-            {h2h.last.length > 0 && (
-              <span className="h2h-form" aria-label={`Últimos resultados: ${h2h.last.map(r => r === 'W' ? 'vitória' : r === 'D' ? 'empate' : 'derrota').join(', ')}`}>
-                {h2h.last.map((r, i) => <span key={i} className={`h2h-pill ${r}`} aria-hidden="true">{r}</span>)}
-              </span>
-            )}
-          </summary>
-          {h2h.log && h2h.log.length > 0 && (
-            <div className="h2h-log">
-              {h2h.log.map((m, i) => (
-                <div key={`${m.date}-${i}`} className="h2h-log-row">
-                  <span className={`h2h-pill ${m.result}`} aria-hidden="true">{m.result}</span>
-                  <span className="h2h-log-date">{m.date}</span>
-                  <span className="h2h-log-score" style={{ color: teamTextColor(initialHome) }}>{m.gf}</span>
-                  <span className="h2h-log-sep">–</span>
-                  <span className="h2h-log-score" style={{ color: teamTextColor(initialAway) }}>{m.ga}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </details>
+      {!lockAway && (
+        <div className="setup-side-switch" role="radiogroup" aria-label="Time que você está editando">
+          {([['home', homeTeam], ['away', awayTeam]] as const).map(([side, t]) => (
+            <button key={side} type="button" role="radio" aria-checked={editSide === side}
+              className={`setup-side ${editSide === side ? 'on' : ''}`} onClick={() => setEditSide(side)}>
+              <img src={crestSrc(t.logoUrl)} alt="" />
+              <span>{t.name}</span>
+            </button>
+          ))}
+        </div>
       )}
 
-      {/* ── Tactical Matchup Insight ── */}
-      <div className="tactical-insight">
-        <div className="tactical-insight-head">
-          <span className="tactical-insight-label">Análise tática</span>
-          <Button size="sm" variant="ghost" onClick={() => setShowOpponentAnalysis(true)}>Analisar oponente</Button>
-        </div>
-        <p className="tactical-insight-text">
-          {getTacticalInsight(lockAway ? myTeam : homeTeam, lockAway ? theirTeam : awayTeam)}
-        </p>
+      <div className="setup-tabs" role="tablist">
+        {([['lineup', 'Escalação'], ['style', 'Estilo'], ['squad', 'Jogadores']] as const).map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={setupTab === id}
+            className={`setup-tab ${setupTab === id ? 'on' : ''}`} onClick={() => setSetupTab(id)}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      <div className="ht-tabs" style={{ margin: '8px 0', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>
-        <button
-          className={`ht-tab ${setupTab === 'tactics' ? 'active' : ''}`}
-          onClick={() => setSetupTab('tactics')}
-        >
-          Táticas
-        </button>
-        <button
-          className={`ht-tab ${setupTab === 'squad' ? 'active' : ''}`}
-          onClick={() => setSetupTab('squad')}
-        >
-          Gerenciar Elenco
-        </button>
-      </div>
-
-      <div className={lockAway ? 'setup-layout setup-layout-solo' : 'setup-layout'}>
-        <div className="setup-left">
-          {(() => {
-            const updateFn = mySide === 'away' ? updateAway : updateHome;
-            const selected = mySide === 'away' ? awaySelected : homeSelected;
-            const setSelected = mySide === 'away' ? setAwaySelected : setHomeSelected;
-            const swapFn = mySide === 'away' ? handleSwapAway : handleSwapHome;
-            return setupTab === 'tactics'
-              ? renderCard(myTeam, updateFn, mySide)
-              : renderSquad(myTeam, selected, setSelected, swapFn, false);
-          })()}
-        </div>
-
-        {!lockAway && (
+      <div className="setup-panel fit-scroll" role="tabpanel">
+        {setupTab === 'lineup' && (
           <>
-            <div className="setup-center">
-              <div className="setup-vs-col">
-                <div className="setup-vs-circle">VS</div>
-              </div>
-            </div>
-            <div className="setup-right">
-              {setupTab === 'tactics'
-                ? renderCard(awayTeam, updateAway, 'away', false)
-                : renderSquad(awayTeam, awaySelected, setAwaySelected, handleSwapAway, false)
-              }
-            </div>
+            <div className="setup-lineup-sub">{editTeam.name} · {avgOvr(editTeam)} OVR</div>
+            <FormationPitch
+              team={editTeam}
+              selectedId={editSelected}
+              onSelect={setEditSelected}
+              onSwap={editSwap}
+              onFormation={f => editStrategy({ ...editTeam.strategy, formation: f })}
+            />
           </>
         )}
+        {setupTab === 'style' && renderStyle(editTeam, editStrategy)}
+        {setupTab === 'squad' && renderSquad(editTeam, editSelected, setEditSelected, editSwap, false)}
       </div>
 
       {showOpponentAnalysis && (

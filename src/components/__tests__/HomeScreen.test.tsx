@@ -63,10 +63,10 @@ describe('HomeScreen — layout', () => {
   it('os quatro modos chamam suas ações', () => {
     const h = { onSingleMatch: vi.fn(), onQuickPlay: vi.fn(), onLeague: vi.fn(), onCup: vi.fn() };
     render(<HomeScreen {...base} {...h} onCareer={vi.fn()} />);
-    fireEvent.click(screen.getByText('Partida Única'));
-    fireEvent.click(screen.getByText('Jogo Rápido'));
-    fireEvent.click(screen.getByText('Campeonatos'));
-    fireEvent.click(screen.getByText('Copas'));
+    fireEvent.click(screen.getByText('Partida'));
+    fireEvent.click(screen.getByText('Rápido'));
+    fireEvent.click(screen.getByText('Campeonato'));
+    fireEvent.click(screen.getByText('Copa'));
     expect(h.onSingleMatch).toHaveBeenCalledOnce();
     expect(h.onQuickPlay).toHaveBeenCalledOnce();
     expect(h.onLeague).toHaveBeenCalledOnce();
