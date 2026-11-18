@@ -1,5 +1,4 @@
 import { useId, useMemo, useState } from 'react';
-import { remindersSupported, remindersEnabled, setRemindersEnabled } from '../services/reminders';
 import { goalsFor, loadDaily, isComplete, nextStreakReward } from '../engine/dailyGoals';
 import { Icon } from './ui';
 import styles from './DailyGoalsCard.module.css';
@@ -13,7 +12,6 @@ export default function DailyGoalsCard() {
   const state = useMemo(() => loadDaily(), []);
   const goals = goalsFor(state.date);
   const done = isComplete(state);
-  const [reminderOn, setReminderOn] = useState(remindersEnabled);
   const [open, setOpen] = useState(false);
   const panelId = useId();
 
@@ -54,13 +52,6 @@ export default function DailyGoalsCard() {
           </ul>
           {done && <p className={styles.footer}>Tudo feito hoje! Volte amanhã pra manter a sequência.</p>}
           {next && <p className={styles.reward}>Próxima conquista: {next.days} dias seguidos ({state.streak}/{next.days})</p>}
-          {remindersSupported() && (
-            <label className={styles.reminder}>
-              <input type="checkbox" checked={reminderOn}
-                onChange={e => { setReminderOn(e.target.checked); void setRemindersEnabled(e.target.checked); }} />
-              Lembrete diário às 19h
-            </label>
-          )}
         </div>
       )}
     </section>

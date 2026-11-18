@@ -1,6 +1,4 @@
-import type { Difficulty } from '../engine/matchConfig';
 import type { FormResult } from '../engine/careerSummary';
-import { getDifficultyLabel } from '../engine/matchConfig';
 import styles from './HomeScreen.module.css';
 import DailyGoalsCard from './DailyGoalsCard';
 import { crestSrc } from '../utils/crest';
@@ -24,8 +22,6 @@ export interface CareerResume {
   form?: FormResult[];
 }
 
-const DIFFICULTIES: Difficulty[] = ['easy', 'normal', 'hard'];
-
 interface Props {
   onSingleMatch: () => void;
   onQuickPlay: () => void;
@@ -35,8 +31,10 @@ interface Props {
   onAchievements: () => void;
   onOnline: () => void;
   onFriendLeague?: () => void;
-  difficulty: Difficulty;
-  onSetDifficulty: (d: Difficulty) => void;
+  /** Abre a tela de Perfil (ícone de bonequinho no topo). */
+  onProfile?: () => void;
+  /** Abre Configurações (dificuldade, velocidade, lembretes, dados…). */
+  onSettings?: () => void;
   /** Carreira salva: vira o card de destaque no topo. */
   careerResume?: CareerResume | null;
 }
@@ -103,7 +101,7 @@ function NextMatch({ home, away }: { home: NextMatchSide; away: NextMatchSide })
   );
 }
 
-export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, onFriendLeague, difficulty, onSetDifficulty, careerResume }: Props) {
+export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, onFriendLeague, onProfile, onSettings, careerResume }: Props) {
   return (
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.pitch} aria-hidden="true" />
@@ -113,9 +111,21 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
           <h1 className={styles.title}>Foot<span>Plan</span></h1>
           <p className={styles.subtitle}>Simulador Tático</p>
         </div>
-        <button className={styles.iconBtn} onClick={onAchievements} aria-label="Conquistas">
-          <Icon name="medal" size={20} />
-        </button>
+        <div className={styles.headerActions}>
+          <button className={styles.iconBtn} onClick={onAchievements} aria-label="Conquistas">
+            <Icon name="medal" size={20} />
+          </button>
+          {onProfile && (
+            <button className={styles.iconBtn} onClick={onProfile} aria-label="Perfil">
+              <Icon name="user" size={20} />
+            </button>
+          )}
+          {onSettings && (
+            <button className={styles.iconBtn} onClick={onSettings} aria-label="Configurações">
+              <Icon name="settings" size={20} />
+            </button>
+          )}
+        </div>
       </header>
 
       <section className={styles.careerCard} aria-label="Modo carreira">
@@ -152,25 +162,6 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
       <section className={styles.section}>
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle}>Modos de jogo</h2>
-          <label className={styles.difficultyPick}>
-            <span className={styles.difficultyLabel}>Dificuldade</span>
-            <span className={styles.difficultyValue} aria-hidden="true">{getDifficultyLabel(difficulty)}</span>
-            <select
-              className={styles.difficultySelect}
-              aria-label="Dificuldade das partidas"
-              value={difficulty}
-              onChange={e => {
-                const d = e.target.value as Difficulty;
-                onSetDifficulty(d);
-                try { localStorage.setItem('fp:difficulty', d); } catch {}
-              }}
-            >
-              {DIFFICULTIES.map(d => (
-                <option key={d} value={d}>{getDifficultyLabel(d)}</option>
-              ))}
-            </select>
-            <Icon name="chevron-right" size={14} className={styles.difficultyChevron} />
-          </label>
         </div>
         <div className={styles.grid}>
           <ModeCard icon="ball" name="Partida Única" desc="Escolha dois times" onClick={onSingleMatch} />

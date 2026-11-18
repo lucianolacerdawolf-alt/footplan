@@ -22,6 +22,11 @@ import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
 
 import { getAvgOvr } from '../utils/teamUtils';
+import SettingsScreen from './SettingsScreen';
+import ProfileScreen, { type ProfileCareer } from './ProfileScreen';
+import { ACHIEVEMENTS } from '../engine/achievements';
+import { loadDaily } from '../engine/dailyGoals';
+import { hasRosterCloud } from '../services/rosterCloud';
 import HomeScreen, { type CareerResume } from './HomeScreen';
 import TeamSelectionScreen from './TeamSelectionScreen';
 import SetupScreen from './SetupScreen';
@@ -486,6 +491,23 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     );
   },
 
+  'settings': (p) => (
+    <SettingsScreen difficulty={p.difficulty} onSetDifficulty={p.setDifficulty} onBack={() => p.setScreen('home')} />
+  ),
+
+  'profile': (p) => (
+    <ProfileScreen
+      onBack={() => p.setScreen('home')}
+      career={profileCareer(p.career.careerState)}
+      matchesPlayed={p.history.length}
+      achievementsUnlocked={p.achievements.unlocked.length}
+      achievementsTotal={ACHIEVEMENTS.length}
+      dailyStreak={loadDaily().streak}
+      cloudBackup={hasRosterCloud()}
+      onAchievements={() => p.setScreen('achievements')}
+    />
+  ),
+
   'achievements': (p) => (
     <AchievementsScreen
       achievements={p.achievements.getAll()}
@@ -763,6 +785,27 @@ function nextUserMatch(lg: LeagueState): CareerResume['nextMatch'] {
   };
 }
 
+/** Dados da carreira pra tela de Perfil. */
+export function profileCareer(cs: UseCareerManagerReturn['careerState']): ProfileCareer | null {
+  if (!cs) return null;
+  const lg = cs.season.league;
+  const team = lg.teams.find(t => t.id === lg.userTeamId);
+  if (!team) return null;
+  const finishes = cs.history.map(h => h.userLeaguePosition).filter(n => n > 0);
+  return {
+    managerName: cs.manager.name,
+    reputation: cs.manager.reputation,
+    teamName: team.name,
+    teamCrest: team.logoUrl,
+    leagueName: getLeague(cs.leagueId)?.name ?? '',
+    seasonYear: cs.currentSeasonYear,
+    seasonsDone: cs.history.length,
+    leagueTitles: cs.history.filter(h => h.userLeaguePosition === 1).length,
+    cupTitles: cs.history.filter(h => h.cupResult === 'champion').length,
+    bestFinish: finishes.length ? Math.min(...finishes) : null,
+  };
+}
+
 /** Resumo da carreira salva pro card "Continuar carreira" da tela inicial. */
 export function careerResumeInfo(cs: UseCareerManagerReturn['careerState']): CareerResume | null {
   if (!cs) return null;
@@ -792,8 +835,8 @@ function renderHome(props: AppScreensProps): React.ReactNode {
       onAchievements={() => props.setScreen('achievements')}
       onOnline={() => props.setScreen('online-lobby')}
       onFriendLeague={() => props.setScreen('friend-league')}
-      difficulty={props.difficulty}
-      onSetDifficulty={props.setDifficulty}
+      onProfile={() => props.setScreen('profile')}
+      onSettings={() => props.setScreen('settings')}
     />
   );
 }

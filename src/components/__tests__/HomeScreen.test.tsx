@@ -7,7 +7,7 @@ import { careerResumeInfo } from '../AppScreens';
 
 const base = {
   onSingleMatch: vi.fn(), onQuickPlay: vi.fn(), onLeague: vi.fn(), onCup: vi.fn(),
-  onAchievements: vi.fn(), onOnline: vi.fn(), difficulty: 'normal' as const, onSetDifficulty: vi.fn(),
+  onAchievements: vi.fn(), onOnline: vi.fn(),
 };
 
 describe('HomeScreen — Continuar carreira', () => {
@@ -80,11 +80,15 @@ describe('HomeScreen — layout', () => {
     expect(onAchievements).toHaveBeenCalledOnce();
   });
 
-  it('troca a dificuldade', () => {
-    const onSetDifficulty = vi.fn();
-    render(<HomeScreen {...base} onSetDifficulty={onSetDifficulty} onCareer={vi.fn()} />);
-    fireEvent.change(screen.getByRole('combobox', { name: 'Dificuldade das partidas' }), { target: { value: 'hard' } });
-    expect(onSetDifficulty).toHaveBeenCalledWith('hard');
+  it('Perfil e Configurações abrem pelos ícones do topo', () => {
+    const onProfile = vi.fn();
+    const onSettings = vi.fn();
+    render(<HomeScreen {...base} onCareer={vi.fn()} onProfile={onProfile} onSettings={onSettings} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Perfil' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Configurações' }));
+    expect(onProfile).toHaveBeenCalledOnce();
+    expect(onSettings).toHaveBeenCalledOnce();
+    expect(screen.queryByRole('combobox', { name: 'Dificuldade das partidas' })).not.toBeInTheDocument();
   });
 });
 

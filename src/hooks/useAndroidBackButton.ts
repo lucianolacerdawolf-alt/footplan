@@ -34,6 +34,8 @@ export const backTargets: Record<Screen, (c: BackNavContext) => BackTarget> = {
   'league-table': () => 'league',
   'bracket': () => 'home-reset',
   'achievements': () => 'home-reset',
+  'settings': () => 'home',
+  'profile': () => 'home',
   'stats': () => 'home-reset',
 
   'setup': (c) => {

@@ -1,0 +1,75 @@
+.screen {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.cardTitle {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.row { display: flex; flex-direction: column; gap: 8px; }
+.label { display: block; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.hint { display: block; margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--text-secondary); }
+
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+}
+.seg {
+  min-height: 40px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.segOn { background: var(--accent); color: #04131a; }
+
+.toggleRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; }
+.switch { width: 22px; height: 22px; accent-color: var(--accent); flex-shrink: 0; }
+
+.actionRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--loss);
+  background: color-mix(in srgb, var(--loss) 10%, transparent);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.confirmBtns { display: flex; gap: 8px; justify-content: flex-end; }
+
+.about { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-secondary); }
+.links { display: flex; gap: 14px; }
+.links a { color: var(--accent); text-decoration: none; font-weight: 600; }

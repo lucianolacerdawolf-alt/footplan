@@ -1,0 +1,86 @@
+.screen {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--accent-border);
+  background: linear-gradient(135deg, var(--accent-bg), var(--surface) 70%);
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+}
+.heroText { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.7rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sub { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--text-secondary); }
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.cardTitle {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.club { display: flex; align-items: center; gap: 12px; }
+.crest { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
+.clubText { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 13px; color: var(--text-secondary); }
+.clubText strong { font-size: 15px; color: var(--text-primary); }
+
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.linkRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  color: var(--accent);
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.linkText { flex: 1; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.linkValue { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+
+.note { margin: 4px 2px 0; font-size: 12px; color: var(--text-secondary); text-align: center; }
