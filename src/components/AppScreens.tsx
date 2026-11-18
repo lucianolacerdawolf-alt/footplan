@@ -747,6 +747,21 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
   },
 };
 
+/** Jogo do clube do usuário na rodada atual (mandante à esquerda), pro card da Home. */
+function nextUserMatch(lg: LeagueState): CareerResume['nextMatch'] {
+  const fixture = lg.fixtures?.[lg.currentRound]?.find(
+    f => f.homeTeamId === lg.userTeamId || f.awayTeamId === lg.userTeamId,
+  );
+  if (!fixture) return null;
+  const home = lg.teams.find(t => t.id === fixture.homeTeamId);
+  const away = lg.teams.find(t => t.id === fixture.awayTeamId);
+  if (!home || !away) return null;
+  return {
+    home: { name: home.name, crest: home.logoUrl },
+    away: { name: away.name, crest: away.logoUrl },
+  };
+}
+
 /** Resumo da carreira salva pro card "Continuar carreira" da tela inicial. */
 export function careerResumeInfo(cs: UseCareerManagerReturn['careerState']): CareerResume | null {
   if (!cs) return null;
@@ -759,6 +774,7 @@ export function careerResumeInfo(cs: UseCareerManagerReturn['careerState']): Car
     teamName: team.name,
     crest: team.logoUrl,
     detail: [leagueName, `Temporada ${cs.currentSeasonYear}`, step].filter(Boolean).join(' · '),
+    nextMatch: lg.phase === 'done' ? null : nextUserMatch(lg),
   };
 }
 

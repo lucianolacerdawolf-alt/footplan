@@ -2,67 +2,63 @@
   max-width: 520px;
   min-height: 100dvh;
   justify-content: center;
-  padding: 40px 24px 64px;
-  gap: 36px;
+  padding: 32px 20px 56px;
+  gap: 20px;
+  position: relative;
+  isolation: isolate;
+}
+
+/* Marcação de campo bem discreta atrás do topo (linha central + círculo). */
+.pitch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 260px;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent);
+  mask-image: linear-gradient(to bottom, #000 30%, transparent);
+}
+.pitch::before,
+.pitch::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  border: 1px solid rgba(6, 182, 212, 0.1);
+}
+.pitch::before { top: 0; bottom: 0; border-width: 0 0 0 1px; }
+.pitch::after {
+  top: 130px;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  border-radius: 50%;
 }
 
 /* ── Header ── */
 .header {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 0;
-  text-align: center;
-  position: relative;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.backLeague {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 20px;
-  padding: 5px 12px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-  font-family: var(--sans);
-}
+.brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
-.backLeague:hover {
-  background: var(--surface);
-  color: var(--text-primary);
-  border-color: var(--border-light);
-}
-
-/* Título principal */
 .title {
   font-family: var(--display);
-  font-size: 104px;
+  font-size: 44px;
   font-weight: 400;
-  letter-spacing: 0.06em;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--text-primary);
-  line-height: 0.88;
+  line-height: 0.95;
   margin: 0;
-  /* Brilho sutil no texto */
-  text-shadow: 0 0 80px rgba(6, 182, 212, 0.18);
 }
-
-/* Linha cyan abaixo do título */
-.titleLine {
-  display: block;
-  width: 56px;
-  height: 3px;
-  background: var(--accent);
-  border-radius: 2px;
-  margin: 12px auto 14px;
-  box-shadow: 0 0 12px rgba(6, 182, 212, 0.6);
-}
+.title span { color: var(--accent); }
 
 .subtitle {
   font-family: var(--sans);
@@ -70,72 +66,215 @@
   font-weight: 700;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 4px;
+  letter-spacing: 3px;
   margin: 0;
 }
 
-/* ── Cards de modo ── */
-.modes {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.modeCard {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  padding: 18px 20px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.2s, background 0.2s, transform 0.15s;
-  /* Remove estilos padrão de botão */
-  color: inherit;
-  font-family: inherit;
-}
-
-/* Barra lateral cyan no hover */
-.modeCard::before {
-  content: '';
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 3px;
-  background: var(--accent);
-  border-radius: 0 2px 2px 0;
-  transform: scaleY(0);
-  transform-origin: center;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.modeCard:hover::before { transform: scaleY(1); }
-
-.modeCard:hover {
-  border-color: var(--accent);
-  background: var(--surface-hover);
-  transform: translateX(3px);
-}
-
-.modeCard:active { transform: translateX(1px); }
-
-.modeIcon {
+.iconBtn {
   display: grid;
   place-items: center;
   width: 44px;
   height: 44px;
   flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--accent-border);
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.iconBtn:hover { border-color: var(--accent); background: var(--surface-hover); }
+
+/* ── Card de carreira (destaque) ── */
+.careerCard {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  /* Único brilho da tela: destaca o card principal sem poluir o resto. */
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.16);
+}
+
+.careerArt {
+  position: absolute;
+  right: -18px;
+  top: -14px;
+  color: var(--accent);
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.careerTitle {
+  position: relative;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.careerDesc {
+  position: relative;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.careerClub {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.resumeCrest { width: 44px; height: 44px; object-fit: contain; flex-shrink: 0; }
+.resumeTeam { font-size: 1.05rem; font-weight: 800; color: var(--text-primary); }
+
+.careerCta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border: 0;
   border-radius: 12px;
+  background: var(--accent);
+  color: #04222a;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(6, 182, 212, 0.3);
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.careerCta:hover { transform: translateY(-1px); box-shadow: 0 0 20px rgba(6, 182, 212, 0.45); }
+.careerCta:active { transform: translateY(0); }
+
+/* Próximo jogo: escudos de cada lado, sem sobreposição. */
+.nextMatch {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(4, 12, 24, 0.55);
+}
+.nextLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.versus {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+.side { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sideHome { justify-content: flex-start; }
+.sideAway { justify-content: flex-end; text-align: right; }
+.sideName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.versusCrest { width: 30px; height: 30px; object-fit: contain; flex-shrink: 0; }
+.versusX { font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+
+/* ── Seções ── */
+.section { display: flex; flex-direction: column; gap: 10px; }
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* ── Cards de modo ── */
+.modeCard {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+  transition: border-color 0.2s, background 0.2s;
+}
+button.modeCard { cursor: pointer; }
+button.modeCard:hover { border-color: var(--accent); background: var(--surface-hover); }
+
+.modeArt {
+  position: absolute;
+  right: -12px;
+  top: -10px;
+  color: var(--accent);
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.modeTop {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modeIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  border: 1px solid var(--accent-border);
   background: var(--accent-bg);
   color: var(--accent);
   line-height: 1;
 }
 
+.modeArrow { color: var(--accent); }
+
 .modeText {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -144,91 +283,86 @@
 }
 
 .modeName {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--text-primary);
   font-family: var(--sans);
-  letter-spacing: 0.1px;
   line-height: 1.2;
 }
 
 .modeDesc {
-  font-size: 12.5px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-weight: 400;
   line-height: 1.3;
 }
 
-.modeArrow {
-  font-size: 18px;
+.modeActions {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.modeAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-bg);
   color: var(--accent);
-  opacity: 0;
-  flex-shrink: 0;
-  transition: opacity 0.2s, transform 0.2s;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
 }
+.modeAction:hover { border-color: var(--accent); background: rgba(6, 182, 212, 0.18); }
 
-.modeCard:hover .modeArrow {
-  opacity: 1;
-  transform: translateX(3px);
-}
-
-/* ── Mobile ── */
-@media (max-width: 640px) {
-  .screen { padding: 48px 16px 40px; gap: 28px; }
-  .title { font-size: 64px; }
-  .titleLine { margin: 10px auto 12px; }
-  .subtitle { letter-spacing: 3px; font-size: 10px; }
-  .modeCard { padding: 15px 16px; gap: 14px; }
-  .modeIcon { font-size: 28px; }
-  .modeName { font-size: 15px; }
-  .modeDesc { font-size: 12px; }
-}
-
-.difficultyBar {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
-  padding-top: 8px; margin-top: 4px;
-}
+/* ── Dificuldade (vale para todas as partidas) ── */
+.difficulty { display: flex; align-items: center; gap: 8px; }
 
 .difficultyLabel {
-  font-size: 11px; font-weight: 700; text-transform: uppercase;
-  letter-spacing: 0.6px; color: var(--text-secondary); font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+  font-family: var(--mono);
 }
 
-.difficultyBtns {
-  display: flex; gap: 4px;
-}
+.difficultyBtns { display: flex; gap: 4px; }
 
 .diffBtn {
-  /* 24px de altura ficava abaixo do mínimo de alvo de toque; são os 3 botões
-   * mais tocados da Home. */
-  padding: 8px 16px; min-height: 34px; border-radius: 17px; border: 1.5px solid var(--border);
-  background: transparent; color: var(--text-secondary); font-size: 12px;
-  font-weight: 600; cursor: pointer; transition: all 0.15s;
+  padding: 6px 12px;
+  min-height: 34px;
+  border-radius: 17px;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
   font-family: var(--sans);
 }
-
 .diffBtn:hover { border-color: var(--accent); color: var(--text-primary); }
-
-.quickPlayCard {
-  border-color: var(--accent) !important;
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface)) !important;
-}
-
-.diffActive {
-  background: var(--accent); color: #04222a; border-color: var(--accent);
-  box-shadow: 0 0 12px rgba(6,182,212,0.25);
-}
+.diffActive { background: var(--accent); color: #04222a; border-color: var(--accent); }
 
 @media (max-width: 400px) {
-  .title { font-size: 48px; }
-  .subtitle { font-size: 9px; }
-  .modeCard { padding: 12px 14px; gap: 10px; }
-  .modeIcon { font-size: 24px; }
-  .modeName { font-size: 14px; }
+  .screen { padding: 24px 14px 40px; }
+  .title { font-size: 38px; }
+  .grid { gap: 8px; }
+  .modeCard { padding: 10px; }
   .modeDesc { font-size: 11px; }
-  .difficultyBar { flex-direction: column; gap: 6px; }
 }
 
+/* ── Rodapé ── */
 .footer {
   display: flex;
   flex-direction: column;
@@ -268,44 +402,4 @@
 .legalSep {
   color: var(--text-secondary);
   opacity: 0.5;
-}
-
-/* ── Card de destaque: continuar carreira ── */
-.resumeCard {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  width: 100%;
-  padding: 18px 18px;
-  border-radius: 14px;
-  border: 1px solid var(--accent);
-  background: linear-gradient(135deg, rgba(6, 182, 212, 0.16), var(--surface) 70%);
-  box-shadow: 0 0 24px rgba(6, 182, 212, 0.15);
-  cursor: pointer;
-  text-align: left;
-  color: inherit;
-  font-family: inherit;
-  transition: transform 0.15s, box-shadow 0.2s;
-}
-.resumeCard:hover { transform: translateY(-2px); box-shadow: 0 0 32px rgba(6, 182, 212, 0.25); }
-.resumeCard:active { transform: translateY(0); }
-.resumeCrest { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; }
-.resumeKicker {
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-.resumeTeam { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
-.resumePlay {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--accent);
-  color: #04131a;
-  font-size: 14px;
 }

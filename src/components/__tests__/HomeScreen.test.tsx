@@ -26,12 +26,76 @@ describe('HomeScreen — Continuar carreira', () => {
   });
 });
 
+describe('HomeScreen — layout', () => {
+  it('sem carreira oferece "Começar carreira"', () => {
+    const onCareer = vi.fn();
+    render(<HomeScreen {...base} onCareer={onCareer} />);
+    fireEvent.click(screen.getByText('Começar carreira'));
+    expect(onCareer).toHaveBeenCalledOnce();
+  });
+
+  it('mostra o próximo jogo com os dois clubes', () => {
+    render(<HomeScreen {...base} onCareer={vi.fn()} careerResume={{
+      teamName: 'Arsenal', detail: 'Premier League · Temporada 1 · Rodada 4',
+      nextMatch: { home: { name: 'Arsenal' }, away: { name: 'Chelsea' } },
+    }} />);
+    expect(screen.getByText('Próximo jogo')).toBeInTheDocument();
+    expect(screen.getByText('Chelsea')).toBeInTheDocument();
+  });
+
+  it('Partida e Competições expõem as 4 ações originais', () => {
+    const h = { onSingleMatch: vi.fn(), onQuickPlay: vi.fn(), onLeague: vi.fn(), onCup: vi.fn() };
+    render(<HomeScreen {...base} {...h} onCareer={vi.fn()} />);
+    fireEvent.click(screen.getByText('Escolher times'));
+    fireEvent.click(screen.getByText('Jogo rápido'));
+    fireEvent.click(screen.getByText('Campeonato'));
+    fireEvent.click(screen.getByText('Copa'));
+    expect(h.onSingleMatch).toHaveBeenCalledOnce();
+    expect(h.onQuickPlay).toHaveBeenCalledOnce();
+    expect(h.onLeague).toHaveBeenCalledOnce();
+    expect(h.onCup).toHaveBeenCalledOnce();
+  });
+
+  it('Conquistas abre pelo ícone do topo', () => {
+    const onAchievements = vi.fn();
+    render(<HomeScreen {...base} onAchievements={onAchievements} onCareer={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Conquistas' }));
+    expect(onAchievements).toHaveBeenCalledOnce();
+  });
+
+  it('troca a dificuldade', () => {
+    const onSetDifficulty = vi.fn();
+    render(<HomeScreen {...base} onSetDifficulty={onSetDifficulty} onCareer={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Difícil' }));
+    expect(onSetDifficulty).toHaveBeenCalledWith('hard');
+  });
+});
+
 describe('careerResumeInfo', () => {
   const cs = (phase: 'playing' | 'done') => ({
     leagueId: 'premier-league',
     currentSeasonYear: 2,
     season: { league: { userTeamId: 'cp', currentRound: 3, phase, teams: [{ id: 'cp', name: 'Crystal Palace', logoUrl: 'x.png' }] } },
   }) as never;
+
+  it('traz o próximo jogo da rodada atual com mandante à esquerda', () => {
+    const state = {
+      leagueId: 'premier-league',
+      currentSeasonYear: 1,
+      season: { league: {
+        userTeamId: 'ars', currentRound: 1, phase: 'playing',
+        teams: [{ id: 'ars', name: 'Arsenal', logoUrl: 'a.png' }, { id: 'che', name: 'Chelsea', logoUrl: 'c.png' }],
+        fixtures: [[], [{ id: 'f', roundIndex: 1, homeTeamId: 'che', awayTeamId: 'ars', played: false }]],
+      } },
+    } as never;
+    const r = careerResumeInfo(state)!;
+    expect(r.nextMatch?.home.name).toBe('Chelsea');
+    expect(r.nextMatch?.away.name).toBe('Arsenal');
+  });
+
+  it('liga encerrada não tem próximo jogo', () => {
+    expect(careerResumeInfo(cs('done'))!.nextMatch).toBeNull();
+  });
 
   it('sem carreira devolve null', () => {
     expect(careerResumeInfo(null)).toBeNull();
