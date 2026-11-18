@@ -97,6 +97,9 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
   const MAX_SUBS = 5;
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showOpponent, setShowOpponent] = useState(false);
+  // Na pausa, "Seu time" é o lado do usuário — antes era sempre o mandante, então
+  // jogando fora de casa (carreira) a pausa editava as táticas do adversário.
+  const editAway = (userSide === 'away') !== showOpponent;
   const [pauseTab, setPauseTab] = useState<'tactics' | 'squad'>('tactics');
   const [showSuggestions, setShowSuggestions] = useState(true);
 
@@ -674,14 +677,14 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                           onClick={() => setShowOpponent(false)}
                           style={{ fontSize: 12, padding: '4px 14px' }}
                         >
-                          Seu Time ({home.abbreviation})
+                          Seu time ({(userSide === 'away' ? away : home).abbreviation})
                         </button>
                         <button
                           className={`speed-btn ${showOpponent ? 'active' : ''}`}
                           onClick={() => setShowOpponent(true)}
                           style={{ fontSize: 12, padding: '4px 14px' }}
                         >
-                          Adversário ({away.abbreviation})
+                          Adversário ({(userSide === 'away' ? home : away).abbreviation})
                         </button>
                       </div>
                     )}
@@ -721,7 +724,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                         className={`ht-tab ${pauseTab === 'squad' ? 'active' : ''}`}
                         onClick={() => setPauseTab('squad')}
                       >
-                        Gerenciar Elenco
+                        Substituições
                       </button>
                     </div>
 
@@ -732,28 +735,28 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                     {pauseTab === 'tactics' ? (
                       <div className="halftime-team" style={{ marginBottom: 8 }}>
                         <TacticPresets
-                          onApply={showOpponent ? updateAway : updateHome}
-                          currentStrategy={showOpponent ? away.strategy : home.strategy}
+                          onApply={editAway ? updateAway : updateHome}
+                          currentStrategy={editAway ? away.strategy : home.strategy}
                         />
                         <TacticEditor
-                          strategy={showOpponent ? away.strategy : home.strategy}
-                          onChange={showOpponent ? updateAway : updateHome}
+                          strategy={editAway ? away.strategy : home.strategy}
+                          onChange={editAway ? updateAway : updateHome}
                         />
                       </div>
                     ) : (
                       <>
                         <div style={{ fontSize: 12, opacity: 0.6, textAlign: 'center', marginBottom: 2 }}>
-                          Substituições · <span style={{ color: showOpponent ? away.color : home.color }}>{showOpponent ? away.abbreviation : home.abbreviation} {showOpponent ? subsAway : subsHome}/{MAX_SUBS}</span>
-                          <span className="sub-window-breakdown"> ({formatSubWindows(showOpponent ? subWindowsAway : subWindowsHome)})</span>
+                          Substituições · <span style={{ color: editAway ? away.color : home.color }}>{editAway ? away.abbreviation : home.abbreviation} {editAway ? subsAway : subsHome}/{MAX_SUBS}</span>
+                          <span className="sub-window-breakdown"> ({formatSubWindows(editAway ? subWindowsAway : subWindowsHome)})</span>
                         </div>
                         <div className="ht-squad-grid" style={{ maxHeight: '50dvh', overflowY: 'auto' }}>
                           <SquadSwapPanel
-                            team={showOpponent ? away : home}
-                            accentColor={showOpponent ? away.color : home.color}
-                            title={showOpponent ? away.abbreviation : home.abbreviation}
-                            pick={showOpponent ? htAwayPick : htHomePick}
-                            setPick={showOpponent ? setHtAwayPick : setHtHomePick}
-                            onSwap={(bi, si) => swapSquad(showOpponent ? away : home, showOpponent ? setAway : setHome, bi, si, showOpponent ? 'away' : 'home')}
+                            team={editAway ? away : home}
+                            accentColor={editAway ? away.color : home.color}
+                            title={editAway ? away.abbreviation : home.abbreviation}
+                            pick={editAway ? htAwayPick : htHomePick}
+                            setPick={editAway ? setHtAwayPick : setHtHomePick}
+                            onSwap={(bi, si) => swapSquad(editAway ? away : home, editAway ? setAway : setHome, bi, si, editAway ? 'away' : 'home')}
                             injuredIds={injuredIds}
                             setInjuredIds={setInjuredIds}
                             fatigueMap={fatigueMap}
@@ -762,7 +765,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                       </>
                     )}
 
-                    {() => {
+                    {(() => {
                       const side: 'home' | 'away' = (userSide ?? 'home') as 'home' | 'away';
                       const team = side === 'home' ? home : away;
                       const starterCount = getStarterCount(team.strategy.formation);
@@ -788,7 +791,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                           🔁 {mostTired.name} exausto ({(mostTired.currentFatigue ?? 0)}%) → {bestBench.name} ({playerOvr(bestBench)})? <strong>Clique pra substituir</strong>
                         </div>
                       );
-                    }}
+                    })()}
 
                     {subToast && (
                       <div className="sub-toast">{subToast}</div>

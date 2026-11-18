@@ -87,7 +87,7 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
     const userStanding = standings.find(s => s.teamId === userTeamId)!;
     const userPos = standings.findIndex(s => s.teamId === userTeamId) + 1;
     return (
-      <div className={`${styles.screen} app-screen`}>
+      <div className={`${styles.screen} app-screen fit-screen`}>
         <ScreenHeader onBack={hideTopNav ? undefined : onBack} kicker={league.name} title="Fim da temporada" />
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
@@ -98,7 +98,9 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
         <div className={styles.userResult}>
           Você terminou em <strong>{userPos}º lugar</strong> com {userStanding.points} pontos
         </div>
-        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
+        <div className={`${styles.doneTable} fit-scroll`}>
+          <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
+        </div>
         <Button glow onClick={onBack}>{hideTopNav ? '← Voltar à Central' : 'Nova Partida'}</Button>
       </div>
     );

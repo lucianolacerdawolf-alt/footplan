@@ -149,7 +149,7 @@ export default function FriendLeagueScreen({ onBack }: Props) {
   if (view.kind === 'create') {
     const teams = teamsFor(baseLeagueId);
     return (
-      <div className={`${styles.screen} app-screen`}>
+      <div className={`${styles.screen} app-screen fit-screen`}>
         {header('Criar liga', () => setView({ kind: 'list' }))}
         <label className={styles.field}>
           <span>Nome da liga</span>
@@ -163,7 +163,9 @@ export default function FriendLeagueScreen({ onBack }: Props) {
         </label>
         {nameField}
         <h2 className={styles.subtitle}>Escolha seu clube</h2>
-        <TeamPicker teams={teams} taken={new Set()} selected={pickedTeam} onSelect={setPickedTeam} />
+        <div className="fit-scroll">
+          <TeamPicker teams={teams} taken={new Set()} selected={pickedTeam} onSelect={setPickedTeam} />
+        </div>
         {errorBox}
         <div className={styles.stickyAction}>
           <Button block disabled={busy || !pickedTeam || !managerName.trim() || !newName.trim()}
@@ -243,6 +245,7 @@ function FriendLeagueView({ data, busy, error, copied, onBack, onCopy, onPreset 
   onBack: () => void; onCopy: () => void; onPreset: (id: string) => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
+  const [flTab, setFlTab] = useState<'table' | 'last'>('table');
   useEffect(() => { const id = setInterval(() => setNow(Date.now()), 30_000); return () => clearInterval(id); }, []);
 
   const computed = useMemo(() => {
@@ -276,7 +279,7 @@ function FriendLeagueView({ data, busy, error, copied, onBack, onCopy, onPreset 
   const abbr = (id: string) => teamById.get(id)?.abbreviation ?? '???';
 
   return (
-    <div className={`${styles.screen} app-screen`}>
+    <div className={`${styles.screen} app-screen fit-screen`}>
       <ScreenHeader onBack={onBack} kicker="Liga entre Amigos" title={league.name} />
       <div className={styles.codeRow}>
         <span>Código pra convidar: <strong className={styles.code}>{league.code}</strong></span>
@@ -309,37 +312,41 @@ function FriendLeagueView({ data, busy, error, copied, onBack, onCopy, onPreset 
         )}
       </section>
 
-      {lastResults.length > 0 && (
-        <section className={styles.panel}>
-          <h2 className={styles.subtitle}>Rodada {lastRound + 1}</h2>
+      <div className={styles.flTabs} role="tablist">
+        <button role="tab" aria-selected={flTab === 'table'} className={`${styles.flTab} ${flTab === 'table' ? styles.flTabOn : ''}`} onClick={() => setFlTab('table')}>Classificação</button>
+        <button role="tab" aria-selected={flTab === 'last'} disabled={lastResults.length === 0}
+          className={`${styles.flTab} ${flTab === 'last' ? styles.flTabOn : ''}`} onClick={() => setFlTab('last')}>
+          {lastResults.length > 0 ? `Rodada ${lastRound + 1}` : 'Sem rodadas ainda'}
+        </button>
+      </div>
+
+      <div className="fit-scroll">
+        {flTab === 'last' && lastResults.length > 0 ? (
           <ul className={styles.results}>
             {lastResults.map(r => (
               <li key={r.fixtureId}>{abbr(r.homeTeamId)} <strong>{r.homeScore}–{r.awayScore}</strong> {abbr(r.awayTeamId)}</li>
             ))}
           </ul>
-        </section>
-      )}
-
-      <section className={styles.panel}>
-        <h2 className={styles.subtitle}>Classificação</h2>
-        <table className={styles.table}>
-          <thead><tr><th>#</th><th>Clube</th><th>J</th><th>SG</th><th>Pts</th></tr></thead>
-          <tbody>
-            {computed.standings.map((s, i) => {
-              const owner = ownerByTeam.get(s.teamId);
-              return (
-                <tr key={s.teamId} className={me?.teamId === s.teamId ? styles.mine : owner ? styles.human : undefined}>
-                  <td>{i + 1}</td>
-                  <td>{teamById.get(s.teamId)?.name ?? s.teamId}{owner && <span className={styles.owner}> · {owner}</span>}</td>
-                  <td>{s.played}</td>
-                  <td>{s.goalsFor - s.goalsAgainst}</td>
-                  <td><strong>{s.points}</strong></td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </section>
+        ) : (
+          <table className={styles.table}>
+            <thead><tr><th>#</th><th>Clube</th><th>J</th><th>SG</th><th>Pts</th></tr></thead>
+            <tbody>
+              {computed.standings.map((s, i) => {
+                const owner = ownerByTeam.get(s.teamId);
+                return (
+                  <tr key={s.teamId} className={me?.teamId === s.teamId ? styles.mine : owner ? styles.human : undefined}>
+                    <td>{i + 1}</td>
+                    <td>{teamById.get(s.teamId)?.name ?? s.teamId}{owner && <span className={styles.owner}> · {owner}</span>}</td>
+                    <td>{s.played}</td>
+                    <td>{s.goalsFor - s.goalsAgainst}</td>
+                    <td><strong>{s.points}</strong></td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

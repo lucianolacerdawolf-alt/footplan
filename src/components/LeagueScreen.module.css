@@ -120,3 +120,6 @@
 .othersList { display: flex; flex-direction: column; gap: 6px; }
 .fit-screen .fixture { padding: 6px 10px; }
 .fit-screen .statsStrip { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 10px; }
+
+.fit-screen > .doneTable { flex: 1 1 auto; }
+.fit-screen .champion { padding: 8px 0; }

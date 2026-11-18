@@ -3,7 +3,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { memo } from 'react';
 import styles from './SeasonEndScreen.module.css';
 import { crestSrc } from '../utils/crest';
-import { Button } from './ui';
+import { Button, ScreenHeader } from './ui';
 import { teamTextColor } from '../utils/teamTextColor';
 
 interface Props {
@@ -28,7 +28,7 @@ function SeasonEndScreen({ entry, league, newReputation, onContinue }: Props) {
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <h1 className={styles.headerTitle}>Temporada {entry.year} encerrada</h1>
+      <ScreenHeader kicker={league.name} title={`Temporada ${entry.year} encerrada`} />
 
       <div className={styles.champion}>
         <div className={styles.championCrown}>🏆</div>

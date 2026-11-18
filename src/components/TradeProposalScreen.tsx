@@ -73,16 +73,17 @@ function TradeProposalScreen({ userTeam, leagueRoster, budget, onBack, onPropose
     setCashOffered(0);
   };
 
+  const [pickSide, setPickSide] = useState<'mine' | 'theirs'>('mine');
   const opponentTeam = opponentId ? opponentTeams.find(t => t.id === opponentId) ?? null : null;
 
   return (
-    <div className="team-select-screen">
+    <div className="team-select-screen fit-screen">
       <ScreenHeader onBack={onBack} kicker="Mercado" title="Propor troca" />
 
           {!opponentTeam ? (
             <>
               <div className="select-instruction">Escolha o time adversário</div>
-              <div className="team-grid">
+              <div className="team-grid fit-scroll">
                 {[...opponentTeams].sort((a, b) => a.name.localeCompare(b.name)).map(team => (
                   <button
                     key={team.id}
@@ -104,38 +105,37 @@ function TradeProposalScreen({ userTeam, leagueRoster, budget, onBack, onPropose
                 <a href="#" onClick={e => { e.preventDefault(); resetToStep1(); }}>Trocar de time</a>
               </div>
 
-              <div className="select-summary">
-                <div className={`select-slot home-slot ${offeredPlayerId ? 'filled' : ''}`}>
-                  <span className="slot-empty">Seu Jogador</span>
-                </div>
-                <span className="select-vs">⇄</span>
-                <div className={`select-slot away-slot ${requestedPlayerId ? 'filled' : ''}`}>
-                  <span className="slot-empty">Jogador Deles</span>
-                </div>
+              {/* Os dois escolhidos ficam no topo e só UMA lista aparece por vez (antes as
+                  duas listas de ~29 jogadores ficavam empilhadas). */}
+              <div className="trade-picks" role="tablist">
+                {([['mine', 'Seu jogador', offeredPlayerId ? userTeam.squad.find(p => p.id === offeredPlayerId)?.name : null],
+                   ['theirs', 'Jogador deles', requestedPlayerId ? opponentTeam.squad.find(p => p.id === requestedPlayerId)?.name : null]] as const)
+                  .map(([side, label, chosen]) => (
+                    <button key={side} role="tab" aria-selected={pickSide === side}
+                      className={`trade-pick ${pickSide === side ? 'on' : ''} ${chosen ? 'filled' : ''}`} onClick={() => setPickSide(side)}>
+                      <span className="trade-pick-label">{label}</span>
+                      <span className="trade-pick-name">{chosen ?? 'Toque pra escolher'}</span>
+                    </button>
+                  ))}
               </div>
 
-              <div className="select-instruction">Seu Jogador</div>
-              <div className="team-grid">
-                {userTeam.squad.map(p => (
-                  <PlayerRow
-                    key={p.id}
-                    player={p}
-                    selected={p.id === offeredPlayerId}
-                    onClick={() => setOfferedPlayerId(p.id === offeredPlayerId ? null : p.id)}
-                  />
-                ))}
-              </div>
-
-              <div className="select-instruction">Jogador Deles</div>
-              <div className="team-grid">
-                {opponentTeam.squad.map(p => (
-                  <PlayerRow
-                    key={p.id}
-                    player={p}
-                    selected={p.id === requestedPlayerId}
-                    onClick={() => setRequestedPlayerId(p.id === requestedPlayerId ? null : p.id)}
-                  />
-                ))}
+              <div className="team-grid trade-list fit-scroll">
+                {(pickSide === 'mine' ? userTeam.squad : opponentTeam.squad).map(p => {
+                  const sel = pickSide === 'mine' ? offeredPlayerId : requestedPlayerId;
+                  const setSel = pickSide === 'mine' ? setOfferedPlayerId : setRequestedPlayerId;
+                  return (
+                    <PlayerRow
+                      key={p.id}
+                      player={p}
+                      selected={p.id === sel}
+                      onClick={() => {
+                        setSel(p.id === sel ? null : p.id);
+                        // Escolheu o seu: já mostra a lista deles.
+                        if (pickSide === 'mine' && p.id !== sel && !requestedPlayerId) setPickSide('theirs');
+                      }}
+                    />
+                  );
+                })}
               </div>
 
               {offeredPlayerId && requestedPlayerId && (() => {

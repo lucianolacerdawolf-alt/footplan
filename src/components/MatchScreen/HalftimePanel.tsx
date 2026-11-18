@@ -90,7 +90,7 @@ export default function HalftimePanel({
             className={`ht-tab ${htTab === 'squad' ? 'active' : ''}`}
             onClick={() => setHtTab('squad')}
           >
-            Gerenciar Elenco
+            Substituições
           </button>
         </div>
 
@@ -125,7 +125,17 @@ export default function HalftimePanel({
                 </div>
               </div>
             );
-          })() : (
+          })() : gameMode === 'cpu' ? (
+            // Contra a CPU só o seu time é editável — o bloco travado do adversário só
+            // ocupava metade do painel.
+            <div className="halftime-teams" style={{ justifyContent: 'center' }}>
+              <div className="halftime-team">
+                <strong style={{ color: teamTextColor(home) }}>{home.abbreviation} (Você)</strong>
+                <TacticPresets onApply={updateHome} currentStrategy={home.strategy} />
+                <TacticEditor strategy={home.strategy} onChange={updateHome} />
+              </div>
+            </div>
+          ) : (
             <div className="halftime-teams">
               <div className="halftime-team">
                 <strong style={{ color: teamTextColor(home) }}>{home.abbreviation}</strong>
@@ -133,16 +143,10 @@ export default function HalftimePanel({
                 <TacticEditor strategy={home.strategy} onChange={updateHome} />
               </div>
               <span className="halftime-vs">vs</span>
-              <div className={`halftime-team${gameMode === 'cpu' ? ' locked' : ''}`}>
-                <strong style={{ color: away.secondaryColor }}>{away.abbreviation}{gameMode === 'cpu' ? ' (CPU)' : ''}</strong>
-                {gameMode !== 'cpu' ? (
-                  <>
-                    <TacticPresets onApply={updateAway} currentStrategy={away.strategy} />
-                    <TacticEditor strategy={away.strategy} onChange={updateAway} />
-                  </>
-                ) : (
-                  <p style={{ fontSize: 11, opacity: 0.5, margin: 0 }}>Táticas controladas pela CPU</p>
-                )}
+              <div className="halftime-team">
+                <strong style={{ color: teamTextColor(away) }}>{away.abbreviation}</strong>
+                <TacticPresets onApply={updateAway} currentStrategy={away.strategy} />
+                <TacticEditor strategy={away.strategy} onChange={updateAway} />
               </div>
             </div>
           )
@@ -155,11 +159,14 @@ export default function HalftimePanel({
                 : matchContext && matchContext !== 'regular'
                 ? <>Substituições · <span style={{ color: (userSide !== 'away' ? home : away).color }}>{userSide !== 'away' ? home.abbreviation : away.abbreviation} {userSide !== 'away' ? subsHome : subsAway}/{MAX_SUBS}</span>
                     <span className="sub-window-breakdown"> ({formatSubWindows(userSide !== 'away' ? subWindowsHome : subWindowsAway)})</span></>
+                : gameMode === 'cpu'
+                ? <>Substituições · <span style={{ color: teamTextColor(home) }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span>
+                    <span className="sub-window-breakdown"> ({formatSubWindows(subWindowsHome)})</span></>
                 : <>Substituições · <span style={{ color: teamTextColor(home) }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: teamTextColor(away) }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
                     <span className="sub-window-breakdown"> ({formatSubWindows(subWindowsHome)} / {formatSubWindows(subWindowsAway)})</span></>
               }
             </div>
-            <div className="ht-squad-grid" style={{ maxHeight: '50dvh', overflowY: 'auto' }}>
+            <div className="ht-squad-grid">
               {(online
                 ? [online.isHost
                     ? ['home', home, setHome, htHomePick, setHtHomePick, true] as const
@@ -173,7 +180,7 @@ export default function HalftimePanel({
                     ['home', home, setHome, htHomePick, setHtHomePick, true],
                     ['away', away, setAway, htAwayPick, setHtAwayPick, gameMode !== 'cpu'],
                   ] as const
-              ).map(([side, team, setTeam, pick, setPick, canEdit]) => (
+              ).filter(([, , , , , canEdit]) => canEdit).map(([side, team, setTeam, pick, setPick, canEdit]) => (
                 <SquadSwapPanel
                   key={side}
                   team={team}
