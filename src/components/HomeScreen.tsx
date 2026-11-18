@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import type { Difficulty } from '../engine/matchConfig';
 import { getDifficultyLabel } from '../engine/matchConfig';
 import styles from './HomeScreen.module.css';
@@ -37,52 +36,26 @@ interface Props {
   careerResume?: CareerResume | null;
 }
 
-interface ModeAction {
-  label: string;
-  icon?: IconName;
-  onClick: () => void;
-}
-
 interface ModeCardProps {
   icon: IconName;
   name: string;
   desc: string;
-  /** Card de ação única: o card inteiro é o botão. */
-  onClick?: () => void;
-  /** Card com duas ações explícitas (cada botão diz o que faz). */
-  actions?: ModeAction[];
+  onClick: () => void;
 }
 
-function ModeCard({ icon, name, desc, onClick, actions }: ModeCardProps) {
-  const body: ReactNode = (
-    <>
+function ModeCard({ icon, name, desc, onClick }: ModeCardProps) {
+  return (
+    <button className={styles.modeCard} onClick={onClick}>
       <Icon name={icon} size={84} className={styles.modeArt} />
       <span className={styles.modeTop}>
         <span className={styles.modeIcon} aria-hidden="true"><Icon name={icon} size={22} /></span>
-        {onClick && <Icon name="chevron-right" size={18} className={styles.modeArrow} />}
+        <Icon name="chevron-right" size={18} className={styles.modeArrow} />
       </span>
       <span className={styles.modeText}>
         <span className={styles.modeName}>{name}</span>
         <span className={styles.modeDesc}>{desc}</span>
       </span>
-    </>
-  );
-
-  if (onClick) {
-    return <button className={styles.modeCard} onClick={onClick}>{body}</button>;
-  }
-  return (
-    <div className={styles.modeCard}>
-      {body}
-      <div className={styles.modeActions}>
-        {actions?.map(a => (
-          <button key={a.label} className={styles.modeAction} onClick={a.onClick}>
-            {a.icon && <Icon name={a.icon} size={14} />}
-            {a.label}
-          </button>
-        ))}
-      </div>
-    </div>
+    </button>
   );
 }
 
@@ -152,44 +125,31 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
       <section className={styles.section}>
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle}>Modos de jogo</h2>
-          <div className={styles.difficulty} role="group" aria-label="Dificuldade das partidas">
+          <label className={styles.difficultyPick}>
             <span className={styles.difficultyLabel}>Dificuldade</span>
-            <div className={styles.difficultyBtns}>
+            <span className={styles.difficultyValue} aria-hidden="true">{getDifficultyLabel(difficulty)}</span>
+            <select
+              className={styles.difficultySelect}
+              aria-label="Dificuldade das partidas"
+              value={difficulty}
+              onChange={e => {
+                const d = e.target.value as Difficulty;
+                onSetDifficulty(d);
+                try { localStorage.setItem('fp:difficulty', d); } catch {}
+              }}
+            >
               {DIFFICULTIES.map(d => (
-                <button
-                  key={d}
-                  className={`${styles.diffBtn} ${d === difficulty ? styles.diffActive : ''}`}
-                  aria-pressed={d === difficulty}
-                  onClick={() => {
-                    onSetDifficulty(d);
-                    try { localStorage.setItem('fp:difficulty', d); } catch {}
-                  }}
-                >
-                  {getDifficultyLabel(d)}
-                </button>
+                <option key={d} value={d}>{getDifficultyLabel(d)}</option>
               ))}
-            </div>
-          </div>
+            </select>
+            <Icon name="chevron-right" size={14} className={styles.difficultyChevron} />
+          </label>
         </div>
         <div className={styles.grid}>
-          <ModeCard
-            icon="ball"
-            name="Partida"
-            desc="Amistoso entre dois times"
-            actions={[
-              { label: 'Escolher times', onClick: onSingleMatch },
-              { label: 'Jogo rápido', icon: 'bolt', onClick: onQuickPlay },
-            ]}
-          />
-          <ModeCard
-            icon="trophy"
-            name="Competições"
-            desc="Pontos corridos ou mata-mata"
-            actions={[
-              { label: 'Campeonato', onClick: onLeague },
-              { label: 'Copa', onClick: onCup },
-            ]}
-          />
+          <ModeCard icon="ball" name="Partida Única" desc="Escolha dois times" onClick={onSingleMatch} />
+          <ModeCard icon="calendar" name="Campeonatos" desc="Pontos corridos" onClick={onLeague} />
+          <ModeCard icon="bolt" name="Jogo Rápido" desc="Times aleatórios" onClick={onQuickPlay} />
+          <ModeCard icon="trophy" name="Copas" desc="Mata-mata e pênaltis" onClick={onCup} />
         </div>
       </section>
 

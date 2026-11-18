@@ -43,13 +43,13 @@ describe('HomeScreen — layout', () => {
     expect(screen.getByText('Chelsea')).toBeInTheDocument();
   });
 
-  it('Partida e Competições expõem as 4 ações originais', () => {
+  it('os quatro modos chamam suas ações', () => {
     const h = { onSingleMatch: vi.fn(), onQuickPlay: vi.fn(), onLeague: vi.fn(), onCup: vi.fn() };
     render(<HomeScreen {...base} {...h} onCareer={vi.fn()} />);
-    fireEvent.click(screen.getByText('Escolher times'));
-    fireEvent.click(screen.getByText('Jogo rápido'));
-    fireEvent.click(screen.getByText('Campeonato'));
-    fireEvent.click(screen.getByText('Copa'));
+    fireEvent.click(screen.getByText('Partida Única'));
+    fireEvent.click(screen.getByText('Jogo Rápido'));
+    fireEvent.click(screen.getByText('Campeonatos'));
+    fireEvent.click(screen.getByText('Copas'));
     expect(h.onSingleMatch).toHaveBeenCalledOnce();
     expect(h.onQuickPlay).toHaveBeenCalledOnce();
     expect(h.onLeague).toHaveBeenCalledOnce();
@@ -66,7 +66,7 @@ describe('HomeScreen — layout', () => {
   it('troca a dificuldade', () => {
     const onSetDifficulty = vi.fn();
     render(<HomeScreen {...base} onSetDifficulty={onSetDifficulty} onCareer={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Difícil' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Dificuldade das partidas' }), { target: { value: 'hard' } });
     expect(onSetDifficulty).toHaveBeenCalledWith('hard');
   });
 });

@@ -1,11 +1,61 @@
 .card {
-  margin: 4px 0 14px; padding: 12px 14px; border-radius: 12px;
-  border: 1px solid var(--border); background: var(--code-bg);
+  margin: 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--code-bg);
+  overflow: hidden;
 }
-.head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-.title { font-weight: 800; color: var(--text-h); font-size: 14px; }
-.streak { font-family: var(--mono); font-size: 12px; font-weight: 700; color: #f59e0b; }
-.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+
+/* Linha de resumo: sempre visível, é o botão que abre/fecha a lista. */
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary:active { background: var(--surface-hover); }
+@media (hover: hover) {
+  .summary:hover { background: var(--surface-hover); }
+}
+
+.title { flex-shrink: 0; font-weight: 800; color: var(--text-h); font-size: 14px; }
+
+.bar {
+  flex: 1;
+  min-width: 24px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+}
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+.barDone .barFill { background: var(--positive); }
+
+.total { flex-shrink: 0; font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text-secondary); }
+.totalDone { color: var(--positive); }
+
+.streak { flex-shrink: 0; font-family: var(--mono); font-size: 12px; font-weight: 700; color: #f59e0b; }
+
+.chevron { flex-shrink: 0; color: var(--text-secondary); transform: rotate(90deg); transition: transform 0.2s; }
+.chevronOpen { transform: rotate(-90deg); }
+
+/* Lista completa: só aparece expandido. */
+.panel { padding: 0 14px 12px; border-top: 1px solid var(--border); }
+.list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .list li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
 .check { width: 16px; text-align: center; color: var(--text-secondary); }
 .label { flex: 1; min-width: 0; }
