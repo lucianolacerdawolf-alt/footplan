@@ -5,6 +5,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { formatMoney } from '../utils/formatMoney';
 import { calculateMarketValue } from '../engine/transferMarket';
 import { crestSrc } from '../utils/crest';
+import { ScreenHeader } from './ui';
 
 interface Props {
   userTeam: Team;
@@ -76,13 +77,7 @@ function TradeProposalScreen({ userTeam, leagueRoster, budget, onBack, onPropose
 
   return (
     <div className="team-select-screen">
-      <div className="top-nav">
-        <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
-        <header className="app-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <h1>FootPlan</h1>
-          <p className="subtitle">Propor Troca</p>
-        </header>
-      </div>
+      <ScreenHeader onBack={onBack} kicker="Mercado" title="Propor troca" />
 
           {!opponentTeam ? (
             <>

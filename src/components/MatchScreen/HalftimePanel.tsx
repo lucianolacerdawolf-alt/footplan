@@ -5,6 +5,7 @@ import type { SubWindow } from '@/utils/liveMatchPersistence';
 import TacticPresets from '../shared/TacticPresets';
 import TacticEditor from '../shared/TacticEditor';
 import SquadSwapPanel from './SquadSwapPanel';
+import { teamTextColor } from '../../utils/teamTextColor';
 
 const SUB_WINDOW_LABELS: Record<SubWindow, string> = { firstHalfPause: '1ºT', halftime: 'Intervalo', secondHalfPause: '2ºT' };
 function formatSubWindows(w: Record<SubWindow, number>): string {
@@ -73,9 +74,9 @@ export default function HalftimePanel({
         <div className="halftime-title">Intervalo</div>
 
         <div className="ht-mini-stats">
-          <div className="ht-stat-row"><span style={{ color: home.color }}>{hShots}</span><span className="ht-stat-label">Finalizações</span><span style={{ color: away.color }}>{aShots}</span></div>
-          <div className="ht-stat-row"><span style={{ color: home.color }}>{hSoT}</span><span className="ht-stat-label">No Alvo</span><span style={{ color: away.color }}>{aSoT}</span></div>
-          <div className="ht-stat-row"><span style={{ color: home.color }}>{homePct}%</span><span className="ht-stat-label">Posse de Bola</span><span style={{ color: away.color }}>{100 - homePct}%</span></div>
+          <div className="ht-stat-row"><span style={{ color: teamTextColor(home) }}>{hShots}</span><span className="ht-stat-label">Finalizações</span><span style={{ color: teamTextColor(away) }}>{aShots}</span></div>
+          <div className="ht-stat-row"><span style={{ color: teamTextColor(home) }}>{hSoT}</span><span className="ht-stat-label">No Alvo</span><span style={{ color: teamTextColor(away) }}>{aSoT}</span></div>
+          <div className="ht-stat-row"><span style={{ color: teamTextColor(home) }}>{homePct}%</span><span className="ht-stat-label">Posse de Bola</span><span style={{ color: teamTextColor(away) }}>{100 - homePct}%</span></div>
         </div>
 
         <div className="ht-tabs">
@@ -118,7 +119,7 @@ export default function HalftimePanel({
             return (
               <div className="halftime-teams" style={{ justifyContent: 'center' }}>
                 <div className="halftime-team">
-                  <strong style={{ color: userTeam.color }}>{userTeam.abbreviation} (Você)</strong>
+                  <strong style={{ color: teamTextColor(userTeam) }}>{userTeam.abbreviation} (Você)</strong>
                   <TacticPresets onApply={userStrategy.update} currentStrategy={userStrategy.strategy} />
                   <TacticEditor strategy={userStrategy.strategy} onChange={userStrategy.update} />
                 </div>
@@ -127,7 +128,7 @@ export default function HalftimePanel({
           })() : (
             <div className="halftime-teams">
               <div className="halftime-team">
-                <strong style={{ color: home.color }}>{home.abbreviation}</strong>
+                <strong style={{ color: teamTextColor(home) }}>{home.abbreviation}</strong>
                 <TacticPresets onApply={updateHome} currentStrategy={home.strategy} />
                 <TacticEditor strategy={home.strategy} onChange={updateHome} />
               </div>
@@ -154,7 +155,7 @@ export default function HalftimePanel({
                 : matchContext && matchContext !== 'regular'
                 ? <>Substituições · <span style={{ color: (userSide !== 'away' ? home : away).color }}>{userSide !== 'away' ? home.abbreviation : away.abbreviation} {userSide !== 'away' ? subsHome : subsAway}/{MAX_SUBS}</span>
                     <span className="sub-window-breakdown"> ({formatSubWindows(userSide !== 'away' ? subWindowsHome : subWindowsAway)})</span></>
-                : <>Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
+                : <>Substituições · <span style={{ color: teamTextColor(home) }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: teamTextColor(away) }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
                     <span className="sub-window-breakdown"> ({formatSubWindows(subWindowsHome)} / {formatSubWindows(subWindowsAway)})</span></>
               }
             </div>

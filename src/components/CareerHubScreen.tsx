@@ -451,7 +451,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                 <div className={styles.progressFill} style={{ width: `${progressPct}%` }} />
               </div>
               <div className={styles.progressFooter}>
-                <span>{gamesPlayed > 0 ? `${userPosition}º lugar` : 'Pré-temporada'} · {userTeam ? `OVR titular médio: ${avgOvr}` : ''}</span>
+                <span>{gamesPlayed > 0 ? `${userPosition}º lugar` : 'Pré-temporada'} · {userTeam ? `OVR titulares ${avgOvr}` : ''}</span>
                 {topScorer && <span>⚽ Artilheiro: {topScorer[0]} ({topScorer[1]} gols)</span>}
               </div>
             </div>

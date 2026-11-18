@@ -4,6 +4,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLiveRoster } from '../hooks/useLiveRoster';
 import { crestSrc } from '../utils/crest';
+import { ScreenHeader } from './ui';
 
 export type TournamentMode = 'league' | 'bracket' | 'career';
 
@@ -34,7 +35,7 @@ function sanitizeManagerName(raw: string): string {
   return out.slice(0, 24);
 }
 
-export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, onStart, onRosterSynced }: Props) {
+export default function TournamentSetupScreen({ mode, league, onBack, onStart, onRosterSynced }: Props) {
   const [userTeamId, setUserTeamId] = useState<string | null>(null);
   const [managerName, setManagerName] = useState('');
   const { syncing, lastSource, lastError, lastUpdatedAt, sync, loadSyncInfo } = useLiveRoster();
@@ -69,18 +70,12 @@ export default function TournamentSetupScreen({ mode, league, onBack, onGoHome, 
 
   return (
     <div className="team-select-screen">
-      <div className="top-nav">
-        <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
-        <header className="app-header" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          {isCup && league.cupLogo ? (
-            <img src={crestSrc(league.cupLogo)} alt={league.cupName} style={{ width: 52, height: 52, objectFit: 'contain' }} />
-          ) : (
-            <h1>FootPlan</h1>
-          )}
-          <p className="subtitle">{title}</p>
-        </header>
-        <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
-      </div>
+      <ScreenHeader
+        onBack={onBack}
+        kicker={isCup ? 'Copa' : 'Campeonato'}
+        title={title}
+        right={isCup && league.cupLogo ? <img src={crestSrc(league.cupLogo)} alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} /> : undefined}
+      />
 
       <div className="roster-sync-row">
         {syncing && (

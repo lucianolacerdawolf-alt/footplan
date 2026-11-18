@@ -80,8 +80,8 @@ describe('LeagueScreen — dia de jogo (matchday)', () => {
         hideTopNav
       />
     );
-    expect(screen.queryByText('← Editar Táticas')).not.toBeInTheDocument();
-    expect(screen.queryByText('Menu Principal →')).not.toBeInTheDocument();
+    expect(screen.queryByText('Táticas')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Voltar')).not.toBeInTheDocument();
   });
 
   it('mostra "Editar Táticas" e "Menu Principal" quando hideTopNav não é passado (Campeonatos normal)', () => {
@@ -92,8 +92,8 @@ describe('LeagueScreen — dia de jogo (matchday)', () => {
         onNextRound={vi.fn()} onEditTactics={vi.fn()} onViewTable={vi.fn()} onBack={vi.fn()}
       />
     );
-    expect(screen.getByText('← Editar Táticas')).toBeInTheDocument();
-    expect(screen.getByText('Menu Principal →')).toBeInTheDocument();
+    expect(screen.getByText('Táticas')).toBeInTheDocument();
+    expect(screen.getByLabelText('Voltar')).toBeInTheDocument();
   });
 
   it('aciona onPlayMatch com a fixture do usuário ao clicar em "Jogar"', () => {

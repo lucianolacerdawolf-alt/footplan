@@ -680,4 +680,11 @@ describe('normalizeShirtNumbers', () => {
     expect(out.map(p => p.number)).toEqual([1, 2, 7, 3, 4]);
     expect(new Set(out.map(p => p.number)).size).toBe(out.length);
   });
+
+  it('3+ camisas na faixa 90–99 (padrão "90 + posição" do sync antigo) são renumeradas; uma só fica', async () => {
+    const { normalizeShirtNumbers } = await import('../rosterSync');
+    const mk = (id: string, number: number) => makePlayer(id, id, 'MID', number);
+    expect(normalizeShirtNumbers([mk('a', 1), mk('b', 90), mk('c', 94), mk('d', 97)]).map(p => p.number)).toEqual([1, 2, 3, 4]);
+    expect(normalizeShirtNumbers([mk('a', 1), mk('b', 99), mk('c', 7)]).map(p => p.number)).toEqual([1, 99, 7]);
+  });
 });

@@ -4,4 +4,5 @@ export { default as Card } from './Card';
 export { default as StatTile } from './StatTile';
 export type { StatTone } from './StatTile';
 export { default as Icon } from './Icon';
+export { default as ScreenHeader } from './ScreenHeader';
 export type { IconName } from './Icon';

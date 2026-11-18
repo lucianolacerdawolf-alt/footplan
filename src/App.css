@@ -170,7 +170,7 @@
    TEAM SELECTION SCREEN
    ============================================================================= */
 .team-select-screen {
-  max-width: 100%; margin: 0 auto; padding-bottom: 16px;
+  max-width: 100%; margin: 0 auto; padding: 16px 12px;
   min-height: 100dvh;
 }
 
@@ -1045,3 +1045,30 @@
 .sq-contract-btn { cursor: pointer; font-family: var(--sans); min-height: 28px; }
 .sq-contract-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--text-h); }
 .sq-contract-btn:disabled { cursor: default; opacity: 0.7; }
+
+/* Análise tática (tela de táticas) — rótulo + ação numa linha, texto inteiro embaixo */
+.tactical-insight {
+  margin: 8px 0; padding: 10px 12px; border-radius: 10px;
+  background: var(--accent-bg); border: 1px solid var(--accent-border);
+}
+.tactical-insight-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tactical-insight-label { font-size: 10px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); }
+.tactical-insight-text { margin: 4px 0 0; font-size: 13px; font-weight: 600; color: var(--text-h); line-height: 1.35; }
+.setup-screen .setup-confirm-btn { white-space: nowrap; }
+
+/* Pré-jogo: confronto com escudos no lugar das siglas soltas */
+.prematch-card {
+  position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  width: 100%; max-width: 420px; margin: 8px auto 6px; padding: 16px 10px;
+  border-radius: 14px; background: var(--surface); border: 1px solid var(--border);
+}
+.prematch-team { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; min-width: 0; }
+.prematch-crest { width: 64px; height: 64px; object-fit: contain; }
+.prematch-name { font-weight: 800; font-size: 15px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prematch-meta { font-size: 12px; color: var(--text-secondary); font-family: var(--mono); }
+.prematch-side { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-secondary); opacity: 0.7; }
+.prematch-vs {
+  position: absolute; left: 50%; top: 42px; transform: translateX(-50%);
+  font-family: var(--display); font-size: 22px; color: var(--text-secondary);
+}
+.prematch-stadium { text-align: center; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }

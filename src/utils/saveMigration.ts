@@ -14,7 +14,10 @@
 //      ausente ou parcial — nunca deve lançar. Migração é bônus, jamais derruba
 //      o boot do app.
 
-export const SAVE_SCHEMA_VERSION = 1;
+import type { Team } from '../engine/types';
+import { normalizeTeamsShirtNumbers } from './shirtNumbers';
+
+export const SAVE_SCHEMA_VERSION = 3;
 
 const VERSION_KEY = 'fp:schemaVersion';
 const SAVE_PREFIX = 'fp:';
@@ -22,9 +25,29 @@ const SAVE_PREFIX = 'fp:';
 /** Transforma o localStorage de um esquema para o imediatamente seguinte. */
 export type Migration = (ls: Storage) => void;
 
-// Vazio nesta primeira release versionada: v1 é a linha de base. Migrações reais
-// entram aqui a partir do v2. Ex: `2: migrateV1toV2,`
-export const MIGRATIONS: Record<number, Migration> = {};
+/** v1 → v2: camisas 1–99 sem repetição nos times gravados na carreira (elencos vindos do
+ *  sync antigo tinham #90–#118). */
+export function migrateShirtNumbersV2(ls: Storage): void {
+  const raw = ls.getItem('fp:career');
+  if (!raw) return;
+  const cs = JSON.parse(raw) as {
+    rosters?: Record<string, Team[]>;
+    season?: { league?: { teams?: Team[] }; cup?: { teams?: Team[] }; continentalCup?: { teams?: Team[] } | null };
+  };
+  if (cs.rosters) for (const k of Object.keys(cs.rosters)) cs.rosters[k] = normalizeTeamsShirtNumbers(cs.rosters[k] ?? []);
+  const s = cs.season;
+  if (s?.league?.teams) s.league.teams = normalizeTeamsShirtNumbers(s.league.teams);
+  if (s?.cup?.teams) s.cup.teams = normalizeTeamsShirtNumbers(s.cup.teams);
+  if (s?.continentalCup?.teams) s.continentalCup.teams = normalizeTeamsShirtNumbers(s.continentalCup.teams);
+  ls.setItem('fp:career', JSON.stringify(cs));
+}
+
+// Indexadas pela versão de DESTINO (MIGRATIONS[2] transforma v1 -> v2).
+export const MIGRATIONS: Record<number, Migration> = {
+  2: migrateShirtNumbersV2,
+  // v3: mesma normalização, agora também tirando a faixa 90–99 gerada pelo sync antigo.
+  3: migrateShirtNumbersV2,
+};
 
 /** Existe algum save real do jogo (fora a própria chave de versão)? */
 function hasExistingSave(ls: Storage): boolean {

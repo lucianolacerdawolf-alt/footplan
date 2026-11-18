@@ -18,7 +18,7 @@ describe('CareerTabBar', () => {
     expect(screen.getByText('Elenco')).toBeInTheDocument();
     expect(screen.getByText('Transferências')).toBeInTheDocument();
     expect(screen.getByText('Meu Clube')).toBeInTheDocument();
-    expect(screen.getByText('Escritório')).toBeInTheDocument();
+    expect(screen.getByText('Competições')).toBeInTheDocument();
   });
 
   it('destaca a aba ativa via aria-current', () => {
@@ -48,7 +48,7 @@ describe('CareerTabBar', () => {
     );
     fireEvent.click(screen.getByText('Elenco'));
     expect(onElenco).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByText('Escritório'));
+    fireEvent.click(screen.getByText('Competições'));
     expect(onEscritorio).toHaveBeenCalledTimes(1);
     expect(onCentral).not.toHaveBeenCalled();
     expect(onTransferencias).not.toHaveBeenCalled();

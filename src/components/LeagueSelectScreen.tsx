@@ -2,6 +2,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
 import { crestSrc } from '../utils/crest';
 import styles from './LeagueSelectScreen.module.css';
+import { ScreenHeader } from './ui';
 
 const LEAGUE_ORDER: Record<string, number> = {
   pl: 0, championship: 1,
@@ -33,15 +34,7 @@ interface Props {
 export default function LeagueSelectScreen({ onSelect, selectedLeague, onBack, resumable, onResume, isCareer = false }: Props) {
   return (
     <div className={`${styles.screen} app-screen`}>
-      <header className={styles.header}>
-        <div className={styles.titleRow}>
-          {onBack && (
-            <button className={styles.backBtn} onClick={onBack}>←</button>
-          )}
-          <div className={styles.logo}>FootPlan</div>
-        </div>
-        <p className={styles.subtitle}>{isCareer ? 'Escolha a liga da sua carreira' : 'Escolha seu campeonato'}</p>
-      </header>
+      <ScreenHeader onBack={onBack} kicker={isCareer ? 'Modo Carreira' : undefined} title={isCareer ? 'Escolha a liga da carreira' : 'Escolha a liga'} />
 
       {resumable && resumable.length > 0 && onResume && (
         <div className={styles.resumeBanner}>

@@ -16,8 +16,8 @@ describe('sponsors — marcas fictícias', () => {
 });
 
 describe('sponsors — chaves de liga (regressão)', () => {
-  it('Serie A (id serieA) começa em global e usa pool italiano', () => {
-    expect(getStartingTier('serieA')).toBe('global');
+  it('Serie A (id serieA) começa em nacional (global é meta de reputação) e usa pool italiano', () => {
+    expect(getStartingTier('serieA')).toBe('national');
     expect(ITALIAN_POOL).toContain(generateSponsor('serieA', 'int', 'global').name);
   });
 

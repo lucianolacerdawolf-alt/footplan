@@ -6,6 +6,7 @@ import { computeStandings } from '../engine/tournament';
 import TopScorersTable from './TopScorersTable';
 import styles from './LeagueTableScreen.module.css';
 import { crestSrc } from '../utils/crest';
+import { ScreenHeader } from './ui';
 
 function getRecentForm(teamId: string, fixtures: LeagueFixture[][]): ('W' | 'D' | 'L')[] {
   const results: ('W' | 'D' | 'L')[] = [];
@@ -52,9 +53,9 @@ export function StandingsTable({ standings, teams, userTeamId, league, fixtures 
           <th className={styles.thPos}>#</th>
           <th className={styles.thTeam}>Clube</th>
           <th className={styles.thPts}>Pts</th>
-          <th>J</th><th>V</th><th>E</th><th>D</th>
-          <th>GP</th><th>GC</th><th className={styles.thSg}>SG</th>
-          {showForm && <th className={styles.thForm}>Forma</th>}
+          <th>J</th><th className={styles.colExtra}>V</th><th className={styles.colExtra}>E</th><th className={styles.colExtra}>D</th>
+          <th className={styles.colExtra}>GP</th><th className={styles.colExtra}>GC</th><th className={styles.thSg}>SG</th>
+          {showForm && <th className={`${styles.thForm} ${styles.colExtra}`}>Forma</th>}
         </tr>
       </thead>
       <tbody>
@@ -74,17 +75,17 @@ export function StandingsTable({ standings, teams, userTeamId, league, fixtures 
               </td>
               <td className={styles.tdPts}>{s.points}</td>
               <td>{s.played}</td>
-              <td>{s.won}</td>
-              <td>{s.drawn}</td>
-              <td>{s.lost}</td>
-              <td>{s.goalsFor}</td>
-              <td>{s.goalsAgainst}</td>
+              <td className={styles.colExtra}>{s.won}</td>
+              <td className={styles.colExtra}>{s.drawn}</td>
+              <td className={styles.colExtra}>{s.lost}</td>
+              <td className={styles.colExtra}>{s.goalsFor}</td>
+              <td className={styles.colExtra}>{s.goalsAgainst}</td>
               <td className={sg >= 0 ? styles.sgPos : styles.sgNeg}>{sg > 0 ? '+' : ''}{sg}</td>
               {showForm && form && (
-                <td className={styles.tdForm}>
+                <td className={`${styles.tdForm} ${styles.colExtra}`}>
                   {form.map((r, idx) => (
                     <span key={idx} className={`${styles.formDot} ${r === 'W' ? styles.formWin : r === 'D' ? styles.formDraw : styles.formLoss}`}>
-                      {r}
+                      {r === 'W' ? 'V' : r === 'D' ? 'E' : 'D'}
                     </span>
                   ))}
                 </td>
@@ -111,15 +112,7 @@ function LeagueTableScreen({ state, league, onBack, hideTopNav }: Props) {
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <header className={styles.header}>
-        {!hideTopNav && (
-          <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
-        )}
-        <div className={styles.headerCenter}>
-          <span className={styles.leagueTitle}>{league.name}</span>
-          <span className={styles.roundLabel}>Classificação</span>
-        </div>
-      </header>
+      <ScreenHeader onBack={hideTopNav ? undefined : onBack} kicker={league.name} title="Classificação" />
 
       <div className={styles.standingsScroll}>
         <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />

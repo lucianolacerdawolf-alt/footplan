@@ -6,8 +6,9 @@ import { computeStandings } from '../engine/tournament';
 import { FORMATION_COUNTS } from '../engine/constants';
 import { StandingsTable } from './LeagueTableScreen';
 import styles from './LeagueScreen.module.css';
-import { Button } from './ui';
+import { Button, ScreenHeader } from './ui';
 import { crestSrc } from '../utils/crest';
+import { teamTextColor } from '../utils/teamTextColor';
 
 function squadHealth(team: Team) {
   const counts = FORMATION_COUNTS[team.strategy.formation];
@@ -90,15 +91,11 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
     const userPos = standings.findIndex(s => s.teamId === userTeamId) + 1;
     return (
       <div className={`${styles.screen} app-screen`}>
-        {!hideTopNav && (
-          <header className={styles.header}>
-            <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
-          </header>
-        )}
+        <ScreenHeader onBack={hideTopNav ? undefined : onBack} kicker={league.name} title="Fim da temporada" />
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
           <img src={crestSrc(champion.logoUrl)} alt={champion.name} className={styles.championCrest} />
-          <div className={styles.championName} style={{ color: champion.color }}>{champion.name}</div>
+          <div className={styles.championName} style={{ color: teamTextColor(champion) }}>{champion.name}</div>
           <div className={styles.championSub}>Campeão da Temporada</div>
         </div>
         <div className={styles.userResult}>
@@ -123,13 +120,12 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <header className={styles.header}>
-        {!hideTopNav && (
-          <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
-        )}
-        <div className={styles.headerCenter}>
-          <span className={styles.leagueTitle}>{league.name}</span>
-          <span className={styles.roundLabel}>Rodada {currentRound + 1} / {fixtures.length}</span>
+      <ScreenHeader
+        onBack={hideTopNav ? undefined : onBack}
+        kicker={league.name}
+        title={`Rodada ${currentRound + 1} / ${fixtures.length}`}
+        right={!hideTopNav ? <Button size="sm" variant="secondary" onClick={onEditTactics}>Táticas</Button> : undefined}
+      />
           {(() => {
             const user = teams.find(t => t.id === userTeamId);
             if (!user) return null;
@@ -142,11 +138,6 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
               </span>
             );
           })()}
-        </div>
-        {!hideTopNav && (
-          <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
-        )}
-      </header>
 
       {seasonStats}
 
@@ -169,13 +160,13 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
           <div className={`${styles.fixture} ${styles.fixtureUser}`}>
             <div className={styles.fixtureTeam}>
               <img src={crestSrc(teamById(teams, userFixture.homeTeamId).logoUrl)} className={styles.fixtureCrest} alt="" />
-              <span style={{ color: teamById(teams, userFixture.homeTeamId).color }}>
+              <span style={{ color: teamTextColor(teamById(teams, userFixture.homeTeamId)) }}>
                 {teamById(teams, userFixture.homeTeamId).abbreviation}
               </span>
             </div>
             {renderScore(userFixture)}
             <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
-              <span style={{ color: teamById(teams, userFixture.awayTeamId).color }}>
+              <span style={{ color: teamTextColor(teamById(teams, userFixture.awayTeamId)) }}>
                 {teamById(teams, userFixture.awayTeamId).abbreviation}
               </span>
               <img src={crestSrc(teamById(teams, userFixture.awayTeamId).logoUrl)} className={styles.fixtureCrest} alt="" />
@@ -214,13 +205,13 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
             <div key={f.id} className={styles.fixture}>
               <div className={styles.fixtureTeam}>
                 <img src={crestSrc(teamById(teams, f.homeTeamId).logoUrl)} className={styles.fixtureCrest} alt="" />
-                <span style={{ color: teamById(teams, f.homeTeamId).color }}>
+                <span style={{ color: teamTextColor(teamById(teams, f.homeTeamId)) }}>
                   {teamById(teams, f.homeTeamId).abbreviation}
                 </span>
               </div>
               {renderScore(f)}
               <div className={`${styles.fixtureTeam} ${styles.fixtureTeamAway}`}>
-                <span style={{ color: teamById(teams, f.awayTeamId).color }}>
+                <span style={{ color: teamTextColor(teamById(teams, f.awayTeamId)) }}>
                   {teamById(teams, f.awayTeamId).abbreviation}
                 </span>
                 <img src={crestSrc(teamById(teams, f.awayTeamId).logoUrl)} className={styles.fixtureCrest} alt="" />

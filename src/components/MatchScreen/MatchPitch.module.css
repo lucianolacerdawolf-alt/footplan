@@ -21,15 +21,14 @@
 
 .goal { fill: rgba(255, 255, 255, 0.85); }
 
-.player {
-  stroke-width: 0.45;
-  transition: cx 0.7s ease-in-out, cy 0.7s ease-in-out;
-}
+.playerG { transition: transform 0.7s ease-in-out; }
+.player { stroke-width: 0.45; }
+.num { font-size: 2.3px; font-weight: 800; font-family: var(--sans); pointer-events: none; }
 
 .carrierRing {
   fill: none;
   stroke: #fde047;
-  stroke-width: 0.45;
+  stroke-width: 0.5;
   transition: cx 0.7s ease-in-out, cy 0.7s ease-in-out;
 }
 

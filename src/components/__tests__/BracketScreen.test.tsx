@@ -26,7 +26,7 @@ describe('BracketScreen — fase de mata-mata', () => {
       />
     );
 
-    expect(screen.getByText('Oitavas de Final')).toBeInTheDocument();
+    expect(screen.getAllByText('Oitavas de Final').length).toBeGreaterThan(0);
     expect(screen.getAllByText('vs')).toHaveLength(8);
     expect(screen.getByText('Jogar')).toBeInTheDocument();
     expect(screen.getByText('USR')).toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('BracketScreen — fase de mata-mata', () => {
     await waitFor(() => expect(onSimulateOthers).toHaveBeenCalledTimes(1));
   });
 
-  it('"Editar Táticas" e "Menu Principal" acionam os callbacks certos', () => {
+  it('"Táticas" e "Voltar" acionam os callbacks certos', () => {
     const state = makeRoundOf16();
     const onEditTactics = vi.fn();
     const onBack = vi.fn();
@@ -78,9 +78,9 @@ describe('BracketScreen — fase de mata-mata', () => {
       />
     );
 
-    fireEvent.click(screen.getByText('← Editar Táticas'));
+    fireEvent.click(screen.getByText('Táticas'));
     expect(onEditTactics).toHaveBeenCalledTimes(1);
-    fireEvent.click(screen.getByText('Menu Principal →'));
+    fireEvent.click(screen.getByLabelText('Voltar'));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
@@ -94,8 +94,8 @@ describe('BracketScreen — fase de mata-mata', () => {
         hideTopNav
       />
     );
-    expect(screen.queryByText('← Editar Táticas')).not.toBeInTheDocument();
-    expect(screen.queryByText('Menu Principal →')).not.toBeInTheDocument();
+    expect(screen.queryByText('Táticas')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Voltar')).not.toBeInTheDocument();
   });
 
   it('tela de campeão mostra o time campeão e sinaliza eliminação quando o usuário não venceu', () => {

@@ -1,5 +1,7 @@
 import { memo, useMemo } from 'react';
 import type { MatchEvent, Team } from '../../engine/types';
+import { getStarterCount } from '../../engine/squadUtils';
+import { pitchRows } from '../../utils/pitchRows';
 import styles from './MatchPitch.module.css';
 
 // =============================================================================
@@ -41,6 +43,20 @@ function teamDots(formation: string, side: 'home' | 'away', ballX: number): Arra
     }
   });
   return dots;
+}
+
+function shirtNumbers(team: Team): number[] {
+  const starters = team.squad.slice(0, getStarterCount(team.strategy.formation));
+  return pitchRows(team.strategy.formation, starters).flat().map(p => p.number);
+}
+
+/** Texto preto ou branco conforme a cor da camisa. */
+function numberInk(hex: string | undefined): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex ?? '');
+  if (!m) return '#fff';
+  const n = parseInt(m[1], 16);
+  const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+  return lum > 0.6 ? '#0b1220' : '#fff';
 }
 
 /** Zona da bola pro evento. `homeId` decide pra que lado "atacar". */
@@ -98,6 +114,10 @@ function MatchPitch({ home, away, event }: Props) {
   const ball = useMemo(() => ballFor(event, home.id), [event, home.id]);
   const homeDots = useMemo(() => teamDots(home.strategy.formation, 'home', ball.x), [home.strategy.formation, ball.x]);
   const awayDots = useMemo(() => teamDots(away.strategy.formation, 'away', ball.x), [away.strategy.formation, ball.x]);
+  // Números das camisas na mesma ordem dos pontos (GK, defesa, meio…, ataque) — igual ao
+  // campinho da tela de táticas.
+  const homeNums = useMemo(() => shirtNumbers(home), [home]);
+  const awayNums = useMemo(() => shirtNumbers(away), [away]);
   const isGoal = event?.type === 'goal' || (event?.type === 'penalty' && event.description.includes('⚽'));
   // Quem está com a bola: o jogador do time que agiu mais perto dela (anel), com o nome
   // de quem a narração citou.
@@ -133,16 +153,21 @@ function MatchPitch({ home, away, event }: Props) {
         <rect x={-0.5} y={H / 2 - 4} width={1.2} height={8} className={styles.goal} />
         <rect x={W - 0.7} y={H / 2 - 4} width={1.2} height={8} className={styles.goal} />
 
-        {homeDots.map((d, i) => (
-          <circle key={`h${i}`} cx={d.x} cy={d.y} r={d.gk ? 1.9 : 1.7} className={styles.player}
-            style={{ fill: d.gk ? home.secondaryColor : home.color, stroke: d.gk ? home.color : home.secondaryColor }} />
-        ))}
-        {awayDots.map((d, i) => (
-          <circle key={`a${i}`} cx={d.x} cy={d.y} r={d.gk ? 1.9 : 1.7} className={styles.player}
-            style={{ fill: d.gk ? away.secondaryColor : away.color, stroke: d.gk ? away.color : away.secondaryColor }} />
-        ))}
+        {([['h', home, homeDots, homeNums], ['a', away, awayDots, awayNums]] as const).map(([k, t, dots, nums]) =>
+          dots.map((d, i) => {
+            const fill = d.gk ? t.secondaryColor : t.color;
+            return (
+              <g key={`${k}${i}`} className={styles.playerG} style={{ transform: `translate(${d.x}px, ${d.y}px)` }}>
+                <circle r={2.3} className={styles.player} style={{ fill, stroke: d.gk ? t.color : t.secondaryColor }} />
+                {nums[i] != null && (
+                  <text className={styles.num} textAnchor="middle" dy="0.8" style={{ fill: numberInk(fill) }}>{nums[i]}</text>
+                )}
+              </g>
+            );
+          }),
+        )}
         {carrier >= 0 && actingDots && (
-          <circle cx={actingDots[carrier].x} cy={actingDots[carrier].y} r={2.9} className={styles.carrierRing} />
+          <circle cx={actingDots[carrier].x} cy={actingDots[carrier].y} r={3.3} className={styles.carrierRing} />
         )}
         <circle cx={ball.x} cy={ball.y} r={1.1} className={styles.ball} />
         {name && !isGoal && (

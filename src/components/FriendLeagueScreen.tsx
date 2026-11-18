@@ -14,6 +14,7 @@ import { getAvgOvr } from '../utils/teamUtils';
 import { crestSrc } from '../utils/crest';
 import { Button } from './ui';
 import styles from './FriendLeagueScreen.module.css';
+import { ScreenHeader } from './ui';
 
 interface Props { onBack: () => void }
 
@@ -99,17 +100,14 @@ export default function FriendLeagueScreen({ onBack }: Props) {
   if (!hasRosterCloud()) {
     return (
       <div className={`${styles.screen} app-screen`}>
-        <button className={styles.backBtn} onClick={onBack}>← Voltar</button>
+        <ScreenHeader onBack={onBack} title="Liga entre Amigos" />
         <p className={styles.note}>A Liga entre Amigos precisa de conexão com a nuvem, que não está configurada nesta versão.</p>
       </div>
     );
   }
 
   const header = (title: string, back: () => void) => (
-    <header className={styles.header}>
-      <button className={styles.backBtn} onClick={back}>← Voltar</button>
-      <h1 className={styles.title}>{title}</h1>
-    </header>
+    <ScreenHeader onBack={back} title={title} />
   );
   const errorBox = error && <p className={styles.error} role="alert">{error}</p>;
   const nameField = (
@@ -258,7 +256,7 @@ function FriendLeagueView({ data, busy, error, copied, onBack, onCopy, onPreset 
   if (!data || !computed) {
     return (
       <div className={`${styles.screen} app-screen`}>
-        <button className={styles.backBtn} onClick={onBack}>← Voltar</button>
+        <ScreenHeader onBack={onBack} title="Liga entre Amigos" />
         {error ? <p className={styles.error} role="alert">{error}</p> : <p className={styles.note}>Carregando a liga…</p>}
       </div>
     );
@@ -279,10 +277,7 @@ function FriendLeagueView({ data, busy, error, copied, onBack, onCopy, onPreset 
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <header className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack}>← Voltar</button>
-        <h1 className={styles.title}>{league.name}</h1>
-      </header>
+      <ScreenHeader onBack={onBack} kicker="Liga entre Amigos" title={league.name} />
       <div className={styles.codeRow}>
         <span>Código pra convidar: <strong className={styles.code}>{league.code}</strong></span>
         <Button size="sm" variant="secondary" onClick={onCopy}>{copied ? 'Copiado!' : 'Copiar'}</Button>

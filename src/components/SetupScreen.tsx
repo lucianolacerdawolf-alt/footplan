@@ -4,7 +4,7 @@ import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS
 import { cloneTeam } from '../utils/teamUtils';
 import { MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
 import { isPlayerUnavailable, rebalanceForFormation, getStarterCount } from '../engine/squadUtils';
-import { Button } from './ui';
+import { Button, ScreenHeader } from './ui';
 import { FORMATION_BONUS, getTacticalHardCounter } from '../engine/matchConfig';
 import TacticLabel from './TacticLabel';
 import TacticPresets from './shared/TacticPresets';
@@ -97,6 +97,7 @@ import { fireClick } from '../utils/fireClick';
 import { getContractSeasonsLeft, renewPlayerContract, canRenewContract, type ContractRenewalOptions } from '../engine/career';
 import ContractRenewalModal from './ContractRenewalModal';
 import { crestSrc } from '../utils/crest';
+import { teamTextColor } from '../utils/teamTextColor';
 
 export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview, onRenewContract, currentSeasonYear, budget }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
@@ -374,18 +375,16 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
   return (
     <div className="setup-screen">
       {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
-      <div className="setup-topbar">
-        <button className="back-btn-secondary" onClick={onBack}>← Voltar</button>
-        <header className="app-header" style={{ flex: 1 }}>
-          <h1>FootPlan</h1>
-          <p className="subtitle">
-            {mode === 'league' ? 'Campeonato' : mode === 'cup' ? 'Mata-mata' : mode === 'career' ? 'Modo Carreira' : mode === 'online' ? 'Online' : 'Configuração Tática'}
-          </p>
-        </header>
-        <Button glow className="setup-confirm-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
-          {isTacticsOnly ? 'Confirmar Táticas ✓' : goesToPreview ? 'Confirmar e Continuar →' : 'Iniciar Partida →'}
-        </Button>
-      </div>
+      <ScreenHeader
+        onBack={onBack}
+        kicker={mode === 'league' ? 'Campeonato' : mode === 'cup' ? 'Mata-mata' : mode === 'career' ? 'Modo Carreira' : mode === 'online' ? 'Online' : 'Partida Única'}
+        title="Táticas"
+        right={
+          <Button size="sm" glow className="setup-confirm-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
+            {isTacticsOnly ? 'Salvar ✓' : goesToPreview ? 'Continuar →' : 'Jogar →'}
+          </Button>
+        }
+      />
 
       {(() => {
         const moraleTeam = lockAway ? myTeam : null; // só mostra em torneios, do lado do usuário
@@ -424,9 +423,9 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                 <div key={`${m.date}-${i}`} className="h2h-log-row">
                   <span className={`h2h-pill ${m.result}`} aria-hidden="true">{m.result}</span>
                   <span className="h2h-log-date">{m.date}</span>
-                  <span className="h2h-log-score" style={{ color: initialHome.color }}>{m.gf}</span>
+                  <span className="h2h-log-score" style={{ color: teamTextColor(initialHome) }}>{m.gf}</span>
                   <span className="h2h-log-sep">–</span>
-                  <span className="h2h-log-score" style={{ color: initialAway.color }}>{m.ga}</span>
+                  <span className="h2h-log-score" style={{ color: teamTextColor(initialAway) }}>{m.ga}</span>
                 </div>
               ))}
             </div>
@@ -435,18 +434,14 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       )}
 
       {/* ── Tactical Matchup Insight ── */}
-      <div className="morale-strip" style={{ background: 'var(--accent-bg)', border: '1px solid var(--accent-border)', justifyContent: 'space-between' }}>
-        <span className="morale-label" style={{ color: 'var(--accent)' }}>📋 Análise Tática</span>
-        <span className="morale-value" style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-h)', flex: 1, textAlign: 'center' }}>
+      <div className="tactical-insight">
+        <div className="tactical-insight-head">
+          <span className="tactical-insight-label">Análise tática</span>
+          <Button size="sm" variant="ghost" onClick={() => setShowOpponentAnalysis(true)}>Analisar oponente</Button>
+        </div>
+        <p className="tactical-insight-text">
           {getTacticalInsight(lockAway ? myTeam : homeTeam, lockAway ? theirTeam : awayTeam)}
-        </span>
-        <button
-          className="back-btn-secondary"
-          style={{ fontSize: 11, padding: '4px 10px', whiteSpace: 'nowrap' }}
-          onClick={() => setShowOpponentAnalysis(true)}
-        >
-          🔍 Analisar Oponente
-        </button>
+        </p>
       </div>
 
       <div className="ht-tabs" style={{ margin: '8px 0', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>

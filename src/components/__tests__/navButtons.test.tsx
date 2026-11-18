@@ -25,29 +25,29 @@ function makePeer(overrides: Partial<UsePeerConnectionReturn> = {}): UsePeerConn
 }
 
 describe('telas de seleção de time — botões de nav', () => {
-  it('TeamSelectionScreen (Partida Única) mostra Voltar e Menu Principal', () => {
+  it('TeamSelectionScreen (Partida Única) mostra só o Voltar (sem Menu Principal duplicado)', () => {
     render(
       <TeamSelectionScreen teams={testTeams} leagueName="Liga Teste" onConfirm={vi.fn()} onBack={vi.fn()} onGoHome={vi.fn()} />
     );
-    expect(screen.getByText('← Voltar')).toBeInTheDocument();
-    expect(screen.getByText('Menu Principal')).toBeInTheDocument();
+    expect(screen.getByLabelText('Voltar')).toBeInTheDocument();
+    expect(screen.queryByText('Menu Principal')).not.toBeInTheDocument(); // o Voltar já cobre
   });
 
-  it('TournamentSetupScreen (liga/copa) mostra Voltar e Menu Principal', () => {
+  it('TournamentSetupScreen (liga/copa) mostra só o Voltar (sem Menu Principal duplicado)', () => {
     render(
       <TournamentSetupScreen mode="league" league={makeLeague()} onBack={vi.fn()} onGoHome={vi.fn()} onStart={vi.fn()} />
     );
-    expect(screen.getByText('← Voltar')).toBeInTheDocument();
-    expect(screen.getByText('Menu Principal')).toBeInTheDocument();
+    expect(screen.getByLabelText('Voltar')).toBeInTheDocument();
+    expect(screen.queryByText('Menu Principal')).not.toBeInTheDocument(); // o Voltar já cobre
   });
 
-  it('OnlineLobbyScreen mostra Voltar, Menu Principal, Criar Sala e Entrar', () => {
+  it('OnlineLobbyScreen mostra Voltar, Criar Sala e Entrar', () => {
     render(
       <OnlineLobbyScreen onStartMatch={vi.fn()} onBack={vi.fn()} onGoHome={vi.fn()} peer={makePeer()} />
     );
-    expect(screen.getByText('← Voltar')).toBeInTheDocument();
-    expect(screen.getByText('Menu Principal')).toBeInTheDocument();
-    expect(screen.getByText(/Criar Sala/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Voltar')).toBeInTheDocument();
+    expect(screen.queryByText('Menu Principal')).not.toBeInTheDocument(); // o Voltar já cobre
+    expect(screen.getByText(/Criar sala/i)).toBeInTheDocument();
     expect(screen.getByText('Entrar')).toBeInTheDocument();
   });
 });

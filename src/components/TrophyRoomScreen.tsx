@@ -12,6 +12,7 @@ import FinancePanel from './FinancePanel';
 import CareerSummaryPanel from './CareerSummaryPanel';
 import ContractRenewalModal from './ContractRenewalModal';
 import styles from './TrophyRoomScreen.module.css';
+import { ScreenHeader } from './ui';
 
 interface Props {
   history: CareerSeasonHistoryEntry[];
@@ -23,6 +24,8 @@ interface Props {
   reputation?: number;
   /** Elenco atual do usuário — usado pra listar contratos a expirar na gestão do clube. */
   userSquad?: Player[];
+  /** Média dos titulares — a mesma "força" da Central e da escolha de time. */
+  startersOvr?: number;
   /** Fase 1 — renova contrato por 1 temporada a partir da Central de Comandos. */
   onRenewContract?: (playerId: string, options: ContractRenewalOptions) => void;
   // Identidade do clube (hero no topo da aba Meu Clube)
@@ -93,7 +96,7 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: 'var(--negative)' };
 }
 
-function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
+function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, startersOvr, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const [renewingPlayer, setRenewingPlayer] = useState<Player | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
@@ -123,9 +126,7 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>🏛️ Meu Clube</h1>
-      </div>
+      <ScreenHeader kicker="Modo Carreira" title="Meu Clube" />
 
       {/* Identidade do clube */}
       {userTeamName && (
@@ -161,10 +162,10 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
                     <span className={styles.clubStatLabel}>na copa</span>
                   </div>
                 )}
-                {squadStats && (
+                {(startersOvr ?? squadStats?.avgOvr) != null && (
                   <div className={styles.clubStat}>
-                    <span className={styles.clubStatValue}>{squadStats.avgOvr}</span>
-                    <span className={styles.clubStatLabel}>OVR médio</span>
+                    <span className={styles.clubStatValue}>{startersOvr ?? squadStats?.avgOvr}</span>
+                    <span className={styles.clubStatLabel}>{startersOvr != null ? 'OVR titulares' : 'OVR elenco'}</span>
                   </div>
                 )}
                 {mood && (

@@ -667,8 +667,10 @@ export function beginMatchState(home: Team, away: Team, random: RandomFn = Math.
  *  primeiros minutos 3 disputas viravam "100% × 0%" na barra. */
 export function possessionPct(state: MatchState | null | undefined): number {
   if (!state) return 50;
-  const PRIOR = 4;
   const total = state.homePossessionWins + state.awayPossessionWins;
+  // O "empurrão pra 50%" some conforme o jogo anda: com 40+ disputas vale a conta real,
+  // e o número do fim do jogo bate com o das Estatísticas.
+  const PRIOR = Math.max(0, 4 * (1 - total / 40));
   return Math.round(((state.homePossessionWins + PRIOR) / (total + 2 * PRIOR)) * 100);
 }
 

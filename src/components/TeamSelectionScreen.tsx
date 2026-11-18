@@ -3,6 +3,7 @@ import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { fireClick } from '../utils/fireClick';
 import { crestSrc } from '../utils/crest';
+import { ScreenHeader } from './ui';
 
 export type GameMode = 'cpu' | 'player';
 
@@ -16,7 +17,7 @@ interface Props {
 
 type Uniform = 'home' | 'away';
 
-export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBack, onGoHome }: Props) {
+export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBack }: Props) {
   const [homeId, setHomeId] = useLocalStorage<string | null>('fp:homeId', null);
   const [awayId, setAwayId] = useLocalStorage<string | null>('fp:awayId', null);
   const [homeUniform, setHomeUniform] = useLocalStorage<Uniform>('fp:homeUniform', 'home');
@@ -99,12 +100,12 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
                 className={`uni-btn ${uniform === 'home' ? 'active' : ''}`}
                 style={uniform === 'home' ? { background: team.color, borderColor: team.color } : undefined}
                 onClick={e => { e.stopPropagation(); setUniform('home'); }}
-              >HOME</button>
+              >Camisa 1</button>
               <button
                 className={`uni-btn ${uniform === 'away' ? 'active' : ''}`}
                 style={uniform === 'away' ? { background: team.secondaryColor, borderColor: team.secondaryColor } : undefined}
                 onClick={e => { e.stopPropagation(); setUniform('away'); }}
-              >AWAY</button>
+              >Camisa 2</button>
             </div>
           </>
         ) : (
@@ -116,14 +117,7 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
 
   return (
     <div className="team-select-screen">
-      <div className="top-nav">
-        <button className="slot-nav-btn" onClick={onBack}>← Voltar</button>
-        <header className="app-header">
-          <h1>FootPlan</h1>
-          <p className="subtitle">{leagueName}</p>
-        </header>
-        <button className="slot-nav-btn" onClick={onGoHome}>Menu Principal</button>
-      </div>
+      <ScreenHeader onBack={onBack} kicker={leagueName} title="Escolha os times" />
 
       <div className="select-instruction">
         {!homeTeam && !awayTeam && 'Escolha o time da CASA'}

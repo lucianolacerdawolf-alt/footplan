@@ -4,6 +4,7 @@ import type { Team } from '../engine/types';
 import { getLeague } from '../data/leagues';
 import styles from './JobMarketScreen.module.css';
 import { crestSrc } from '../utils/crest';
+import { ScreenHeader } from './ui';
 
 interface Props {
   offers: JobOffer[];
@@ -20,15 +21,7 @@ function JobMarketScreen({ offers, reputation, currentClubName, rosters, onAccep
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <header className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">
-          ← Voltar
-        </button>
-        <div className={styles.headerTitle}>
-          <h1 className={styles.title}>💼 Mercado de Treinador</h1>
-          <span className={styles.subtitle}>Sua reputação: <strong>{reputation} ⭐</strong></span>
-        </div>
-      </header>
+      <ScreenHeader onBack={onBack} kicker={<>Sua reputação: {reputation} ⭐</>} title="Mercado de Treinador" />
 
       {offers.length === 0 ? (
         <div className={styles.empty}>

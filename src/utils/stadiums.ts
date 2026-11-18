@@ -27,6 +27,6 @@ export function generateStadium(teamName: string, seed: number): { name: string;
  */
 export function teamStadium(team: { id: string; name: string; stadium?: string; capacity?: number }): { name: string; capacity?: number } {
   if (team.stadium) return { name: team.stadium, capacity: team.capacity };
-  const seed = team.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  return { name: generateStadium(team.name, seed).name };
+  // Sem o dado real, um nome neutro — nada de inventar "Arsenal Ground" ou "X Arena".
+  return { name: `Estádio do ${team.name}` };
 }

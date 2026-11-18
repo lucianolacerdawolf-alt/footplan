@@ -7,6 +7,7 @@ import { calculateRatings, manOfTheMatch, goalScorers, cardEvents } from '../eng
 import { FORMATION_BONUS } from '../engine/matchConfig';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { crestSrc } from '../utils/crest';
+import { teamTextColor } from '../utils/teamTextColor';
 
 interface Props {
   result: MatchResult;
@@ -150,13 +151,13 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
       <div className={styles.header}>
         <div className={styles.team}>
           <img src={crestSrc(homeTeam.logoUrl)} alt={homeTeam.name} className={styles.crest} />
-          <span className={styles.teamName} style={{ color: homeTeam.color }}>{homeTeam.abbreviation}</span>
+          <span className={styles.teamName} style={{ color: teamTextColor(homeTeam) }}>{homeTeam.abbreviation}</span>
         </div>
         <div className={styles.scoreBlock}>
           <div className={styles.score}>
-            <span style={{ color: homeTeam.color }}>{homeScore}</span>
+            <span style={{ color: teamTextColor(homeTeam) }}>{homeScore}</span>
             <span className={styles.scoreSep}>–</span>
-            <span style={{ color: awayTeam.color }}>{awayScore}</span>
+            <span style={{ color: teamTextColor(awayTeam) }}>{awayScore}</span>
           </div>
           {result.wentToExtraTime && (
             <span className={styles.etLabel}>
@@ -170,7 +171,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
         </div>
         <div className={styles.team}>
           <img src={crestSrc(awayTeam.logoUrl)} alt={awayTeam.name} className={styles.crest} />
-          <span className={styles.teamName} style={{ color: awayTeam.color }}>{awayTeam.abbreviation}</span>
+          <span className={styles.teamName} style={{ color: teamTextColor(awayTeam) }}>{awayTeam.abbreviation}</span>
         </div>
       </div>
 
@@ -183,7 +184,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
               <div key={`${g.team.id}-${g.minute}-${g.scorer}-${i}`} className={styles.scorerRow}>
                 <span className={styles.scorerMinute}>{g.minute}&apos;</span>
                 <img src={crestSrc(g.team.logoUrl)} alt={`Escudo ${g.team.abbreviation}`} className={styles.scorerCrest} />
-                <span className={styles.scorerName} style={{ color: g.team.color }}>{g.scorer}</span>
+                <span className={styles.scorerName} style={{ color: teamTextColor(g.team) }}>{g.scorer}</span>
               </div>
             ))}
           </div>
@@ -200,7 +201,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
           <div className={styles.motmBody}>
             <img src={crestSrc(motm.team.logoUrl)} alt="" className={styles.motmCrest} />
             <div className={styles.motmInfo}>
-              <span className={styles.motmName} style={{ color: motm.team.color }}>
+              <span className={styles.motmName} style={{ color: teamTextColor(motm.team) }}>
                 #{motm.player.number} {motm.player.name}
               </span>
               <span className={styles.motmStats}>
@@ -225,7 +226,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
             <div key={r.player.id} className={styles.ratingRow}>
               <img src={crestSrc(r.team.logoUrl)} alt="" className={styles.ratingCrest} />
               <span className={styles.ratingNum}>#{r.player.number}</span>
-              <span className={styles.ratingName} style={{ color: r.team.color }}>{r.player.name}</span>
+              <span className={styles.ratingName} style={{ color: teamTextColor(r.team) }}>{r.player.name}</span>
               <span className={styles.ratingPos}>{r.player.position}</span>
               <span className={styles.ratingVal} style={{ background: ratingColor(r.rating) }}>
                 {r.rating.toFixed(1)}
@@ -316,9 +317,9 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
                 <span className={styles.historyDate}>{r.date}</span>
                 <div className={styles.historyMatch}>
                   <img src={crestSrc(r.homeTeam.logoUrl)} alt={r.homeTeam.abbreviation} className={styles.historyCrest} />
-                  <span className={styles.historyAbbr} style={{ color: r.homeTeam.color }}>{r.homeTeam.abbreviation}</span>
+                  <span className={styles.historyAbbr} style={{ color: teamTextColor(r.homeTeam) }}>{r.homeTeam.abbreviation}</span>
                   <span className={styles.historyScore}>{r.homeScore}–{r.awayScore}</span>
-                  <span className={styles.historyAbbr} style={{ color: r.awayTeam.color }}>{r.awayTeam.abbreviation}</span>
+                  <span className={styles.historyAbbr} style={{ color: teamTextColor(r.awayTeam) }}>{r.awayTeam.abbreviation}</span>
                   <img src={crestSrc(r.awayTeam.logoUrl)} alt={r.awayTeam.abbreviation} className={styles.historyCrest} />
                 </div>
               </div>

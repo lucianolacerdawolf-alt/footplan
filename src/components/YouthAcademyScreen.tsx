@@ -4,6 +4,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { canPromote, scoutEstimate, YOUTH_PROMOTE_MIN_AGE, YOUTH_PROMOTE_MIN_OVR, YOUTH_RELEASE_AGE } from '../engine/youthAcademy';
 import { Button } from './ui';
 import styles from './YouthAcademyScreen.module.css';
+import { ScreenHeader } from './ui';
 
 interface Props {
   youthPlayers: Player[];
@@ -12,7 +13,7 @@ interface Props {
   onBack: () => void;
 }
 
-const POS_LABEL: Record<Player['position'], string> = { GK: 'GOL', DEF: 'DEF', MID: 'MEI', FWD: 'ATA' };
+const POS_LABEL: Record<Player['position'], string> = { GK: 'GK', DEF: 'DEF', MID: 'MID', FWD: 'FWD' };
 
 /** Os 2 atributos mais relevantes por posição (resumo do card). */
 function keyAttrs(p: Player): string {
@@ -31,10 +32,7 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, onBack }: Prop
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <header className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack}>← Voltar</button>
-        <h1 className={styles.title}>🌱 Categorias de Base</h1>
-      </header>
+      <ScreenHeader onBack={onBack} kicker="Modo Carreira" title="Categorias de Base" />
 
       <p className={styles.intro}>
         {youthPlayers.length} {youthPlayers.length === 1 ? 'jovem' : 'jovens'} na base · elenco profissional com {squadSize} jogadores.

@@ -23,7 +23,7 @@ import { useResumePrompt } from './hooks/useResumePrompt';
 import { renderScreen, type AppScreensProps } from './components/AppScreens';
 import Toast from './components/Toast';
 import CareerTabBar from './components/CareerTabBar';
-import { preloadAllRosters } from './services/rosterSync';
+import { preloadAllRosters, withLoadedTeams } from './services/rosterSync';
 import { loadDaily, STREAK_ACHIEVEMENTS } from './engine/dailyGoals';
 import { syncReminders } from './services/reminders';
 import { CAREER_TAB_SCREENS, getCareerTabForScreen } from './utils/careerTabs';
@@ -275,7 +275,7 @@ function App() {
 
   // ── Jogo Rápido ──────────────────────────────────────────────────────────
   const handleQuickPlay = useCallback(() => {
-    const league = allLeagues[Math.floor(Math.random() * allLeagues.length)];
+    const league = withLoadedTeams(allLeagues[Math.floor(Math.random() * allLeagues.length)]);
     const shuffled = [...league.teams].sort(() => Math.random() - 0.5);
     const home = shuffled[0];
     const away = shuffled[1];

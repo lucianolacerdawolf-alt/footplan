@@ -2,9 +2,10 @@ import { memo, useState } from 'react';
 import type { Team } from '../engine/types';
 import type { BracketState, BracketMatch, PlayableStage } from '../engine/tournament';
 import styles from './BracketScreen.module.css';
-import { Button } from './ui';
+import { Button, ScreenHeader } from './ui';
 import { crestSrc } from '../utils/crest';
 import { getStageMatches } from '../engine/bracketHelpers';
+import { teamTextColor } from '../utils/teamTextColor';
 
 interface Props {
   state: BracketState;
@@ -68,7 +69,7 @@ function MatchCard({
       <div className={styles.matchTeams}>
         <div className={`${styles.matchTeam} ${match.winnerId === match.homeTeamId ? styles.winner : match.played ? styles.loser : ''}`}>
           {home ? <img src={crestSrc(home.logoUrl)} alt={home.abbreviation} className={styles.matchCrest} /> : <span className={styles.tbd}>—</span>}
-          <span style={home ? { color: home.color } : undefined}>{home?.abbreviation ?? '?'}</span>
+          <span style={home ? { color: teamTextColor(home) } : undefined}>{home?.abbreviation ?? '?'}</span>
         </div>
         <div className={styles.matchMiddle}>
           {match.played
@@ -76,7 +77,7 @@ function MatchCard({
             : <span className={styles.matchVs}>vs</span>}
         </div>
         <div className={`${styles.matchTeam} ${styles.matchTeamAway} ${match.winnerId === match.awayTeamId ? styles.winner : match.played ? styles.loser : ''}`}>
-          <span style={away ? { color: away.color } : undefined}>{away?.abbreviation ?? '?'}</span>
+          <span style={away ? { color: teamTextColor(away) } : undefined}>{away?.abbreviation ?? '?'}</span>
           {away ? <img src={crestSrc(away.logoUrl)} alt={away.abbreviation} className={styles.matchCrest} /> : <span className={styles.tbd}>—</span>}
         </div>
       </div>
@@ -89,7 +90,7 @@ function MatchCard({
         </div>
       )}
       {match.played && winner && (
-        <div className={styles.winnerTag} style={{ color: winner.color }}>
+        <div className={styles.winnerTag} style={{ color: teamTextColor(winner) }}>
           ✓ {winner.abbreviation}
         </div>
       )}
@@ -111,15 +112,11 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
     const userWon = championId === userTeamId;
     return (
       <div className={`${styles.screen} app-screen`}>
-        {!hideTopNav && (
-          <header className={styles.header}>
-            <button className="back-btn-secondary" onClick={onBack}>← Menu Principal</button>
-          </header>
-        )}
+        <ScreenHeader onBack={hideTopNav ? undefined : onBack} kicker={state.cupName} title="Final" />
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
           <img src={crestSrc(champion.logoUrl)} alt={champion.name} className={styles.championCrest} />
-          <div className={styles.championName} style={{ color: champion.color }}>{champion.name}</div>
+          <div className={styles.championName} style={{ color: teamTextColor(champion) }}>{champion.name}</div>
           <div className={styles.championSub}>Campeão da {state.cupName}</div>
           {!userWon && (
             <div className={styles.userEliminated}>
@@ -178,17 +175,12 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <header className={styles.header}>
-        {!hideTopNav && (
-          <button className="back-btn-secondary" onClick={onEditTactics}>← Editar Táticas</button>
-        )}
-        <div className={styles.headerCenter}>
-          <span className={styles.title} style={cupColor ? { color: cupColor } : undefined}>{state.cupName} · {stageLabels[stage]}</span>
-        </div>
-        {!hideTopNav && (
-          <button className="back-btn-secondary" onClick={onBack}>Menu Principal →</button>
-        )}
-      </header>
+      <ScreenHeader
+        onBack={hideTopNav ? undefined : onBack}
+        kicker={<span style={cupColor ? { color: cupColor } : undefined}>{state.cupName}</span>}
+        title={stageLabels[stage]}
+        right={!hideTopNav ? <Button size="sm" variant="secondary" onClick={onEditTactics}>Táticas</Button> : undefined}
+      />
 
       {lockedMessage && (
         <div className={styles.lockedNote} role="status">🗓️ {lockedMessage}</div>

@@ -3,6 +3,7 @@ import { getDifficultyLabel } from '../engine/matchConfig';
 import styles from './HomeScreen.module.css';
 import DailyGoalsCard from './DailyGoalsCard';
 import { crestSrc } from '../utils/crest';
+import { Icon } from './ui';
 
 export interface CareerResume {
   teamName: string;
@@ -53,7 +54,7 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
 
       <div className={styles.modes}>
         <button className={`${styles.modeCard} ${styles.quickPlayCard}`} onClick={onQuickPlay}>
-          <span className={styles.modeIcon}>⚡</span>
+          <span className={styles.modeIcon} aria-hidden="true"><Icon name="bolt" size={26} /></span>
           <div className={styles.modeText}>
             <span className={styles.modeName}>Jogo Rápido</span>
             <span className={styles.modeDesc}>Times aleatórios, táticas padrão — vai direto pro jogo</span>
@@ -62,17 +63,17 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         </button>
 
         <button className={styles.modeCard} onClick={onOnline}>
-          <span className={styles.modeIcon}>🌐</span>
+          <span className={styles.modeIcon} aria-hidden="true"><Icon name="globe" size={26} /></span>
           <div className={styles.modeText}>
             <span className={styles.modeName}>Jogar Online</span>
-            <span className={styles.modeDesc}>Convide um amigo e joguem P2P via WebRTC</span>
+            <span className={styles.modeDesc}>Jogue ao vivo com um amigo pelo código da sala</span>
           </div>
           <span className={styles.modeArrow}>›</span>
         </button>
 
         {onFriendLeague && (
           <button className={styles.modeCard} onClick={onFriendLeague}>
-            <span className={styles.modeIcon}>👥</span>
+            <span className={styles.modeIcon} aria-hidden="true"><Icon name="users" size={26} /></span>
             <div className={styles.modeText}>
               <span className={styles.modeName}>Liga entre Amigos</span>
               <span className={styles.modeDesc}>Cada um comanda um clube · uma rodada por dia</span>
@@ -82,7 +83,7 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         )}
 
         <button className={styles.modeCard} onClick={onSingleMatch}>
-          <span className={styles.modeIcon}>⚽</span>
+          <span className={styles.modeIcon} aria-hidden="true"><Icon name="ball" size={26} /></span>
           <div className={styles.modeText}>
             <span className={styles.modeName}>Partida Única</span>
             <span className={styles.modeDesc}>Escolha dois times e simule uma partida amistosa</span>
@@ -91,7 +92,7 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         </button>
 
         <button className={styles.modeCard} onClick={onLeague}>
-          <span className={styles.modeIcon}>📅</span>
+          <span className={styles.modeIcon} aria-hidden="true"><Icon name="calendar" size={26} /></span>
           <div className={styles.modeText}>
             <span className={styles.modeName}>Campeonatos</span>
             <span className={styles.modeDesc}>Pontos corridos com o campeonato que você escolher</span>
@@ -100,7 +101,7 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         </button>
 
         <button className={styles.modeCard} onClick={onCareer}>
-          <span className={styles.modeIcon}>👔</span>
+          <span className={styles.modeIcon} aria-hidden="true"><Icon name="manager" size={26} /></span>
           <div className={styles.modeText}>
             <span className={styles.modeName}>Modo Carreira</span>
             <span className={styles.modeDesc}>{careerResume ? `Sua carreira com o ${careerResume.teamName}` : 'Progrida por temporadas com seu elenco, transferências e reputação de técnico'}</span>
@@ -109,7 +110,7 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         </button>
 
         <button className={styles.modeCard} onClick={onCup}>
-          <span className={styles.modeIcon}>🏆</span>
+          <span className={styles.modeIcon} aria-hidden="true"><Icon name="trophy" size={26} /></span>
           <div className={styles.modeText}>
             <span className={styles.modeName}>Copas</span>
             <span className={styles.modeDesc}>Mata-mata · prorrogação e pênaltis</span>
@@ -118,7 +119,7 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
         </button>
 
         <button className={styles.modeCard} onClick={onAchievements}>
-          <span className={styles.modeIcon}>🏅</span>
+          <span className={styles.modeIcon} aria-hidden="true"><Icon name="medal" size={26} /></span>
           <div className={styles.modeText}>
             <span className={styles.modeName}>Conquistas</span>
             <span className={styles.modeDesc}>Veja as conquistas desbloqueadas e as que faltam</span>

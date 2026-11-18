@@ -1,5 +1,6 @@
 import type { CareerTab } from '../utils/careerTabs';
 import styles from './CareerTabBar.module.css';
+import { Icon, type IconName } from './ui';
 
 interface Props {
   active: CareerTab | null;
@@ -10,12 +11,12 @@ interface Props {
   onEscritorio: () => void;
 }
 
-const TABS: Array<{ id: CareerTab; icon: string; label: string; onClick: keyof Props }> = [
-  { id: 'central', icon: '🏠', label: 'Central', onClick: 'onCentral' },
-  { id: 'elenco', icon: '👕', label: 'Elenco', onClick: 'onElenco' },
-  { id: 'transferencias', icon: '🛒', label: 'Transferências', onClick: 'onTransferencias' },
-  { id: 'meu-clube', icon: '🏛️', label: 'Meu Clube', onClick: 'onMeuClube' },
-  { id: 'escritorio', icon: '📅', label: 'Escritório', onClick: 'onEscritorio' },
+const TABS: Array<{ id: CareerTab; icon: IconName; label: string; onClick: keyof Props }> = [
+  { id: 'central', icon: 'home', label: 'Central', onClick: 'onCentral' },
+  { id: 'elenco', icon: 'shirt', label: 'Elenco', onClick: 'onElenco' },
+  { id: 'transferencias', icon: 'refresh', label: 'Transferências', onClick: 'onTransferencias' },
+  { id: 'meu-clube', icon: 'briefcase', label: 'Meu Clube', onClick: 'onMeuClube' },
+  { id: 'escritorio', icon: 'trophy', label: 'Competições', onClick: 'onEscritorio' },
 ];
 
 export default function CareerTabBar({ active, onCentral, onElenco, onTransferencias, onMeuClube, onEscritorio }: Props) {
@@ -30,7 +31,7 @@ export default function CareerTabBar({ active, onCentral, onElenco, onTransferen
           onClick={handlers[tab.onClick]}
           aria-current={active === tab.id ? 'page' : undefined}
         >
-          <span className={styles.icon} aria-hidden="true">{tab.icon}</span>
+          <span className={styles.icon} aria-hidden="true"><Icon name={tab.icon} size={22} /></span>
           <span className={styles.label}>{tab.label}</span>
         </button>
       ))}

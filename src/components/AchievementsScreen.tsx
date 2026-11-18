@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { AchievementCategory } from '../engine/achievements';
 import { ACHIEVEMENT_CATEGORY_LABELS } from '../engine/achievements';
 import styles from './AchievementsScreen.module.css';
+import { ScreenHeader } from './ui';
 
 interface AchievementItem {
   id: string;
@@ -41,15 +42,7 @@ export default function AchievementsScreen({ achievements, onBack }: Props) {
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <div className={styles.header}>
-        <button className={styles.backBtn} onClick={onBack} aria-label="Voltar">
-          ← Voltar
-        </button>
-        <div className={styles.headerTitle}>
-          <h1 className={styles.title}>Conquistas</h1>
-          <span className={styles.progress}>{unlockedCount}/{total}</span>
-        </div>
-      </div>
+      <ScreenHeader onBack={onBack} title="Conquistas" right={<span className={styles.progress}>{unlockedCount}/{total}</span>} />
 
       {/* A contagem sozinha não dava noção de quanto falta. */}
       <div

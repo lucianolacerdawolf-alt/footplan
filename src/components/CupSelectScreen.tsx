@@ -2,6 +2,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { allLeagues } from '../data/leagues';
 import { crestSrc } from '../utils/crest';
 import styles from './CupSelectScreen.module.css';
+import { ScreenHeader } from './ui';
 
 interface Props {
   onSelect: (league: LeagueDefinition) => void;
@@ -11,13 +12,7 @@ interface Props {
 export default function CupSelectScreen({ onSelect, onBack }: Props) {
   return (
     <div className={`${styles.screen} app-screen`}>
-      <header className={styles.header}>
-        <div className={styles.titleRow}>
-          <button className={styles.backBtn} onClick={onBack}>←</button>
-          <div className={styles.logo}>FootPlan</div>
-        </div>
-        <p className={styles.subtitle}>Escolha sua copa</p>
-      </header>
+      <ScreenHeader onBack={onBack} kicker="Copas" title="Escolha a copa" />
 
       <div className={styles.grid}>
         {allLeagues.map(league => (

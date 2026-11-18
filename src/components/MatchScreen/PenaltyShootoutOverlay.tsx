@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Team, Player, PenaltyResult } from '../../engine/types';
+import { teamTextColor } from '../../utils/teamTextColor';
 
 type Corner = 'left' | 'center' | 'right';
 
@@ -176,9 +177,9 @@ export default function PenaltyShootoutOverlay({
       )}
 
       <div className="penalty-score">
-        <span style={{ color: homeTeam.color }}>{homeTeam.abbreviation} {homeScore}</span>
+        <span style={{ color: teamTextColor(homeTeam) }}>{homeTeam.abbreviation} {homeScore}</span>
         <span style={{ opacity: 0.35 }}>×</span>
-        <span style={{ color: awayTeam.color }}>{awayScore} {awayTeam.abbreviation}</span>
+        <span style={{ color: teamTextColor(awayTeam) }}>{awayScore} {awayTeam.abbreviation}</span>
       </div>
 
       {isSuddenDeath && <div className="penalty-sudden-death">MORTE SÚBITA</div>}
@@ -196,7 +197,7 @@ export default function PenaltyShootoutOverlay({
         ))}
       </div>
 
-      <div className="penalty-shooter" style={{ color: currentKickTeam.color }}>
+      <div className="penalty-shooter" style={{ color: teamTextColor(currentKickTeam) }}>
         {currentShooter?.name ?? '?'} ({currentKickTeam.abbreviation})
       </div>
       <div className="penalty-gk">

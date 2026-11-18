@@ -9,6 +9,7 @@ import { syncLeagueRoster } from '../services/rosterSync';
 import TacticLabel from './TacticLabel';
 import styles from './OnlineLobbyScreen.module.css';
 import { crestSrc } from '../utils/crest';
+import { ScreenHeader } from './ui';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
@@ -32,7 +33,7 @@ const allTeamsMap = new Map<string, Team>(
 );
 const registerTeams = (teams: Team[]) => { for (const t of teams) allTeamsMap.set(t.id, t); };
 
-export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer }: Props) {
+export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props) {
   const [joinCode, setJoinCode] = useState('');
   const [copyLabel, setCopyLabel] = useState('Copiar');
 
@@ -158,14 +159,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
   const bothPicked = hostTeamId !== null && guestTeamId !== null;
 
   const topNav = (disconnect?: boolean) => (
-    <div className="top-nav">
-      <button className="slot-nav-btn" onClick={() => { if (disconnect) peer.disconnect(); onBack(); }}>← Voltar</button>
-      <header className="app-header">
-        <h1>FootPlan</h1>
-        <p className="subtitle">Jogar Online</p>
-      </header>
-      <button className="slot-nav-btn" onClick={() => { if (disconnect) peer.disconnect(); onGoHome(); }}>Menu Principal</button>
-    </div>
+    <ScreenHeader onBack={() => { if (disconnect) peer.disconnect(); onBack(); }} kicker="Ao vivo com um amigo" title="Jogar Online" />
   );
 
   const roomCodeBadge = peer.isHost && peer.roomId ? (
@@ -189,23 +183,25 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, onGoHome, peer
             <button className="conflict-fix-btn" onClick={() => peer.disconnect()}>Tentar novamente</button>
           </div>
         )}
-        <div className="select-instruction">
-          {peer.state === 'connecting' ? 'Conectando...' : 'Crie uma sala ou entre em uma existente'}
-        </div>
+        <p className={styles.howTo}>
+          {peer.state === 'connecting'
+            ? 'Conectando…'
+            : 'Um cria a sala e passa o código de 4 letras; o outro digita o código e entra. Cada um escolhe seu time e vocês jogam a mesma partida ao vivo.'}
+        </p>
         <div className={styles.connectContainer}>
           <button
             className={`slot-nav-btn slot-nav-btn-primary ${styles.connectBtn}`}
             onClick={() => peer.createRoom()}
             disabled={peer.state === 'connecting'}
           >
-            {peer.state === 'connecting' ? 'Conectando...' : '🌐 Criar Sala'}
+            {peer.state === 'connecting' ? 'Conectando...' : 'Criar sala'}
           </button>
           <div className={styles.divider}>
             <span className={styles.dividerText}>OU</span>
           </div>
           <div className={styles.joinRow}>
             <input
-              type="text" placeholder="Código (4 letras)" maxLength={4}
+              type="text" placeholder="Código da sala" maxLength={4}
               value={joinCode}
               onChange={e => setJoinCode(e.target.value.toUpperCase().slice(0, 4))}
               onKeyDown={e => e.key === 'Enter' && joinCode.trim().length === 4 && peer.joinRoom(joinCode.trim())}

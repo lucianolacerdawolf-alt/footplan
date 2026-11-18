@@ -8,6 +8,7 @@ import { calculateMarketValue } from '../engine/transferMarket';
 import { syncLeagueRoster } from '../services/rosterSync';
 import PlayerDetailModal from './PlayerDetailModal';
 import styles from './TransferMarketScreen.module.css';
+import { ScreenHeader } from './ui';
 import { crestSrc } from '../utils/crest';
 
 interface Props {
@@ -225,16 +226,11 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
 
   return (
     <div className={`${styles.screen} app-screen`}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>🛒 Mercado</h1>
-        {activeTab === 'buy' && buyLeagueId && leagueMeta(buyLeagueId) && (
-          <span className={styles.leagueBadge} aria-label={`Navegando em ${leagueMeta(buyLeagueId)!.name}`}>
-            <img src={crestSrc(leagueMeta(buyLeagueId)!.logo)} alt="" className={styles.leagueBadgeLogo} />
-            <span className={styles.leagueBadgeName}>{leagueMeta(buyLeagueId)!.name}</span>
-          </span>
-        )}
-        <span className={styles.budget}>{formatMoney(budget)}</span>
-      </div>
+      <ScreenHeader
+        kicker={activeTab === 'buy' && buyLeagueId && leagueMeta(buyLeagueId) ? leagueMeta(buyLeagueId)!.name : 'Modo Carreira'}
+        title="Mercado"
+        right={<span className={styles.budget} aria-label={`Orçamento ${formatMoney(budget)}`}>{formatMoney(budget)}</span>}
+      />
 
       <div className={styles.tabs}>
         <button className={`${styles.tabBtn} ${activeTab === 'buy' ? styles.active : ''}`} onClick={() => switchTab('buy')}>

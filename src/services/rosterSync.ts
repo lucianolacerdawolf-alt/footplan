@@ -28,6 +28,7 @@ import { allLeagues } from '../data/leagues';
 import { loadRosterSnapshot, saveRosterSnapshot, hasRosterCloud, type RosterSnapshot } from './rosterCloud';
 import { mapRemotePosition } from './positionMapping';
 import { calibrateLeagueTeams } from '../engine/ratingCalibration';
+import { normalizeShirtNumbers, normalizeTeamsShirtNumbers } from '../utils/shirtNumbers';
 
 const CACHE_PREFIX = 'fp:rosterCache:';
 /** Variação por atributo do jogador real desconhecido (ver generatePlayer): OVR ±3 em vez de ±9. */
@@ -155,26 +156,7 @@ function starterOvr(team: Team): number {
     : 70;
 }
 
-/**
- * Números de camisa válidos (1–99) e sem repetição. Jogador sem número na API ganhava
- * "90 + posição na lista" (#116, #117…); repetidos também acontecem entre fontes. Quem
- * já tem número válido e único mantém; o resto pega o primeiro livre.
- */
-export function normalizeShirtNumbers(squad: Player[]): Player[] {
-  const used = new Set<number>();
-  const keep = squad.map(p => {
-    const ok = Number.isInteger(p.number) && p.number >= 1 && p.number <= 99 && !used.has(p.number);
-    if (ok) used.add(p.number);
-    return ok;
-  });
-  let next = 1;
-  return squad.map((p, i) => {
-    if (keep[i]) return p;
-    while (used.has(next) && next < 99) next++;
-    used.add(next);
-    return { ...p, number: next };
-  });
-}
+export { normalizeShirtNumbers } from '../utils/shirtNumbers';
 
 function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[], targetOvrOverride?: number): { team: Team; stats: MergeStats } {
   const byName = new Map(staticTeam.squad.map(p => [normalizeName(p.name), p]));
@@ -290,6 +272,14 @@ const loadedLeagueTeams = new Map<string, Team[]>();
 
 export function getLoadedLeagueTeams(leagueId: string): Team[] | undefined {
   return loadedLeagueTeams.get(leagueId);
+}
+
+/** A liga com os elencos que o jogo usa de verdade: os atualizados já carregados ou, sem
+ *  eles, o estático calibrado — assim Partida Única/Campeonatos/Copas mostram os mesmos
+ *  times e notas da carreira. */
+export function withLoadedTeams(league: LeagueDefinition): LeagueDefinition {
+  const loaded = loadedLeagueTeams.get(league.id);
+  return { ...league, teams: loaded ?? normalizeTeamsShirtNumbers(calibrateLeagueTeams(league.teams, league.id)) };
 }
 
 /** Carrega as 12 ligas (cache → nuvem → estático, sem bater na API) em segundo plano. */
@@ -424,7 +414,7 @@ export async function syncLeagueRoster(
   snapshot?: RosterSnapshot | null,
 ): Promise<RosterSyncResult> {
   const r = await syncLeagueRosterRaw(league, opts, snapshot);
-  const teams = calibrateLeagueTeams(r.league.teams, league.id);
+  const teams = normalizeTeamsShirtNumbers(calibrateLeagueTeams(r.league.teams, league.id));
   if (teams !== r.league.teams) loadedLeagueTeams.set(league.id, teams);
   return { ...r, league: { ...r.league, teams } };
 }

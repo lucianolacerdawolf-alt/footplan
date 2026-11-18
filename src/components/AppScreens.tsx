@@ -20,6 +20,7 @@ import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import type { SeededRng } from '../engine/rng';
 import type { ResumableSave } from './LeagueSelectScreen';
 
+import { getAvgOvr } from '../utils/teamUtils';
 import HomeScreen, { type CareerResume } from './HomeScreen';
 import TeamSelectionScreen from './TeamSelectionScreen';
 import SetupScreen from './SetupScreen';
@@ -56,7 +57,7 @@ function getResumableSaves(): ResumableSave[] {
       const bs = JSON.parse(bsRaw) as { stage?: string; leagueId?: string };
       if (bs.stage && bs.stage !== 'champion' && bs.leagueId) {
         const league = getLeague(bs.leagueId);
-        if (league) results.push({ type: 'bracket', league, label: `Copa ${league.name}` });
+        if (league) results.push({ type: 'bracket', league, label: league.cupName });
       }
     }
   } catch { /* noop */ }
@@ -195,7 +196,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     <LeagueSelectScreen
       selectedLeague={p.selectedLeague}
       isCareer={p.isCareerMode}
-      resumable={p.isCareerMode ? [] : getResumableSaves()}
+      resumable={!p.isCareerMode && p.returnScreen === 'tournament-setup' && p.tournamentMode === 'league' ? getResumableSaves().filter(r => r.type === 'league') : []}
       onResume={(save) => {
         localStorage.setItem('fp:selectedLeague', JSON.stringify(save.league.id));
         p.setSelectedLeague(save.league);
@@ -598,6 +599,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         currentSeason={currentSeason}
         reputation={cs.manager.reputation}
         userSquad={cs.rosters[cs.leagueId]?.find(t => t.id === lg.userTeamId)?.squad}
+        startersOvr={(() => { const t = cs.rosters[cs.leagueId]?.find(x => x.id === lg.userTeamId); return t ? getAvgOvr(t) : undefined; })()}
         userTeamName={lg.teams.find(t => t.id === lg.userTeamId)?.name}
         userTeamLogo={lg.teams.find(t => t.id === lg.userTeamId)?.logoUrl}
         stadium={lg.teams.find(t => t.id === lg.userTeamId)?.stadium}

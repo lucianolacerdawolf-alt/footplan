@@ -50,8 +50,11 @@ const COUNTRY_BY_LEAGUE: Record<string, string> = {
   ligaPortugal: 'portugal', ligaPortugal2: 'portugal',
 };
 
+// As 5 grandes começam em Nacional (×1.8), não no topo: o Global (×2.5) vira meta de
+// reputação (75+) em vez de vir de graça na 1ª temporada — antes o Meu Clube já abria
+// com "Nível máximo" e não havia pra onde crescer.
 const LEAGUE_STARTING_TIER: Record<string, SponsorTier> = {
-  pl: 'global', laliga: 'global', bundesliga: 'global', serieA: 'global', ligue1: 'global',
+  pl: 'national', laliga: 'national', bundesliga: 'national', serieA: 'national', ligue1: 'national',
   ligaPortugal: 'regional', championship: 'regional',
   laliga2: 'local', bundesliga2: 'local', serieB: 'local', ligue2: 'local', ligaPortugal2: 'local',
 };

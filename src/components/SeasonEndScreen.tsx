@@ -4,6 +4,7 @@ import { memo } from 'react';
 import styles from './SeasonEndScreen.module.css';
 import { crestSrc } from '../utils/crest';
 import { Button } from './ui';
+import { teamTextColor } from '../utils/teamTextColor';
 
 interface Props {
   entry: CareerSeasonHistoryEntry;
@@ -34,7 +35,7 @@ function SeasonEndScreen({ entry, league, newReputation, onContinue }: Props) {
         {champion ? (
           <>
             <img src={crestSrc(champion.logoUrl)} alt={champion.name} className={styles.championCrest} />
-            <div className={styles.championName} style={{ color: champion.color }}>{champion.name}</div>
+            <div className={styles.championName} style={{ color: teamTextColor(champion) }}>{champion.name}</div>
           </>
         ) : (
           <div className={styles.championName}>Campeão desconhecido</div>

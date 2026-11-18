@@ -9,6 +9,7 @@ import { isPlayerUnavailable } from '../engine/squadUtils';
 import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './OpponentAnalysisModal.module.css';
 import { crestSrc } from '../utils/crest';
+import { teamTextColor } from '../utils/teamTextColor';
 
 interface Props {
   opponent: Team;
@@ -65,7 +66,7 @@ export default function OpponentAnalysisModal({ opponent, userTeam, h2h, onClose
         <div className={styles.header}>
           <img src={crestSrc(opponent.logoUrl)} alt="" className={styles.crest} />
           <div id="opp-analysis-title">
-            <div className={styles.teamName} style={{ color: opponent.color }}>{opponent.name}</div>
+            <div className={styles.teamName} style={{ color: teamTextColor(opponent) }}>{opponent.name}</div>
             <div className={styles.teamOvr}>
               OVR médio <span className={tier.cls}>{ovr}</span> · {tier.label}
             </div>

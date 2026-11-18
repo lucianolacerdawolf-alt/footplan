@@ -9,7 +9,8 @@
 export type IconName =
   | 'play' | 'trophy' | 'briefcase' | 'refresh' | 'cloud' | 'cloud-off'
   | 'star' | 'calendar' | 'stadium' | 'shirt' | 'globe' | 'bolt'
-  | 'medal' | 'warning' | 'bell' | 'chart' | 'manager' | 'chevron-right' | 'arrow-left';
+  | 'medal' | 'warning' | 'bell' | 'chart' | 'manager' | 'chevron-right' | 'arrow-left'
+  | 'users' | 'ball' | 'home';
 
 interface Props {
   name: IconName;
@@ -41,6 +42,9 @@ const PATHS: Record<IconName, React.ReactNode> = {
   manager: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /><path d="M9 21v-3l3-2 3 2v3" /></>,
   'chevron-right': <path d="M9 6l6 6-6 6" />,
   'arrow-left': <path d="M19 12H5M12 19l-7-7 7-7" />,
+  home: <><path d="M3 11l9-7 9 7" /><path d="M5 10v10h5v-6h4v6h5V10" /></>,
+  users: <><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0" /><circle cx="17" cy="9" r="2.8" /><path d="M16 14.2a5.5 5.5 0 0 1 5.5 5.8" /></>,
+  ball: <><circle cx="12" cy="12" r="9" /><path d="M12 7l4 3-1.5 4.5h-5L8 10l4-3z" /><path d="M12 3v4M16 10l4.5-1.5M14.5 14.5l2.5 4M9.5 14.5L7 18.5M8 10L3.5 8.5" /></>,
 };
 
 export default function Icon({ name, size = 18, className, title }: Props) {

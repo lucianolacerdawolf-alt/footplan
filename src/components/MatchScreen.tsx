@@ -12,6 +12,8 @@ import { playGoal, playWhistle, playFullTime, playCard } from '../utils/gameAudi
 import LiveScoreTicker from './LiveScoreTicker';
 import type { LeagueFixture } from '../engine/tournament';
 import { teamStadium } from '../utils/stadiums';
+import { getAvgOvr } from '../utils/teamUtils';
+import { crestSrc } from '../utils/crest';
 
 // Janelas de parada em que substituições podem ser feitas — estruturalmente só existem 3
 // (pausa no 1º tempo, intervalo, pausa no 2º tempo), então o limite de "até 3 pausas" já
@@ -36,6 +38,7 @@ import MatchPitch from './MatchScreen/MatchPitch';
 import { trackDailyMatch } from '../engine/dailyGoals';
 import PenaltyShootoutOverlay from './MatchScreen/PenaltyShootoutOverlay';
 import SquadSwapPanel from './MatchScreen/SquadSwapPanel';
+import { teamTextColor } from '../utils/teamTextColor';
 
 interface Props {
   homeTeam: Team;
@@ -541,7 +544,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           {replayEvents.filter(e => e.type === 'goal').map((e, idx) => {
             const isHome = e.teamId === initialHome.id;
             return (
-              <span key={idx} className={`goal-entry ${isHome ? 'goal-home' : 'goal-away'}`} style={{ color: isHome ? home.color : away.color }}>
+              <span key={idx} className={`goal-entry ${isHome ? 'goal-home' : 'goal-away'}`} style={{ color: teamTextColor(isHome ? home : away) }}>
                 {e.minute}&apos; · {e.scorer ?? '?'} ({isHome ? home.abbreviation : away.abbreviation})
               </span>
             );
@@ -555,14 +558,18 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
           {/* Formações antes do início */}
           {!started && (
             <>
-            <div className="formation-text-preview">
-              <span className="formation-text-team" style={{ color: home.color }}>{home.abbreviation}</span>
-              <span className="formation-text-value">{home.strategy.formation}</span>
-              <span className="formation-text-vs">vs</span>
-              <span className="formation-text-value">{away.strategy.formation}</span>
-              <span className="formation-text-team" style={{ color: away.color }}>{away.abbreviation}</span>
+            <div className="prematch-card">
+              {[home, away].map((t, i) => (
+                <div key={t.id} className="prematch-team">
+                  <img src={crestSrc(t.logoUrl)} alt="" className="prematch-crest" />
+                  <span className="prematch-name" style={{ color: teamTextColor(t) }}>{t.name}</span>
+                  <span className="prematch-meta">{t.strategy.formation} · {getAvgOvr(t)} OVR</span>
+                  <span className="prematch-side">{i === 0 ? 'Mandante' : 'Visitante'}</span>
+                </div>
+              ))}
+              <span className="prematch-vs">vs</span>
             </div>
-            {(() => { const s = teamStadium(home); return <div className="formation-text-preview" style={{ fontSize: 12, opacity: 0.5, fontFamily: 'var(--mono)', gap: 4 }}>🏟️ {s.name}{s.capacity ? ` · ${s.capacity.toLocaleString('pt-BR')} lugares` : ''}</div>; })()}
+            {(() => { const s = teamStadium(home); return <div className="prematch-stadium">🏟️ {s.name}{s.capacity ? ` · ${s.capacity.toLocaleString('pt-BR')} lugares` : ''}</div>; })()}
             </>
           )}
 
@@ -625,7 +632,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
                 {online ? (
                   <>
                     <div style={{ fontSize: 12, opacity: 0.6, textAlign: 'center', marginBottom: 4 }}>
-                      Substituições · <span style={{ color: home.color }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: away.color }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
+                      Substituições · <span style={{ color: teamTextColor(home) }}>{home.abbreviation} {subsHome}/{MAX_SUBS}</span> · <span style={{ color: teamTextColor(away) }}>{away.abbreviation} {subsAway}/{MAX_SUBS}</span>
                       <span className="sub-window-breakdown"> ({formatSubWindows(subWindowsHome)} / {formatSubWindows(subWindowsAway)})</span>
                     </div>
                     <div className="ht-squad-grid">

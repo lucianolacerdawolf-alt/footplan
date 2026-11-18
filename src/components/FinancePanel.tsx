@@ -135,7 +135,7 @@ export default function FinancePanel({
             <div className={styles.row}>
               <span className={styles.rowLabel}>👥 Composição</span>
               <span className={styles.rowValue}>
-                {squadSize} jog.{avgOvr != null ? ` · OVR ${avgOvr}` : ''}{avgAge != null ? ` · ${avgAge} anos` : ''}
+                {squadSize} jog.{avgOvr != null ? ` · OVR elenco ${avgOvr}` : ''}{avgAge != null ? ` · ${avgAge} anos` : ''}
               </span>
             </div>
           )}

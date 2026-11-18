@@ -419,7 +419,7 @@ describe('possessionPct', () => {
       const away = makeTeam('a', 'Away');
       const { state } = simularPrimeiroTempo(home, away, seededRng(seed));
       const r = simularSegundoTempo(home, away, state, seededRng(seed + 1000));
-      expect(Math.abs(possessionPct(state) - r.homePossession)).toBeLessThanOrEqual(3);
+      expect(possessionPct(state)).toBe(r.homePossession);
       expect(r.homePossession).toBeGreaterThan(20);
       expect(r.homePossession).toBeLessThan(80);
     }

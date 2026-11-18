@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { LeagueDefinition } from '../data/leagues/types';
 import type { Screen, MatchContext, TournamentMode } from '../types/navigation';
 import { getLeague } from '../data/leagues';
+import { withLoadedTeams } from '../services/rosterSync';
 
 export function useAppShell() {
   const [screen, setScreen] = useState<Screen>('home');
@@ -24,21 +25,26 @@ export function useAppShell() {
   }, []);
 
   // Carrega a liga salva na inicialização para destacar no LeagueSelectScreen
-  const [selectedLeague, setSelectedLeague] = useState<LeagueDefinition | null>(() => {
+  const [selectedLeague, setSelectedLeagueRaw] = useState<LeagueDefinition | null>(() => {
     try {
       const stored = localStorage.getItem('fp:selectedLeague');
       if (!stored) return null;
       const id = JSON.parse(stored) as string;
-      return getLeague(id) ?? null;
+      const l = getLeague(id);
+      return l ? withLoadedTeams(l) : null;
     } catch {
       return null;
     }
   });
+  // Toda liga escolhida passa pelos elencos atualizados (mesmos times/notas da carreira).
+  const setSelectedLeague = useCallback((l: LeagueDefinition | null) => {
+    setSelectedLeagueRaw(l ? withLoadedTeams(l) : null);
+  }, []);
 
   const [returnScreen, setReturnScreen] = useState<Screen | null>(null);
 
   const goHome = useCallback(() => {
-    setSelectedLeague(null);
+    setSelectedLeagueRaw(null);
     setReturnScreen(null);
     try { localStorage.removeItem('fp:selectedLeague'); } catch {}
     try { localStorage.removeItem('fp:homeId'); } catch {}

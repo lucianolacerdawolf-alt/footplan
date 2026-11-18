@@ -74,4 +74,13 @@
 @media (max-width: 640px) {
   .screen { padding: 12px 10px 24px; }
   .roundLabel { font-size: 18px; }
+  /* No celular: só #, clube, Pts, J e SG — cabe sem rolagem lateral. */
+  .colExtra { display: none; }
+  .table td { padding: 9px 6px; }
+  .table th { padding-left: 6px; padding-right: 6px; }
+  .tdTeam { min-width: 0; max-width: 46vw; }
+  .teamName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .table { width: 100%; font-size: 14px; }
+  .tableCrest { width: 24px; height: 24px; }
+  .tdPts { font-size: 16px; }
 }
