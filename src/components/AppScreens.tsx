@@ -15,6 +15,7 @@ import { getSponsorLabel, getNextTierUp, getSponsorMultiplier, getSponsorMinRepu
 import { getTicketRevenue } from '../engine/transferMarket';
 import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
+import { userLeagueSummary } from '../engine/careerSummary';
 import { computeUserSeasonRecord } from '../engine/seasonClosure';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import type { SeededRng } from '../engine/rng';
@@ -775,6 +776,7 @@ export function careerResumeInfo(cs: UseCareerManagerReturn['careerState']): Car
     crest: team.logoUrl,
     detail: [leagueName, `Temporada ${cs.currentSeasonYear}`, step].filter(Boolean).join(' · '),
     nextMatch: lg.phase === 'done' ? null : nextUserMatch(lg),
+    ...userLeagueSummary(lg),
   };
 }
 
