@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import TrophyRoomScreen from '../TrophyRoomScreen';
 import type { CareerSeasonHistoryEntry, TransferRecord } from '@/engine/career';
 import type { Player } from '@/engine/types';
