@@ -89,14 +89,14 @@ describe('runSaveMigrations', () => {
 });
 
 describe('migração v2 — números de camisa', () => {
-  it('troca #116/#117 e repetidos por números livres 1–99 nos times da carreira', () => {
+  it('#116 e repetidos viram desconhecidos (0) nos times da carreira', () => {
     const team = { id: 't', squad: [{ id: 'a', number: 9 }, { id: 'b', number: 116 }, { id: 'c', number: 9 }, { id: 'd', number: 1 }] };
     const ls = makeMemoryStorage({ 'fp:career': JSON.stringify({ rosters: { pl: [team] }, season: { league: { teams: [team] }, cup: { teams: [] } } }) });
     migrateShirtNumbersV2(ls);
     const cs = JSON.parse(ls.getItem('fp:career')!);
     const nums = cs.rosters.pl[0].squad.map((p: { number: number }) => p.number);
-    expect(nums).toEqual([9, 2, 3, 1]);
-    expect(cs.season.league.teams[0].squad.map((p: { number: number }) => p.number)).toEqual([9, 2, 3, 1]);
+    expect(nums).toEqual([9, 0, 0, 1]);
+    expect(cs.season.league.teams[0].squad.map((p: { number: number }) => p.number)).toEqual([9, 0, 0, 1]);
   });
   it('sem carreira salva não faz nada', () => {
     const ls = makeMemoryStorage();

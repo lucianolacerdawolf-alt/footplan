@@ -42,7 +42,7 @@ describe('LeagueScreen — dia de jogo (matchday)', () => {
         onNextRound={vi.fn()} onEditTactics={vi.fn()} onViewTable={onViewTable} onBack={vi.fn()}
       />
     );
-    fireEvent.click(screen.getByText(/Ver Classificação/));
+    fireEvent.click(screen.getByText('📊 Classificação'));
     expect(onViewTable).toHaveBeenCalledTimes(1);
   });
 
@@ -54,7 +54,7 @@ describe('LeagueScreen — dia de jogo (matchday)', () => {
         onNextRound={vi.fn()} onEditTactics={vi.fn()} onViewTable={vi.fn()} onBack={vi.fn()}
       />
     );
-    expect(screen.queryByText(/Ver Copa/)).not.toBeInTheDocument();
+    expect(screen.queryByText('🏆 Copa')).not.toBeInTheDocument();
   });
 
   it('aciona onViewCup ao clicar em "Ver Copa" quando passado (Modo Carreira)', () => {
@@ -67,7 +67,7 @@ describe('LeagueScreen — dia de jogo (matchday)', () => {
         onViewCup={onViewCup}
       />
     );
-    fireEvent.click(screen.getByText(/Ver Copa/));
+    fireEvent.click(screen.getByText('🏆 Copa'));
     expect(onViewCup).toHaveBeenCalledTimes(1);
   });
 

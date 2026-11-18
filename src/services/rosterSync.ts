@@ -178,7 +178,7 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[], targetOv
   };
 
   const grouped: Record<Position, Player[]> = { GK: [], DEF: [], MID: [], FWD: [] };
-  remoteSquad.forEach((rp, i) => {
+  remoteSquad.forEach(rp => {
     const position = mapRemotePosition(rp.position);
     const age = ageFromDob(rp.dateOfBirth);
     const existing = byName.get(normalizeName(rp.name));
@@ -190,7 +190,7 @@ function mergeTeamRoster(staticTeam: Team, remoteSquad: RemotePlayer[], targetOv
       grouped[position].push(updated);
     } else {
       added++;
-      const generated = generatePlayer(`${staticTeam.id}-live-${rp.id}`, rp.name, rp.shirtNumber ?? (90 + i), position, unknownTarget(position, age), age, UNKNOWN_PLAYER_SPREAD);
+      const generated = generatePlayer(`${staticTeam.id}-live-${rp.id}`, rp.name, rp.shirtNumber ?? 0, position, unknownTarget(position, age), age, UNKNOWN_PLAYER_SPREAD);
       if (rp.nationality) generated.nationality = rp.nationality;
       grouped[position].push(generated);
     }

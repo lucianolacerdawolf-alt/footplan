@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, Standing, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -109,40 +109,51 @@ interface Props {
 function LeagueTableScreen({ state, league, onBack, hideTopNav }: Props) {
   const { teams, userTeamId, fixtures } = state;
   const standings: Standing[] = computeStandings(teams, fixtures);
-
-  return (
-    <div className={`${styles.screen} app-screen`}>
-      <ScreenHeader onBack={hideTopNav ? undefined : onBack} kicker={league.name} title="Classificação" />
-
-      <div className={styles.standingsScroll}>
-        <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
-      </div>
-
-      <TopScorersTable scorers={useMemo(() => {
-        const map = new Map<string, { name: string; goals: number; team: string }>();
-        for (const round of fixtures) {
-          for (const f of round) {
-            if (!f.scorers) continue;
-            for (const s of f.scorers) {
-              const key = s.playerName;
-              const existing = map.get(key);
-              if (existing) { existing.goals += s.goals; }
-              else {
-                const team = teams.find(t => t.id === s.teamId);
-                map.set(key, { name: s.playerName, goals: s.goals, team: team?.abbreviation ?? '???' });
-              }
-            }
+  const [view, setView] = useState<'table' | 'scorers'>('table');
+  const scorers = useMemo(() => {
+    const map = new Map<string, { name: string; goals: number; team: string }>();
+    for (const round of fixtures) {
+      for (const f of round) {
+        if (!f.scorers) continue;
+        for (const s of f.scorers) {
+          const existing = map.get(s.playerName);
+          if (existing) { existing.goals += s.goals; }
+          else {
+            const team = teams.find(t => t.id === s.teamId);
+            map.set(s.playerName, { name: s.playerName, goals: s.goals, team: team?.abbreviation ?? '???' });
           }
         }
-        return [...map.values()].sort((a, b) => b.goals - a.goals).slice(0, 15);
-      }, [fixtures, teams])} />
+      }
+    }
+    return [...map.values()].sort((a, b) => b.goals - a.goals).slice(0, 15);
+  }, [fixtures, teams]);
 
-      <div className={styles.zoneLegend}>
-        <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions League
-        <span className={styles.zoneDot} style={{ background: '#e85d04' }} />Europa League
-        <span className={styles.zoneDot} style={{ background: '#38a169' }} />Conference League
-        <span className={styles.zoneDot} style={{ background: '#e53e3e' }} />Rebaixamento
+  return (
+    <div className={`${styles.screen} app-screen fit-screen`}>
+      <ScreenHeader onBack={hideTopNav ? undefined : onBack} kicker={league.name} title="Classificação" />
+
+      <div className={styles.viewTabs} role="tablist">
+        <button role="tab" aria-selected={view === 'table'} className={`${styles.viewTab} ${view === 'table' ? styles.viewTabOn : ''}`} onClick={() => setView('table')}>Tabela</button>
+        <button role="tab" aria-selected={view === 'scorers'} className={`${styles.viewTab} ${view === 'scorers' ? styles.viewTabOn : ''}`} onClick={() => setView('scorers')}>Artilheiros</button>
       </div>
+
+      {view === 'table' ? (
+        <>
+          <div className={`${styles.standingsScroll} fit-scroll`}>
+            <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
+          </div>
+          <div className={styles.zoneLegend}>
+            <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions
+            <span className={styles.zoneDot} style={{ background: '#e85d04' }} />Europa
+            <span className={styles.zoneDot} style={{ background: '#38a169' }} />Conference
+            <span className={styles.zoneDot} style={{ background: '#e53e3e' }} />Rebaixamento
+          </div>
+        </>
+      ) : (
+        <div className="fit-scroll">
+          <TopScorersTable scorers={scorers} />
+        </div>
+      )}
     </div>
   );
 }

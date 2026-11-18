@@ -74,12 +74,9 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
     if (playedCount === 0) return null;
     return (
       <div className={styles.statsStrip}>
-        <span className={styles.statItem}>⚽ Gols: <b>{totalGoals}</b></span>
-        <span className={styles.statItem}>📊 Média: <b>{(totalGoals / playedCount).toFixed(2)}</b></span>
-        <span className={styles.statItem}>🏟️ Casa: <b>{(homeWins / playedCount * 100).toFixed(0)}%</b></span>
-        <span className={styles.statItem}>🤝 Empate: <b>{(draws / playedCount * 100).toFixed(0)}%</b></span>
-        <span className={styles.statItem}>🔢 Seu time: <b>{userGF} GP · {userGA} GC {userGF - userGA >= 0 ? '+' : ''}{userGF - userGA}</b></span>
-        <span className={styles.statItem}>🧤 Clean sheets: <b>{userClean}</b></span>
+        <span className={styles.statItem}>Seu time <b>{userGF}–{userGA}</b> ({userGF - userGA >= 0 ? '+' : ''}{userGF - userGA})</span>
+        <span className={styles.statItem}>Sem sofrer gol <b>{userClean}</b></span>
+        <span className={styles.statItem} title={`Mandante vence ${(homeWins / playedCount * 100).toFixed(0)}% · empates ${(draws / playedCount * 100).toFixed(0)}%`}>Liga <b>{(totalGoals / playedCount).toFixed(1)}</b> gols/jogo</span>
       </div>
     );
   }, [fixtures, userTeamId]);
@@ -119,7 +116,7 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
   };
 
   return (
-    <div className={`${styles.screen} app-screen`}>
+    <div className={`${styles.screen} app-screen fit-screen`}>
       <ScreenHeader
         onBack={hideTopNav ? undefined : onBack}
         kicker={league.name}
@@ -142,9 +139,9 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
       {seasonStats}
 
       <div className={styles.viewTableRow}>
-        <button className={styles.viewTableLink} onClick={onViewTable}>📊 Ver Classificação →</button>
+        <button className={styles.viewTableLink} onClick={onViewTable}>📊 Classificação</button>
         {onViewCup && (
-          <button className={styles.viewTableLink} onClick={onViewCup}>🏆 Ver Copa →</button>
+          <button className={styles.viewTableLink} onClick={onViewCup}>🏆 Copa</button>
         )}
         {onOpenJobMarket && (jobMarketOffers ?? 0) > 0 && (
           <button className={styles.viewTableLink} onClick={onOpenJobMarket}>
@@ -191,8 +188,8 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
           </div>
         </div>
 
-        {/* Outros jogos */}
-        <div className={styles.section}>
+        {/* Outros jogos: só esta lista rola por dentro. */}
+        <div className={`${styles.section} ${styles.othersSection}`}>
           <div className={styles.sectionLabelRow}>
             <span className={styles.sectionLabel}>Outros Jogos</span>
             {!othersComplete && (
@@ -201,6 +198,7 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
               </button>
             )}
           </div>
+          <div className={`${styles.othersList} fit-scroll`}>
           {otherFixtures.map(f => (
             <div key={f.id} className={styles.fixture}>
               <div className={styles.fixtureTeam}>
@@ -218,6 +216,7 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
               </div>
             </div>
           ))}
+          </div>
         </div>
 
         {roundComplete && (

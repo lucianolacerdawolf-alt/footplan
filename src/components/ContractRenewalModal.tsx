@@ -7,6 +7,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { formatMoney } from '../utils/formatMoney';
 import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './ContractRenewalModal.module.css';
+import { shirtTag } from '../utils/shirtNumbers';
 
 interface Props {
   player: Player;
@@ -115,7 +116,7 @@ export default function ContractRenewalModal({ player, budget, currentSeasonYear
           <div className={styles.headerInfo}>
             <div className={styles.name} id="renewal-modal-name">{player.name}</div>
             <div className={styles.subtitle}>
-              <span>#{player.number}</span>
+              <span>{shirtTag(player)}</span>
               <span>{player.position}</span>
               {player.age !== undefined && <span>{player.age} anos</span>}
               <span>📋 {player.contractSeasonsLeft ?? 2} temp. restante{(player.contractSeasonsLeft ?? 2) > 1 ? 's' : ''}</span>

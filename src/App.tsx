@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { Team, MatchResult } from './engine/types';
 import type { GameMode } from './components/TeamSelectionScreen';
 import type { LeagueState, BracketState } from './engine/tournament';
@@ -171,7 +171,12 @@ function App() {
 
   // ── Elencos atualizados das 12 ligas em segundo plano (cache → nuvem → estático) ──
   // Quem monta tudo de uma vez (criar carreira) lê de getLoadedLeagueTeams.
-  useEffect(() => { void preloadAllRosters(); void syncReminders(); }, []);
+  const refreshShirtNumbersRef = useRef(career.refreshShirtNumbers);
+  refreshShirtNumbersRef.current = career.refreshShirtNumbers;
+  useEffect(() => {
+    void preloadAllRosters().then(() => refreshShirtNumbersRef.current());
+    void syncReminders();
+  }, []);
 
   // ── Restaura partida ao vivo salva (F5) ──────────────────────────────────────
   // Funciona pra todos os modos (regular, league, bracket, career) desde que o

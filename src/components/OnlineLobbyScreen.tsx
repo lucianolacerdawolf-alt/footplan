@@ -236,7 +236,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props)
   if (!bothPicked) {
     const opponentPick = peer.isHost ? guestTeamId : hostTeamId;
     return (
-      <div className="team-select-screen">
+      <div className="team-select-screen fit-screen">
         {topNav(true)}
         {roomCodeBadge}
         {!peer.isHost && <div className={styles.statusBadge}>● Conectado</div>}
@@ -273,7 +273,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props)
           })}
         </div>
 
-        <div className="team-grid">
+        <div className="team-grid fit-scroll">
           {filteredTeams.map(team => {
             const isHostPick = team.id === hostTeamId;
             const isGuestPick = team.id === guestTeamId;

@@ -174,7 +174,7 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
   };
 
   return (
-    <div className={`${styles.screen} app-screen`}>
+    <div className={`${styles.screen} app-screen fit-screen`}>
       <ScreenHeader
         onBack={hideTopNav ? undefined : onBack}
         kicker={<span style={cupColor ? { color: cupColor } : undefined}>{state.cupName}</span>}
@@ -185,6 +185,7 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
       {lockedMessage && (
         <div className={styles.lockedNote} role="status">🗓️ {lockedMessage}</div>
       )}
+      <div className={`${styles.bracketBody} fit-scroll`}>
       {stage === 'roundOf16'    && renderStage('Oitavas de Final', roundOf16,     true)}
       {state.preliminary && state.preliminary.length > 0 && stage === 'roundOf16' && (
         <details className={styles.prelim}>
@@ -211,6 +212,7 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 }

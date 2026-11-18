@@ -122,3 +122,13 @@
   line-height: 1.2;
   letter-spacing: 0.2px;
 }
+
+/* ── Compacto: todas as opções numa tela de celular, sem rolar ── */
+.screen { padding: 14px 14px 16px; min-height: auto; }
+.grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; max-width: 520px; }
+.cardStripe { height: 4px; }
+.cardBody { padding: 10px 4px 10px; gap: 2px; }
+.badge { width: 44px; height: 44px; margin-bottom: 4px; }
+.leagueName, .cupName { font-size: 12.5px; line-height: 1.15; }
+.stats { display: none; }
+.card:hover { transform: none; }

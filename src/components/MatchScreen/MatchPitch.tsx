@@ -2,6 +2,7 @@ import { memo, useMemo } from 'react';
 import type { MatchEvent, Team } from '../../engine/types';
 import { getStarterCount } from '../../engine/squadUtils';
 import { pitchRows } from '../../utils/pitchRows';
+import { shirtBadge } from '../../utils/shirtNumbers';
 import styles from './MatchPitch.module.css';
 
 // =============================================================================
@@ -45,9 +46,9 @@ function teamDots(formation: string, side: 'home' | 'away', ballX: number): Arra
   return dots;
 }
 
-function shirtNumbers(team: Team): number[] {
+function shirtNumbers(team: Team): string[] {
   const starters = team.squad.slice(0, getStarterCount(team.strategy.formation));
-  return pitchRows(team.strategy.formation, starters).flat().map(p => p.number);
+  return pitchRows(team.strategy.formation, starters).flat().map(p => shirtBadge(p));
 }
 
 /** Texto preto ou branco conforme a cor da camisa. */

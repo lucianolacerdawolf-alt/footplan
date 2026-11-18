@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, fireEvent, within } from '@testing-library/react';
 import TrophyRoomScreen from '../TrophyRoomScreen';
 import type { CareerSeasonHistoryEntry, TransferRecord } from '@/engine/career';
 import type { Player } from '@/engine/types';
@@ -201,6 +201,7 @@ describe('TrophyRoomScreen', () => {
         finances={{ budget: 20_000_000, wageBill: 0, weeklyIncome: 0 }}
       />
     );
+    fireEvent.click(screen.getByRole('tab', { name: /Contratos/ }));
 
     expect(screen.getByText('📋 Gestão de Contratos')).toBeInTheDocument();
     // Só o jogador com contrato ≤1 aparece na lista de vencimento.
@@ -223,6 +224,7 @@ describe('TrophyRoomScreen', () => {
         attributes: { speed: 60, stamina: 60, passing: 60, finishing: 60, tackling: 60, dribbling: 60, vision: 60, positioning: 60 } },
     ] as SquadPlayer[];
     render(<TrophyRoomScreen history={[]} transfers={[]} userSquad={userSquad} onRenewContract={onRenewContract} seasonYear={2} />);
+    fireEvent.click(screen.getByRole('tab', { name: /Contratos/ }));
 
     const renewBtn = screen.getByText('Renovar');
     expect(renewBtn).toBeDisabled();
@@ -237,6 +239,7 @@ describe('TrophyRoomScreen', () => {
         attributes: { speed: 60, stamina: 60, passing: 60, finishing: 60, tackling: 60, dribbling: 60, vision: 60, positioning: 60 } },
     ] as SquadPlayer[];
     render(<TrophyRoomScreen history={[]} transfers={[]} userSquad={userSquad} />);
+    fireEvent.click(screen.getByRole('tab', { name: /Contratos/ }));
     expect(screen.getByText(/Nenhum contrato vencendo/)).toBeInTheDocument();
   });
 
@@ -278,6 +281,7 @@ describe('TrophyRoomScreen', () => {
         onRenegotiateSponsor={onRenegotiateSponsor}
       />
     );
+    fireEvent.click(screen.getByRole('tab', { name: /Finanças/ }));
     fireEvent.click(screen.getByText(/Negociar patrocínio/));
     expect(onRenegotiateSponsor).toHaveBeenCalled();
   });

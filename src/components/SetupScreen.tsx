@@ -97,6 +97,7 @@ import { fireClick } from '../utils/fireClick';
 import { getContractSeasonsLeft, renewPlayerContract, canRenewContract, type ContractRenewalOptions } from '../engine/career';
 import ContractRenewalModal from './ContractRenewalModal';
 import { crestSrc } from '../utils/crest';
+import { shirtTag } from '../utils/shirtNumbers';
 
 export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview, onRenewContract, currentSeasonYear, budget }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
@@ -262,7 +263,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                 }}
                 onKeyDown={e => fireClick(e)}
               >
-                <span className="sq-num">#{p.number}</span>
+                <span className="sq-num">{shirtTag(p)}</span>
                 <span className="sq-name">{p.name}</span>
                 {p.injuredRounds ? <span className="sq-injury">🤕 {p.injuredRounds}j</span> : null}
                 <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -295,7 +296,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
                   }}
                   onKeyDown={e => fireClick(e)}
                 >
-                  <span className="sq-num">#{p.number}</span>
+                  <span className="sq-num">{shirtTag(p)}</span>
                   <span className="sq-name">{p.name}</span>
                   {p.injuredRounds ? <span className="sq-injury">🤕 {p.injuredRounds}j</span> : null}
                   {p.isSuspended ? <span className="sq-injury">🚫 {p.suspendedRounds ?? 1}j</span> : null}

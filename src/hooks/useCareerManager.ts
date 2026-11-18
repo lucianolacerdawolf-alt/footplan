@@ -11,6 +11,7 @@ import { allLeagues } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { getRosterSyncInfo, getLoadedLeagueTeams } from '../services/rosterSync';
+import { copyShirtNumbers } from '../utils/shirtNumbers';
 import { generateSponsor, getStartingTier, getSponsorMultiplier } from '../engine/sponsors';
 import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, pairedDivisionId, getYouthPool, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
@@ -213,8 +214,32 @@ export function useCareerManager({
     getRosterSyncInfo().then(info => setRosterLastUpdatedAt(info.updatedAt)).catch(() => {});
   }, []);
 
+  // Carreiras salvas antes de 2026-11-18 ficaram com números de camisa inventados
+  // (#90+ do sync antigo, depois "1º número livre"). Quando os elencos atualizados
+  // carregam, copia o número de cada jogador (mesmo id) — real ou "sem número".
+  const refreshShirtNumbers = useCallback(() => {
+    setCareerState(prev => {
+      if (!prev) return prev;
+      const fix = (teams: Team[] | undefined, leagueId: string) => {
+        const src = getLoadedLeagueTeams(leagueId);
+        return teams && src ? copyShirtNumbers(teams, src) : teams;
+      };
+      let changed = false;
+      const rosters = { ...prev.rosters };
+      for (const id of Object.keys(rosters)) {
+        const next = fix(rosters[id], id);
+        if (next && next !== rosters[id]) { rosters[id] = next; changed = true; }
+      }
+      const leagueTeams = fix(prev.season.league.teams, prev.leagueId);
+      if (leagueTeams !== prev.season.league.teams) changed = true;
+      if (!changed) return prev;
+      return { ...prev, rosters, season: { ...prev.season, league: { ...prev.season.league, teams: leagueTeams ?? prev.season.league.teams } } };
+    });
+  }, [setCareerState]);
+
   return {
     careerState, setCareerState,
+    refreshShirtNumbers,
     handleStartCareer,
     handlePromoteYouthPlayer,
     rosterLastUpdatedAt,

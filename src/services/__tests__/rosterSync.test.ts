@@ -673,18 +673,26 @@ describe('cache local × snapshot publicado', () => {
 });
 
 describe('normalizeShirtNumbers', () => {
-  it('mantém números válidos e únicos; troca fora de 1–99 e repetidos pelo primeiro livre', async () => {
+  it('mantém números válidos e únicos; fora de 1–99 e repetidos viram desconhecidos (0)', async () => {
     const { normalizeShirtNumbers } = await import('../rosterSync');
     const mk = (id: string, number: number) => makePlayer(id, id, 'MID', number);
     const out = normalizeShirtNumbers([mk('a', 1), mk('b', 116), mk('c', 7), mk('d', 7), mk('e', 0)]);
-    expect(out.map(p => p.number)).toEqual([1, 2, 7, 3, 4]);
-    expect(new Set(out.map(p => p.number)).size).toBe(out.length);
+    expect(out.map(p => p.number)).toEqual([1, 0, 7, 0, 0]);
   });
 
-  it('3+ camisas na faixa 90–99 (padrão "90 + posição" do sync antigo) são renumeradas; uma só fica', async () => {
+  it('3+ camisas na faixa 90–99 (padrão "90 + posição" do sync antigo) viram desconhecidas (0); uma só fica', async () => {
     const { normalizeShirtNumbers } = await import('../rosterSync');
     const mk = (id: string, number: number) => makePlayer(id, id, 'MID', number);
-    expect(normalizeShirtNumbers([mk('a', 1), mk('b', 90), mk('c', 94), mk('d', 97)]).map(p => p.number)).toEqual([1, 2, 3, 4]);
+    expect(normalizeShirtNumbers([mk('a', 1), mk('b', 90), mk('c', 94), mk('d', 97)]).map(p => p.number)).toEqual([1, 0, 0, 0]);
     expect(normalizeShirtNumbers([mk('a', 1), mk('b', 99), mk('c', 7)]).map(p => p.number)).toEqual([1, 99, 7]);
+  });
+
+  it('copyShirtNumbers devolve o número do elenco atualizado pro mesmo jogador', async () => {
+    const { copyShirtNumbers } = await import('../../utils/shirtNumbers');
+    const mk = (id: string, number: number) => makePlayer(id, id, 'MID', number);
+    const saved = [{ id: 't', squad: [mk('saka', 7), mk('gyok', 5)] }] as never;
+    const fresh = [{ id: 't', squad: [mk('saka', 7), mk('gyok', 0)] }] as never;
+    const out = copyShirtNumbers(saved, fresh) as unknown as { squad: { number: number }[] }[];
+    expect(out[0].squad.map(p => p.number)).toEqual([7, 0]);
   });
 });

@@ -105,6 +105,7 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
   const summary = ordered.length > 0 ? computeCareerSummary(history, reputation ?? 0) : null;
   const highlights = ordered.length > 0 ? careerHighlights(history, transfers ?? []) : null;
   // Fase 1 — contrato vencendo (≤1 temporada) pra renovação rápida na gestão do clube.
+  const [clubTab, setClubTab] = useState<'fin' | 'contracts' | 'history'>(() => (finances ? 'fin' : 'history'));
   const expiringContracts = userSquad
     ? userSquad.filter(p => getContractSeasonsLeft(p) <= 1)
     : [];
@@ -125,7 +126,7 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
   const nextTierLabel = nextSponsorTier ? getSponsorLabel(nextSponsorTier as SponsorTier) : null;
 
   return (
-    <div className={`${styles.screen} app-screen`}>
+    <div className={`${styles.screen} app-screen fit-screen`}>
       <ScreenHeader kicker="Modo Carreira" title="Meu Clube" />
 
       {/* Identidade do clube */}
@@ -180,6 +181,19 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
         </div>
       )}
 
+      {/* Abas: a tela não rola, só o conteúdo da aba ativa. */}
+      <div className={styles.clubTabs} role="tablist" aria-label="Meu Clube">
+        {([['fin', 'Finanças'], ['contracts', `Contratos${expiringContracts.length ? ` (${expiringContracts.length})` : ''}`], ['history', 'Histórico']] as const).map(([id, label]) => (
+          <button key={id} role="tab" aria-selected={clubTab === id}
+            className={`${styles.clubTab} ${clubTab === id ? styles.clubTabOn : ''}`} onClick={() => setClubTab(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className={`${styles.clubBody} fit-scroll`} role="tabpanel">
+        {clubTab === 'fin' && (
+          <>
       {summary && highlights && <CareerSummaryPanel summary={summary} highlights={highlights} />}
 
       {finances && <FinancePanel
@@ -203,6 +217,10 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
         </button>
       )}
 
+          </>
+        )}
+        {clubTab === 'contracts' && (
+          <>
       {userSquad && (
         <div className={styles.contractSection}>
           <div className={styles.repLabel}>📋 Gestão de Contratos</div>
@@ -239,6 +257,10 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
         </div>
       )}
 
+          </>
+        )}
+        {clubTab === 'history' && (
+          <>
       {transfersRecent.length > 0 && (
         <div className={styles.transferSection}>
           <div className={styles.repLabel}>📜 Histórico de Transferências</div>
@@ -385,6 +407,10 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
           </div>
         </>
       )}
+
+          </>
+        )}
+      </div>
 
       {renewingPlayer && onRenewContract && (
         <ContractRenewalModal

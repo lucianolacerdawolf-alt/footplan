@@ -6,6 +6,7 @@ import { countryFlagEmoji } from '../utils/countryFlags';
 import { getContractSeasonsLeft } from '../engine/career';
 import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './PlayerDetailModal.module.css';
+import { shirtTag } from '../utils/shirtNumbers';
 
 interface Props {
   player: Player;
@@ -65,7 +66,7 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
               {player.name}
             </div>
             <div className={styles.subtitle}>
-              <span>#{player.number}</span>
+              <span>{shirtTag(player)}</span>
               <span>{POSITION_LABELS[player.position]}</span>
               {player.age !== undefined && <span>{player.age} anos</span>}
               {player.nationality && <span>{player.nationality}</span>}

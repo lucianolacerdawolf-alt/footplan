@@ -10,6 +10,7 @@ import PlayerDetailModal from './PlayerDetailModal';
 import styles from './TransferMarketScreen.module.css';
 import { ScreenHeader } from './ui';
 import { crestSrc } from '../utils/crest';
+import { shirtTag } from '../utils/shirtNumbers';
 
 interface Props {
   userTeam: Team;
@@ -225,7 +226,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
   };
 
   return (
-    <div className={`${styles.screen} app-screen`}>
+    <div className={`${styles.screen} app-screen fit-screen`}>
       <ScreenHeader
         kicker={activeTab === 'buy' && buyLeagueId && leagueMeta(buyLeagueId) ? leagueMeta(buyLeagueId)!.name : 'Modo Carreira'}
         title="Mercado"
@@ -244,7 +245,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
         </button>
         {onProposeTrade && (
           <button className={styles.tabBtn} onClick={onProposeTrade}>
-            🔄 Propor Troca
+            🔄 Troca
           </button>
         )}
       </div>
@@ -284,6 +285,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
             </div>
           )}
 
+          <div className={`${styles.marketBody} fit-scroll`}>
           {showFilterBar && cheapestVisible === Infinity && (
             <div className={styles.emptyState}>
               {activeTab === 'free-agents' ? 'Nenhum agente livre disponível no momento.'
@@ -365,7 +367,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                         <div key={p.id} className={styles.playerRow}>
                           <div className={styles.playerRowFlex}>
                             <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
-                              <span className={styles.playerNum}>#{p.number}</span>
+                              <span className={styles.playerNum}>{shirtTag(p)}</span>
                               <span className={styles.playerName}>{p.name}</span>
                               <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
                               <span className={styles.playerOvr}>{playerOvr(p)}</span>
@@ -396,7 +398,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                       <div key={p.id} className={styles.playerRow}>
                         <div className={styles.playerRowFlex}>
                           <div className={styles.playerRowHeader}>
-                            <span className={styles.playerNum}>#{p.number}</span>
+                            <span className={styles.playerNum}>{shirtTag(p)}</span>
                             <span className={styles.playerName}>{p.name}</span>
                             <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
                             <span className={styles.playerOvr}>{playerOvr(p)}</span>
@@ -424,7 +426,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                     <div key={p.id} className={styles.playerRow}>
                       <div className={styles.playerRowFlex}>
                         <button className={styles.playerRowHeader} onClick={() => handleExpand(p.id, 1)}>
-                          <span className={styles.playerNum}>#{p.number}</span>
+                          <span className={styles.playerNum}>{shirtTag(p)}</span>
                           <span className={styles.playerName}>{p.name}</span>
                           <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
                           <span className={styles.playerOvr}>{playerOvr(p)}</span>
@@ -473,6 +475,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
               })}
             </div>
           )}
+          </div>
         </>
       )}
 

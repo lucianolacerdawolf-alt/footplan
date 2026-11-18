@@ -76,8 +76,12 @@ export function useCareerMatchFlow({
     setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
     setMatchContext('league'); setIsKnockout(false);
     saveLiveMatchMeta({ matchContext: 'league', roundIdx, fixtureIdx, isCareer: true });
+    // Partida de verdade: desliga o modo "só editar táticas" que a aba Elenco liga —
+    // senão, depois de visitar o Elenco, o "Jogar" abria as táticas com "Salvar ✓" e
+    // voltava pra rodada em vez de ir pro jogo.
+    setIsTournamentEntry(false);
     setScreen('setup');
-  }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
+  }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
 
 
   const handlePlayNextCareerMatch = useCallback(() => {
@@ -325,8 +329,9 @@ export function useCareerMatchFlow({
     setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
     setMatchContext('bracket'); setIsKnockout(true);
     saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx, bracketKind: 'cup', isCareer: true });
+    setIsTournamentEntry(false);
     setScreen('setup');
-  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
+  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
 
   const handlePlayContinentalMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
     setPendingCareerBracketKind('continental');
@@ -335,8 +340,9 @@ export function useCareerMatchFlow({
     setHomeTeam(cloneTeam(home, true)); setAwayTeam(cloneTeam(away, true));
     setMatchContext('bracket'); setIsKnockout(true);
     saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx, bracketKind: 'continental', isCareer: true });
+    setIsTournamentEntry(false);
     setScreen('setup');
-  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout]);
+  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
 
 
   const handlePlayNextCareerCupMatch = useCallback(() => {

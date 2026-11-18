@@ -177,3 +177,17 @@
   .screen { padding: 12px 10px 24px; gap: 12px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 }
+
+/* ── Meu Clube cabendo na tela: abas, só o conteúdo rola ── */
+.fit-screen.screen { gap: 8px; }
+.fit-screen > * { flex-shrink: 0; }
+.fit-screen > .clubBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
+.clubTabs {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  padding: 3px; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--border);
+}
+.clubTab {
+  min-height: 36px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--text-secondary); font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.clubTabOn { background: var(--surface); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent); }

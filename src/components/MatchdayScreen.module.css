@@ -72,3 +72,8 @@
   .teamName { font-size: 11px; }
   .logo { width: 40px; height: 40px; }
 }
+
+/* Cabe na tela: confronto e ações fixos, só o miolo rola. */
+.screen { height: 100dvh; min-height: 0; }
+.heroBg { padding: 14px 12px 16px; }
+.content { min-height: 0; }

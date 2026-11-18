@@ -69,7 +69,7 @@ export default function TournamentSetupScreen({ mode, league, onBack, onStart, o
   const title = isCup ? league.cupName : league.name;
 
   return (
-    <div className="team-select-screen">
+    <div className="team-select-screen fit-screen">
       <ScreenHeader
         onBack={onBack}
         kicker={isCup ? 'Copa' : 'Campeonato'}
@@ -146,7 +146,7 @@ export default function TournamentSetupScreen({ mode, league, onBack, onStart, o
         )}
       </div>
 
-      <div className="team-grid">
+      <div className="team-grid fit-scroll">
         {[...league.teams].sort((a, b) => a.name.localeCompare(b.name)).map(team => {
           const isSelected = team.id === userTeamId;
           return (

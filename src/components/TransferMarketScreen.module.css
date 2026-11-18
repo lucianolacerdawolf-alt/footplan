@@ -389,3 +389,8 @@
   .screen { padding: 12px 10px 24px; }
   .playerValue { min-width: 50px; }
 }
+
+/* Cabe na tela: abas e filtros fixos, só a lista rola. */
+.fit-screen > * { flex-shrink: 0; }
+.fit-screen > .marketBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; }
+.fit-screen .tabBtn { padding: 8px 4px; font-size: 12px; }

@@ -31,7 +31,7 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, onBack }: Prop
   const sorted = [...youthPlayers].sort((a, b) => scoutEstimate(b).max - scoutEstimate(a).max);
 
   return (
-    <div className={`${styles.screen} app-screen`}>
+    <div className={`${styles.screen} app-screen fit-screen`}>
       <ScreenHeader onBack={onBack} kicker="Modo Carreira" title="Categorias de Base" />
 
       <p className={styles.intro}>
@@ -41,7 +41,7 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, onBack }: Prop
 
       {sorted.length === 0 && <p className={styles.empty}>Nenhum jovem na base. A próxima captação chega no fim da temporada.</p>}
 
-      <ul className={styles.list}>
+      <ul className={`${styles.list} fit-scroll`}>
         {sorted.map(p => {
           const ovr = playerOvr(p);
           const est = scoutEstimate(p);

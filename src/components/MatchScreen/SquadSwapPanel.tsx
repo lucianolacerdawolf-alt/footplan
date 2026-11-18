@@ -2,6 +2,7 @@ import type { Team, Player } from '@/engine/types';
 import { getStarterCount } from '@/engine/squadUtils';
 import { playerOvr } from '@/utils/playerOvr';
 import { fireClick } from '@/utils/fireClick';
+import { shirtTag } from '../../utils/shirtNumbers';
 
 interface SquadSwapPanelProps {
   team: Team;
@@ -64,7 +65,7 @@ export default function SquadSwapPanel({
               }
             }}
             onKeyDown={e => fireClick(e)}>
-            <span className="sq-num">#{p.number}</span>
+            <span className="sq-num">{shirtTag(p)}</span>
             <span className="sq-name">{p.name}</span>
             <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
             <span className="sq-ovr">
@@ -95,7 +96,7 @@ export default function SquadSwapPanel({
               }
             }}
             onKeyDown={e => fireClick(e)}>
-            <span className="sq-num">#{p.number}</span>
+            <span className="sq-num">{shirtTag(p)}</span>
             <span className="sq-name">{p.name}</span>
             <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
             <span className="sq-ovr">

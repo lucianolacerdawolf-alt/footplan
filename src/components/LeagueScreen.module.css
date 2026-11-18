@@ -111,3 +111,12 @@
   color: var(--warning);
   margin-top: 4px;
 }
+
+/* ── Rodada cabendo na tela: só a lista de outros jogos rola ── */
+.screen.fit-screen, .fit-screen.screen { gap: 8px; }
+.fit-screen > * { flex-shrink: 0; }
+.fit-screen .fixturesCol { flex: 1 1 auto; min-height: 0; gap: 8px; }
+.othersSection { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.othersList { display: flex; flex-direction: column; gap: 6px; }
+.fit-screen .fixture { padding: 6px 10px; }
+.fit-screen .statsStrip { display: flex; flex-wrap: wrap; gap: 6px 12px; padding: 8px 10px; }

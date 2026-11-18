@@ -4,6 +4,7 @@ import { FORMATIONS, FORMATION_COUNTS } from '../engine/constants';
 import { isPlayerUnavailable } from '../engine/squadUtils';
 import { playerOvr } from '../utils/playerOvr';
 import styles from './FormationPitch.module.css';
+import { shirtBadge, shirtTag } from '../utils/shirtNumbers';
 
 // =============================================================================
 // Campinho da escalação — formação desenhada com os titulares
@@ -73,7 +74,7 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
                   aria-label={`${p.name}, ${p.position}, ${playerOvr(p)}${out ? ', indisponível' : ''}`}
                 >
                   <span className={`${styles.shirt} ${styles[`pos${p.position}`]}`}>
-                    {p.number}
+                    {shirtBadge(p)}
                     {out && <span className={styles.alert} aria-hidden="true">!</span>}
                   </span>
                   <span className={styles.name}>{shortName(p.name)}</span>
@@ -105,7 +106,7 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
                     disabled={out}
                     onClick={() => { onSwap(team.squad.findIndex(q => q.id === p.id), selectedIdx); }}
                   >
-                    <span className={styles.benchName}>#{p.number} {p.name}</span>
+                    <span className={styles.benchName}>{shirtTag(p)} {p.name}</span>
                     <span className={styles.benchOvr}>
                       {out ? (p.isSuspended ? '🚫' : '🤕') : playerOvr(p)}
                       {!out && diff !== 0 && <span className={diff > 0 ? styles.up : styles.down}> {diff > 0 ? `+${diff}` : diff}</span>}

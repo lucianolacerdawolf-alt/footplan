@@ -8,6 +8,7 @@ import { FORMATION_BONUS } from '../engine/matchConfig';
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { crestSrc } from '../utils/crest';
 import { teamTextColor } from '../utils/teamTextColor';
+import { shirtTag } from '../utils/shirtNumbers';
 
 interface Props {
   result: MatchResult;
@@ -145,7 +146,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
   }, [events, homeTeam.id]);
 
   return (
-    <div className={`${styles.screen} app-screen`}>
+    <div className={`${styles.screen} app-screen fit-screen`}>
       {isTitleWin && <div className={styles.confetti} />}
       {/* Header */}
       <div className={styles.header}>
@@ -175,6 +176,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
         </div>
       </div>
 
+      <div className={`${styles.statsBody} fit-scroll`}>
       {/* Gols */}
       {scorers.length > 0 && (
         <div className={styles.scorersBlock}>
@@ -202,7 +204,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
             <img src={crestSrc(motm.team.logoUrl)} alt="" className={styles.motmCrest} />
             <div className={styles.motmInfo}>
               <span className={styles.motmName} style={{ color: teamTextColor(motm.team) }}>
-                #{motm.player.number} {motm.player.name}
+                {shirtTag(motm.player)} {motm.player.name}
               </span>
               <span className={styles.motmStats}>
                 {motm.player.position}
@@ -225,7 +227,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
           {topPerformers.map(r => (
             <div key={r.player.id} className={styles.ratingRow}>
               <img src={crestSrc(r.team.logoUrl)} alt="" className={styles.ratingCrest} />
-              <span className={styles.ratingNum}>#{r.player.number}</span>
+              <span className={styles.ratingNum}>{shirtTag(r.player)}</span>
               <span className={styles.ratingName} style={{ color: teamTextColor(r.team) }}>{r.player.name}</span>
               <span className={styles.ratingPos}>{r.player.position}</span>
               <span className={styles.ratingVal} style={{ background: ratingColor(r.rating) }}>
@@ -291,20 +293,6 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
         </div>
       )}
 
-      {/* Actions */}
-      <div className={styles.actions}>
-        {/* O botão antigo dizia "Escolher Times" mas levava ao menu principal. */}
-        {onContinue
-          ? <Button glow onClick={onContinue}>{continueLabel ?? 'Continuar'}</Button>
-          : (
-            <>
-              {onPlayAgain && <Button glow onClick={onPlayAgain}>Jogar de novo</Button>}
-              <Button variant={onPlayAgain ? 'secondary' : 'primary'} glow={!onPlayAgain} onClick={onMenu}>Menu principal</Button>
-            </>
-          )
-        }
-      </div>
-
       {/* Histórico */}
       {history.length > 0 && (
         <details className={styles.history}>
@@ -328,6 +316,22 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
           <button className={styles.clearBtn} onClick={onClearHistory}>Limpar histórico</button>
         </details>
       )}
+      </div>
+
+      {/* Actions */}
+      <div className={styles.actions}>
+        {/* O botão antigo dizia "Escolher Times" mas levava ao menu principal. */}
+        {onContinue
+          ? <Button glow onClick={onContinue}>{continueLabel ?? 'Continuar'}</Button>
+          : (
+            <>
+              {onPlayAgain && <Button glow onClick={onPlayAgain}>Jogar de novo</Button>}
+              <Button variant={onPlayAgain ? 'secondary' : 'primary'} glow={!onPlayAgain} onClick={onMenu}>Menu principal</Button>
+            </>
+          )
+        }
+      </div>
+
     </div>
   );
 }

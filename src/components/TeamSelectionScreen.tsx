@@ -116,7 +116,7 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
   };
 
   return (
-    <div className="team-select-screen">
+    <div className="team-select-screen fit-screen">
       <ScreenHeader onBack={onBack} kicker={leagueName} title="Escolha os times" />
 
       <div className="select-instruction">
@@ -157,7 +157,7 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
         </button>
       </div>
 
-      <div className="team-grid">
+      <div className="team-grid fit-scroll">
         {[...teams].sort((a, b) => a.name.localeCompare(b.name)).map(team => {
           const isHome = team.id === homeId;
           const isAway = team.id === awayId;
