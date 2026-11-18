@@ -1,5 +1,4 @@
 import type { LeagueDefinition } from './types';
-import laliga2Logo from '@/assets/leagues/laliga2.svg';
 import type { Team } from '@/engine/types';
 import { makeSecondDivisionTeam } from './divisionHelpers';
 
@@ -41,7 +40,8 @@ export const laliga2: LeagueDefinition = {
   flag: '🇪🇸',
   color: '#b99b3c',
   // Emblema próprio: o anterior era o logo da LaLiga (1ª divisão) com a marca Santander.
-  logo: laliga2Logo,
+  // Logo oficial (TheSportsDB, sem patrocinador) — servido local via crests:download.
+  logo: 'https://r2.thesportsdb.com/images/media/league/badge/r7u6821688425700.png',
   totalRounds: 42,
   teams,
   europeanSlots: { championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },

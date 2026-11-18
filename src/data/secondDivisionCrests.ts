@@ -4,6 +4,8 @@
 // makeSecondDivisionTeam (logoUrl estático) e bundlado por crests:download.
 
 export const SECOND_DIVISION_CRESTS: Record<string, string> = {
+  "ligaPortugal2-live-2039979053": "https://r2.thesportsdb.com/images/media/team/badge/xp8oqb1688676544.png",
+  "ligaPortugal2-live-1222963536": "https://r2.thesportsdb.com/images/media/team/badge/mwdq0z1593020085.png",
   "ligaPortugal2-live-1090666017": "https://r2.thesportsdb.com/images/media/team/badge/ohj6ih1628855978.png",
   "b2-bra": "https://r2.thesportsdb.com/images/media/team/badge/lrrq0z1599820707.png",
   "b2-elt": "https://r2.thesportsdb.com/images/media/team/badge/z079go1677573926.png",

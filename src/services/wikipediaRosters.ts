@@ -50,13 +50,18 @@ async function wikitext(title: string): Promise<string | null> {
 
 interface ClubLink { article: string; label: string; code: string }
 
+/** Rótulos da tabela da Wikipedia que não são o nome pelo qual o clube é conhecido. */
+const LABEL_OVERRIDE: Record<string, string> = {
+  'AVS Futebol SAD': 'AVS',
+};
+
 /** Times da temporada: `name_XXX=[[Artigo|Rótulo]]` (Module:Sports table), na própria
  *  página ou no template "… table"; senão, os rótulos do mapa da seção Teams. */
 export function parseSeasonClubs(text: string): ClubLink[] {
   const out = new Map<string, ClubLink>();
   for (const m of text.matchAll(/\|\s*name_([^\s=|]+)\s*=\s*(?:\{\{\s*nowrap\s*\|\s*)?\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g)) {
     const [, code, article, label] = m;
-    if (!out.has(article)) out.set(article, { article, label: (label ?? article).trim(), code });
+    if (!out.has(article)) out.set(article, { article, label: LABEL_OVERRIDE[article] ?? (label ?? article).trim(), code });
   }
   if (out.size === 0) {
     for (const m of text.matchAll(/Location map~[^}]*?label=\[\[([^|\]]+)(?:\|([^\]]+))?\]\]/g)) {

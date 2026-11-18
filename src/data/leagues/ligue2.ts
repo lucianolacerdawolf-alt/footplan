@@ -35,7 +35,8 @@ export const ligue2: LeagueDefinition = {
   cupLogo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Coupe_de_France_trophy.png/250px-Coupe_de_France_trophy.png',
   flag: '🇫🇷',
   color: '#1d428a',
-  logo: 'https://crests.football-data.org/FL2.png',
+  // Logo atual (2024) — o do football-data era o antigo, anterior a 2020.
+  logo: 'https://r2.thesportsdb.com/images/media/league/badge/aofb771742983333.png',
   totalRounds: 38,
   teams,
   europeanSlots: { championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },

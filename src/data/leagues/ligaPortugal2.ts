@@ -1,5 +1,4 @@
 import type { LeagueDefinition } from './types';
-import ligaPortugal2Logo from '@/assets/leagues/ligaportugal2.svg';
 import type { Team } from '@/engine/types';
 import { makeSecondDivisionTeam } from './divisionHelpers';
 
@@ -37,7 +36,8 @@ export const ligaPortugal2: LeagueDefinition = {
   flag: '🇵🇹',
   color: '#e31e25',
   // Emblema próprio: o anterior era o logo da Liga Portugal (1ª divisão).
-  logo: ligaPortugal2Logo,
+  // Logo oficial (TheSportsDB, sem patrocinador) — servido local via crests:download.
+  logo: 'https://r2.thesportsdb.com/images/media/league/badge/pns32l1782689191.png',
   totalRounds: 34,
   teams,
   europeanSlots: { championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },

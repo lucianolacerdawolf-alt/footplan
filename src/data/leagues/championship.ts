@@ -1,5 +1,4 @@
 import type { LeagueDefinition } from './types';
-import championshipLogo from '@/assets/leagues/championship.svg';
 import type { Team } from '@/engine/types';
 import { makeSecondDivisionTeam } from './divisionHelpers';
 
@@ -43,7 +42,8 @@ export const championship: LeagueDefinition = {
   flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
   color: '#1c355e',
   // Emblema próprio: o anterior trazia a marca Sky Bet (patrocinador de apostas).
-  logo: championshipLogo,
+  // Logo oficial (TheSportsDB, sem patrocinador) — servido local via crests:download.
+  logo: 'https://r2.thesportsdb.com/images/media/league/badge/ty5a681688770169.png',
   totalRounds: 46,
   teams,
   europeanSlots: { championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },
