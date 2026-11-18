@@ -29,6 +29,7 @@ import { loadRosterSnapshot, saveRosterSnapshot, hasRosterCloud, type RosterSnap
 import { mapRemotePosition } from './positionMapping';
 import { calibrateLeagueTeams } from '../engine/ratingCalibration';
 import { normalizeShirtNumbers, normalizeTeamsShirtNumbers } from '../utils/shirtNumbers';
+import { applyShirtNumberMap, type ShirtNumberMap } from '../utils/shirtNumberMap';
 
 const CACHE_PREFIX = 'fp:rosterCache:';
 /** Variação por atributo do jogador real desconhecido (ver generatePlayer): OVR ±3 em vez de ±9. */
@@ -502,7 +503,7 @@ export interface AllRostersResult {
   liveCount: number;
 }
 
-export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: SupabaseClient }): Promise<AllRostersResult> {
+export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: SupabaseClient; shirtNumbers?: ShirtNumberMap }): Promise<AllRostersResult> {
   const rosters: Record<string, Team[]> = {};
   const sources: Record<string, RosterSource> = {};
   const errors: Record<string, string> = {};
@@ -528,6 +529,9 @@ export async function syncAllLeagueRosters(opts?: { force?: boolean; supabase?: 
       sources[league.id] = result.source;
     }
     if (result.source === 'live') liveCount++;
+    // Números de camisa da Wikipedia (scripts/fetch-shirt-numbers.ts) — a fonte dos
+    // elencos não manda o número; sem o mapa, quem não tem fica 0 (desconhecido).
+    if (opts?.shirtNumbers) rosters[league.id] = applyShirtNumberMap(rosters[league.id], opts.shirtNumbers.leagues[league.id]);
   }
 
   if (opts?.force) {

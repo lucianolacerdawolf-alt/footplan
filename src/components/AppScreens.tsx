@@ -835,6 +835,7 @@ function renderHome(props: AppScreensProps): React.ReactNode {
       onAchievements={() => props.setScreen('achievements')}
       onOnline={() => props.setScreen('online-lobby')}
       onFriendLeague={() => props.setScreen('friend-league')}
+      onNewCareer={props.handleNewCareerFromHub}
       onProfile={() => props.setScreen('profile')}
       onSettings={() => props.setScreen('settings')}
     />

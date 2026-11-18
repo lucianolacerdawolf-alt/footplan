@@ -31,6 +31,8 @@ interface Props {
   onAchievements: () => void;
   onOnline: () => void;
   onFriendLeague?: () => void;
+  /** Começa uma carreira do zero (o save atual só é trocado depois de confirmar). */
+  onNewCareer?: () => void;
   /** Abre a tela de Perfil (ícone de bonequinho no topo). */
   onProfile?: () => void;
   /** Abre Configurações (dificuldade, velocidade, lembretes, dados…). */
@@ -97,7 +99,7 @@ function NextMatch({ home, away }: { home: NextMatchSide; away: NextMatchSide })
   );
 }
 
-export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, onFriendLeague, onProfile, onSettings, careerResume }: Props) {
+export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCareer, onCup, onAchievements, onOnline, onFriendLeague, onNewCareer, onProfile, onSettings, careerResume }: Props) {
   return (
     <div className={`${styles.screen} app-screen`}>
       <div className={styles.pitch} aria-hidden="true" />
@@ -142,11 +144,18 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
 
         {careerResume && <CareerStats position={careerResume.position} form={careerResume.form} />}
 
-        <button className={styles.careerCta} onClick={onCareer}>
-          <Icon name="play" size={16} />
-          <span>{careerResume ? 'Continuar carreira' : 'Começar carreira'}</span>
-          <Icon name="chevron-right" size={16} />
-        </button>
+        <div className={styles.careerActions}>
+          <button className={styles.careerCta} onClick={onCareer}>
+            <Icon name="play" size={16} />
+            <span>{careerResume ? 'Continuar' : 'Começar carreira'}</span>
+            <Icon name="chevron-right" size={16} />
+          </button>
+          {careerResume && onNewCareer && (
+            <button className={styles.newCareerBtn} onClick={onNewCareer} title="Começar uma carreira do zero">
+              Nova<br />carreira
+            </button>
+          )}
+        </div>
 
         {careerResume?.nextMatch && (
           <NextMatch home={careerResume.nextMatch.home} away={careerResume.nextMatch.away} />

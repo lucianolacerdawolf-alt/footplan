@@ -13,15 +13,15 @@ const base = {
 describe('HomeScreen — Continuar carreira', () => {
   it('sem carreira salva não mostra o card de destaque', () => {
     render(<HomeScreen {...base} onCareer={vi.fn()} />);
-    expect(screen.queryByText('Continuar carreira')).not.toBeInTheDocument();
+    expect(screen.queryByText('Continuar')).not.toBeInTheDocument();
   });
 
   it('com carreira salva mostra o card no topo e ele abre a carreira', () => {
     const onCareer = vi.fn();
     render(<HomeScreen {...base} onCareer={onCareer} careerResume={{ teamName: 'Crystal Palace', detail: 'Premier League · Temporada 1 · Rodada 4' }} />);
-    expect(screen.getByText('Continuar carreira')).toBeInTheDocument();
+    expect(screen.getByText('Continuar')).toBeInTheDocument();
     expect(screen.getByText('Premier League · Temporada 1 · Rodada 4')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Continuar carreira'));
+    fireEvent.click(screen.getByText('Continuar'));
     expect(onCareer).toHaveBeenCalledOnce();
   });
 });
@@ -148,5 +148,19 @@ describe('careerResumeInfo', () => {
 
   it('liga encerrada no lugar da rodada', () => {
     expect(careerResumeInfo(cs('done'))!.detail).toMatch(/Liga encerrada$/);
+  });
+});
+
+describe('HomeScreen — nova carreira', () => {
+  it('com carreira salva mostra "Nova carreira", que chama onNewCareer', () => {
+    const onNewCareer = vi.fn();
+    render(<HomeScreen {...base} onCareer={vi.fn()} onNewCareer={onNewCareer}
+      careerResume={{ teamName: 'Crystal Palace', detail: 'Premier League · Temporada 1 · Rodada 4' }} />);
+    fireEvent.click(screen.getByRole('button', { name: /Nova\s*carreira/ }));
+    expect(onNewCareer).toHaveBeenCalledOnce();
+  });
+  it('sem carreira salva não mostra o botão (o principal já é "Começar carreira")', () => {
+    render(<HomeScreen {...base} onCareer={vi.fn()} onNewCareer={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: /Nova\s*carreira/ })).not.toBeInTheDocument();
   });
 });

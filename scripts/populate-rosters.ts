@@ -33,6 +33,9 @@ import { syncAllLeagueRosters } from '../src/services/rosterSync';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { loadEnv } from 'vite';
 import { writeRosterBundle } from './lib/rosterBundle';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import type { ShirtNumberMap } from '../src/utils/shirtNumberMap';
 
 async function main() {
   console.log('🔄 Buscando elencos ao vivo das 12 ligas e gravando no Supabase…\n');
@@ -49,7 +52,12 @@ async function main() {
     console.warn('⚠ SUPABASE_SERVICE_ROLE_KEY ausente no .env — o snapshot global NÃO será publicado (RLS de produção só aceita service role).\n');
   }
 
-  const result = await syncAllLeagueRosters({ force: true, supabase: admin });
+  // Números de camisa (npm run shirts:fetch) — aplicados antes de publicar.
+  const shirtsPath = resolve('src/data/shirtNumbers.json');
+  const shirtNumbers = existsSync(shirtsPath) ? JSON.parse(readFileSync(shirtsPath, 'utf8')) as ShirtNumberMap : undefined;
+  if (!shirtNumbers) console.warn('⚠ src/data/shirtNumbers.json ausente — rode `npm run shirts:fetch` pra ter os números de camisa.');
+
+  const result = await syncAllLeagueRosters({ force: true, supabase: admin, shirtNumbers });
 
   const bySource: Record<string, number> = {};
   for (const src of Object.values(result.sources)) {

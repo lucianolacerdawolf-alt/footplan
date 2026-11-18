@@ -307,10 +307,13 @@ function App() {
   // pendingCareerStart overwrite-confirmation gate (already built, was previously
   // unreachable) fires when the user picks a team on the screen this routes to.
   const handleNewCareerFromHub = useCallback(() => {
+    // Também usado pelo botão "Nova carreira" da tela inicial, onde o modo carreira
+    // ainda não está ligado. O save atual só é substituído depois da confirmação.
+    setIsCareerMode(true);
     setTournamentMode('league');
     setReturnScreen('tournament-setup');
     setScreen('league-select');
-  }, [setTournamentMode, setReturnScreen, setScreen]);
+  }, [setIsCareerMode, setTournamentMode, setReturnScreen, setScreen]);
 
   // Navegação da carreira com identidade estável, num único objeto. As telas de
   // carreira são React.memo; se estes fossem arrows inline no screenMap, mudariam

@@ -469,3 +469,13 @@ button.modeCard:active { border-color: var(--accent); background: var(--surface-
 .modeCard .modeText { align-items: center; }
 .modeCard .modeName { font-size: 14px; }
 .modeCard .modeDesc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* Continuar (principal) + Nova carreira (secundário) lado a lado */
+.careerActions { position: relative; display: flex; gap: 8px; }
+.careerActions .careerCta { flex: 1; min-width: 0; }
+.newCareerBtn {
+  flex-shrink: 0; min-height: 48px; padding: 0 16px; border-radius: 12px;
+  border: 1px solid var(--accent-border); background: var(--surface); color: var(--text-primary);
+  font-family: var(--sans); font-size: 12px; line-height: 1.15; font-weight: 800; cursor: pointer;
+}
+.newCareerBtn:active { transform: scale(0.97); }

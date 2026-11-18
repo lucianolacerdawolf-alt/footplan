@@ -13,6 +13,7 @@
     "generate-icons": "node scripts/generate-pwa-icons.mjs",
     "generate:publish-assets": "node scripts/generate-publish-assets.mjs",
     "rosters:sync": "vite-node scripts/populate-rosters.ts",
+    "shirts:fetch": "vite-node scripts/fetch-shirt-numbers.ts",
     "rosters:copy": "vite-node scripts/copy-roster-snapshot.ts",
     "rosters:bundle": "vite-node scripts/export-roster-bundle.ts",
     "crests:secondary": "vite-node scripts/fetch-secondary-crests.ts",

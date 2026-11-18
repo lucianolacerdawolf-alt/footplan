@@ -6,6 +6,8 @@ chcp 65001 >nul
 cd /d "%~dp0.."
 if not exist logs mkdir logs
 echo ===== %date% %time% ===== >> logs\roster-sync.log
+rem Numeros de camisa (Wikipedia): o script pula se a ultima busca tem menos de 6 dias.
+call npm run shirts:fetch >> logs\roster-sync.log 2>&1
 call npm run rosters:sync >> logs\roster-sync.log 2>&1
 echo exit code: %errorlevel% >> logs\roster-sync.log
 echo. >> logs\roster-sync.log
