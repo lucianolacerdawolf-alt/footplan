@@ -125,31 +125,31 @@ export default function HomeScreen({ onSingleMatch, onQuickPlay, onLeague, onCar
       <section className={styles.section}>
         <div className={styles.sectionHead}>
           <h2 className={styles.sectionTitle}>Modos de jogo</h2>
+          <label className={styles.difficultyPick}>
+            <span className={styles.difficultyLabel}>Dificuldade</span>
+            <span className={styles.difficultyValue} aria-hidden="true">{getDifficultyLabel(difficulty)}</span>
+            <select
+              className={styles.difficultySelect}
+              aria-label="Dificuldade das partidas"
+              value={difficulty}
+              onChange={e => {
+                const d = e.target.value as Difficulty;
+                onSetDifficulty(d);
+                try { localStorage.setItem('fp:difficulty', d); } catch {}
+              }}
+            >
+              {DIFFICULTIES.map(d => (
+                <option key={d} value={d}>{getDifficultyLabel(d)}</option>
+              ))}
+            </select>
+            <Icon name="chevron-right" size={14} className={styles.difficultyChevron} />
+          </label>
         </div>
         <div className={styles.grid}>
           <ModeCard icon="ball" name="Partida Única" desc="Escolha dois times" onClick={onSingleMatch} />
           <ModeCard icon="calendar" name="Campeonatos" desc="Pontos corridos" onClick={onLeague} />
           <ModeCard icon="bolt" name="Jogo Rápido" desc="Times aleatórios" onClick={onQuickPlay} />
           <ModeCard icon="trophy" name="Copas" desc="Mata-mata e pênaltis" onClick={onCup} />
-        </div>
-
-        <div className={styles.difficultyCard} role="group" aria-label="Dificuldade das partidas">
-          <span className={styles.difficultyLabel}>Dificuldade</span>
-          <div className={styles.difficultyBtns}>
-            {DIFFICULTIES.map(d => (
-              <button
-                key={d}
-                className={`${styles.diffBtn} ${d === difficulty ? styles.diffActive : ''}`}
-                aria-pressed={d === difficulty}
-                onClick={() => {
-                  onSetDifficulty(d);
-                  try { localStorage.setItem('fp:difficulty', d); } catch {}
-                }}
-              >
-                {getDifficultyLabel(d)}
-              </button>
-            ))}
-          </div>
         </div>
       </section>
 

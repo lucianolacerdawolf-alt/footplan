@@ -66,7 +66,7 @@ describe('HomeScreen — layout', () => {
   it('troca a dificuldade', () => {
     const onSetDifficulty = vi.fn();
     render(<HomeScreen {...base} onSetDifficulty={onSetDifficulty} onCareer={vi.fn()} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Difícil' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Dificuldade das partidas' }), { target: { value: 'hard' } });
     expect(onSetDifficulty).toHaveBeenCalledWith('hard');
   });
 });
