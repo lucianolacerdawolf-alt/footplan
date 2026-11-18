@@ -26,6 +26,7 @@ import { generatePlayer } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { rebalanceForFormation } from '../engine/squadUtils';
 import { allLeagues } from '../data/leagues';
+import { SECOND_DIVISION_CRESTS } from '../data/secondDivisionCrests';
 import { loadRosterSnapshot, saveRosterSnapshot, hasRosterCloud, type RosterSnapshot } from './rosterCloud';
 import { mapRemotePosition } from './positionMapping';
 import { calibrateLeagueTeams } from '../engine/ratingCalibration';
@@ -339,13 +340,15 @@ function withVenue(team: Team, remote: RemoteTeam): Team {
 /** Time novo a partir só do dado remoto (clube que não existe em nenhuma liga estática). */
 function newTeamFromRemote(remote: RemoteTeam, leagueId: string): Team {
   const name = remote.shortName || remote.name;
+  const id = `${leagueId}-live-${remote.id}`;
   return {
-    id: `${leagueId}-live-${remote.id}`,
+    id,
     name,
     abbreviation: (remote.tla || name.slice(0, 3)).toUpperCase(),
     color: '#4b5563',
     secondaryColor: '#ffffff',
-    logoUrl: remote.crest ?? '',
+    // Escudo do TheSportsDB (scripts/fetch-secondary-crests.ts) — a Wikipedia não manda.
+    logoUrl: remote.crest || SECOND_DIVISION_CRESTS[id] || '',
     squad: [],
     strategy: { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' },
   };

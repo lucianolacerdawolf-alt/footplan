@@ -16,7 +16,7 @@
  * o candidato certo (evita times femininos, juvenis e clubes homônimos de outro país).
  */
 
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { allLeagues } from '../src/data/leagues';
@@ -34,9 +34,21 @@ const ALIASES: Record<string, string[]> = {
   'Nacional': ['CD Nacional', 'Nacional Madeira'],
   'Hamburger SV': ['Hamburg'],
   'Paris FC': ['Paris FC'],
+  'Académica': ['Academica Coimbra', 'Academica de Coimbra'],
+  'AFS': ['AVS Futebol SAD', 'AVS', 'Aves'],
+  'Sporting CP B': ['Sporting CP B', 'Sporting B'],
+  'União de Leiria': ['Uniao Leiria', 'UD Leiria'],
+  'Cottbus': ['Energie Cottbus'],
+  'Darmstadt': ['SV Darmstadt 98', 'Darmstadt 98'],
+  'Dresden': ['Dynamo Dresden'],
+  'Arezzo': ['SS Arezzo'],
+  'Clermont': ['Clermont Foot'],
+  'Dijon': ['Dijon FCO'],
+  'Nancy': ['AS Nancy Lorraine', 'Nancy'],
+  'Red Star': ['Red Star FC', 'Red Star Paris'],
 };
 
-const API = 'https://www.thesportsdb.com/api/v1/json/3';
+const API = 'https://www.thesportsdb.com/api/v1/json/123';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, 'src', 'data', 'secondDivisionCrests.ts');
 
@@ -124,7 +136,7 @@ async function bestBadge(name: string, country: string): Promise<{ badge: string
     for (const c of await search(q)) {
       if (c.strTeam) seen.set(c.strTeam, c);
     }
-    await sleep(700);
+    await sleep(2200); // chave pública de teste: ~30 req/min
     // Se já achou match forte num nome exato, pode parar cedo.
     if ([...seen.values()].some(c => norm(c.strTeam) === norm(name) && c.strCountry === country)) break;
   }
@@ -134,6 +146,7 @@ async function bestBadge(name: string, country: string): Promise<{ badge: string
     if (c.strSport !== 'Soccer') continue;
     if (!c.strBadge) continue;
     if (EXCLUDE.test(c.strTeam)) continue;
+    if (c.strLeague?.startsWith('_No League')) continue; // clube sem liga = quase sempre homônimo
     let sc = nameScore(name, c.strTeam);
     if (sc < 4) continue; // nome muito distante — descarta
     if (c.strCountry === country) sc += 3;
@@ -148,15 +161,24 @@ async function main() {
   const unmatched: string[] = [];
   console.log(`Partindo de ${Object.keys(map).length} badges já resolvidos${FORCE ? ' (IGNORADO: --force)' : ''}.`);
 
+  // Times que entraram pelo sync (subiram da 3ª divisão via Wikipedia) não estão nos
+  // dados estáticos: vêm do snapshot publicado, com id estável "<liga>-live-<n>".
+  const snapPath = path.join(ROOT, 'public', 'rosters-snapshot.json');
+  const snap = existsSync(snapPath)
+    ? JSON.parse(readFileSync(snapPath, 'utf8')) as { rosters: Record<string, { id: string; name: string; logoUrl?: string }[]> }
+    : { rosters: {} as Record<string, { id: string; name: string; logoUrl?: string }[]> };
+
   for (const league of allLeagues) {
     const country = SECOND_DIVISIONS[league.id];
     if (!country) continue;
-    const pending = league.teams.filter(t => !map[t.id]);
+    const extra = (snap.rosters[league.id] ?? []).filter(t => !t.logoUrl && !league.teams.some(s => s.id === t.id));
+    const pending = [...league.teams, ...extra].filter(t => !map[t.id]);
     if (pending.length === 0) continue;
-    console.log(`\n=== ${league.id} (${country}) — ${pending.length}/${league.teams.length} faltando ===`);
+    console.log(`\n=== ${league.id} (${country}) — ${pending.length} faltando ===`);
     for (const team of pending) {
       const hit = await bestBadge(team.name, country);
-      if (hit && hit.sc >= 6) {
+      // País tem que bater: "Académica" casava com o Academica SC dos EUA.
+      if (hit && hit.sc >= 6 && hit.chosen.includes(`(${country}/`)) {
         map[team.id] = hit.badge;
         console.log(`  ✓ ${team.name.padEnd(22)} -> ${hit.chosen}  [${hit.sc.toFixed(1)}]`);
       } else {

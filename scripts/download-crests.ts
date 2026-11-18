@@ -12,11 +12,12 @@
  */
 
 import { createHash } from 'node:crypto';
-import { mkdirSync, existsSync, writeFileSync } from 'node:fs';
+import { mkdirSync, existsSync, writeFileSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import sharp from 'sharp';
 import { allLeagues } from '../src/data/leagues';
+import { SECOND_DIVISION_CRESTS } from '../src/data/secondDivisionCrests';
 
 // Escudos das fontes vêm em até 500px (150KB+), mas o jogo mostra a ~40-120px.
 // Redimensiona pra 192px (nítido até em telas retina nos maiores usos) e recomprime:
@@ -53,6 +54,14 @@ async function main() {
     add(league.logo);
     add(league.cupLogo);
     for (const team of league.teams) add(team.logoUrl);
+  }
+  // Escudos de times que só existem no snapshot (subiram pela Wikipedia).
+  for (const url of Object.values(SECOND_DIVISION_CRESTS)) add(url);
+  // E os do snapshot publicado (times que subiram com escudo vindo do football-data).
+  const snapPath = path.join(ROOT, 'public', 'rosters-snapshot.json');
+  if (existsSync(snapPath)) {
+    const snap = JSON.parse(readFileSync(snapPath, 'utf8')) as { rosters: Record<string, { logoUrl?: string }[]> };
+    for (const teams of Object.values(snap.rosters)) for (const t of teams) add(t.logoUrl);
   }
 
   const sorted = [...urls].sort();
