@@ -6,7 +6,7 @@ import { useCareerManager } from '../useCareerManager';
 import { makeTeam } from '@/components/__tests__/testFixtures';
 import { getLeague, allLeagues } from '@/data/leagues';
 import { getContinentalCup, getQualifiedTeams, createContinentalBracket } from '@/engine/continentalCups';
-import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, getTicketRevenue, renewalCost, calculateMarketValue } from '@/engine/transferMarket';
+import { netSellRevenue, getLeaguePrizeMoney, getCupPrizeMoney, renewalCost, calculateMarketValue } from '@/engine/transferMarket';
 import { computeStandings } from '@/engine/tournament';
 import { deriveCupResult, getFinances, getFreeAgentPool, getJobOffers, getPlayerConversations } from '@/engine/career';import type { MatchResult, MatchEvent, Team, Player } from '@/engine/types';
 import * as careerEvents from '@/engine/careerEvents';
@@ -422,6 +422,56 @@ describe('Finanças e Inbox (Modo Carreira)', () => {
     expect(before.baseRevenue).toBeGreaterThan(0);
     expect(before.operatingCost).toBe(operatingCostPerRound(before.baseRevenue!));
     expect(after.budget).toBe(before.budget + before.weeklyIncome + expectedTicketRevenue - after.wageBill - before.operatingCost!);
+  });
+
+  it('avançar a rodada grava o resumo (mostrado uma vez) e recarrega os olheiros', () => {
+    vi.spyOn(careerEvents, 'maybeGetCareerEvent').mockReturnValue(null);
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    act(() => { result.current.setCareerState(prev => prev ? { ...prev, scouting: { scoutedIds: ['x'], reportsLeft: 0 } } : prev); });
+    act(() => { result.current.handleNextCareerLeagueRound(); });
+    const st = result.current.careerState!;
+    expect(st.roundSummary).toMatchObject({ round: 1, seen: false, totalTeams: st.season.league.teams.length });
+    expect(st.roundSummary!.money.budget).toBe(st.finances!.budget);
+    expect(st.scouting).toEqual({ scoutedIds: ['x'], reportsLeft: 3 });
+    act(() => { result.current.handleDismissRoundSummary(); });
+    expect(result.current.careerState!.roundSummary!.seen).toBe(true);
+  });
+
+  it('confiança da diretoria no fundo depois das primeiras rodadas demite o técnico e bloqueia os jogos', () => {
+    vi.spyOn(careerEvents, 'maybeGetCareerEvent').mockReturnValue(null);
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    act(() => {
+      result.current.setCareerState(prev => prev ? {
+        ...prev, boardConfidence: 5, manager: { ...prev.manager, reputation: 30 },
+        season: { ...prev.season, league: { ...prev.season.league, currentRound: 6 } },
+      } : prev);
+    });
+    act(() => { result.current.handleNextCareerLeagueRound(); });
+    const st = result.current.careerState!;
+    expect(st.sacked).toBeTruthy();
+    expect(st.manager.reputation).toBe(22);
+    expect((st.jobOffers ?? []).length).toBeGreaterThan(0);
+    const round = st.season.league.currentRound;
+    act(() => { result.current.handleNextCareerLeagueRound(); });
+    expect(result.current.careerState!.season.league.currentRound).toBe(round); // bloqueado
+    // Aceitar uma proposta tira da demissão e a confiança recomeça.
+    act(() => { result.current.handleAcceptJobOffer(st.jobOffers![0].id); });
+    expect(result.current.careerState!.sacked).toBeUndefined();
+    expect(result.current.careerState!.boardConfidence).toBe(60);
+  });
+
+  it('olheiro gasta relatório e revela o jogador; sem relatório, recusa', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    let ok = false;
+    act(() => { ok = result.current.handleScoutPlayer('p1'); });
+    expect(ok).toBe(true);
+    expect(result.current.careerState!.scouting).toEqual({ scoutedIds: ['p1'], reportsLeft: 2 });
+    act(() => { result.current.setCareerState(prev => prev ? { ...prev, scouting: { scoutedIds: ['p1'], reportsLeft: 0 } } : prev); });
+    act(() => { ok = result.current.handleScoutPlayer('p2'); });
+    expect(ok).toBe(false);
   });
 
   it('bloqueia handleNextCareerLeagueRound enquanto houver mensagem obrigatória não lida', () => {
@@ -1674,7 +1724,7 @@ describe('Imersão pré-jogo (Fase 3)', () => {
     expect(params.setToastMsg).toHaveBeenCalled();
   });
 
-  it('responder com resposta dura (idx 2) aplica -2', () => {
+  it('responder com resposta cautelosa (idx 2) aplica -1 e guarda "tirar a pressão"', () => {
     const { result } = renderHook(() => useCareerManager(mockParams()));
     const { leagueId, userTeamId } = startPlCareer(result);
     const opp = result.current.careerState!.rosters[leagueId].find(t => t.id !== userTeamId)!;
@@ -1682,7 +1732,24 @@ describe('Imersão pré-jogo (Fase 3)', () => {
     act(() => { result.current.handleRespondPressConference(2); });
 
     const userTeam = result.current.careerState!.rosters[leagueId].find(t => t.id === userTeamId)!;
-    expect(userTeam.morale).toBe(-2);
+    expect(userTeam.morale).toBe(-1);
+    expect(result.current.careerState!.pressStance).toMatchObject({ opponentId: opp.id, stance: 'shield' });
+  });
+
+  it('coletiva de jogo grande tem 2 perguntas e só marca feita depois da 2ª', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    const { leagueId, userTeamId } = startPlCareer(result);
+    const opp = result.current.careerState!.rosters[leagueId].find(t => t.id !== userTeamId)!;
+    act(() => { result.current.handleOpenPressConference(opp, true); });
+    expect(result.current.pressStep).toEqual({ index: 1, total: 2 });
+    act(() => { result.current.handleRespondPressConference(0); }); // promete vitória
+    expect(result.current.pressDone).toBe(false);
+    expect(result.current.pressStep).toEqual({ index: 2, total: 2 });
+    act(() => { result.current.handleRespondPressConference(1); }); // equilibrada: +1 diretoria
+    expect(result.current.pressDone).toBe(true);
+    expect(result.current.pressQuestion).toBeNull();
+    expect(result.current.careerState!.pressStance?.stance).toBe('bold');
+    expect(result.current.careerState!.boardConfidence).toBe(61);
   });
 
   it('coletiva fechada sem responder é no-op (sem moral, sem flag)', () => {

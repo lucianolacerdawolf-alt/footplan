@@ -118,14 +118,15 @@ describe('getPressContext', () => {
 });
 
 describe('generatePressConferenceQuestion / respondToPressConference', () => {
-  it('gera 1 pergunta por contexto com 2-3 respostas e deltas +2/0/-2', () => {
+  it('gera 1 pergunta por contexto com 3 respostas: ousada +2, equilibrada 0, cautelosa -1', () => {
     for (const [userOvr, oppOvr] of [[85, 60], [60, 85], [70, 71]]) {
       const q = generatePressConferenceQuestion(makeTeam('u', userOvr), makeTeam('o', oppOvr), seededRng(3));
       expect(q.id).toBeTruthy();
       expect(q.question).toBeTruthy();
       expect(q.responses.length).toBeGreaterThanOrEqual(2);
       expect(q.responses.length).toBeLessThanOrEqual(3);
-      expect(q.responses.map(r => r.moraleDelta).sort()).toEqual([-2, 0, 2]);
+      expect(q.responses.map(r => r.moraleDelta)).toEqual([2, 0, -1]);
+      expect(q.responses.map(r => r.stance)).toEqual(['bold', 'calm', 'shield']);
     }
   });
 
@@ -133,7 +134,7 @@ describe('generatePressConferenceQuestion / respondToPressConference', () => {
     const q = generatePressConferenceQuestion(makeTeam('u', 70), makeTeam('o', 71), seededRng(3));
     expect(respondToPressConference(q, 0)!.moraleDelta).toBe(2);
     expect(respondToPressConference(q, 1)!.moraleDelta).toBe(0);
-    expect(respondToPressConference(q, 2)!.moraleDelta).toBe(-2);
+    expect(respondToPressConference(q, 2)!.moraleDelta).toBe(-1);
     expect(respondToPressConference(q, 9)).toBeNull();
   });
 });

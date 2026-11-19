@@ -395,3 +395,8 @@
 :global(.fit-screen) .tabBtn { padding: 8px 4px; font-size: 12px; }
 
 .wageText { font-size: 11.5px; color: var(--text-secondary); }
+
+/* ── Olheiros ── */
+.ovrUnknown { font-size: 0.78em; letter-spacing: -0.02em; color: var(--text-secondary); white-space: nowrap; }
+.scoutBar { flex-shrink: 0; padding: 4px 2px; font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scoutBar strong { color: var(--accent); }

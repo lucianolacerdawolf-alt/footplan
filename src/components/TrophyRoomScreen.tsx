@@ -14,7 +14,11 @@ import ContractRenewalModal from './ContractRenewalModal';
 import styles from './TrophyRoomScreen.module.css';
 import { ScreenHeader } from './ui';
 
+export interface MilestoneView { id: string; icon: string; title: string; reached: boolean; progress: number; target: number }
+
 interface Props {
+  /** Marcos da carreira (jogos, vitórias, títulos, base…), atingidos e a caminho. */
+  milestones?: MilestoneView[];
   /** Rodadas restantes da liga (projeção do caixa no painel de finanças). */
   roundsLeft?: number;
   history: CareerSeasonHistoryEntry[];
@@ -98,7 +102,7 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: 'var(--negative)' };
 }
 
-function TrophyRoomScreen({ roundsLeft, history, finances, transfers, currentSeason, reputation, userSquad, startersOvr, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
+function TrophyRoomScreen({ milestones, roundsLeft, history, finances, transfers, currentSeason, reputation, userSquad, startersOvr, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const [renewingPlayer, setRenewingPlayer] = useState<Player | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
@@ -264,6 +268,21 @@ function TrophyRoomScreen({ roundsLeft, history, finances, transfers, currentSea
         )}
         {clubTab === 'history' && (
           <>
+      {milestones && milestones.length > 0 && (
+        <div className={styles.transferSection}>
+          <div className={styles.repLabel}>🏅 Marcos da carreira · {milestones.filter(m => m.reached).length}/{milestones.length}</div>
+          <div className={styles.milestoneGrid}>
+            {/* Atingidos primeiro; dos que faltam, os mais perto de sair. */}
+            {[...milestones].sort((a, b) => Number(b.reached) - Number(a.reached) || (b.progress / b.target) - (a.progress / a.target)).map(m => (
+              <div key={m.id} className={`${styles.milestone} ${m.reached ? styles.milestoneOn : ''}`}>
+                <span className={styles.milestoneIcon} aria-hidden="true">{m.reached ? m.icon : '🔒'}</span>
+                <span className={styles.milestoneTitle}>{m.title}</span>
+                {!m.reached && <span className={styles.milestoneProg}>{Math.min(m.progress, m.target)}/{m.target}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {transfersRecent.length > 0 && (
         <div className={styles.transferSection}>
           <div className={styles.repLabel}>📜 Histórico de Transferências</div>

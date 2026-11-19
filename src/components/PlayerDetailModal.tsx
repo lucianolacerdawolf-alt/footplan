@@ -7,12 +7,17 @@ import { getContractSeasonsLeft } from '../engine/career';
 import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './PlayerDetailModal.module.css';
 import { shirtTag } from '../utils/shirtNumbers';
+import { ovrText } from '../engine/scouting';
 
 interface Props {
   player: Player;
   teamName?: string;
   leagueFlag?: string;
   onClose: () => void;
+  /** Jogador de fora ainda não observado: atributos escondidos, OVR em faixa. */
+  hidden?: boolean;
+  scoutReportsLeft?: number;
+  onScout?: () => void;
 }
 
 const POSITION_LABELS: Record<Player['position'], string> = {
@@ -40,7 +45,7 @@ function tierClass(value: number): string {
   return styles.tierWeak;
 }
 
-export default function PlayerDetailModal({ player, teamName, leagueFlag, onClose }: Props) {
+export default function PlayerDetailModal({ player, teamName, leagueFlag, onClose, hidden, scoutReportsLeft, onScout }: Props) {
   const ovr = playerOvr(player);
   const marketValue = player.marketValue ?? calculateMarketValue(player);
   const weeklyWage = player.weeklyWage ?? calculateWeeklyWage(marketValue);
@@ -52,8 +57,8 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
         <button className={styles.closeBtn} onClick={onClose} aria-label="Fechar">✕</button>
 
         <div className={styles.header}>
-          <div className={`${styles.ovrBadge} ${tierClass(ovr)}`}>
-            <span className={styles.ovrNumber}>{ovr}</span>
+          <div className={`${styles.ovrBadge} ${hidden ? styles.tierAvg : tierClass(ovr)}`}>
+            <span className={`${styles.ovrNumber} ${hidden ? styles.ovrRange : ''}`}>{hidden ? ovrText(player, false) : ovr}</span>
             <span className={styles.ovrLabel}>{player.position}</span>
           </div>
           <div className={styles.headerInfo}>
@@ -75,6 +80,17 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
           </div>
         </div>
 
+        {hidden && (
+          <div className={styles.scoutBox}>
+            <span>🔭 Jogador não observado: atributos e OVR exato ficam escondidos.</span>
+            {onScout && (
+              <button className={styles.scoutBtn} disabled={!scoutReportsLeft} onClick={onScout}>
+                {scoutReportsLeft ? `Mandar olheiro (${scoutReportsLeft} restante${scoutReportsLeft > 1 ? 's' : ''})` : 'Sem relatórios nesta rodada'}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className={styles.attrGrid}>
           {ATTRIBUTE_GROUPS.map(({ label, key }) => {
             // Math.round defensivo — os 8 atributos são sempre inteiros por convenção em
@@ -83,7 +99,7 @@ export default function PlayerDetailModal({ player, teamName, leagueFlag, onClos
             const value = Math.round(player.attributes[key]);
             return (
               <div key={key} className={styles.attrCell}>
-                <span className={`${styles.attrValue} ${tierClass(value)}`}>{value}</span>
+                <span className={`${styles.attrValue} ${hidden ? styles.attrHidden : tierClass(value)}`}>{hidden ? '?' : value}</span>
                 <span className={styles.attrLabel}>{label}</span>
               </div>
             );

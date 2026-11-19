@@ -188,3 +188,32 @@ export function createSeasonDebtMessage(budget: number, repLoss: number, date: s
     body: `O clube terminou a temporada com €${(budget / 1_000_000).toFixed(1)}M em caixa. A diretoria descontou ${repLoss} de reputação e espera as contas equilibradas na próxima temporada.`,
   });
 }
+
+/** Confiança da diretoria caiu abaixo de um limiar (aviso ou ultimato). */
+export function createBoardConfidenceMessage(level: 'warn' | 'ultimatum', confidence: number, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: level === 'ultimatum', type: 'BOARD_UPDATE',
+    subject: level === 'ultimatum' ? '🚨 Ultimato da diretoria' : '⚠️ Diretoria preocupada',
+    body: level === 'ultimatum'
+      ? `A confiança da diretoria está em ${confidence}%. Mais alguns resultados ruins e você será demitido.`
+      : `A confiança da diretoria caiu para ${confidence}%. Ela espera uma reação nos próximos jogos.`,
+  });
+}
+
+/** Técnico demitido. */
+export function createSackedMessage(clubName: string, repLoss: number, offers: number, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `❌ Demitido do ${clubName}`,
+    body: `A diretoria perdeu a confiança e encerrou o seu trabalho. Reputação −${repLoss}. ${offers > 0 ? `${offers} clube${offers > 1 ? 's já fizeram' : ' já fez'} proposta — veja no Mercado de Treinador.` : 'Nenhum clube fez proposta ainda.'}`,
+  });
+}
+
+/** Marco da carreira atingido. */
+export function createMilestoneMessage(icon: string, title: string, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: false, type: 'BOARD_UPDATE',
+    subject: `${icon} Marco da carreira: ${title}`,
+    body: `Você atingiu um novo marco: ${title}. Veja todos em Meu Clube → Histórico.`,
+  });
+}

@@ -22,6 +22,9 @@ import InboxPanel from './InboxPanel';
 import ConversationsPanel from './ConversationsPanel';
 import PreMatchPrepCard from './PreMatchPrepCard';
 import SocialFeedCard from './SocialFeedCard';
+import RoundSummaryModal from './RoundSummaryModal';
+import { confidenceLabel, CONFIDENCE_START } from '../engine/boardConfidence';
+import { getDerbyName } from '../engine/rivalries';
 import styles from './CareerHubScreen.module.css';
 import { crestSrc } from '../utils/crest';
 import { Button, StatTile, Icon } from './ui';
@@ -52,7 +55,11 @@ interface Props {
   /** Fase 3a — aplica o treino pré-jogo escolhido. */
   onApplyTraining?: (choice: TrainingChoice) => void;
   /** Fase 3b — abre a coletiva de imprensa com o adversário. */
-  onOpenPressConference?: (opponentTeam: Team) => void;
+  onOpenPressConference?: (opponentTeam: Team, bigGame?: boolean) => void;
+  /** Pergunta atual / total da coletiva (jogo grande tem 2). */
+  pressStep?: { index: number; total: number } | null;
+  /** Fecha o resumo da rodada (marca como visto). */
+  onDismissRoundSummary?: () => void;
   /** Fase 3b — responde a pergunta da coletiva. */
   onAnswerPressConference?: (choiceIdx: number) => void;
   /** Fase 3b — fecha a coletiva sem responder. */
@@ -165,14 +172,18 @@ function determineNextMatch(state: CareerState): NextMatch {
   return null;
 }
 
-function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onSimulateRound, onViewYouth, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, blockAdvanceReason, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
+function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayNextCup, onPlayNextContinental, onAdvanceSeason, onNewCareer, onBack, onMarkInboxRead, onAcceptTransferOffer, onRejectTransferOffer, onNextRound, onViewLeague, onSimulateRound, onViewYouth, onOpenJobMarket, jobOfferCount, onRespondConversation, onApplyTraining, onOpenPressConference, onAnswerPressConference, onClosePressConference, pressQuestion, pressDone, pressStep, onDismissRoundSummary, blockAdvanceReason, rosterLastUpdatedAt, cloudStatus, onRetryCloudSave }: Props) {
   const inbox = getInbox(state);
   const finances = getFinances(state);
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
   const userPosition = standings.findIndex(s => s.teamId === state.season.league.userTeamId) + 1;
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
   const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
-  const nextMatch = determineNextMatch(state);
+  // Demitido: nada de jogo até aceitar uma proposta (ou recomeçar).
+  const sacked = state.sacked;
+  const nextMatch = sacked ? null : determineNextMatch(state);
+  const confidence = state.boardConfidence ?? CONFIDENCE_START;
+  const conf = confidenceLabel(confidence);
   const trainingDone = isTrainingDone(getPreMatchDoneRound(state), state.season.league.currentRound);
 
   // Sem próxima partida e sem temporada encerrada, a Central ficava sem nenhuma
@@ -180,7 +191,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
   // que o usuário joga o jogo dele.
   const currentRoundFixtures = state.season.league.fixtures[state.season.league.currentRound];
   const roundComplete = currentRoundFixtures?.every(f => f.played) ?? false;
-  const awaitingRound = !nextMatch && !seasonReady && state.season.league.phase !== 'done';
+  const awaitingRound = !sacked && !nextMatch && !seasonReady && state.season.league.phase !== 'done';
   const youthPool = getYouthPool(state);
   const youthReady = youthPool.filter(canPromote).length;
 
@@ -292,6 +303,14 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
     return { ovr, pos: pos > 0 && form.length > 0 ? pos : null, form, topScorer };
   }, [opponentTeam, standings, state.season.league.fixtures]);
 
+  // Jogo grande: mata-mata, clássico ou confronto direto entre times do G4 — a coletiva
+  // ganha uma 2ª pergunta e a promessa de vitória pesa mais.
+  const bigGame = !!nextMatch && !!opponentTeam && (
+    nextMatch.type !== 'league'
+    || !!getDerbyName(state.season.league.userTeamId, opponentTeam.id)
+    || (gamesPlayed > 0 && userPosition <= 4 && !!opponentInfo?.pos && opponentInfo.pos <= 4)
+  );
+
   const socialPosts = useMemo(() => {
     if (!userTeam) return [];
     return generateSocialFeed({
@@ -325,8 +344,25 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
               {league.name} · T{state.currentSeasonYear} · <Icon name="star" size={11} /> {state.manager.reputation} rep
             </span>
           </div>
+          <div className={`${styles.confChip} ${styles[`conf_${conf.tone}`]}`} title={`Confiança da diretoria: ${conf.label}`} aria-label={`Confiança da diretoria ${confidence}%`}>
+            <span className={styles.confLabel}>Diretoria</span>
+            <span className={styles.confValue}>{confidence}%</span>
+          </div>
         </div>
       )}
+
+          {sacked && (
+            <div className={styles.sackedCard} role="alert">
+              <div className={styles.sackedTitle}>Você foi demitido</div>
+              <p className={styles.sackedText}>
+                A diretoria do {sacked.clubName} encerrou o seu trabalho. Escolha um dos clubes que fizeram proposta ou comece uma carreira nova.
+              </p>
+              <Button size="lg" block onClick={onOpenJobMarket}>
+                <Icon name="briefcase" size={16} /> Ver propostas{jobOfferCount > 0 ? ` (${jobOfferCount})` : ''}
+              </Button>
+              <button className={styles.newCareerBtn} onClick={onNewCareer}>Começar nova carreira</button>
+            </div>
+          )}
 
           {nextMatch && !seasonReady && (
             <div className={styles.nextMatchCard}>
@@ -371,7 +407,9 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
               pressDone={!!pressDone}
               opponentName={opponentTeam.name}
               onTraining={onApplyTraining}
-              onOpenPress={() => onOpenPressConference(opponentTeam)}
+              onOpenPress={() => onOpenPressConference(opponentTeam, bigGame)}
+              bigGame={bigGame}
+              pressStep={pressStep ?? null}
               pressQuestion={pressQuestion ?? null}
               onAnswerPress={onAnswerPressConference ?? (() => {})}
               onClosePress={onClosePressConference ?? (() => {})}
@@ -395,7 +433,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
             </div>
           )}
 
-          {seasonReady ? (
+          {sacked ? null : seasonReady ? (
             <div className={styles.advanceRow}>
               <Button block size="lg" onClick={onAdvanceSeason}>Avançar Temporada →</Button>
             </div>
@@ -498,6 +536,18 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
               </div>
             );
           })()}
+
+          <div className={styles.confCard}>
+            <div className={styles.confHeader}>
+              <span>Confiança da diretoria</span>
+              <strong className={styles[`conf_${conf.tone}`]}>{confidence}% · {conf.label}</strong>
+            </div>
+            <div className={styles.confBar} aria-hidden="true">
+              <div className={`${styles.confFill} ${styles[`confFill_${conf.tone}`]}`} style={{ width: `${confidence}%` }} />
+              <div className={styles.confSackMark} title="Abaixo daqui: demissão" />
+            </div>
+            <div className={styles.confHint}>Sobe com vitórias (mais contra times fortes) e cai com derrotas, meta fora da tabela e caixa no vermelho. Em 10% você é demitido.</div>
+          </div>
 
           {boardObj && boardObj.objectives.length > 0 && (
             <details className={styles.objectivesCard}>
@@ -610,6 +660,10 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
           </>
         )}
       </div>
+
+      {state.roundSummary && !state.roundSummary.seen && onDismissRoundSummary && (
+        <RoundSummaryModal summary={state.roundSummary} onClose={onDismissRoundSummary} />
+      )}
     </div>
   );
 }

@@ -313,3 +313,59 @@
 .nextMatchCard { padding: clamp(6px, 1.3dvh, 12px) 12px; gap: clamp(3px, 0.8dvh, 6px); }
 .nextMatchCard > button { min-height: clamp(36px, 5.2dvh, 44px); }
 .hubTab { min-height: clamp(32px, 4.4dvh, 36px); }
+
+/* ── Confiança da diretoria ─────────────────────────────────────── */
+.topInfo { flex: 1; }
+.confChip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  line-height: 1.1;
+}
+.confLabel { font-size: 9px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-secondary); }
+.confValue { font-size: 14px; font-weight: 900; }
+.conf_good, .conf_good .confValue { color: var(--win); }
+.conf_ok, .conf_ok .confValue { color: var(--text-primary); }
+.conf_warn, .conf_warn .confValue { color: var(--warning); }
+.conf_danger, .conf_danger .confValue { color: var(--loss); }
+.confChip.conf_warn { border-color: color-mix(in srgb, var(--warning) 55%, transparent); }
+.confChip.conf_danger { border-color: color-mix(in srgb, var(--loss) 60%, transparent); }
+.confChip .confLabel { color: var(--text-secondary); }
+
+.confCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.confHeader { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+.confBar { position: relative; height: 8px; border-radius: 4px; background: var(--code-bg); overflow: hidden; }
+.confFill { height: 100%; border-radius: 4px; transition: width 300ms ease; }
+.confFill_good { background: var(--win); }
+.confFill_ok { background: var(--accent); }
+.confFill_warn { background: var(--warning); }
+.confFill_danger { background: var(--loss); }
+.confSackMark { position: absolute; top: 0; bottom: 0; left: 10%; width: 2px; background: var(--loss); opacity: 0.8; }
+.confHint { font-size: 11.5px; line-height: 1.35; color: var(--text-secondary); }
+
+/* ── Demitido ───────────────────────────────────────────────────── */
+.sackedCard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--loss);
+  background: color-mix(in srgb, var(--loss) 10%, var(--surface));
+  text-align: center;
+}
+.sackedTitle { font-family: var(--display); font-size: 1.5rem; color: var(--loss); letter-spacing: 0.03em; }
+.sackedText { margin: 0; font-size: 13px; line-height: 1.4; color: var(--text-primary); }

@@ -14,6 +14,10 @@ import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinR
 import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, pairedDivisionId, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getYouthPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
 import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage, createContinentalQualificationMessage, createContinentalResultMessage, createYouthIntakeMessage, createYouthReadyMessage, createYouthReleasedMessage, createSeasonDebtMessage } from '@/engine/inbox';
 import { generateJobOffers } from '@/engine/jobMarket';
+import { CONFIDENCE_START, CONFIDENCE_SACK, seasonEndConfidence, generateSackedOffers } from '@/engine/boardConfidence';
+import { getCareerTotals } from '@/engine/careerMilestones';
+import { refreshScouting } from '@/engine/scouting';
+import { createSackedMessage } from '@/engine/inbox';
 import type { Screen } from '@/types/navigation';
 
 interface UseCareerSeasonParams {
@@ -142,6 +146,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       // ── Copa continental (UCL/UEL/UECL) ──
       // 1) Premiação da copa continental da temporada que ENCERROU (se o usuário disputou).
       let continentalPrize = 0;
+      let wonContinental = false;
       const endingContinental = careerState.season.continentalCup;
       const endingContinentalId = careerState.season.continentalCupId;
       if (endingContinental && endingContinentalId) {
@@ -156,6 +161,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         // jogou quanto pra quem simulou a final (o caminho por-partida só dispara ao jogar).
         unlockAchievement('continental_participant');
         if (ccResult === 'champion') {
+          wonContinental = true;
           if (endingContinentalId === 'ucl') unlockAchievement('continental_champion');
           else if (endingContinentalId === 'uel') unlockAchievement('europa_king');
           else if (endingContinentalId === 'uecl') unlockAchievement('conference_king');
@@ -204,13 +210,26 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       if (youthReady.length > 0) objectiveMessages.push(createYouthReadyMessage(youthReady.map(p => p.name), nextSeasonLabel));
       if (youthReleased.length > 0) objectiveMessages.push(createYouthReleasedMessage(youthReleased.map(p => p.name), nextSeasonLabel));
 
+      // Confiança da diretoria: os objetivos pesam nela; se zerou, o técnico sai.
+      const conf = seasonEndConfidence(careerState.boardConfidence ?? CONFIDENCE_START, objEval.totalRepDelta);
+      const sackedAtSeasonEnd = conf.final <= CONFIDENCE_SACK;
+      if (sackedAtSeasonEnd) newReputation = Math.max(0, newReputation - 8);
+
       // Fase 2 — Mercado de Treinador: sondagens pro novo ciclo, com a reputação final.
-      const jobOffers = generateJobOffers({
+      const jobOffers = sackedAtSeasonEnd ? generateSackedOffers({
+        rosters: evolvedRosters, currentClubId: evolvedUserTeam.id, currentLeagueId: careerState.leagueId,
+        reputation: newReputation, seasonYear: careerState.currentSeasonYear + 1,
+      }) : generateJobOffers({
         rosters: evolvedRosters,
         currentClubId: evolvedUserTeam.id,
         reputation: newReputation,
         currentSeasonYear: careerState.currentSeasonYear + 1,
       });
+
+      if (sackedAtSeasonEnd) {
+        objectiveMessages.push(createSackedMessage(evolvedUserTeam.name, 8, jobOffers.length, `Fim da temporada ${careerState.currentSeasonYear}`));
+      }
+      const totalsBefore = getCareerTotals(careerState);
 
       setCareerState(prev => {
         if (!prev) return prev;
@@ -249,6 +268,12 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
           // "já feito" da temporada anterior.
           preMatchDoneRound: undefined,
           pressDoneRound: undefined,
+          pressStance: undefined,
+          roundSummary: undefined,
+          scouting: refreshScouting(prev.scouting),
+          boardConfidence: conf.carried,
+          careerTotals: wonContinental ? { ...totalsBefore, continentalTitles: totalsBefore.continentalTitles + 1 } : prev.careerTotals,
+          ...(sackedAtSeasonEnd ? { sacked: { clubName: evolvedUserTeam.name, seasonYear: prev.currentSeasonYear + 1 } } : {}),
         };
       });
       setScreen('season-end');

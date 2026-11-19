@@ -5,6 +5,9 @@ import type { LeagueDefinition } from '../data/leagues/types';
 // são apagados na compilação — não há ciclo em runtime.
 import type { BoardObjectivesState } from './boardObjectives';
 import type { ContinentalCupDef } from './continentalCups';
+import type { PressStance } from './boardConfidence';
+import type { ScoutingState } from './scouting';
+import type { CareerTotals } from './careerMilestones';
 import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
@@ -168,6 +171,34 @@ export interface CareerState {
   preMatchDoneRound?: number;
   // Fase 3b — coletiva de imprensa já feita nesta rodada.
   pressDoneRound?: number;
+  /** Confiança da diretoria 0-100 (boardConfidence.ts). Ausente = ponto de partida. */
+  boardConfidence?: number;
+  /** Técnico demitido: a Central bloqueia os jogos até aceitar uma proposta ou recomeçar. */
+  sacked?: { clubName: string; seasonYear: number };
+  /** Postura na última coletiva — cobrada no resultado contra esse adversário. */
+  pressStance?: { round: number; opponentId: string; stance: PressStance };
+  /** Resumo da última rodada da liga (mostrado uma vez na Central). */
+  roundSummary?: RoundSummary;
+  /** Olheiros: jogadores de fora já observados e relatórios restantes na rodada. */
+  scouting?: ScoutingState;
+  /** Números do técnico somados jogo a jogo (careerMilestones.ts). */
+  careerTotals?: CareerTotals;
+  /** Ids dos marcos já atingidos. */
+  milestonesReached?: string[];
+}
+
+export interface RoundSummary {
+  seasonYear: number;
+  /** Rodada encerrada, 1-based. */
+  round: number;
+  user?: { homeName: string; awayName: string; homeScore: number; awayScore: number; userHome: boolean; scorers: string[] };
+  others: Array<{ home: string; away: string; homeScore: number; awayScore: number }>;
+  positionBefore: number | null;
+  positionAfter: number;
+  totalTeams: number;
+  money: { sponsor: number; tickets: number; merch: number; wages: number; opex: number; events: number; net: number; budget: number };
+  confidence: { before: number; after: number; reasons: string[] };
+  seen: boolean;
 }
 
 export const DEFAULT_FINANCES: ClubFinances = { budget: 20_000_000, wageBill: 0, weeklyIncome: 400_000 };

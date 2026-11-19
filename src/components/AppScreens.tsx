@@ -1,3 +1,5 @@
+import { getScouting } from '../engine/scouting';
+import { MILESTONES, milestoneSource } from '../engine/careerMilestones';
 import React from 'react';
 import type { Team, MatchResult, RandomFn } from '../engine/types';
 import type { GameMode } from './TeamSelectionScreen';
@@ -548,6 +550,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onClosePressConference={p.career.handleClosePressConference}
         pressQuestion={p.career.pressQuestion}
         pressDone={p.career.pressDone}
+        pressStep={p.career.pressStep}
+        onDismissRoundSummary={p.career.handleDismissRoundSummary}
         blockAdvanceReason={hubBlockAdvanceReason}
         rosterLastUpdatedAt={p.career.rosterLastUpdatedAt}
         cloudStatus={p.career.cloudStatus}
@@ -569,6 +573,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         transferListPlayerIds={getTransferList(p.career.careerState)}
         budget={finances.budget}
         wageCap={finances.wageCap}
+        scouting={getScouting(p.career.careerState)}
+        onScoutPlayer={p.career.handleScoutPlayer}
         isWindowOpen={isTransferWindowOpen(p.career.careerState.season.league.currentRound)}
         onBuyPlayer={p.career.handleBuyPlayer}
         onListPlayerForSale={p.career.handleListPlayerForSale}
@@ -618,6 +624,11 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
     const userTeam = lg.teams.find(t => t.id === lg.userTeamId);
     return (
       <TrophyRoomScreen
+        milestones={(() => {
+          const src = milestoneSource(cs);
+          const reached = new Set(cs.milestonesReached ?? []);
+          return MILESTONES.map(m => ({ id: m.id, icon: m.icon, title: m.title, target: m.target, progress: m.progress(src), reached: reached.has(m.id) }));
+        })()}
         history={cs.history}
         finances={getFinances(cs)}
         transfers={getTransferHistory(cs)}

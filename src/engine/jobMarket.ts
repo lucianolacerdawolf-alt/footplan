@@ -10,6 +10,7 @@ import { getStartingTier, generateSponsor } from './sponsors';
 import { generateBoardObjectives } from './boardObjectives';
 import { getLeague } from '../data/leagues';
 import { shuffle } from './rng';
+import { CONFIDENCE_START } from './boardConfidence';
 
 /**
  * Reputação mínima do manager pra ser sondado por um clube, dado o prestígio dele
@@ -110,6 +111,11 @@ export function applyClubChange(state: CareerState, offer: JobOffer): CareerStat
     boardObjectives: boardObj,
     transferListPlayerIds: undefined,
     jobOffers: undefined,
+    // A trajetória do técnico vai com ele; a confiança recomeça no clube novo
+    // (e `sacked` some — aceitar uma proposta é o que tira o técnico da demissão).
+    careerTotals: state.careerTotals,
+    milestonesReached: state.milestonesReached,
+    boardConfidence: CONFIDENCE_START,
   };
 
   return isValidCareerState(next) ? next : null;

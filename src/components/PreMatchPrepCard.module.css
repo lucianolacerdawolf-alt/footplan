@@ -154,3 +154,9 @@
 }
 
 
+
+.modalStep { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--warning); }
+.modalHint { font-size: 11px; line-height: 1.35; color: var(--text-secondary); text-align: center; }
+/* Celular baixo: o modal da coletiva não passa da tela. */
+.modal { max-height: calc(100dvh - 24px); overflow-y: auto; padding: clamp(16px, 3dvh, 28px) 18px clamp(14px, 2.4dvh, 22px); }
+.modalIcon { font-size: clamp(32px, 6dvh, 48px); }

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { Team, MatchResult } from '@/engine/types';
-import type { LeagueFixture, BracketMatch, PlayableStage } from '@/engine/tournament';
+import type { LeagueFixture, BracketMatch, PlayableStage, BracketState } from '@/engine/tournament';
 import {
   simularFixtureAuto, simularRodadaAuto, recoverFatigue, applyPostMatchInjuries, randomizeCPUTactics,
   advanceBracket, simularBracketMatch,
@@ -12,8 +12,14 @@ import { computeWageBill, getTicketRevenue, calculateMarketValue } from '@/engin
 import { ticketPerHomeMatch } from '@/engine/clubEconomy';
 import {
   createInjuryMessage, createMatchPreviewMessage, createTransferWindowMessage, createTransferOfferMessage, hasMandatoryUnread,
-  createDerbyPreviewMessage, createNegativeBudgetMessage,
+  createDerbyPreviewMessage, createNegativeBudgetMessage, createBoardConfidenceMessage, createSackedMessage,
 } from '@/engine/inbox';
+import {
+  CONFIDENCE_START, clampConfidence, matchConfidenceDelta, roundConfidenceDelta, crossedThreshold, shouldSack, generateSackedOffers,
+} from '@/engine/boardConfidence';
+import { addMatchToTotals, getCareerTotals } from '@/engine/careerMilestones';
+import { refreshScouting } from '@/engine/scouting';
+import { computeStandings } from '@/engine/tournament';
 import { getDerbyName } from '@/engine/rivalries';
 import { tallyUserGoals, mergeGoalTally } from '@/engine/seasonClosure';
 import { generateFreeAgentPool } from '@/engine/freeAgentPool';
@@ -24,7 +30,7 @@ import { getStageMatches, updateStageMatch } from '@/engine/bracketHelpers';
 import { saveLiveMatchMeta } from '@/utils/liveMatchPersistence';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult, extractScorers } from '../shared/matchHandlers';
 import { maybeGetCareerEvent } from '@/engine/careerEvents';
-import { getFinances, getInbox, isTransferWindowOpen, getTransferList, type CareerState, type InboxMessage } from '@/engine/career';
+import { getFinances, getInbox, isTransferWindowOpen, getTransferList, type CareerState, type InboxMessage, type RoundSummary } from '@/engine/career';
 import type { ConversationContext } from '@/engine/playerConversations';
 import type { Screen } from '@/types/navigation';
 import type { AchievementEvalInput } from '../useAchievements';
@@ -44,6 +50,33 @@ interface UseCareerMatchFlowParams {
   evaluateAchievements: (input: AchievementEvalInput) => void;
   /** Fase 4 — tenta gerar 0-1 conversa com atleta no contexto dado. */
   generateConversation?: (ctx: ConversationContext) => void;
+}
+
+/** Jogo de mata-mata do usuário (copa ou continental): conta nos números da carreira e
+ *  mexe na confiança da diretoria (pênaltis contam como vitória/derrota). */
+function userKnockoutPatch(prev: CareerState, bm: BracketMatch, cup: BracketState): Partial<CareerState> {
+  const userId = cup.userTeamId;
+  if (!userId || (bm.homeTeamId !== userId && bm.awayTeamId !== userId) || bm.homeScore == null || bm.awayScore == null) return {};
+  const userHome = bm.homeTeamId === userId;
+  // homeScore/awayScore já incluem a prorrogação.
+  const us = userHome ? bm.homeScore : bm.awayScore;
+  const them = userHome ? bm.awayScore : bm.homeScore;
+  const oppId = userHome ? bm.awayTeamId : bm.homeTeamId;
+  const won = bm.winnerId ? bm.winnerId === userId : us > them;
+  const userTeam = cup.teams.find(t => t.id === userId);
+  const opp = cup.teams.find(t => t.id === oppId);
+  const stance = prev.pressStance && prev.pressStance.opponentId === oppId ? prev.pressStance.stance : undefined;
+  const delta = matchConfidenceDelta({
+    // Empate decidido nos pênaltis: conta pelo vencedor.
+    userScore: us === them ? (won ? 1 : 0) : us, oppScore: us === them ? (won ? 0 : 1) : them,
+    userOvr: userTeam ? getAvgOvr(userTeam) : 70, oppOvr: opp ? getAvgOvr(opp) : 70,
+    knockout: true, stance,
+  });
+  return {
+    boardConfidence: clampConfidence((prev.boardConfidence ?? CONFIDENCE_START) + delta),
+    careerTotals: addMatchToTotals(getCareerTotals(prev), us, them),
+    pressStance: stance ? undefined : prev.pressStance,
+  };
 }
 
 export function useCareerMatchFlow({
@@ -71,6 +104,7 @@ export function useCareerMatchFlow({
 
   const handlePlayCareerLeagueMatch = useCallback((fixture: LeagueFixture, home: Team, away: Team) => {
     if (!careerState) return;
+    if (careerState.sacked) { setToastMsg('Você foi demitido — escolha um novo clube na Central'); return; }
     const roundIdx = fixture.roundIndex;
     const fixtureIdx = careerState.season.league.fixtures[roundIdx].findIndex(f => f.id === fixture.id);
     setPendingCareerLeagueFixture({ roundIdx, fixtureIdx });
@@ -82,7 +116,7 @@ export function useCareerMatchFlow({
     // voltava pra rodada em vez de ir pro jogo.
     setIsTournamentEntry(false);
     setScreen('setup');
-  }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
+  }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setToastMsg]);
 
 
   const handlePlayNextCareerMatch = useCallback(() => {
@@ -125,6 +159,7 @@ export function useCareerMatchFlow({
 
   const handleNextCareerLeagueRound = useCallback(() => {
     if (!careerState) return;
+    if (careerState.sacked) { setToastMsg('Você foi demitido — escolha um novo clube na Central'); return; }
     // Mensagens obrigatórias (ex: relatório de lesão) precisam ser lidas antes de
     // avançar — o botão na UI já fica desabilitado, isto é a barreira de verdade.
     if (hasMandatoryUnread(getInbox(careerState))) {
@@ -237,6 +272,52 @@ export function useCareerMatchFlow({
       }
     }
 
+    // ── Resumo da rodada + confiança da diretoria ──
+    const teamName = (id: string) => leg.teams.find(t => t.id === id)?.name ?? '???';
+    const roundFixtures = leg.fixtures[leg.currentRound] ?? [];
+    const standingsAfter = computeStandings(leg.teams, leg.fixtures);
+    const positionAfter = standingsAfter.findIndex(st => st.teamId === leg.userTeamId) + 1;
+    const positionBefore = leg.currentRound > 0
+      ? computeStandings(leg.teams, leg.fixtures.slice(0, leg.currentRound)).findIndex(st => st.teamId === leg.userTeamId) + 1
+      : null;
+    const others = roundFixtures
+      .filter(f => f.played && f.homeTeamId !== leg.userTeamId && f.awayTeamId !== leg.userTeamId && f.homeScore != null && f.awayScore != null)
+      .map(f => ({ home: teamName(f.homeTeamId), away: teamName(f.awayTeamId), homeScore: f.homeScore!, awayScore: f.awayScore! }));
+    let userLine: RoundSummary['user'];
+    let matchDelta = 0;
+    let matchScore: { us: number; them: number } | null = null;
+    const reasons: string[] = [];
+    let stanceUsed = false;
+    if (justPlayedFixture?.played && justPlayedFixture.homeScore != null && justPlayedFixture.awayScore != null) {
+      const userHome = justPlayedFixture.homeTeamId === leg.userTeamId;
+      const oppId = userHome ? justPlayedFixture.awayTeamId : justPlayedFixture.homeTeamId;
+      const us = userHome ? justPlayedFixture.homeScore : justPlayedFixture.awayScore;
+      const them = userHome ? justPlayedFixture.awayScore : justPlayedFixture.homeScore;
+      matchScore = { us, them };
+      userLine = {
+        homeName: teamName(justPlayedFixture.homeTeamId), awayName: teamName(justPlayedFixture.awayTeamId),
+        homeScore: justPlayedFixture.homeScore, awayScore: justPlayedFixture.awayScore, userHome,
+        scorers: (justPlayedFixture.scorers ?? []).filter(sc => sc.teamId === leg.userTeamId)
+          .map(sc => `${sc.playerName}${sc.goals > 1 ? ` (${sc.goals})` : ''}`),
+      };
+      const stance = careerState.pressStance?.round === leg.currentRound && careerState.pressStance.opponentId === oppId
+        ? careerState.pressStance.stance : undefined;
+      stanceUsed = !!stance;
+      const oppTeam = leg.teams.find(t => t.id === oppId);
+      const derby = !!getDerbyName(leg.userTeamId, oppId);
+      matchDelta = matchConfidenceDelta({
+        userScore: us, oppScore: them,
+        userOvr: getAvgOvr(userTeamAfter), oppOvr: oppTeam ? getAvgOvr(oppTeam) : getAvgOvr(userTeamAfter),
+        derby, stance,
+      });
+      const word = us > them ? 'Vitória' : us === them ? 'Empate' : 'Derrota';
+      reasons.push(`${word} ${derby ? 'no clássico ' : ''}contra ${teamName(oppId)}: ${matchDelta > 0 ? '+' : ''}${matchDelta}`);
+      if (stance === 'bold') reasons.push(us > them ? 'Promessa da coletiva cumprida' : 'Promessa da coletiva não cumprida');
+      if (stance === 'shield' && us < them) reasons.push('Você tirou a pressão na coletiva: a derrota pesou menos');
+    }
+    const leagueObj = careerState.boardObjectives?.objectives.find(o => o.type === 'league_position' || o.type === 'top_half' || o.type === 'avoid_relegation');
+    const leagueObjectiveOff = !!leagueObj && positionAfter > leagueObj.target;
+
     setCareerState(prev => {
       if (!prev) return prev;
       // Finanças derivadas do `prev` (estado mais recente), não do snapshot — senão
@@ -248,12 +329,63 @@ export function useCareerMatchFlow({
       const debtWarning = prevFinances.budget >= 0 && nextBudget < 0
         ? [createNegativeBudgetMessage(nextBudget, `Rodada ${next + 1}`)] : [];
       const allNew = [...newMessages, ...debtWarning];
+      // Guarda contra duplo avanço (clique rápido): a rodada já avançou no `prev`.
+      if (prev.season.league.currentRound !== leg.currentRound) return prev;
+
+      const roundDelta = roundConfidenceDelta({ leagueObjectiveOff, budgetNegative: nextBudget < 0, round: next, totalRounds: leg.fixtures.length });
+      const confReasons = [...reasons];
+      if (leagueObjectiveOff && next >= Math.ceil(leg.fixtures.length / 4)) confReasons.push('Fora da meta na tabela: -1');
+      if (nextBudget < 0) confReasons.push('Caixa no vermelho: -2');
+      const confBefore = prev.boardConfidence ?? CONFIDENCE_START;
+      const confAfter = clampConfidence(confBefore + matchDelta + roundDelta);
+      const crossed = crossedThreshold(confBefore, confAfter);
+      if (crossed) allNew.push(createBoardConfidenceMessage(crossed, confAfter, `Rodada ${next + 1}`));
+
+      // Demissão: sem confiança, depois das primeiras rodadas.
+      let sackPatch: Partial<CareerState> = {};
+      if (shouldSack(confAfter, next)) {
+        const repLoss = 8;
+        const clubName = userTeamAfter.name;
+        const offers = generateSackedOffers({
+          rosters: prev.rosters, currentClubId: leg.userTeamId, currentLeagueId: prev.leagueId,
+          reputation: Math.max(0, prev.manager.reputation - repLoss), seasonYear: prev.currentSeasonYear,
+        });
+        allNew.push(createSackedMessage(clubName, repLoss, offers.length, `Rodada ${next + 1}`));
+        sackPatch = {
+          sacked: { clubName, seasonYear: prev.currentSeasonYear },
+          manager: { ...prev.manager, reputation: Math.max(0, prev.manager.reputation - repLoss) },
+          jobOffers: offers,
+        };
+      }
+
+      const roundSummary: RoundSummary = {
+        seasonYear: prev.currentSeasonYear,
+        round: leg.currentRound + 1,
+        user: userLine,
+        others,
+        positionBefore,
+        positionAfter,
+        totalTeams: leg.teams.length,
+        money: {
+          sponsor: prevFinances.weeklyIncome, tickets: ticketRevenue, merch: prevFinances.merchRevenue ?? 0,
+          wages: wageBill, opex: prevFinances.operatingCost ?? 0, events: eventBudgetDelta,
+          net: nextBudget - prevFinances.budget, budget: nextBudget,
+        },
+        confidence: { before: confBefore, after: confAfter, reasons: confReasons },
+        seen: false,
+      };
       return {
         ...prev,
         ...freeAgentPoolPatch,
         season: { ...prev.season, league: updatedState },
         finances: { ...prevFinances, budget: nextBudget, wageBill },
         inbox: allNew.length > 0 ? [...getInbox(prev), ...allNew] : prev.inbox,
+        boardConfidence: confAfter,
+        careerTotals: matchScore ? addMatchToTotals(getCareerTotals(prev), matchScore.us, matchScore.them) : prev.careerTotals,
+        pressStance: stanceUsed ? undefined : prev.pressStance,
+        scouting: refreshScouting(prev.scouting),
+        roundSummary,
+        ...sackPatch,
       };
     });
     // Fase 4 — sinais estruturais no avanço de rodada (banco/lista/contrato): o motor
@@ -404,7 +536,7 @@ export function useCareerMatchFlow({
     const updated: BracketMatch = { ...match, ...sim };
     let s = { ...cupState };
     s = updateStageMatch(s, matchIdx, updated);
-    setCareerState(prev => prev ? { ...prev, season: { ...prev.season, cup: advanceBracket(s) } } : prev);
+    setCareerState(prev => prev ? { ...prev, ...userKnockoutPatch(prev, updated, cupState), season: { ...prev.season, cup: advanceBracket(s) } } : prev);
   }, [careerState, setCareerState]);
 
   // ── Copa continental (UCL/UEL/UECL) ──
@@ -459,7 +591,7 @@ export function useCareerMatchFlow({
     const updated: BracketMatch = { ...match, ...sim };
     let s = { ...cupState };
     s = updateStageMatch(s, matchIdx, updated);
-    setCareerState(prev => prev?.season.continentalCup ? { ...prev, season: { ...prev.season, continentalCup: advanceBracket(s) } } : prev);
+    setCareerState(prev => prev?.season.continentalCup ? { ...prev, ...userKnockoutPatch(prev, updated, cupState), season: { ...prev.season, continentalCup: advanceBracket(s) } } : prev);
   }, [careerState, setCareerState]);
 
   const handleEditContinentalTactics = useCallback(() => {
@@ -526,6 +658,7 @@ export function useCareerMatchFlow({
         : { cup: finalState };
       return {
         ...prev,
+        ...userKnockoutPatch(prev, updated, cupState),
         season: {
           ...prev.season, ...seasonPatch,
           userGoalScorers: mergeGoalTally(prev.season.userGoalScorers, goalScorers),

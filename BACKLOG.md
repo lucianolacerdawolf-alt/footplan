@@ -17,6 +17,16 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - **O que envolve:** a partir de ~900px de largura, Central em duas colunas (próximo jogo + preparação | mensagens/temporada/clube), Táticas com campinho ao lado do Estilo, Meu Clube com finanças ao lado de contratos; grades de times/ligas com mais colunas; testar em 768×1024 e 1280×800.
 - **Posso retomar quando:** houver tráfego relevante de tablet/desktop (ver analytics) ou antes de divulgar a versão web.
 
+### Ideias dos jogos concorrentes (2026-11-19) — ✅ 1, 3, 5, 7 e 8 feitos
+
+- ✅ **Confiança da diretoria** (`engine/boardConfidence.ts`): medidor 0–100 que se move a cada jogo (vitória sobre time mais forte vale mais, derrota como favorito pesa mais, clássico ×1,5, mata-mata ×1,3), mais −1/rodada com a meta da tabela fora de alcance (após 1/4 da liga) e −2 com caixa negativo. Avisos em 35% e 20% (ultimato). Em 10%, a partir da rodada 6, demissão: −8 de reputação, 2–3 propostas de clubes menores, Central bloqueada até aceitar uma ou recomeçar. No fim da temporada os objetivos somam na confiança e metade da distância até 60 é perdoada. Chip "Diretoria N%" no topo da Central e barra na aba Temporada.
+- ✅ **Resumo da rodada** (`RoundSummaryModal`): ao avançar, uma tela com o resultado, artilheiros, posição (subiu/caiu), dinheiro da rodada linha a linha, variação da diretoria com os motivos e os outros jogos. Mostrado uma vez (`roundSummary.seen`).
+- ✅ **Olheiros** (`engine/scouting.ts`): no Mercado, jogadores de outras ligas e agentes livres mostram só uma faixa de OVR de 8 pontos (contém o real; ordenação usa o meio da faixa); a ficha esconde os atributos. 3 relatórios por rodada revelam o jogador para sempre. A liga do usuário é conhecida.
+- ✅ **Coletiva**: respostas têm efeito na diretoria: ousada (+2 moral, promete vitória: ganhar dá bônus, perder pesa mais), equilibrada (+1 diretoria), cautelosa (−1 moral, derrota pesa metade). Jogo grande (mata-mata, clássico, confronto entre G4) tem 2 perguntas.
+- ✅ **Marcos da carreira** (`engine/careerMilestones.ts`): 20 marcos (jogos, vitórias, gols, jogos sem sofrer gol, goleada, títulos, base, temporadas) somados jogo a jogo em `careerTotals` (sobrevivem à troca de clube); aviso na caixa de entrada + toast; lista com progresso em Meu Clube → Histórico. Saves antigos partem do histórico + rodadas já jogadas.
+- ⏳ **Não conferido na tela:** o Mercado com olheiros (a janela de transferências estava fechada no save de teste) e uma demissão de verdade jogando (testada por teste automático e forçando o estado).
+- 💡 Ficaram de fora desta rodada (sugestões 2, 4 e 6): investir em estrutura (estádio/CT/base), empréstimos e cláusulas, comissão técnica.
+
 ### Teste como jogador novo + pontas soltas (2026-11-18/19) — ✅ feito
 
 - ✅ Botão de avançar a rodada escondido depois da partida (regras `.fit-screen` em CSS modules nunca aplicavam; agora `:global(.fit-screen)`).

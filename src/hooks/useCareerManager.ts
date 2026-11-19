@@ -3,7 +3,9 @@ import type { Team } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { assignMarketValues, computeWageBill } from '../engine/transferMarket';
 import { baseWeeklyRevenue, clubInitialBudget, sponsorTvPerRound, operatingCostPerRound, wageCap } from '../engine/clubEconomy';
-import { createWelcomeMessage, createYouthIntakeMessage } from '../engine/inbox';
+import { createWelcomeMessage, createYouthIntakeMessage, createMilestoneMessage } from '../engine/inbox';
+import { getCareerTotals, newlyReachedMilestones } from '../engine/careerMilestones';
+import { getScouting, scoutPlayer } from '../engine/scouting';
 import { generateYouthIntake, promoteYouthPlayer, canPromote } from '../engine/youthAcademy';
 import { generateFreeAgentPool } from '../engine/freeAgentPool';
 import { generateBoardObjectives, createBoardObjectivesInboxMessage } from '../engine/boardObjectives';
@@ -210,6 +212,7 @@ export function useCareerManager({
     const promoted = updatedTeam.squad[updatedTeam.squad.length - 1];
     setCareerState(prev => prev ? {
       ...prev,
+      careerTotals: { ...getCareerTotals(prev), youthPromoted: getCareerTotals(prev).youthPromoted + 1 },
       youthPool: getYouthPool(prev).filter(p => p.id !== playerId),
       rosters: { ...prev.rosters, [prev.leagueId]: prev.rosters[prev.leagueId].map(t => t.id === userTeamId ? updatedTeam : t) },
       season: {
@@ -219,6 +222,45 @@ export function useCareerManager({
       finances: prev.finances ? { ...prev.finances, wageBill: computeWageBill(updatedTeam) } : prev.finances,
     } : prev);
     setToastMsg(`✅ ${youth.name} promovido ao elenco profissional!`);
+  }, [careerState, setCareerState, setToastMsg]);
+
+  // Olheiros: gasta um relatório da rodada pra revelar um jogador de fora.
+  const handleScoutPlayer = useCallback((playerId: string): boolean => {
+    if (!careerState) return false;
+    const next = scoutPlayer(getScouting(careerState), playerId);
+    if (!next) { setToastMsg('🔭 Sem relatórios de olheiro nesta rodada — recarregam na próxima'); return false; }
+    setCareerState(prev => {
+      if (!prev) return prev;
+      const n = scoutPlayer(getScouting(prev), playerId);
+      return n ? { ...prev, scouting: n } : prev;
+    });
+    return true;
+  }, [careerState, setCareerState, setToastMsg]);
+
+  const handleDismissRoundSummary = useCallback(() => {
+    setCareerState(prev => prev?.roundSummary && !prev.roundSummary.seen
+      ? { ...prev, roundSummary: { ...prev.roundSummary, seen: true } } : prev);
+  }, [setCareerState]);
+
+  // Marcos da carreira: qualquer mudança no estado pode completar um (jogo, título,
+  // jovem promovido). Registra, avisa na caixa de entrada e mostra um toast.
+  useEffect(() => {
+    // Save inválido é descartado pelo efeito de validação do mount — não ler antes disso.
+    if (!careerState || !isValidCareerState(careerState)) return;
+    const fresh = newlyReachedMilestones(careerState);
+    if (fresh.length === 0) return;
+    setCareerState(prev => {
+      if (!prev || !isValidCareerState(prev)) return prev;
+      const now = newlyReachedMilestones(prev);
+      if (now.length === 0) return prev;
+      const date = `Temporada ${prev.currentSeasonYear}`;
+      return {
+        ...prev,
+        milestonesReached: [...(prev.milestonesReached ?? []), ...now.map(m => m.id)],
+        inbox: [...(prev.inbox ?? []), ...now.map(m => createMilestoneMessage(m.icon, m.title, date))],
+      };
+    });
+    setToastMsg(`${fresh[0].icon} Marco da carreira: ${fresh[0].title}`);
   }, [careerState, setCareerState, setToastMsg]);
 
   const conversations = useCareerConversations({ careerState, setCareerState, setToastMsg });
@@ -254,6 +296,8 @@ export function useCareerManager({
     refreshShirtNumbers,
     handleStartCareer,
     handlePromoteYouthPlayer,
+    handleScoutPlayer,
+    handleDismissRoundSummary,
     rosterLastUpdatedAt,
     cloudStatus, retryCloudSave,
     ...matchFlow,

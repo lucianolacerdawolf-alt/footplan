@@ -7,6 +7,7 @@ import { formatMoney } from '../utils/formatMoney';
 import { computeWageBill, calculateMarketValue } from '../engine/transferMarket';
 import { syncLeagueRoster } from '../services/rosterSync';
 import PlayerDetailModal from './PlayerDetailModal';
+import { ovrText, visibleOvr, type ScoutingState } from '../engine/scouting';
 import { withWage } from '../engine/clubEconomy';
 import styles from './TransferMarketScreen.module.css';
 import { ScreenHeader } from './ui';
@@ -26,6 +27,9 @@ interface Props {
   budget: number;
   /** Teto semanal da folha (diretoria) — avisa antes de oferecer por quem estoura. */
   wageCap?: number;
+  /** Olheiros (jogadores de fora observados + relatórios da rodada). Ausente = tudo visível. */
+  scouting?: ScoutingState;
+  onScoutPlayer?: (playerId: string) => boolean;
   isWindowOpen: boolean;
   onBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
   onListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
@@ -69,15 +73,15 @@ function resultMessage(reason: string): string {
   }
 }
 
-function sortPlayers<T extends Player>(players: T[], sortBy: SortKey): T[] {
+function sortPlayers<T extends Player>(players: T[], sortBy: SortKey, ovrOf: (p: Player) => number = playerOvr): T[] {
   return [...players].sort((a, b) => {
     if (sortBy === 'name') return a.name.localeCompare(b.name);
     if (sortBy === 'value') return (b.marketValue ?? calculateMarketValue(b)) - (a.marketValue ?? calculateMarketValue(a));
-    return playerOvr(b) - playerOvr(a);
+    return ovrOf(b) - ovrOf(a);
   });
 }
 
-function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, wageCap, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
+function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, wageCap, scouting, onScoutPlayer, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
@@ -115,13 +119,24 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
       .finally(() => setSyncingLeagueId(prev => (prev === buyLeagueId ? null : prev)));
   }, [buyLeagueId, userLeagueId, onRosterSynced]);
 
+  // Olheiros: quem joga na liga do usuário (e o próprio elenco) é conhecido; de fora,
+  // só a faixa de OVR até alguém observar. Sem `scouting` (testes antigos) tudo é visível.
+  const ownLeagueIds = new Set((rosters[userLeagueId] ?? []).flatMap(t => t.squad.map(p => p.id)));
+  const isKnown = (p: Player) => !scouting || ownLeagueIds.has(p.id) || scouting.scoutedIds.includes(p.id);
+  const ovrOf = (p: Player) => visibleOvr(p, isKnown(p));
+  const ovrCell = (p: Player) => (
+    <span className={`${styles.playerOvr} ${isKnown(p) ? '' : styles.ovrUnknown}`} title={isKnown(p) ? undefined : 'Não observado — toque em ⓘ para mandar um olheiro'}>
+      {ovrText(p, isKnown(p))}
+    </span>
+  );
+
   const switchTab = (tab: 'buy' | 'sell' | 'free-agents') => {
     setActiveTab(tab); setExpandedId(null); setFeedback(null);
     setBuyLeagueId(null); setBuyTeamId(null); setBuySearch('');
   };
 
   const applyFilter = (players: Player[]) =>
-    sortPlayers(positionFilter === 'ALL' ? players : players.filter(p => p.position === positionFilter), sortBy);
+    sortPlayers(positionFilter === 'ALL' ? players : players.filter(p => p.position === positionFilter), sortBy, ovrOf);
 
   const filterHits = (hits: SearchHit[]) =>
     positionFilter === 'ALL' ? hits : hits.filter(h => h.player.position === positionFilter);
@@ -129,7 +144,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
   const sortHits = (hits: SearchHit[]) => [...hits].sort((a, b) => {
     if (sortBy === 'name') return a.player.name.localeCompare(b.player.name);
     if (sortBy === 'value') return (b.player.marketValue ?? calculateMarketValue(b.player)) - (a.player.marketValue ?? calculateMarketValue(a.player));
-    return playerOvr(b.player) - playerOvr(a.player);
+    return ovrOf(b.player) - ovrOf(a.player);
   });
 
   const handleExpand = (playerId: string, defaultMultiplier: number) => {
@@ -296,6 +311,12 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
             </div>
           )}
 
+          {scouting && activeTab !== 'sell' && (
+            <div className={styles.scoutBar}>
+              🔭 Olheiros: <strong>{scouting.reportsLeft}</strong> relatório{scouting.reportsLeft === 1 ? '' : 's'} nesta rodada · de outras ligas você vê só a faixa de OVR
+            </div>
+          )}
+
           <div className={`${styles.marketBody} fit-scroll`}>
           {showFilterBar && cheapestVisible === Infinity && (
             <div className={styles.emptyState}>
@@ -322,7 +343,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                             <span className={styles.playerName}>{p.name}</span>
                             <span className={styles.searchHitSource}>{league?.flag} {team.abbreviation}</span>
                             <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                            <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                            {ovrCell(p)}
                             <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
                           </button>
                           {renderInfoBtn(p, { teamName: team.name, leagueFlag: league?.flag })}
@@ -381,7 +402,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                               <span className={styles.playerNum}>{shirtTag(p)}</span>
                               <span className={styles.playerName}>{p.name}</span>
                               <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                              <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                              {ovrCell(p)}
                               <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
                             </button>
                             {renderInfoBtn(p, { teamName: buyTeam.name, leagueFlag: leagueMeta(buyLeagueId)?.flag })}
@@ -475,7 +496,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                         <span className={styles.playerNum}>{p.age}a</span>
                         <span className={styles.playerName}>{p.name}</span>
                         <span className={`${styles.playerPos} ${styles[`pos${p.position}`]}`}>{p.position}</span>
-                        <span className={styles.playerOvr}>{playerOvr(p)}</span>
+                        {ovrCell(p)}
                         <span className={styles.playerValue}>{formatMoney(marketValue)}</span>
                       </button>
                       {renderInfoBtn(p)}
@@ -496,6 +517,9 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
           teamName={detailPlayer.teamName}
           leagueFlag={detailPlayer.leagueFlag}
           onClose={() => setDetailPlayer(null)}
+          hidden={!isKnown(detailPlayer.player)}
+          scoutReportsLeft={scouting?.reportsLeft}
+          onScout={onScoutPlayer ? () => { onScoutPlayer(detailPlayer.player.id); } : undefined}
         />
       )}
     </div>

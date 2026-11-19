@@ -1,6 +1,6 @@
 import type { TrainingChoice } from '../engine/training';
 import { TRAINING_PRESETS } from '../engine/training';
-import type { PressConferenceQuestion } from '../engine/pressConference';
+import { responseEffectLabel, type PressConferenceQuestion } from '../engine/pressConference';
 import { useModalFocus } from '../hooks/useModalFocus';
 import styles from './PreMatchPrepCard.module.css';
 
@@ -11,6 +11,9 @@ interface Props {
   onTraining: (choice: TrainingChoice) => void;
   onOpenPress: () => void;
   pressQuestion: PressConferenceQuestion | null;
+  /** Jogo grande: a coletiva tem 2 perguntas. */
+  bigGame?: boolean;
+  pressStep?: { index: number; total: number } | null;
   onAnswerPress: (choiceIdx: number) => void;
   onClosePress: () => void;
 }
@@ -18,7 +21,7 @@ interface Props {
 const CHOICES: TrainingChoice[] = ['intense', 'light', 'rest'];
 
 export default function PreMatchPrepCard({
-  trainingDone, pressDone, opponentName,
+  trainingDone, pressDone, opponentName, bigGame, pressStep,
   onTraining, onOpenPress, pressQuestion, onAnswerPress, onClosePress,
 }: Props) {
   const pressModalRef = useModalFocus<HTMLDivElement>(!!pressQuestion, onClosePress);
@@ -60,7 +63,7 @@ export default function PreMatchPrepCard({
           title={`Fale com a imprensa antes de enfrentar ${opponentName}`}
         >
           <span className={styles.trainLabel}>🎤 Coletiva</span>
-          <span className={styles.effectNeutral}>{pressDone ? 'Feita' : 'Moral ±'}</span>
+          <span className={styles.effectNeutral}>{pressDone ? 'Feita' : bigGame ? 'Jogo grande' : 'Moral ±'}</span>
         </button>
       </div>
 
@@ -70,17 +73,19 @@ export default function PreMatchPrepCard({
             <button className={styles.closeBtn} onClick={onClosePress} aria-label="Fechar coletiva">Pular ✕</button>
             <div className={styles.modalIcon} aria-hidden="true">🎤</div>
             <div className={styles.modalTitle} id="press-title">Coletiva de Imprensa</div>
+            {pressStep && pressStep.total > 1 && (
+              <div className={styles.modalStep}>Jogo grande · pergunta {pressStep.index} de {pressStep.total}</div>
+            )}
             <div className={styles.modalQuestion}>{pressQuestion.question}</div>
             <div className={styles.modalOptions}>
               {pressQuestion.responses.map((r, idx) => (
                 <button key={idx} className={styles.modalOption} onClick={() => onAnswerPress(idx)}>
                   {r.label}
-                  <span className={styles.modalDelta}>
-                    {r.moraleDelta > 0 ? '+' : ''}{r.moraleDelta} moral
-                  </span>
+                  <span className={styles.modalDelta}>{responseEffectLabel(r)}</span>
                 </button>
               ))}
             </div>
+            <div className={styles.modalHint}>Prometer vitória cobra no resultado: ganhar sobe a confiança da diretoria, perder derruba.</div>
           </div>
         </div>
       )}
