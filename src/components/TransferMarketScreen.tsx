@@ -31,6 +31,8 @@ interface Props {
   scouting?: ScoutingState;
   onScoutPlayer?: (playerId: string) => boolean;
   isWindowOpen: boolean;
+  /** Rodada atual (0-based) — diz quando a janela reabre. */
+  currentRound?: number;
   onBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
   onListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
   onUnlistPlayerForSale: (playerId: string) => void;
@@ -81,7 +83,7 @@ function sortPlayers<T extends Player>(players: T[], sortBy: SortKey, ovrOf: (p:
   });
 }
 
-function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, wageCap, scouting, onScoutPlayer, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
+function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, wageCap, scouting, onScoutPlayer, isWindowOpen, currentRound, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
@@ -261,13 +263,13 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
 
       <div className={styles.tabs}>
         <button className={`${styles.tabBtn} ${activeTab === 'buy' ? styles.active : ''}`} onClick={() => switchTab('buy')}>
-          🛒 Comprar Jogadores
+          🛒 Comprar
         </button>
         <button className={`${styles.tabBtn} ${activeTab === 'sell' ? styles.active : ''}`} onClick={() => switchTab('sell')}>
-          💰 Vender Jogadores
+          💰 Vender
         </button>
         <button className={`${styles.tabBtn} ${activeTab === 'free-agents' ? styles.active : ''}`} onClick={() => switchTab('free-agents')}>
-          🆓 Agentes Livres ({freeAgents.length})
+          🆓 Livres ({freeAgents.length})
         </button>
         {onProposeTrade && (
           <button className={styles.tabBtn} onClick={onProposeTrade}>
@@ -278,7 +280,11 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
 
       {!isWindowOpen ? (
         <div className={styles.closedBanner}>
-          🔒 Janela de transferências fechada. Abre nas rodadas 1-5 e 19-24.
+          🔒 Janela de transferências fechada.{' '}
+          {currentRound === undefined ? 'Abre nas rodadas 1-5 e 19-24.'
+            : currentRound < 18 ? `Reabre na rodada 19 (daqui a ${18 - currentRound} rodada${18 - currentRound > 1 ? 's' : ''}).`
+            : 'Reabre no início da próxima temporada.'}
+
         </div>
       ) : (
         <>

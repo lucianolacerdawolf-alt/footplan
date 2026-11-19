@@ -53,8 +53,10 @@ describe('LeagueTableScreen — tela de consulta pura', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('esconde "Voltar" quando hideTopNav é passado (Modo Carreira, coberto pela barra de abas)', () => {
-    render(<LeagueTableScreen state={makeState()} league={makeLeague()} onBack={vi.fn()} hideTopNav />);
-    expect(screen.queryByLabelText('Voltar')).not.toBeInTheDocument();
+  it('sempre tem Voltar, também na carreira (é subtela de Competições)', () => {
+    const onBack = vi.fn();
+    render(<LeagueTableScreen state={makeState()} league={makeLeague()} onBack={onBack} hideTopNav />);
+    fireEvent.click(screen.getByLabelText('Voltar'));
+    expect(onBack).toHaveBeenCalled();
   });
 });

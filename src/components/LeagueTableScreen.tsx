@@ -102,11 +102,11 @@ interface Props {
   state: LeagueState;
   league: LeagueDefinition;
   onBack: () => void;
-  /** Só true no Modo Carreira — a barra de abas fixa já cobre essa navegação (aba Escritório). */
+  /** Mantido por compatibilidade: a Classificação é subtela e sempre mostra o Voltar. */
   hideTopNav?: boolean;
 }
 
-function LeagueTableScreen({ state, league, onBack, hideTopNav }: Props) {
+function LeagueTableScreen({ state, league, onBack }: Props) {
   const { teams, userTeamId, fixtures } = state;
   const standings: Standing[] = computeStandings(teams, fixtures);
   const [view, setView] = useState<'table' | 'scorers'>('table');
@@ -130,7 +130,7 @@ function LeagueTableScreen({ state, league, onBack, hideTopNav }: Props) {
 
   return (
     <div className={`${styles.screen} app-screen fit-screen`}>
-      <ScreenHeader onBack={hideTopNav ? undefined : onBack} kicker={league.name} title="Classificação" />
+      <ScreenHeader onBack={onBack} kicker={league.name} title="Classificação" />
 
       <div className={styles.viewTabs} role="tablist">
         <button role="tab" aria-selected={view === 'table'} className={`${styles.viewTab} ${view === 'table' ? styles.viewTabOn : ''}`} onClick={() => setView('table')}>Tabela</button>

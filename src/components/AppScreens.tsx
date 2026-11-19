@@ -576,6 +576,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         scouting={getScouting(p.career.careerState)}
         onScoutPlayer={p.career.handleScoutPlayer}
         isWindowOpen={isTransferWindowOpen(p.career.careerState.season.league.currentRound)}
+        currentRound={p.career.careerState.season.league.currentRound}
         onBuyPlayer={p.career.handleBuyPlayer}
         onListPlayerForSale={p.career.handleListPlayerForSale}
         onUnlistPlayerForSale={p.career.handleUnlistPlayerForSale}
@@ -707,7 +708,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onSimulateOthers={p.career.handleSimulateOtherCareerBracketMatches}
         onSimulateToEnd={p.career.handleSimulateCareerCupToEnd}
         onEditTactics={p.career.handleEditCareerBracketTactics}
-        onBack={p.nav.toHub}
+        onBack={p.nav.toCareerLeague}
         hideTopNav
         lockedMessage={cupLockMessage(cup.stage, p.career.careerState.season.league, 'domestic')}
       />

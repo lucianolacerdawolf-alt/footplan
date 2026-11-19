@@ -370,7 +370,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
       <ScreenHeader
         onBack={onBack}
         kicker={mode === 'league' ? 'Campeonato' : mode === 'cup' ? 'Mata-mata' : mode === 'career' ? 'Carreira' : mode === 'online' ? 'Online' : 'Partida Única'}
-        title="Táticas"
+        title={isTacticsOnly && mode === 'career' ? 'Elenco' : 'Táticas'}
         right={
           <Button size="sm" glow className="setup-confirm-btn" onClick={() => onStartMatch(homeTeam, awayTeam)}>
             {isTacticsOnly ? 'Salvar ✓' : goesToPreview ? 'Continuar →' : 'Jogar →'}

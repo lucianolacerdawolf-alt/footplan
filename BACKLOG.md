@@ -17,6 +17,20 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - **O que envolve:** a partir de ~900px de largura, Central em duas colunas (próximo jogo + preparação | mensagens/temporada/clube), Táticas com campinho ao lado do Estilo, Meu Clube com finanças ao lado de contratos; grades de times/ligas com mais colunas; testar em 768×1024 e 1280×800.
 - **Posso retomar quando:** houver tráfego relevante de tablet/desktop (ver analytics) ou antes de divulgar a versão web.
 
+### Revisão das telas: saídas, coerência e organização (2026-11-19, 375×720) — ✅ feita
+
+- Percorridas todas as telas (carreira, partida única, campeonato, copa, online, liga entre amigos, configurações, perfil, conquistas, estatísticas). Toda tela tem saída: botão Voltar nas subtelas, barra de baixo nas abas da carreira, e a partida tem Voltar / "Menu principal".
+- ✅ Classificação e Copa da carreira ganharam Voltar (só a barra de baixo tirava de lá); Copa volta pra Competições (botão físico do Android também).
+- ✅ Categorias de Base e Propor Troca ganharam a barra da carreira; Base e Mercado de Treinador acendem "Central" (de onde se chega), Troca acende "Transferências" (antes Mercado de Treinador acendia "Competições").
+- ✅ Propor Troca rolava 64px por baixo da barra (o `min-height: 100dvh` da tela vencia o `.fit-screen`).
+- ✅ Aba "Elenco" abria uma tela chamada "Táticas" → agora "Elenco".
+- ✅ Mercado: abas curtas numa linha ("Comprar / Vender / Livres / Troca") e janela fechada diz quando reabre ("rodada 19, daqui a N rodadas").
+- ✅ Competições: "Seu time 4–5 (−1)" → "Seus gols 4 pró · 5 contra (−1)".
+- ✅ Liga entre Amigos: sem emoji no título e conteúdo em cartões, como Configurações/Perfil.
+- ✅ Tela inicial rolava ~23px em 375×720 (faixa entre 700 e 780px de altura): rótulos "Jogar"/"Próximo jogo" saem nessa faixa.
+- ✅ Aviso "✓ Progresso salvo" quebrava em 2 linhas.
+- ⏳ **Ficou (🟢):** a tela da partida antes do apito usa estilo próprio ("← Voltar", botões em MAIÚSCULAS) diferente do resto; telas fora da carreira rolam 4px sem conteúdo visível (não achei a origem — nenhum elemento passa da tela).
+
 ### Revisão de código + testes (2026-11-19) — ✅ feita
 
 - ✅ Corrigido: demitido ainda jogava/simulava o próprio jogo de copa e continental pela tela da chave.

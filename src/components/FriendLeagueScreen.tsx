@@ -121,14 +121,18 @@ export default function FriendLeagueScreen({ onBack }: Props) {
   if (view.kind === 'list') {
     return (
       <div className={`${styles.screen} app-screen`}>
-        {header('👥 Liga entre Amigos', onBack)}
-        <p className={styles.note}>Cada um comanda um clube da mesma liga. Uma rodada por dia, à meia-noite (UTC) — ninguém precisa estar online junto.</p>
-        <div className={styles.actions}>
-          <Button onClick={() => { setPickedTeam(null); setView({ kind: 'create' }); }}>Criar liga</Button>
-          <Button variant="secondary" onClick={() => setView({ kind: 'join' })}>Entrar com código</Button>
-        </div>
+        {header('Liga entre Amigos', onBack)}
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Como funciona</h2>
+          <p className={styles.note}>Cada um comanda um clube da mesma liga. Uma rodada por dia, à meia-noite (UTC) — ninguém precisa estar online junto.</p>
+          <div className={styles.actions}>
+            <Button onClick={() => { setPickedTeam(null); setView({ kind: 'create' }); }}>Criar liga</Button>
+            <Button variant="secondary" onClick={() => setView({ kind: 'join' })}>Entrar com código</Button>
+          </div>
+        </section>
         {errorBox}
-        <h2 className={styles.subtitle}>Minhas ligas</h2>
+        <section className={styles.card}>
+        <h2 className={styles.cardTitle}>Minhas ligas</h2>
         {myLeagues === null && <p className={styles.note}>Carregando…</p>}
         {myLeagues?.length === 0 && <p className={styles.note}>Você ainda não está em nenhuma liga.</p>}
         <ul className={styles.list}>
@@ -141,6 +145,7 @@ export default function FriendLeagueScreen({ onBack }: Props) {
             </li>
           ))}
         </ul>
+        </section>
       </div>
     );
   }

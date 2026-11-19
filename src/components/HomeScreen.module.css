@@ -498,3 +498,8 @@ button.modeCard:active { border-color: var(--accent); background: var(--surface-
   .section > .sectionTitle { display: none; }
   .nextLabel { display: none; }
 }
+/* Faixa intermediária (ex.: 375×720): só os rótulos saem — sem isto a tela rolava ~23px. */
+@media (max-height: 780px) {
+  .section > .sectionTitle { display: none; }
+  .nextLabel { display: none; }
+}

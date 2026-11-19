@@ -74,7 +74,7 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
     if (playedCount === 0) return null;
     return (
       <div className={styles.statsStrip}>
-        <span className={styles.statItem}>Seu time <b>{userGF}–{userGA}</b> ({userGF - userGA >= 0 ? '+' : ''}{userGF - userGA})</span>
+        <span className={styles.statItem}>Seus gols <b>{userGF} pró · {userGA} contra</b> ({userGF - userGA >= 0 ? '+' : ''}{userGF - userGA})</span>
         <span className={styles.statItem}>Sem sofrer gol <b>{userClean}</b></span>
         <span className={styles.statItem} title={`Mandante vence ${(homeWins / playedCount * 100).toFixed(0)}% · empates ${(draws / playedCount * 100).toFixed(0)}%`}>Liga <b>{(totalGoals / playedCount).toFixed(1)}</b> gols/jogo</span>
       </div>

@@ -400,3 +400,7 @@
 .ovrUnknown { font-size: 0.78em; letter-spacing: -0.02em; color: var(--text-secondary); white-space: nowrap; }
 .scoutBar { flex-shrink: 0; padding: 4px 2px; font-size: 11.5px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .scoutBar strong { color: var(--accent); }
+
+/* Abas numa linha só no celular (antes "Comprar Jogadores" quebrava em 2 linhas). */
+.tabs { gap: 6px; }
+.tabBtn { padding: 9px 4px; white-space: nowrap; font-size: 12.5px; min-width: 0; }

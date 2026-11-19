@@ -112,7 +112,7 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
     const userWon = championId === userTeamId;
     return (
       <div className={`${styles.screen} app-screen`}>
-        <ScreenHeader onBack={hideTopNav ? undefined : onBack} kicker={state.cupName} title="Final" />
+        <ScreenHeader onBack={onBack} kicker={state.cupName} title="Final" />
         <div className={styles.champion}>
           <div className={styles.championCrown}>🏆</div>
           <img src={crestSrc(champion.logoUrl)} alt={champion.name} className={styles.championCrest} />
@@ -125,7 +125,7 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
             </div>
           )}
         </div>
-        <Button glow onClick={onBack}>{hideTopNav ? '← Voltar à Central' : 'Jogar Novamente'}</Button>
+        <Button glow onClick={onBack}>{hideTopNav ? '← Voltar' : 'Jogar Novamente'}</Button>
       </div>
     );
   }
@@ -176,7 +176,7 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
   return (
     <div className={`${styles.screen} app-screen fit-screen`}>
       <ScreenHeader
-        onBack={hideTopNav ? undefined : onBack}
+        onBack={onBack}
         kicker={<span style={cupColor ? { color: cupColor } : undefined}>{state.cupName}</span>}
         title={stageLabels[stage]}
         right={!hideTopNav ? <Button size="sm" variant="secondary" onClick={onEditTactics}>Táticas</Button> : undefined}

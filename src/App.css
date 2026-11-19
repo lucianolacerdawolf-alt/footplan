@@ -787,6 +787,7 @@
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
   opacity: 0; transition: opacity 200ms;
   z-index: 9999;
+  width: max-content; max-width: calc(100vw - 32px); text-align: center;
 }
 .fp-toast-visible { opacity: 1; }
 
@@ -1133,7 +1134,7 @@
 .setup-style { display: flex; flex-direction: column; gap: 12px; }
 
 /* ── Escolha de times: lados fixos no topo, grade de times rola por dentro ── */
-.team-select-screen.fit-screen { display: flex; flex-direction: column; gap: 6px; padding: 12px 12px 8px; }
+.team-select-screen.fit-screen { display: flex; flex-direction: column; gap: 6px; padding: 12px 12px 8px; min-height: 0; }
 .team-select-screen.fit-screen > * { flex-shrink: 0; }
 .team-select-screen.fit-screen > .team-grid { flex: 1 1 auto; align-content: start; padding: 2px 0 8px; }
 @media (max-width: 640px) {

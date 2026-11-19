@@ -84,7 +84,7 @@ describe('BracketScreen — fase de mata-mata', () => {
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('esconde "Editar Táticas" e "Menu Principal" quando hideTopNav é passado (Modo Carreira, coberto pela barra de abas)', () => {
+  it('na carreira (hideTopNav) esconde "Táticas" mas mantém o Voltar — a chave é subtela de Competições', () => {
     const state = makeRoundOf16();
     render(
       <BracketScreen
@@ -95,7 +95,7 @@ describe('BracketScreen — fase de mata-mata', () => {
       />
     );
     expect(screen.queryByText('Táticas')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText('Voltar')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Voltar')).toBeInTheDocument();
   });
 
   it('tela de campeão mostra o time campeão e sinaliza eliminação quando o usuário não venceu', () => {

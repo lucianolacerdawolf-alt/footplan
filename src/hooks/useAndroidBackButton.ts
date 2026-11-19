@@ -58,7 +58,7 @@ export const backTargets: Record<Screen, (c: BackNavContext) => BackTarget> = {
   'career-hub': () => 'home-reset',
   'career-league': () => 'career-hub',
   'career-league-table': () => 'career-league',
-  'career-bracket': () => 'career-hub',
+  'career-bracket': () => 'career-league',
   'career-trophy-room': () => 'career-hub',
   'transfer-market': () => 'career-hub',
   'trade-propose': () => 'transfer-market',

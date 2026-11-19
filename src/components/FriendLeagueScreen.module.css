@@ -63,3 +63,8 @@
 .flTab:disabled { opacity: 0.5; cursor: default; }
 .flTabOn { background: var(--surface); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent); }
 :global(.fit-screen).screen { gap: 8px; }
+
+/* Mesmo cartão das Configurações/Perfil. */
+.card { display: flex; flex-direction: column; gap: 8px; padding: 14px; margin-bottom: 12px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); }
+.card .note, .card .actions { margin: 0; }
+.cardTitle { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); }
