@@ -73,3 +73,9 @@
 .about { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-secondary); }
 .links { display: flex; gap: 14px; }
 .links a { color: var(--accent); text-decoration: none; font-weight: 600; }
+
+/* Fluido na altura (cabe em 360×640 sem rolar) */
+.screen { padding-top: clamp(8px, 2dvh, 16px); padding-bottom: clamp(8px, 2dvh, 24px); gap: clamp(6px, 1.3dvh, 12px); }
+.card { padding: clamp(10px, 1.9dvh, 16px); gap: clamp(6px, 1.3dvh, 12px); }
+.seg { min-height: clamp(34px, 5dvh, 40px); }
+.hint { font-size: clamp(11.5px, 1.7dvh, 12.5px); }

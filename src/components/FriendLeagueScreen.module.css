@@ -51,7 +51,6 @@
 .owner { color: var(--text-secondary); font-size: 11px; }
 
 /* Cabe na tela: abas Classificação / Última rodada; listas rolam por dentro */
-:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
 :global(.fit-screen) > :global(.fit-scroll) { flex: 1 1 auto; }
 .flTabs {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px;

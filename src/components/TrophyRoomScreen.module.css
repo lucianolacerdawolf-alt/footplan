@@ -180,7 +180,6 @@
 
 /* ── Meu Clube cabendo na tela: abas, só o conteúdo rola ── */
 :global(.fit-screen).screen { gap: 8px; }
-:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
 :global(.fit-screen) > .clubBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
 .clubTabs {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;

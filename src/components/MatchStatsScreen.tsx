@@ -133,14 +133,14 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
       const isHome = e.teamId === homeTeam.id;
       const oh = h, oa = a;
       if (isHome) h++; else a++;
-      if (oh !== oa && h === a) { result.push(`🔥 ${e.scorer} empatou! (${e.minute}')`); continue; }
-      if (isHome && oh < oa && h > a) { result.push(`⚡ ${e.scorer} virou! (${e.minute}')`); continue; }
-      if (!isHome && oa < oh && a > h) { result.push(`⚡ ${e.scorer} virou! (${e.minute}')`); continue; }
-      if (e.minute >= 80) { result.push(`⏱️ ${e.scorer} — gol decisivo (${e.minute}')`); continue; }
-      if (result.length < 2 && (h + a) <= 3) { result.push(`⚽ ${e.scorer} abriu o placar (${e.minute}')`); }
+      if (oh !== oa && h === a) { result.push(`🔥 ${e.scorer} empatou! (${Math.max(1, e.minute)}')`); continue; }
+      if (isHome && oh < oa && h > a) { result.push(`⚡ ${e.scorer} virou! (${Math.max(1, e.minute)}')`); continue; }
+      if (!isHome && oa < oh && a > h) { result.push(`⚡ ${e.scorer} virou! (${Math.max(1, e.minute)}')`); continue; }
+      if (e.minute >= 80) { result.push(`⏱️ ${e.scorer} — gol decisivo (${Math.max(1, e.minute)}')`); continue; }
+      if (result.length < 2 && (h + a) <= 3) { result.push(`⚽ ${e.scorer} abriu o placar (${Math.max(1, e.minute)}')`); }
     }
     for (const e of events) {
-      if (e.type === 'redCard') { result.push(`🟥 ${e.scorer ?? 'Jogador'} expulso (${e.minute}')`); }
+      if (e.type === 'redCard') { result.push(`🟥 ${e.scorer ?? 'Jogador'} expulso (${Math.max(1, e.minute)}')`); }
     }
     return result.slice(0, 4);
   }, [events, homeTeam.id]);
@@ -184,7 +184,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
           <div className={styles.scorersList}>
             {scorers.map((g, i) => (
               <div key={`${g.team.id}-${g.minute}-${g.scorer}-${i}`} className={styles.scorerRow}>
-                <span className={styles.scorerMinute}>{g.minute}&apos;</span>
+                <span className={styles.scorerMinute}>{Math.max(1, g.minute)}&apos;</span>
                 <img src={crestSrc(g.team.logoUrl)} alt={`Escudo ${g.team.abbreviation}`} className={styles.scorerCrest} />
                 <span className={styles.scorerName} style={{ color: teamTextColor(g.team) }}>{g.scorer}</span>
               </div>
@@ -247,7 +247,7 @@ export default function MatchStatsScreen({ result, history, onMenu, onPlayAgain,
               <span key={`${c.team.id}-${c.minute}-${c.type}-${i}`} className={styles.cardChip} style={{ borderColor: c.team.color }} aria-label={`${c.type === 'yellow' ? 'Cartão amarelo' : 'Cartão vermelho'} para ${c.player?.name ?? c.team.abbreviation} aos ${c.minute} minutos`}>
                 <span aria-hidden="true">{c.type === 'yellow' ? '🟨' : '🟥'}</span>
                 <span style={{ color: c.team.color, fontWeight: 700 }}>{c.player?.name ?? c.team.abbreviation}</span>
-                <span className={styles.cardMinute}>{c.minute}&apos;</span>
+                <span className={styles.cardMinute}>{Math.max(1, c.minute)}&apos;</span>
               </span>
             ))}
           </div>

@@ -29,7 +29,8 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 6px;
-  min-height: 380px;
+  /* Altura acompanha a tela: 260px num celular baixo, até 480px num alto. */
+  min-height: clamp(260px, 46dvh, 480px);
   padding: 14px 6px;
   border-radius: 12px;
   overflow: hidden;

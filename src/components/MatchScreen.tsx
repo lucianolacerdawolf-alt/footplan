@@ -548,7 +548,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             const isHome = e.teamId === initialHome.id;
             return (
               <span key={idx} className={`goal-entry ${isHome ? 'goal-home' : 'goal-away'}`} style={{ color: teamTextColor(isHome ? home : away) }}>
-                {e.minute}&apos; · {e.scorer ?? '?'} ({isHome ? home.abbreviation : away.abbreviation})
+                {Math.max(1, e.minute)}&apos; · {e.scorer ?? '?'} ({isHome ? home.abbreviation : away.abbreviation})
               </span>
             );
           })}

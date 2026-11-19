@@ -305,3 +305,11 @@
   background: var(--accent); color: #04131a; font-size: 11px; line-height: 18px; font-weight: 800;
 }
 .hubPanel { display: flex; flex-direction: column; gap: 10px; padding-bottom: 4px; }
+
+/* Fluido na altura: em celular baixo o topo encolhe e sobra espaço pras mensagens. */
+.screen:global(.fit-screen) { gap: clamp(5px, 1dvh, 8px); }
+.topBar { min-height: clamp(36px, 5.4dvh, 44px); }
+.topCrest { width: clamp(28px, 4.4dvh, 36px); height: clamp(28px, 4.4dvh, 36px); }
+.nextMatchCard { padding: clamp(6px, 1.3dvh, 12px) 12px; gap: clamp(3px, 0.8dvh, 6px); }
+.nextMatchCard > button { min-height: clamp(36px, 5.2dvh, 44px); }
+.hubTab { min-height: clamp(32px, 4.4dvh, 36px); }

@@ -8,6 +8,15 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
+### Telas que se adaptam ao tamanho do aparelho (2026-11-19)
+
+**✅ Feito (celular):** tamanhos fluidos com `clamp(mín, Xdvh, máx)` (espaços, botões, ícones, escudos e campinho acompanham a altura, sem degraus); uma regra global `.fit-screen > :not(.fit-scroll) { flex-shrink: 0 }` em `App.css` (nos CSS modules ela vazava pra todas as telas). Conferido com roteiro automático em **360×640, 375×667, 390×844, 412×915 e 430×932**: nenhuma tela principal rola, corta ou vaza. Em 360×640 a lista de mensagens da Central fica com ~134px (3 mensagens).
+
+**⏳ Pendente — tablet e computador (🟡 ~2h):**
+- **Por que sobrou:** o público do lançamento é celular (Android); no tablet/PC o app funciona, só fica numa coluna central com espaço sobrando dos lados.
+- **O que envolve:** a partir de ~900px de largura, Central em duas colunas (próximo jogo + preparação | mensagens/temporada/clube), Táticas com campinho ao lado do Estilo, Meu Clube com finanças ao lado de contratos; grades de times/ligas com mais colunas; testar em 768×1024 e 1280×800.
+- **Posso retomar quando:** houver tráfego relevante de tablet/desktop (ver analytics) ou antes de divulgar a versão web.
+
 ### Teste como jogador novo + pontas soltas (2026-11-18/19) — ✅ feito
 
 - ✅ Botão de avançar a rodada escondido depois da partida (regras `.fit-screen` em CSS modules nunca aplicavam; agora `:global(.fit-screen)`).

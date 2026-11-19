@@ -87,7 +87,6 @@
 
 /* ── Cabe na tela: tabela e artilheiros em abas, lista rola por dentro ── */
 :global(.fit-screen).screen { gap: 8px; }
-:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
 :global(.fit-screen) .standingsScroll { max-height: none; flex: 1 1 auto; }
 .viewTabs {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px;

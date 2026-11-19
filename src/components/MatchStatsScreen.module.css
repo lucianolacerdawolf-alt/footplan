@@ -241,6 +241,5 @@
 
 /* Cabe na tela: placar no topo e botões embaixo fixos; números rolam no meio. */
 :global(.fit-screen).screen { gap: 10px; padding-bottom: 12px; }
-:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
 :global(.fit-screen) > .statsBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; }
 :global(.fit-screen) .header { padding: 10px 12px; }

@@ -1,8 +1,8 @@
 .card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
+  gap: clamp(4px, 1dvh, 8px);
+  padding: clamp(6px, 1.2dvh, 10px);
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--code-bg);
@@ -28,7 +28,7 @@
 }
 
 .trainBtn {
-  min-height: 60px;
+  min-height: clamp(46px, 7.4dvh, 60px);
   display: flex;
   flex-direction: column;
   align-items: center;

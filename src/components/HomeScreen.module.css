@@ -480,17 +480,21 @@ button.modeCard:active { border-color: var(--accent); background: var(--surface-
 }
 .newCareerBtn:active { transform: scale(0.97); }
 
-/* Celulares baixos (iPhone SE, Androids 16:9): mesma tela, mais compacta — sem rolar */
-@media (max-height: 740px) {
-  .screen { padding-top: 10px; padding-bottom: 12px; gap: 8px; }
-  .title { font-size: 30px; }
-  .iconBtn { width: 38px; height: 38px; }
-  .careerCard { padding: 12px 14px; gap: 8px; }
-  .careerArt { display: none; }
-  .careerTitle { font-size: 15px; }
-  .nextMatch { padding: 6px 10px; gap: 4px; }
-  .versusCrest { width: 22px; height: 22px; }
-  .modeCard { padding: 8px 4px; gap: 4px; }
-  .modeIcon { width: 32px; height: 32px; }
+/* Tamanhos fluidos: acompanham a altura da tela entre um mínimo e um máximo (sem
+   degraus). Num celular baixo tudo encolhe um pouco; num alto, respira. */
+.screen { padding-top: clamp(8px, 2dvh, 20px); padding-bottom: clamp(10px, 2.4dvh, 24px); gap: clamp(8px, 1.5dvh, 12px); }
+.title { font-size: clamp(28px, 5.4dvh, 44px); }
+.iconBtn { width: clamp(36px, 5.4dvh, 44px); height: clamp(36px, 5.4dvh, 44px); }
+.careerCard { padding: clamp(10px, 2.2dvh, 18px) clamp(12px, 2dvh, 18px); gap: clamp(6px, 1.5dvh, 12px); }
+.careerCta { min-height: clamp(40px, 5.9dvh, 48px); }
+.nextMatch { padding: clamp(5px, 1.2dvh, 10px) 10px; gap: clamp(2px, 0.6dvh, 6px); }
+.versusCrest { width: clamp(22px, 3.7dvh, 30px); height: clamp(22px, 3.7dvh, 30px); }
+.modeCard { padding: clamp(6px, 1.5dvh, 12px) 4px; gap: clamp(3px, 1dvh, 8px); }
+.modeIcon { width: clamp(30px, 4.9dvh, 40px); height: clamp(30px, 4.9dvh, 40px); }
+/* Em telas baixas a legenda do modo sai (o nome basta); o arte de fundo do card também. */
+@media (max-height: 700px) {
   .modeCard .modeDesc { display: none; }
+  .careerArt { display: none; }
+  .section > .sectionTitle { display: none; }
+  .nextLabel { display: none; }
 }

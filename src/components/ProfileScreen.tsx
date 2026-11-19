@@ -62,11 +62,11 @@ export default function ProfileScreen({ onBack, career, matchesPlayed, achieveme
               <span>{career.leagueName} · Temporada {career.seasonYear}</span>
             </div>
           </div>
-          <div className={styles.grid}>
+          <div className={`${styles.grid} ${styles.grid4}`}>
             <StatTile label="Temporadas" value={career.seasonsDone} />
-            <StatTile label="Títulos da liga" value={career.leagueTitles} />
+            <StatTile label="Ligas" value={career.leagueTitles} />
             <StatTile label="Copas" value={career.cupTitles} />
-            <StatTile label="Melhor posição" value={career.bestFinish != null ? `${career.bestFinish}º` : '—'} />
+            <StatTile label="Melhor" value={career.bestFinish != null ? `${career.bestFinish}º` : '—'} />
           </div>
         </section>
       )}

@@ -21,6 +21,9 @@
   overflow: hidden;
   padding-bottom: 8px !important;
 }
+/* Cabeçalhos, abas e botões não encolhem; só a área .fit-scroll cede espaço. Regra
+   ÚNICA aqui — em CSS module ela valia pra todas as telas e a ordem de carga decidia. */
+.fit-screen > :not(.fit-scroll) { flex-shrink: 0; }
 .fit-scroll {
   flex: 1 1 auto;
   min-height: 0;

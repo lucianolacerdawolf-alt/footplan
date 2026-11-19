@@ -94,19 +94,6 @@ export default function SettingsScreen({ difficulty, onSetDifficulty, onBack }: 
       )}
 
       <section className={styles.card}>
-        <h2 className={styles.cardTitle}>Ajuda</h2>
-        <div className={styles.actionRow}>
-          <span className={styles.hint}>
-            {tutorialReset ? 'Pronto — o tutorial aparece na próxima tela de táticas.' : 'Mostra de novo as dicas da tela de táticas.'}
-          </span>
-          <Button size="sm" variant="secondary" disabled={tutorialReset}
-            onClick={() => { try { localStorage.removeItem(TUTORIAL_KEY); } catch { /* noop */ } setTutorialReset(true); }}>
-            Ver tutorial
-          </Button>
-        </div>
-      </section>
-
-      <section className={styles.card}>
         <h2 className={styles.cardTitle}>Dados</h2>
         <p className={styles.hint}>
           Apaga carreira, campeonatos, conquistas, histórico e preferências salvos neste aparelho. Não dá pra desfazer.
@@ -125,7 +112,16 @@ export default function SettingsScreen({ difficulty, onSetDifficulty, onBack }: 
       </section>
 
       <section className={styles.card}>
-        <h2 className={styles.cardTitle}>Sobre</h2>
+        <h2 className={styles.cardTitle}>Ajuda e sobre</h2>
+        <div className={styles.actionRow}>
+          <span className={styles.hint}>
+            {tutorialReset ? 'Pronto — o tutorial aparece na próxima tela de táticas.' : 'Rever as dicas da tela de táticas.'}
+          </span>
+          <Button size="sm" variant="secondary" disabled={tutorialReset}
+            onClick={() => { try { localStorage.removeItem(TUTORIAL_KEY); } catch { /* noop */ } setTutorialReset(true); }}>
+            Ver tutorial
+          </Button>
+        </div>
         <div className={styles.about}>
           <span>FootPlan v{__APP_VERSION__}</span>
           <nav className={styles.links}>

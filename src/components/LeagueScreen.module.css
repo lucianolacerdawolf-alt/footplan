@@ -114,8 +114,7 @@
 
 /* ── Rodada cabendo na tela: só a lista de outros jogos rola ── */
 .screen.fit-screen, :global(.fit-screen).screen { gap: 8px; }
-:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
-:global(.fit-screen) .fixturesCol { flex: 1 1 auto; min-height: 0; gap: 8px; }
+.screen:global(.fit-screen) .fixturesCol { flex: 1 1 auto; min-height: 0; gap: 8px; }
 .othersSection { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .othersList { display: flex; flex-direction: column; gap: 6px; }
 :global(.fit-screen) .fixture { padding: 6px 10px; }

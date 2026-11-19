@@ -84,3 +84,13 @@
 .linkValue { font-size: 14px; font-weight: 800; color: var(--text-primary); }
 
 .note { margin: 4px 2px 0; font-size: 12px; color: var(--text-secondary); text-align: center; }
+
+/* Fluido na altura (cabe em 360×640 sem rolar) */
+.screen { padding-top: clamp(8px, 2dvh, 16px); padding-bottom: clamp(8px, 2dvh, 24px); gap: clamp(6px, 1.3dvh, 12px); }
+.hero { padding: clamp(10px, 2dvh, 18px) 16px; }
+.avatar { width: clamp(48px, 8dvh, 64px); height: clamp(48px, 8dvh, 64px); }
+.card { padding: clamp(10px, 1.9dvh, 16px); gap: clamp(6px, 1.3dvh, 12px); }
+.linkRow { min-height: clamp(40px, 5.9dvh, 48px); }
+
+/* Os 4 números da carreira numa linha só (cabe em celular baixo) */
+.grid4 { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
