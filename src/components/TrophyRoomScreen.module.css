@@ -179,9 +179,9 @@
 }
 
 /* ── Meu Clube cabendo na tela: abas, só o conteúdo rola ── */
-.fit-screen.screen { gap: 8px; }
-.fit-screen > * { flex-shrink: 0; }
-.fit-screen > .clubBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
+:global(.fit-screen).screen { gap: 8px; }
+:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
+:global(.fit-screen) > .clubBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
 .clubTabs {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
   padding: 3px; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--border);

@@ -614,7 +614,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
 
           {/* Goal celebration overlay */}
           {paused && isGoalPause && (
-            <div className="halftime-overlay" style={{ background: 'rgba(0,0,0,0.3)' }}>
+            <div className="halftime-overlay goal-overlay" style={{ background: 'rgba(0,0,0,0.3)' }}>
               <div className="halftime-inner" style={{ textAlign: 'center' }}>
                 <div style={{ fontSize: 64, marginBottom: 8 }}>⚽</div>
                 <div className="halftime-title" style={{ fontSize: 22 }}>

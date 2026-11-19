@@ -391,6 +391,6 @@
 }
 
 /* Cabe na tela: abas e filtros fixos, só a lista rola. */
-.fit-screen > * { flex-shrink: 0; }
-.fit-screen > .marketBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; }
-.fit-screen .tabBtn { padding: 8px 4px; font-size: 12px; }
+:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
+:global(.fit-screen) > .marketBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; }
+:global(.fit-screen) .tabBtn { padding: 8px 4px; font-size: 12px; }

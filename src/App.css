@@ -1192,3 +1192,32 @@
   .team-grid.trade-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .team-grid.trade-list .tile-value { display: block; }
 }
+/* Comemoração de gol: cartão centralizado sobre o jogo, não tela cheia */
+@media (max-width: 640px) {
+  .halftime-overlay.goal-overlay { padding: 16px; align-items: center; }
+  .goal-overlay .halftime-inner {
+    width: auto; max-width: 92%; height: auto; max-height: none;
+    border-radius: 12px; border: 1px solid var(--border); padding: 18px 20px; align-items: center;
+  }
+}
+/* Botão de pausa: "⏸ Pausar" + quantas pausas restam (antes era só "⏸ 2") */
+.pause-left {
+  display: inline-grid; place-items: center; min-width: 16px; height: 16px; margin-left: 2px; padding: 0 4px;
+  border-radius: 8px; background: var(--accent-bg); color: var(--accent); font-size: 10px; font-weight: 800;
+}
+@media (max-width: 400px) {
+  .match-topbar .match-formations { display: none; }
+  .match-topbar .speed-btn { padding: 4px 7px; }
+}
+.ht-score { display: flex; align-items: center; justify-content: center; gap: 12px; font-family: var(--display); font-size: 26px; letter-spacing: 0.04em; }
+.ht-score strong { color: var(--text-primary); font-weight: 400; }
+/* Cabeçalho das táticas: o botão glow largo cortava "Carreira"/"Táticas" ("CARRE…") */
+.setup-screen.fit-screen header .setup-confirm-btn { padding: 8px 14px; min-height: 40px; font-size: 13px; }
+/* Barra da partida no celular: nada quebra linha; o título "ARS vs CHE" é que encolhe */
+.match-topbar .speed-btn, .match-topbar .back-btn { white-space: nowrap; }
+@media (max-width: 400px) {
+  .match-topbar { gap: 4px; }
+  .match-topbar .back-btn { padding: 6px 8px; }
+  .match-topbar .match-title { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+  .match-topbar .speed-btn { padding: 4px 6px; min-width: 30px; }
+}

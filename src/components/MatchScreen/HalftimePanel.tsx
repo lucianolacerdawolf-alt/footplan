@@ -65,6 +65,8 @@ export default function HalftimePanel({
   const aShots = htEvents.filter(e => ['goal','miss','post','save'].includes(e.type) && (e.type === 'save' ? e.teamId !== initialAway.id : e.teamId === initialAway.id)).length;
   const hSoT = htEvents.filter(e => (e.type === 'goal' && e.teamId === initialHome.id) || (e.type === 'save' && e.teamId !== initialHome.id)).length;
   const aSoT = htEvents.filter(e => (e.type === 'goal' && e.teamId === initialAway.id) || (e.type === 'save' && e.teamId !== initialAway.id)).length;
+  const hGoals = htEvents.filter(e => e.type === 'goal' && e.teamId === initialHome.id).length;
+  const aGoals = htEvents.filter(e => e.type === 'goal' && e.teamId === initialAway.id).length;
   // Posse real da engine — antes contava linhas de narração (dava 8%×92%).
   const homePct = homePossessionPct;
 
@@ -72,6 +74,12 @@ export default function HalftimePanel({
     <div className="halftime-overlay">
       <div className="halftime-inner">
         <div className="halftime-title">Intervalo</div>
+        {/* O placar é a primeira coisa que se quer ver no intervalo — antes não aparecia. */}
+        <div className="ht-score" aria-label={`Placar: ${home.abbreviation} ${hGoals}, ${away.abbreviation} ${aGoals}`}>
+          <span style={{ color: teamTextColor(home) }}>{home.abbreviation}</span>
+          <strong>{hGoals} × {aGoals}</strong>
+          <span style={{ color: teamTextColor(away) }}>{away.abbreviation}</span>
+        </div>
 
         <div className="ht-mini-stats">
           <div className="ht-stat-row"><span style={{ color: teamTextColor(home) }}>{hShots}</span><span className="ht-stat-label">Finalizações</span><span style={{ color: teamTextColor(away) }}>{aShots}</span></div>

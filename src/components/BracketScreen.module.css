@@ -115,5 +115,5 @@
 .prelim ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; font-family: var(--mono); font-size: 12px; }
 .prelimWinner { color: var(--positive); font-weight: 700; }
 
-.fit-screen > * { flex-shrink: 0; }
-.fit-screen > .bracketBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
+:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
+:global(.fit-screen) > .bracketBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }

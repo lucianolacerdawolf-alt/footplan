@@ -86,9 +86,9 @@
 }
 
 /* ── Cabe na tela: tabela e artilheiros em abas, lista rola por dentro ── */
-.fit-screen.screen { gap: 8px; }
-.fit-screen > * { flex-shrink: 0; }
-.fit-screen .standingsScroll { max-height: none; flex: 1 1 auto; }
+:global(.fit-screen).screen { gap: 8px; }
+:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
+:global(.fit-screen) .standingsScroll { max-height: none; flex: 1 1 auto; }
 .viewTabs {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
   padding: 3px; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--border);
@@ -98,4 +98,4 @@
   color: var(--text-secondary); font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer;
 }
 .viewTabOn { background: var(--surface); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent); }
-.fit-screen .zoneLegend { font-size: 10.5px; }
+:global(.fit-screen) .zoneLegend { font-size: 10.5px; }

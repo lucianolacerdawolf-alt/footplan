@@ -408,7 +408,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         rng={onlineRngFn}
         online={onlineProps}
         onContinue={isTournament ? p.handleContinueFromMatch : undefined}
-        continueLabel={p.matchContext === 'league' ? (p.selectedLeague ? `Continuar ${p.selectedLeague.name}` : 'Continuar Liga') : p.matchContext === 'bracket' ? `Continuar ${p.bracketState?.cupName ?? 'Copa'}` : undefined}
+        continueLabel={p.matchContext === 'league' ? 'Ver rodada →' : p.matchContext === 'bracket' ? 'Ver copa →' : undefined}
         matchContext={p.matchContext}
         userSide={userSide}
         resumeSnapshot={p.pendingResumeSnapshot}
@@ -484,7 +484,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onPlayAgain={p.matchContext === 'regular' ? (p.returnScreen === 'home' ? p.handleQuickPlay : () => p.setScreen('select')) : undefined}
         onClearHistory={p.clearHistory}
         onContinue={isTournament ? p.handleContinueTournament : p.matchContext === 'online' ? () => p.setScreen('online-lobby') : undefined}
-        continueLabel={p.matchContext === 'online' ? 'Voltar ao Lobby' : p.matchContext === 'league' ? (p.selectedLeague ? `Continuar ${p.selectedLeague.name}` : 'Continuar Liga') : p.matchContext === 'bracket' ? `Continuar ${p.bracketState?.cupName ?? 'Copa'}` : undefined}
+        continueLabel={p.matchContext === 'online' ? 'Voltar ao Lobby' : p.matchContext === 'league' ? 'Ver rodada →' : p.matchContext === 'bracket' ? 'Ver copa →' : undefined}
         isTitleWin={isTitleWin}
         userTeamId={userTeamId}
       />

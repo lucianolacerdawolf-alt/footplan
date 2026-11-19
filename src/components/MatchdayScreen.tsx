@@ -190,9 +190,11 @@ export default function MatchdayScreen({ homeTeam, awayTeam, contextLabel, onPla
         {/* Escolha de modo aqui mesmo: antes era Iniciar Partida → (outra tela) → JOGAR/SIMULAR. */}
         <button className={styles.simBtn} onClick={() => onPlay('fast')}>
           ⚡ Simular
+          <span className={styles.btnHint}>resultado na hora</span>
         </button>
         <button className={styles.playBtn} onClick={() => onPlay('live')}>
           ▶ Jogar ao vivo
+          <span className={styles.btnHint}>mude tática e faça trocas</span>
         </button>
       </div>
     </div>

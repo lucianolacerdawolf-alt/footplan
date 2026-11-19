@@ -37,7 +37,7 @@ export default function TopBar({
             disabled={pausesRemaining <= 0 && !paused}
             title={paused ? 'Retomar' : pausesRemaining > 0 ? `Pausar (${pausesRemaining} restante${pausesRemaining > 1 ? 's' : ''})` : 'Pausas esgotadas'}
             aria-label={paused ? 'Retomar replay' : 'Pausar replay'}
-          >{paused ? '▶' : `⏸ ${pausesRemaining}`}</button>
+          >{paused ? '▶ Retomar' : <>⏸ Pausar <span className="pause-left" aria-hidden="true">{pausesRemaining}</span></>}</button>
         )}
         {phase === 'simulating' && started && online && (
           <button
@@ -46,7 +46,7 @@ export default function TopBar({
             disabled={pausesRemaining <= 0 && !paused}
             title={pausesRemaining > 0 ? `Pausar (${pausesRemaining} restante${pausesRemaining > 1 ? 's' : ''})` : 'Pausas esgotadas'}
             aria-label={pausesRemaining > 0 ? 'Pausar jogo' : 'Pausas esgotadas'}
-          >⏸ {pausesRemaining}</button>
+          >⏸ Pausar <span className="pause-left" aria-hidden="true">{pausesRemaining}</span></button>
         )}
         {[1, 2, 3, 4].map(s => (
           <button

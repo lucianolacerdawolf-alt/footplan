@@ -1,12 +1,19 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { TACTIC_EXPLANATIONS } from '../engine/tacticExplanations';
+
 
 interface Props {
   onClose: () => void;
 }
 
-const STEPS = Object.values(TACTIC_EXPLANATIONS);
+// Antes eram as 7 explicações táticas (até escanteio e falta, que nem aparecem nesta
+// tela) antes do primeiro jogo. Agora: o essencial pra jogar, no que está na tela.
+// O detalhe de cada ajuste continua no "?" ao lado de cada um (aba Estilo).
+const STEPS = [
+  { icon: '⚽', title: 'Escalação', body: 'Os botões no topo trocam a formação. Toque num titular no campinho pra trocar por um reserva da mesma posição.' },
+  { icon: '🧠', title: 'Estilo', body: 'Na aba Estilo, Ofensivo, Equilibrado ou Defensivo já resolvem. Quer ajustar fino? Cada opção tem um "?" explicando.' },
+  { icon: '⏱️', title: 'Durante o jogo', body: 'Jogando ao vivo, você muda a tática e faz substituições no intervalo e nas pausas. "Simular" pula direto pro resultado.' },
+];
 
 export default function TutorialOverlay({ onClose }: Props) {
   const [step, setStep] = useState(0);

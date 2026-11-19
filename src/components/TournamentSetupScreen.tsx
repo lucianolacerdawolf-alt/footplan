@@ -72,7 +72,7 @@ export default function TournamentSetupScreen({ mode, league, onBack, onStart, o
     <div className="team-select-screen fit-screen">
       <ScreenHeader
         onBack={onBack}
-        kicker={isCup ? 'Copa' : 'Campeonato'}
+        kicker={isCup ? 'Copa' : mode === 'career' ? 'Modo Carreira' : 'Campeonato'}
         title={title}
         right={isCup && league.cupLogo ? <img src={crestSrc(league.cupLogo)} alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} /> : undefined}
       />

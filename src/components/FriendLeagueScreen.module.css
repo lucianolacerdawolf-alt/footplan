@@ -51,8 +51,8 @@
 .owner { color: var(--text-secondary); font-size: 11px; }
 
 /* Cabe na tela: abas Classificação / Última rodada; listas rolam por dentro */
-.fit-screen > * { flex-shrink: 0; }
-.fit-screen > :global(.fit-scroll) { flex: 1 1 auto; }
+:global(.fit-screen) > :not(:global(.fit-scroll)) { flex-shrink: 0; }
+:global(.fit-screen) > :global(.fit-scroll) { flex: 1 1 auto; }
 .flTabs {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
   padding: 3px; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--border);
@@ -63,4 +63,4 @@
 }
 .flTab:disabled { opacity: 0.5; cursor: default; }
 .flTabOn { background: var(--surface); color: var(--text-primary); box-shadow: inset 0 -2px 0 var(--accent); }
-.fit-screen.screen { gap: 8px; }
+:global(.fit-screen).screen { gap: 8px; }
