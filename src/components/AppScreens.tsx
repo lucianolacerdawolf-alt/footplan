@@ -765,6 +765,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onAccept={p.career.handleAcceptJobOffer}
         onDecline={p.career.handleDeclineJobOffer}
         onBack={p.nav.toHub}
+        sacked={!!cs.sacked}
       />
     );
   },

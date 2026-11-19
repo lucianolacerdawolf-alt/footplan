@@ -72,12 +72,20 @@ function userKnockoutPatch(prev: CareerState, bm: BracketMatch, cup: BracketStat
     userOvr: userTeam ? getAvgOvr(userTeam) : 70, oppOvr: opp ? getAvgOvr(opp) : 70,
     knockout: true, stance,
   });
+  const before = prev.boardConfidence ?? CONFIDENCE_START;
+  const after = clampConfidence(before + delta);
+  // O aviso/ultimato dispara aqui também — senão uma queda vinda da copa passava do
+  // limiar sem aviso, e a checagem da liga já partia de baixo dele.
+  const crossed = crossedThreshold(before, after);
   return {
-    boardConfidence: clampConfidence((prev.boardConfidence ?? CONFIDENCE_START) + delta),
+    boardConfidence: after,
     careerTotals: addMatchToTotals(getCareerTotals(prev), us, them),
     pressStance: stance ? undefined : prev.pressStance,
+    ...(crossed ? { inbox: [...getInbox(prev), createBoardConfidenceMessage(crossed, after, `Temporada ${prev.currentSeasonYear}`)] } : {}),
   };
 }
+
+const SACKED_MSG = 'Você foi demitido — escolha um novo clube na Central';
 
 export function useCareerMatchFlow({
   careerState, setCareerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry,
@@ -104,7 +112,7 @@ export function useCareerMatchFlow({
 
   const handlePlayCareerLeagueMatch = useCallback((fixture: LeagueFixture, home: Team, away: Team) => {
     if (!careerState) return;
-    if (careerState.sacked) { setToastMsg('Você foi demitido — escolha um novo clube na Central'); return; }
+    if (careerState.sacked) { setToastMsg(SACKED_MSG); return; }
     const roundIdx = fixture.roundIndex;
     const fixtureIdx = careerState.season.league.fixtures[roundIdx].findIndex(f => f.id === fixture.id);
     setPendingCareerLeagueFixture({ roundIdx, fixtureIdx });
@@ -159,7 +167,7 @@ export function useCareerMatchFlow({
 
   const handleNextCareerLeagueRound = useCallback(() => {
     if (!careerState) return;
-    if (careerState.sacked) { setToastMsg('Você foi demitido — escolha um novo clube na Central'); return; }
+    if (careerState.sacked) { setToastMsg(SACKED_MSG); return; }
     // Mensagens obrigatórias (ex: relatório de lesão) precisam ser lidas antes de
     // avançar — o botão na UI já fica desabilitado, isto é a barreira de verdade.
     if (hasMandatoryUnread(getInbox(careerState))) {
@@ -463,6 +471,7 @@ export function useCareerMatchFlow({
   }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
 
   const handlePlayCareerBracketMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
+    if (careerState?.sacked) { setToastMsg(SACKED_MSG); return; }
     setPendingCareerBracketKind('cup');
     setPendingCareerBracketStage(stage);
     setPendingCareerBracketIdx(matchIdx);
@@ -471,9 +480,10 @@ export function useCareerMatchFlow({
     saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx, bracketKind: 'cup', isCareer: true });
     setIsTournamentEntry(false);
     setScreen('setup');
-  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
+  }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setToastMsg]);
 
   const handlePlayContinentalMatch = useCallback((_match: BracketMatch, home: Team, away: Team, stage: PlayableStage, matchIdx: number) => {
+    if (careerState?.sacked) { setToastMsg(SACKED_MSG); return; }
     setPendingCareerBracketKind('continental');
     setPendingCareerBracketStage(stage);
     setPendingCareerBracketIdx(matchIdx);
@@ -482,7 +492,7 @@ export function useCareerMatchFlow({
     saveLiveMatchMeta({ matchContext: 'bracket', bracketStage: stage, bracketIdx: matchIdx, bracketKind: 'continental', isCareer: true });
     setIsTournamentEntry(false);
     setScreen('setup');
-  }, [setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry]);
+  }, [careerState, setScreen, setHomeTeam, setAwayTeam, setMatchContext, setIsKnockout, setIsTournamentEntry, setToastMsg]);
 
 
   const handlePlayNextCareerCupMatch = useCallback(() => {
@@ -532,6 +542,9 @@ export function useCareerMatchFlow({
     const home = cupState.teams.find(t => t.id === match.homeTeamId);
     const away = cupState.teams.find(t => t.id === match.awayTeamId);
     if (!home || !away) return;
+    if (careerState.sacked && (match.homeTeamId === cupState.userTeamId || match.awayTeamId === cupState.userTeamId)) {
+      setToastMsg(SACKED_MSG); return;
+    }
     const sim = simularBracketMatch(home, away);
     const updated: BracketMatch = { ...match, ...sim };
     let s = { ...cupState };
@@ -587,6 +600,9 @@ export function useCareerMatchFlow({
     const home = cupState.teams.find(t => t.id === match.homeTeamId);
     const away = cupState.teams.find(t => t.id === match.awayTeamId);
     if (!home || !away) return;
+    if (careerState.sacked && (match.homeTeamId === cupState.userTeamId || match.awayTeamId === cupState.userTeamId)) {
+      setToastMsg(SACKED_MSG); return;
+    }
     const sim = simularBracketMatch(home, away);
     const updated: BracketMatch = { ...match, ...sim };
     let s = { ...cupState };
@@ -656,15 +672,17 @@ export function useCareerMatchFlow({
       const seasonPatch = isContinental
         ? { continentalCup: finalState }
         : { cup: finalState };
+      const knockout = userKnockoutPatch(prev, updated, cupState);
+      const inboxBase = knockout.inbox ?? getInbox(prev);
       return {
         ...prev,
-        ...userKnockoutPatch(prev, updated, cupState),
+        ...knockout,
         season: {
           ...prev.season, ...seasonPatch,
           userGoalScorers: mergeGoalTally(prev.season.userGoalScorers, goalScorers),
         },
         finances: { ...prevFinances, budget: prevFinances.budget + ticketRevenue },
-        inbox: newInjuryMessages.length > 0 ? [...getInbox(prev), ...newInjuryMessages] : prev.inbox,
+        inbox: newInjuryMessages.length > 0 ? [...inboxBase, ...newInjuryMessages] : (knockout.inbox ?? prev.inbox),
       };
     });
     evaluateAchievements({

@@ -22,7 +22,10 @@ export default defineConfig({
     setupFiles: ['./src/test-setup.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/engine/**', 'src/utils/**', 'src/services/**'],
+      // Mede tudo que tem lógica: motor, hooks (fluxo da carreira) e telas. Antes só
+      // engine/utils/services entravam — hooks e telas ficavam fora do número (56% / 39%).
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/__tests__/**', 'src/**/*.d.ts', 'src/data/**', 'src/test-setup.ts', 'src/main.tsx'],
     },
   },
 })

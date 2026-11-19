@@ -14,14 +14,20 @@ interface Props {
   onAccept: (offerId: string) => void;
   onDecline: (offerId: string) => void;
   onBack: () => void;
+  /** Técnico demitido: a última proposta não pode ser recusada. */
+  sacked?: boolean;
 }
 
-function JobMarketScreen({ offers, reputation, currentClubName, rosters, onAccept, onDecline, onBack }: Props) {
+function JobMarketScreen({ offers, reputation, currentClubName, rosters, onAccept, onDecline, onBack, sacked }: Props) {
   const [pendingOffer, setPendingOffer] = useState<JobOffer | null>(null);
 
   return (
     <div className={`${styles.screen} app-screen`}>
       <ScreenHeader onBack={onBack} kicker={<>Sua reputação: {reputation} ⭐</>} title="Mercado de Treinador" />
+
+      {sacked && (
+        <p className={styles.sackedNote}>Você está sem clube. Aceite uma proposta para voltar a trabalhar — a última não pode ser recusada.</p>
+      )}
 
       {offers.length === 0 ? (
         <div className={styles.empty}>
@@ -49,9 +55,11 @@ function JobMarketScreen({ offers, reputation, currentClubName, rosters, onAccep
                   <span className={styles.offerReq}>Exige {offer.reputationRequired} ⭐</span>
                 </div>
                 <div className={styles.offerActions}>
-                  <button className={styles.declineBtn} onClick={() => onDecline(offer.id)}>
-                    Recusar
-                  </button>
+                  {!(sacked && offers.length <= 1) && (
+                    <button className={styles.declineBtn} onClick={() => onDecline(offer.id)}>
+                      Recusar
+                    </button>
+                  )}
                   <button className={styles.acceptBtn} onClick={() => setPendingOffer(offer)}>
                     Aceitar →
                   </button>

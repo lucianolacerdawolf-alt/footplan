@@ -26,8 +26,14 @@ export function useCareerJobMarket({ careerState, setCareerState, setScreen, set
   }, [careerState, setCareerState, setScreen, setToastMsg]);
 
   const handleDeclineJobOffer = useCallback((offerId: string) => {
+    // Demitido sem nenhuma proposta ficava preso (só restava recomeçar do zero):
+    // a última proposta não pode ser recusada enquanto ele estiver sem clube.
+    if (careerState?.sacked && getJobOffers(careerState).length <= 1) {
+      setToastMsg('Você está sem clube: aceite uma das propostas ou comece uma nova carreira');
+      return;
+    }
     setCareerState(prev => prev ? { ...prev, jobOffers: getJobOffers(prev).filter(o => o.id !== offerId) } : prev);
-  }, [setCareerState]);
+  }, [careerState, setCareerState, setToastMsg]);
 
   return {
     handleAcceptJobOffer, handleDeclineJobOffer,

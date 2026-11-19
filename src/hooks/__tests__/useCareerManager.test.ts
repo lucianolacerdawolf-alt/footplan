@@ -1782,3 +1782,187 @@ describe('Imersão pré-jogo (Fase 3)', () => {
     expect(result.current.careerState!.pressDoneRound).toBeUndefined();
   });
 });
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Diretoria, demissão e marcos nos jogos de copa e no fechamento de temporada
+// ─────────────────────────────────────────────────────────────────────────────
+
+type HookResult = { current: ReturnType<typeof useCareerManager> };
+
+/** Abre o jogo do usuário nas oitavas da copa e devolve o que o teste precisa. */
+function openUserCupMatch(result: HookResult) {
+  const st = result.current.careerState!;
+  const userTeamId = st.season.league.userTeamId;
+  const cup = st.season.cup;
+  const matchIdx = cup.roundOf16.findIndex(m => m.homeTeamId === userTeamId || m.awayTeamId === userTeamId);
+  const match = cup.roundOf16[matchIdx];
+  const home = cup.teams.find(t => t.id === match.homeTeamId)!;
+  const away = cup.teams.find(t => t.id === match.awayTeamId)!;
+  return { userTeamId, matchIdx, match, home, away, userHome: match.homeTeamId === userTeamId };
+}
+
+function cupResult(home: Team, away: Team, homeScore: number, awayScore: number, extra: Partial<MatchResult> = {}): MatchResult {
+  return {
+    homeTeam: home, awayTeam: away, homeScore, awayScore, events: [],
+    homePossession: 50, awayPossession: 50,
+    homeStats: { shots: 5, shotsOnTarget: 2, fouls: 3, yellowCards: 0, redCards: 0 },
+    awayStats: { shots: 5, shotsOnTarget: 2, fouls: 3, yellowCards: 0, redCards: 0 },
+    ...extra,
+  };
+}
+
+describe('Copa na carreira — diretoria, marcos e coletiva', () => {
+  it('derrota na copa derruba a confiança, conta nos marcos e avisa ao cruzar 35%', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    act(() => { result.current.setCareerState(prev => prev ? { ...prev, boardConfidence: 37 } : prev); });
+    const { matchIdx, match, home, away, userHome } = openUserCupMatch(result);
+    act(() => { result.current.handlePlayCareerBracketMatch(match, home, away, 'roundOf16', matchIdx); });
+    act(() => { result.current.handleCareerBracketMatchResult(cupResult(home, away, userHome ? 0 : 3, userHome ? 3 : 0)); });
+
+    const st = result.current.careerState!;
+    expect(st.boardConfidence).toBeLessThanOrEqual(35);
+    expect(st.careerTotals).toMatchObject({ games: 1, losses: 1, goalsAgainst: 3 });
+    expect(st.inbox!.some(m => m.subject.includes('Diretoria preocupada'))).toBe(true);
+  });
+
+  it('empate decidido nos pênaltis conta como vitória pra diretoria e empate nos números', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    const { userTeamId, matchIdx, match, home, away, userHome } = openUserCupMatch(result);
+    act(() => { result.current.handlePlayCareerBracketMatch(match, home, away, 'roundOf16', matchIdx); });
+    act(() => {
+      result.current.handleCareerBracketMatchResult(cupResult(home, away, 1, 1, {
+        winner: userHome ? home : away,
+        penaltyResult: { homeScore: userHome ? 5 : 3, awayScore: userHome ? 3 : 5, winner: userHome ? 'home' : 'away' } as MatchResult['penaltyResult'],
+      }));
+    });
+    const st = result.current.careerState!;
+    expect(st.boardConfidence).toBeGreaterThan(60);
+    expect(st.careerTotals).toMatchObject({ games: 1, draws: 1, wins: 0 });
+    void userTeamId;
+  });
+
+  it('promessa da coletiva é cobrada no jogo da copa e consumida', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    const { matchIdx, match, home, away, userHome } = openUserCupMatch(result);
+    const opp = userHome ? away : home;
+    act(() => { result.current.handleOpenPressConference(opp); });
+    act(() => { result.current.handleRespondPressConference(0); }); // promete vitória
+    expect(result.current.careerState!.pressStance?.stance).toBe('bold');
+    act(() => { result.current.handlePlayCareerBracketMatch(match, home, away, 'roundOf16', matchIdx); });
+    act(() => { result.current.handleCareerBracketMatchResult(cupResult(home, away, userHome ? 0 : 2, userHome ? 2 : 0)); });
+    const st = result.current.careerState!;
+    expect(st.pressStance).toBeUndefined();
+
+    // Mesma derrota sem promessa: a promessa quebrada tem que doer mais.
+    const plain = renderHook(() => useCareerManager(mockParams())).result;
+    startPlCareer(plain);
+    const p = openUserCupMatch(plain);
+    act(() => { plain.current.handlePlayCareerBracketMatch(p.match, p.home, p.away, 'roundOf16', p.matchIdx); });
+    act(() => { plain.current.handleCareerBracketMatchResult(cupResult(p.home, p.away, p.userHome ? 0 : 2, p.userHome ? 2 : 0)); });
+    expect(st.boardConfidence!).toBeLessThan(plain.current.careerState!.boardConfidence!);
+  });
+});
+
+describe('Demissão — bloqueios', () => {
+  function sack(result: HookResult, offers = 1) {
+    act(() => {
+      result.current.setCareerState(prev => prev ? {
+        ...prev,
+        sacked: { clubName: 'X', seasonYear: 1 },
+        jobOffers: getJobOffers(prev).length ? getJobOffers(prev).slice(0, offers) : Array.from({ length: offers }, (_, i) => ({
+          id: `job-${i}`, clubId: prev.rosters[prev.leagueId][i + 2].id, leagueId: prev.leagueId,
+          clubName: prev.rosters[prev.leagueId][i + 2].name, reputationRequired: 0, offeredSeasonYear: 1,
+        })),
+      } : prev);
+    });
+  }
+
+  it('demitido não abre nem simula o próprio jogo de copa', () => {
+    const params = mockParams();
+    const { result } = renderHook(() => useCareerManager(params));
+    startPlCareer(result);
+    sack(result);
+    const { matchIdx, match, home, away } = openUserCupMatch(result);
+    params.setScreen.mockClear();
+    act(() => { result.current.handlePlayCareerBracketMatch(match, home, away, 'roundOf16', matchIdx); });
+    expect(params.setScreen).not.toHaveBeenCalled();
+    act(() => { result.current.handleSimulateCareerBracketMatch('roundOf16', matchIdx); });
+    expect(result.current.careerState!.season.cup.roundOf16[matchIdx].played).toBe(false);
+    expect(params.setToastMsg).toHaveBeenCalledWith(expect.stringContaining('demitido'));
+  });
+
+  it('demitido não pode recusar a última proposta, mas pode recusar quando há outras', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    sack(result, 2);
+    const [first, second] = getJobOffers(result.current.careerState!);
+    act(() => { result.current.handleDeclineJobOffer(first.id); });
+    expect(getJobOffers(result.current.careerState!).map(o => o.id)).toEqual([second.id]);
+    act(() => { result.current.handleDeclineJobOffer(second.id); });
+    expect(getJobOffers(result.current.careerState!)).toHaveLength(1);
+  });
+});
+
+describe('Fechamento de temporada — diretoria e marcos', () => {
+  /** Objetivo único e controlável: caixa positivo no fim (±). */
+  function onlyBudgetObjective(result: HookResult, budget: number, confidence: number) {
+    act(() => {
+      result.current.setCareerState(prev => prev ? {
+        ...prev,
+        boardConfidence: confidence,
+        finances: { ...prev.finances!, budget },
+        boardObjectives: { seasonYear: 1, streakBad: 0, objectives: [{ id: 'o', type: 'budget_positive', label: 'Caixa', target: 0, reward: 6, penalty: 3 }] },
+      } : prev);
+    });
+  }
+
+  it('confiança zerada no fechamento demite e gera propostas', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    forceTerminalSeason(result);
+    onlyBudgetObjective(result, -1_000_000, 5);
+    act(() => { result.current.handleAdvanceSeason(); });
+    const st = result.current.careerState!;
+    expect(st.currentSeasonYear).toBe(2);
+    expect(st.sacked).toMatchObject({ seasonYear: 2 });
+    expect(getJobOffers(st).length).toBeGreaterThan(0);
+    expect(st.inbox!.some(m => m.subject.startsWith('❌ Demitido'))).toBe(true);
+  });
+
+  it('sem demissão, metade da distância até 60 é perdoada na temporada nova', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    forceTerminalSeason(result);
+    onlyBudgetObjective(result, 5_000_000, 40);
+    act(() => { result.current.handleAdvanceSeason(); });
+    const st = result.current.careerState!;
+    expect(st.sacked).toBeUndefined();
+    expect(st.boardConfidence).toBe(53); // 40 + 6 = 46 → 60 + (46 − 60) / 2
+    expect(st.roundSummary).toBeUndefined();
+    expect(st.scouting?.reportsLeft).toBe(3);
+  });
+
+  it('título continental entra nos números da carreira (e destrava o marco)', () => {
+    const { result } = renderHook(() => useCareerManager(mockParams()));
+    startPlCareer(result);
+    forceTerminalSeason(result);
+    act(() => {
+      result.current.setCareerState(prev => prev ? {
+        ...prev,
+        season: {
+          ...prev.season,
+          continentalCup: { ...prev.season.cup, stage: 'champion' as const, championId: prev.season.league.userTeamId },
+          continentalCupId: 'ucl',
+        },
+      } : prev);
+    });
+    act(() => { result.current.handleAdvanceSeason(); });
+    const st = result.current.careerState!;
+    expect(st.careerTotals?.continentalTitles).toBe(1);
+    expect(st.milestonesReached).toContain('continental_1');
+  });
+});

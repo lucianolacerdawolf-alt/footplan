@@ -17,6 +17,16 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - **O que envolve:** a partir de ~900px de largura, Central em duas colunas (próximo jogo + preparação | mensagens/temporada/clube), Táticas com campinho ao lado do Estilo, Meu Clube com finanças ao lado de contratos; grades de times/ligas com mais colunas; testar em 768×1024 e 1280×800.
 - **Posso retomar quando:** houver tráfego relevante de tablet/desktop (ver analytics) ou antes de divulgar a versão web.
 
+### Revisão de código + testes (2026-11-19) — ✅ feita
+
+- ✅ Corrigido: demitido ainda jogava/simulava o próprio jogo de copa e continental pela tela da chave.
+- ✅ Corrigido: demitido podia recusar todas as propostas e ficava preso (só restava recomeçar); a última agora não pode ser recusada.
+- ✅ Corrigido: queda da confiança vinda de jogo de copa passava de 35%/20% sem aviso.
+- ✅ +27 testes: copa (confiança, pênaltis, promessa da coletiva, aviso), demissão (bloqueios, propostas), fechamento (demissão, confiança levada, título continental), retomada da partida após F5, Mercado com olheiros e teto salarial, resumo da rodada, ficha do jogador, Mercado de Treinador.
+- ✅ Cobertura agora mede hooks e telas (`vitest.config.ts`): total 62% de linhas (motor 95%, hooks 57%, telas 44%).
+- ⏳ **Pontos menores que ficaram (🟢):** demissão no fim da temporada desconta a reputação depois de escolhido o patrocinador; save antigo que troca de clube no meio da temporada perde os jogos daquela temporada nos marcos; ficha de jogador não observado ainda mostra valor/salário (dá pista do OVR).
+- ⏳ **Lacunas de teste que sobraram:** jogo online (P2P e liga entre amigos, <35%) e a tela da partida (`MatchScreen`/`useMatchSimulation`, ~0% — o motor por trás tem 94%).
+
 ### Ideias dos jogos concorrentes (2026-11-19) — ✅ 1, 3, 5, 7 e 8 feitos
 
 - ✅ **Confiança da diretoria** (`engine/boardConfidence.ts`): medidor 0–100 que se move a cada jogo (vitória sobre time mais forte vale mais, derrota como favorito pesa mais, clássico ×1,5, mata-mata ×1,3), mais −1/rodada com a meta da tabela fora de alcance (após 1/4 da liga) e −2 com caixa negativo. Avisos em 35% e 20% (ultimato). Em 10%, a partir da rodada 6, demissão: −8 de reputação, 2–3 propostas de clubes menores, Central bloqueada até aceitar uma ou recomeçar. No fim da temporada os objetivos somam na confiança e metade da distância até 60 é perdoada. Chip "Diretoria N%" no topo da Central e barra na aba Temporada.
