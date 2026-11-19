@@ -5,7 +5,7 @@ import { playerOvr } from '../utils/playerOvr';
 import { formatMoney } from '../utils/formatMoney';
 import { calculateMarketValue } from '../engine/transferMarket';
 import { crestSrc } from '../utils/crest';
-import { ScreenHeader } from './ui';
+import { ScreenHeader, Button } from './ui';
 
 interface Props {
   userTeam: Team;
@@ -164,13 +164,12 @@ function TradeProposalScreen({ userTeam, leagueRoster, budget, onBack, onPropose
               })()}
 
               <div className="select-action">
-                <button
-                  className="slot-nav-btn slot-nav-btn-primary"
+                <Button glow
                   disabled={!offeredPlayerId || !requestedPlayerId || cashOffered > budget}
                   onClick={handleConfirm}
                 >
                   Propor Troca
-                </button>
+                </Button>
               </div>
 
               {result && (

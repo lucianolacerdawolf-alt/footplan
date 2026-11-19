@@ -900,6 +900,25 @@ export function simularPartidaRapida(home: Team, away: Team, random: RandomFn = 
   return { homeScore: state.homeScore, awayScore: state.awayScore };
 }
 
+/** Igual a simularPartidaRapida, mas devolve também quem fez os gols. Os jogos simulados
+ *  (CPU × CPU e o "Simular" do usuário) não registravam autores: a lista de artilheiros
+ *  da liga ficava quase vazia e o raio-x do adversário não tinha artilheiro. */
+export function simularPartidaRapidaComGols(home: Team, away: Team, random: RandomFn = Math.random): {
+  homeScore: number; awayScore: number;
+  scorers: Array<{ playerName: string; teamId: string; goals: number }>;
+} {
+  const state = simulateRegulationTime(home, away, random);
+  const tally = new Map<string, { playerName: string; teamId: string; goals: number }>();
+  for (const e of state.events) {
+    if (e.type !== 'goal' || !e.scorer || !e.teamId) continue;
+    const key = `${e.teamId}:${e.scorer}`;
+    const cur = tally.get(key);
+    if (cur) cur.goals++;
+    else tally.set(key, { playerName: e.scorer, teamId: e.teamId, goals: 1 });
+  }
+  return { homeScore: state.homeScore, awayScore: state.awayScore, scorers: [...tally.values()] };
+}
+
 // ---------------------------------------------------------------------------
 // Mata-mata do usuário no modo rápido (botão SIMULAR): MatchResult completo, com
 // prorrogação/pênaltis preservados e vencedor da disputa — antes essa lógica vivia

@@ -24,7 +24,10 @@ const TOPIC_LABEL: Record<ConversationTopic, string> = {
   contract: 'Contrato',
 };
 
-export default function ConversationsPanel({ conversations, onRespond }: Props) {
+export default function ConversationsPanel({ conversations: all, onRespond }: Props) {
+  // Saves antigos podem ter 2+ conversas pendentes do mesmo jogador (o motor gerava uma
+  // por rodada) — mostra só a mais recente de cada um.
+  const conversations = all.filter((c, i) => c.responded || !all.some((o, j) => j > i && !o.responded && o.playerId === c.playerId));
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const unrespondedCount = conversations.filter(c => !c.responded).length;
   const sorted = [...conversations].reverse(); // mais recentes primeiro

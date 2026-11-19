@@ -282,7 +282,14 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
       const theirs = f.homeTeamId === opponentTeam.id ? f.awayScore : f.homeScore;
       form.unshift(mine > theirs ? 'V' : mine === theirs ? 'E' : 'D');
     }
-    return { ovr, pos: pos > 0 && form.length > 0 ? pos : null, form };
+    // Artilheiro do adversário na liga (só aparece quando já houve gol registrado).
+    const goals = new Map<string, number>();
+    for (const round of fx) for (const f of round) for (const sc of f.scorers ?? []) {
+      if (sc.teamId === opponentTeam.id) goals.set(sc.playerName, (goals.get(sc.playerName) ?? 0) + sc.goals);
+    }
+    const best = [...goals.entries()].sort((a, b) => b[1] - a[1])[0];
+    const topScorer = best ? { name: best[0].split(' ').pop() ?? best[0], goals: best[1] } : null;
+    return { ovr, pos: pos > 0 && form.length > 0 ? pos : null, form, topScorer };
   }, [opponentTeam, standings, state.season.league.fixtures]);
 
   const socialPosts = useMemo(() => {
@@ -299,7 +306,8 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
   }, [userTeam, opponentTeam, userPosition, state.season.league.teams.length, lastUserResult, marqueeSigning, state.currentSeasonYear]);
 
   const unreadCount = inbox.filter(m => !m.isRead).length;
-  const convCount = onRespondConversation ? getPlayerConversations(state).length : 0;
+  // Só conversas sem resposta, uma por jogador (antes contava respondidas e duplicadas).
+  const convCount = onRespondConversation ? new Set(getPlayerConversations(state).filter(c => !c.responded).map(c => c.playerId)).size : 0;
 
   return (
     <div className={`${styles.screen} app-screen fit-screen`}>
@@ -338,6 +346,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                 <div className={styles.opponentScout} aria-label="Adversário">
                   <span>{nextMatch.homeName === userTeam?.name ? '🏠 Em casa' : '✈️ Fora'}</span>
                   {opponentInfo.pos && <span>{opponentInfo.pos}º na liga</span>}
+                  {opponentInfo.topScorer && <span title="Artilheiro do adversário na liga">⚽ {opponentInfo.topScorer.name} ({opponentInfo.topScorer.goals})</span>}
                   {opponentInfo.ovr && <span>Força {opponentInfo.ovr}{avgOvr ? (opponentInfo.ovr > avgOvr ? ' ▲' : opponentInfo.ovr < avgOvr ? ' ▼' : '') : ''}</span>}
                   {opponentInfo.form.length > 0 && (
                     <span className={styles.formRow} aria-label={`Últimos jogos: ${opponentInfo.form.join(' ')}`}>

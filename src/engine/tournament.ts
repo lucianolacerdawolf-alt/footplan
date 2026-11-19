@@ -1,6 +1,6 @@
 import type { Team } from './types';
 import type { CpuProfile } from '../data/leagues/types';
-import { simularPartidaRapida, simularKnockout } from './matchEngine';
+import { simularPartidaRapidaComGols, simularKnockout } from './matchEngine';
 import { cloneTeam } from '../utils/teamUtils';
 import { getStarterCount } from './squadUtils';
 import { shuffle } from './rng';
@@ -279,7 +279,7 @@ export function simularRodadaAuto(
     if (f.homeTeamId === userTeamId || f.awayTeamId === userTeamId) return f;
     const home = teamMap.get(f.homeTeamId)!;
     const away = teamMap.get(f.awayTeamId)!;
-    const result = simularPartidaRapida(cloneTeam(home), cloneTeam(away));
+    const result = simularPartidaRapidaComGols(cloneTeam(home), cloneTeam(away));
     return { ...f, ...result, played: true };
   });
 }
@@ -383,7 +383,7 @@ export function simularFixtureAuto(fixture: LeagueFixture, teams: Team[]): Leagu
   const teamMap = new Map(teams.map(t => [t.id, t]));
   const home = teamMap.get(fixture.homeTeamId)!;
   const away = teamMap.get(fixture.awayTeamId)!;
-  const result = simularPartidaRapida(cloneTeam(home), cloneTeam(away));
+  const result = simularPartidaRapidaComGols(cloneTeam(home), cloneTeam(away));
   return { ...fixture, ...result, played: true };
 }
 

@@ -9,7 +9,7 @@ import { syncLeagueRoster } from '../services/rosterSync';
 import TacticLabel from './TacticLabel';
 import styles from './OnlineLobbyScreen.module.css';
 import { crestSrc } from '../utils/crest';
-import { ScreenHeader } from './ui';
+import { ScreenHeader, Button } from './ui';
 
 interface Props {
   onStartMatch: (home: Team, away: Team, seed: number) => void;
@@ -189,13 +189,13 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props)
             : 'Um cria a sala e passa o código de 4 letras; o outro digita o código e entra. Cada um escolhe seu time e vocês jogam a mesma partida ao vivo.'}
         </p>
         <div className={styles.connectContainer}>
-          <button
-            className={`slot-nav-btn slot-nav-btn-primary ${styles.connectBtn}`}
+          <Button glow
+            className={styles.connectBtn}
             onClick={() => peer.createRoom()}
             disabled={peer.state === 'connecting'}
           >
             {peer.state === 'connecting' ? 'Conectando...' : 'Criar sala'}
-          </button>
+          </Button>
           <div className={styles.divider}>
             <span className={styles.dividerText}>OU</span>
           </div>
@@ -207,11 +207,10 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props)
               onKeyDown={e => e.key === 'Enter' && joinCode.trim().length === 4 && peer.joinRoom(joinCode.trim())}
               className={styles.joinCodeInput}
             />
-            <button
-              className="slot-nav-btn slot-nav-btn-primary"
+            <Button glow
               onClick={() => peer.joinRoom(joinCode.trim())}
               disabled={peer.state === 'connecting' || joinCode.trim().length < 4}
-            >Entrar</button>
+            >Entrar</Button>
           </div>
         </div>
       </div>
@@ -319,7 +318,7 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props)
       {/* Status */}
       <div className="select-action">
         {peer.isHost && bothConfirmed
-          ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleStart}>Iniciar Partida →</button>
+          ? <Button glow onClick={handleStart}>Iniciar Partida →</Button>
           : <div className="select-instruction">
               {myConfirmed
                 ? (opponentConfirmed ? '✓ Ambos prontos!' : 'Aguardando adversário confirmar...')
@@ -392,12 +391,12 @@ export default function OnlineLobbyScreen({ onStartMatch, onBack, peer }: Props)
           </div>
 
           {!myConfirmed && (
-            <button
-              className={`slot-nav-btn slot-nav-btn-primary ${styles.confirmBtn}`}
+            <Button glow
+              className={styles.confirmBtn}
               onClick={handleConfirmTactics}
             >
               ✓ Confirmar Táticas
-            </button>
+            </Button>
           )}
           {myConfirmed && (
             <div className={styles.confirmedMsg} style={{ color: 'var(--accent)' }}>

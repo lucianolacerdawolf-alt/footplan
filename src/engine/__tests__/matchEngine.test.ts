@@ -450,3 +450,17 @@ describe('distribuição da posse (calibração)', () => {
     expect(over75).toBeLessThan(0.12);
   });
 });
+
+describe('simularPartidaRapidaComGols', () => {
+  it('a soma dos gols dos artilheiros bate com o placar de cada time', async () => {
+    const { simularPartidaRapidaComGols } = await import('../matchEngine');
+    for (let seed = 1; seed <= 30; seed++) {
+      const home = makeTeam('h', 'Home');
+      const away = makeTeam('a', 'Away');
+      const r = simularPartidaRapidaComGols(home, away, seededRng(seed));
+      const sum = (id: string) => r.scorers.filter(s => s.teamId === id).reduce((t, s) => t + s.goals, 0);
+      expect(sum('h')).toBe(r.homeScore);
+      expect(sum('a')).toBe(r.awayScore);
+    }
+  });
+});

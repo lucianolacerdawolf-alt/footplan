@@ -479,3 +479,18 @@ button.modeCard:active { border-color: var(--accent); background: var(--surface-
   font-family: var(--sans); font-size: 12px; line-height: 1.15; font-weight: 800; cursor: pointer;
 }
 .newCareerBtn:active { transform: scale(0.97); }
+
+/* Celulares baixos (iPhone SE, Androids 16:9): mesma tela, mais compacta — sem rolar */
+@media (max-height: 740px) {
+  .screen { padding-top: 10px; padding-bottom: 12px; gap: 8px; }
+  .title { font-size: 30px; }
+  .iconBtn { width: 38px; height: 38px; }
+  .careerCard { padding: 12px 14px; gap: 8px; }
+  .careerArt { display: none; }
+  .careerTitle { font-size: 15px; }
+  .nextMatch { padding: 6px 10px; gap: 4px; }
+  .versusCrest { width: 22px; height: 22px; }
+  .modeCard { padding: 8px 4px; gap: 4px; }
+  .modeIcon { width: 32px; height: 32px; }
+  .modeCard .modeDesc { display: none; }
+}

@@ -3,7 +3,7 @@ import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { fireClick } from '../utils/fireClick';
 import { crestSrc } from '../utils/crest';
-import { ScreenHeader } from './ui';
+import { ScreenHeader, Button } from './ui';
 
 export type GameMode = 'cpu' | 'player';
 
@@ -133,7 +133,7 @@ export default function TeamSelectionScreen({ teams, leagueName, onConfirm, onBa
 
       <div className="select-action">
         {homeTeam && awayTeam
-          ? <button className="slot-nav-btn slot-nav-btn-primary" onClick={handleConfirm}>Montar Táticas →</button>
+          ? <Button glow onClick={handleConfirm}>Montar Táticas →</Button>
           : null
         }
       </div>

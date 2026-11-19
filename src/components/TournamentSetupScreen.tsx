@@ -4,7 +4,7 @@ import type { LeagueDefinition } from '../data/leagues/types';
 import { cloneTeam, getAvgOvr } from '../utils/teamUtils';
 import { useLiveRoster } from '../hooks/useLiveRoster';
 import { crestSrc } from '../utils/crest';
-import { ScreenHeader } from './ui';
+import { ScreenHeader, Button } from './ui';
 
 export type TournamentMode = 'league' | 'bracket' | 'career';
 
@@ -135,14 +135,13 @@ export default function TournamentSetupScreen({ mode, league, onBack, onStart, o
 
       <div className="select-action">
         {selectedTeam && (mode !== 'career' || managerName.trim().length > 0) && (
-          <button
-            className="slot-nav-btn slot-nav-btn-primary"
+          <Button glow
             onClick={handleStart}
             disabled={syncing}
             title={syncing ? 'Aguardando sincronização do elenco (idades reais dos jogadores)...' : undefined}
           >
             {syncing ? 'Sincronizando elenco...' : MODE_BTN[mode]}
-          </button>
+          </Button>
         )}
       </div>
 

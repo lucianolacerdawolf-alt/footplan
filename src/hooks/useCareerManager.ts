@@ -11,7 +11,7 @@ import { allLeagues } from '../data/leagues';
 import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { getRosterSyncInfo, getLoadedLeagueTeams } from '../services/rosterSync';
-import { copyShirtNumbers } from '../utils/shirtNumbers';
+import { copyShirtNumbers, normalizeTeamsShirtNumbers } from '../utils/shirtNumbers';
 import { generateSponsor, getStartingTier, getSponsorMultiplier } from '../engine/sponsors';
 import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, pairedDivisionId, getYouthPool, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
@@ -43,6 +43,27 @@ interface UseCareerManagerParams {
   evaluateAchievements: (input: AchievementEvalInput) => void;
   /** Destrava uma conquista específica fora do fluxo de partida — ex.: Tríplice Coroa. */
   unlockAchievement: (id: string) => void;
+}
+
+
+/** Números de camisa da carreira: tira os inventados (#90+ do sync antigo) e, quando os
+ *  elencos atualizados já carregaram, copia o número de cada jogador (mesmo id). Usado
+ *  no save local e no que chega da nuvem. Devolve o MESMO objeto se nada mudou. */
+export function withFreshShirtNumbers(state: CareerState): CareerState {
+  let changed = false;
+  const fix = (teams: Team[] | undefined, leagueId: string): Team[] | undefined => {
+    if (!teams) return teams;
+    let out = normalizeTeamsShirtNumbers(teams);
+    const src = getLoadedLeagueTeams(leagueId);
+    if (src) out = copyShirtNumbers(out, src);
+    if (out !== teams) changed = true;
+    return out;
+  };
+  const rosters = { ...state.rosters };
+  for (const id of Object.keys(rosters)) rosters[id] = fix(rosters[id], id) ?? rosters[id];
+  const leagueTeams = fix(state.season.league.teams, state.leagueId) ?? state.season.league.teams;
+  if (!changed) return state;
+  return { ...state, rosters, season: { ...state.season, league: { ...state.season.league, teams: leagueTeams } } };
 }
 
 export function useCareerManager({
@@ -94,9 +115,11 @@ export function useCareerManager({
       // "joguei o 1º jogo da carreira e sumiu como se eu não tivesse jogado".
       setCareerState(prev => {
         const localValid = prev !== null && isValidCareerState(prev);
-        if (!localValid) return cloud.state;
+        // Save vindo da nuvem pode ser anterior à correção das camisas (#90+ / "1º livre"):
+        // passa pela mesma correção do save local.
+        if (!localValid) return withFreshShirtNumbers(cloud.state);
         // Só sobrescreve quando o cloud é estritamente mais novo que o save local.
-        return (Number.isFinite(cloudUpdatedAt) && cloudUpdatedAt > localSavedAt) ? cloud.state : prev;
+        return (Number.isFinite(cloudUpdatedAt) && cloudUpdatedAt > localSavedAt) ? withFreshShirtNumbers(cloud.state) : prev;
       });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -218,23 +241,7 @@ export function useCareerManager({
   // (#90+ do sync antigo, depois "1º número livre"). Quando os elencos atualizados
   // carregam, copia o número de cada jogador (mesmo id) — real ou "sem número".
   const refreshShirtNumbers = useCallback(() => {
-    setCareerState(prev => {
-      if (!prev) return prev;
-      const fix = (teams: Team[] | undefined, leagueId: string) => {
-        const src = getLoadedLeagueTeams(leagueId);
-        return teams && src ? copyShirtNumbers(teams, src) : teams;
-      };
-      let changed = false;
-      const rosters = { ...prev.rosters };
-      for (const id of Object.keys(rosters)) {
-        const next = fix(rosters[id], id);
-        if (next && next !== rosters[id]) { rosters[id] = next; changed = true; }
-      }
-      const leagueTeams = fix(prev.season.league.teams, prev.leagueId);
-      if (leagueTeams !== prev.season.league.teams) changed = true;
-      if (!changed) return prev;
-      return { ...prev, rosters, season: { ...prev.season, league: { ...prev.season.league, teams: leagueTeams ?? prev.season.league.teams } } };
-    });
+    setCareerState(prev => (prev ? withFreshShirtNumbers(prev) : prev));
   }, [setCareerState]);
 
   return {

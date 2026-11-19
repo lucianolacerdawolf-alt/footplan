@@ -147,6 +147,18 @@ export function maybeGenerateConversation(
   ctx: ConversationContext,
   rng: () => number = Math.random,
 ): PlayerConversation | null {
+  const conv = generateConversation(state, ctx, rng);
+  // O mesmo jogador não abre outra conversa enquanto a anterior está sem resposta —
+  // antes o Kamada reclamava do banco toda rodada e a Central mostrava 2, 3 cópias.
+  if (conv && getPlayerConversations(state).some(c => !c.responded && c.playerId === conv.playerId)) return null;
+  return conv;
+}
+
+function generateConversation(
+  state: CareerState,
+  ctx: ConversationContext,
+  rng: () => number = Math.random,
+): PlayerConversation | null {
   const userTeam = state.rosters[state.leagueId]?.find(t => t.id === state.season.league.userTeamId);
   if (!userTeam) return null;
   // Compat de save: getter com backfill; nunca acessa o campo direto.

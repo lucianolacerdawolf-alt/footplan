@@ -208,6 +208,22 @@ describe('maybeGenerateConversation', () => {
   });
 });
 
+describe('maybeGenerateConversation — sem duplicar jogador', () => {
+  it('não abre outra conversa de quem já tem uma pendente (de outra rodada)', () => {
+    const state = makeCareerState();
+    const ctx = { seasonYear: 1, round: 3, lastResult: { userScore: 0, oppScore: 3, opponentId: 'pl-t0' } };
+    const first = maybeGenerateConversation(state, ctx, seededRng(7))!;
+    expect(first).not.toBeNull();
+    const withPending = { ...state, playerConversations: [first] };
+    // Mesma semente na rodada seguinte → mesmo jogador escolhido: não pode repetir.
+    const again = maybeGenerateConversation(withPending, { ...ctx, round: 4 }, seededRng(7));
+    expect(again === null || again.playerId !== first.playerId).toBe(true);
+    // Respondida, o jogador pode voltar a falar.
+    const answered = { ...state, playerConversations: [{ ...first, responded: true }] };
+    expect(maybeGenerateConversation(answered, { ...ctx, round: 4 }, seededRng(7))?.playerId).toBe(first.playerId);
+  });
+});
+
 describe('respondToConversation', () => {
   const baseConv = (topic: PlayerConversation['topic']): PlayerConversation => ({
     id: 'c1', playerId: 'p', playerName: 'Jogador', topic,

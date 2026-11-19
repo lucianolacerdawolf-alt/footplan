@@ -8,6 +8,20 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 
 ## 🐛 Bugs / Limpeza pendente
 
+### Teste como jogador novo + pontas soltas (2026-11-18/19) — ✅ feito
+
+- ✅ Botão de avançar a rodada escondido depois da partida (regras `.fit-screen` em CSS modules nunca aplicavam; agora `:global(.fit-screen)`).
+- ✅ Comemoração de gol virou tela cheia: volta a ser cartão.
+- ✅ Tutorial com 3 passos sobre o que está na tela (eram 7, com escanteio/falta que nem aparecem lá).
+- ✅ Intervalo com placar; botão "Pausar" com quantas restam; legendas em Simular / Jogar ao vivo; "Ver rodada →"; topo "Modo Carreira" na criação.
+- ✅ Conversa duplicada: o mesmo jogador não abre outra conversa com uma pendente; a Central mostra só a mais recente e o número da aba conta só as pendentes.
+- ✅ Save que chega da nuvem passa pela mesma correção de camisas do save local (`withFreshShirtNumbers`).
+- ✅ Botões antigos (`slot-nav-btn`) trocados pelo `Button` padrão em escolha de times, criação de carreira, troca e Online.
+- ✅ Jogos simulados (CPU × CPU e "Simular") registram os autores dos gols (`simularPartidaRapidaComGols`): a lista de artilheiros da liga e o artilheiro do adversário funcionam.
+- ✅ Tela inicial cabe em celular baixo (375×667) com layout compacto.
+- ⏳ Rodadas jogadas antes de 19/11 seguem sem autores de gol (o artilheiro do adversário só conta a partir daí).
+- ⏳ Lembretes Android e telas internas do Online não foram testados pelo navegador.
+
 ### Revisão de coerência entre telas (2026-11-17, celular 375px) — ✅ corrigida
 
 Passei por: inicial, Online, Liga entre Amigos, escolha de liga/time/copa, táticas, partida, estatísticas, conquistas, e na carreira Central, Elenco, Transferências, Meu Clube, Competições, Classificação, Copa e Base.
@@ -60,7 +74,7 @@ Passei por: inicial, Online, Liga entre Amigos, escolha de liga/time/copa, táti
 **🧭 Fluxo:**
 - ✅ Central com ~2200px (3 telas): 12 blocos empilhados. Sugestão: topo fixo com o próximo jogo + "Jogar/Avançar"; o resto em abas ou cards recolhidos. *Feito: próximo jogo no topo; objetivos e FC Hub recolhíveis; conversas só aparecem se houver alguma (~1800px com tudo).*
 - ✅ O "Jogar" fica abaixo do bloco de treino/coletiva; inverter (próximo jogo primeiro, preparação logo abaixo, em formato compacto).
-- ✅ (sem o artilheiro) Card do próximo jogo sem nada do adversário: mostrar posição, força, últimos 5 jogos e o artilheiro dele.
+- ✅ Card do próximo jogo sem nada do adversário: mostrar posição, força, últimos 5 jogos e o artilheiro dele (artilheiro entrou em 19/11).
 - ✅ Aviso "Termine a liga e a copa pra avançar de temporada" aparece desde a rodada 1.
 - "Confirmar Táticas" aparece na aba Elenco fora da preparação de jogo.
 - "Jogar Online · P2P via WebRTC": trocar por "Jogue ao vivo com um amigo pelo código".
