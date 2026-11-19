@@ -4,7 +4,8 @@ import {
   type CareerState, type JobOffer,
 } from './career';
 import { getAvgOvr } from '../utils/teamUtils';
-import { initialBudget, computeWeeklyIncome, computeWageBill } from './transferMarket';
+import { computeWageBill } from './transferMarket';
+import { baseWeeklyRevenue, clubInitialBudget, sponsorTvPerRound, operatingCostPerRound, wageCap } from './clubEconomy';
 import { getStartingTier, generateSponsor } from './sponsors';
 import { generateBoardObjectives } from './boardObjectives';
 import { getLeague } from '../data/leagues';
@@ -81,7 +82,8 @@ export function applyClubChange(state: CareerState, offer: JobOffer): CareerStat
   if (!leagueDef || !newUserTeam) return null;
 
   const { league, cup } = createCareerSeason(newUserTeam, roster, leagueDef, Math.random, state.rosters[pairedDivisionId(offer.leagueId) ?? ''] ?? []);
-  const budget = initialBudget(offer.leagueId);
+  const budget = clubInitialBudget(newUserTeam, roster, offer.leagueId);
+  const base = baseWeeklyRevenue(newUserTeam, offer.leagueId);
   const startingTier = getStartingTier(offer.leagueId);
   const sponsor = generateSponsor(offer.leagueId, offer.clubId, startingTier);
   const boardObj = generateBoardObjectives(league, state.manager.reputation, state.currentSeasonYear);
@@ -94,7 +96,10 @@ export function applyClubChange(state: CareerState, offer: JobOffer): CareerStat
     season: { league, cup, tradesUsedThisSeason: 0, budgetAtSeasonStart: budget, userGoalScorers: {} },
     rosters: state.rosters,
     history: state.history,
-    finances: { budget, wageBill: computeWageBill(newUserTeam), weeklyIncome: computeWeeklyIncome(offer.leagueId) },
+    finances: {
+      budget, wageBill: computeWageBill(newUserTeam), weeklyIncome: sponsorTvPerRound(base, offer.leagueId, startingTier),
+      baseRevenue: base, operatingCost: operatingCostPerRound(base), wageCap: wageCap(base, offer.leagueId, startingTier),
+    },
     // Ofertas de transferência eram do clube antigo — descartar evita um botão
     // "Aceitar" apontando pra um jogador que já não está no elenco.
     inbox: (state.inbox ?? []).filter(m => m.type !== 'TRANSFER_OFFER'),

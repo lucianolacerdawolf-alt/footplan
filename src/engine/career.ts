@@ -9,11 +9,12 @@ import { createBracket, generateLeagueSchedule } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { calculateMarketValue, calculateWeeklyWage, computeWageBill, renewalCost } from './transferMarket';
+import { baseWeeklyRevenue, sponsorTvPerRound, operatingCostPerRound, wageCap } from './clubEconomy';
 import { formatMoney } from '../utils/formatMoney';
 import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
 import { simularKnockout } from './matchEngine';
-import { getStartingTier, generateSponsor } from './sponsors';
+import { getStartingTier, generateSponsor, getSponsorMinReputation, type SponsorTier } from './sponsors';
 
 // =============================================================================
 // TIPOS — Modo Carreira
@@ -53,6 +54,13 @@ export interface ClubFinances {
   wageBill: number;
   weeklyIncome: number;
   merchRevenue?: number; // renda semanal de merchandising (camisas, etc.)
+  /** Receita semanal base do clube (tamanho) — ver clubEconomy.ts. Ausente em saves antigos
+   *  (preenchido por ensureEconomy no carregamento). */
+  baseRevenue?: number;
+  /** Custo operacional por rodada (estrutura, funcionários, viagens). */
+  operatingCost?: number;
+  /** Teto semanal da folha salarial definido pela diretoria. */
+  wageCap?: number;
 }
 
 export interface InboxMessage {
@@ -698,4 +706,31 @@ export function deriveCupResult(cup: BracketState, userTeamId: string): CareerSe
   if (cup.semiFinals.some(m => m.homeTeamId === userTeamId || m.awayTeamId === userTeamId)) return 'semifinal';
   if (cup.quarterFinals.some(m => m.homeTeamId === userTeamId || m.awayTeamId === userTeamId)) return 'quarterfinal';
   return 'roundOf16';
+}
+
+/** Saves anteriores à economia por tamanho de clube (19/11/2026) não têm receita base,
+ *  custo operacional nem teto: calcula a partir da folha atual do clube do usuário e
+ *  ajusta o patrocínio por rodada pra nova escala. O caixa atual é mantido. */
+export function ensureEconomy(state: CareerState): CareerState {
+  const f = state.finances;
+  if (!f || f.baseRevenue) return state;
+  const userTeam = state.rosters[state.leagueId]?.find(t => t.id === state.season.league.userTeamId);
+  if (!userTeam) return state;
+  const base = baseWeeklyRevenue(userTeam, state.leagueId);
+  // Saves antigos ganhavam o patrocínio Global de graça na largada (até 18/11). Na nova
+  // escala ele multiplica a receita — se a reputação não alcança o nível, volta ao inicial.
+  const savedTier = state.sponsorTier as SponsorTier | undefined;
+  const tier: SponsorTier = savedTier && state.manager.reputation >= getSponsorMinReputation(savedTier)
+    ? savedTier : getStartingTier(state.leagueId);
+  return {
+    ...state,
+    sponsorTier: tier,
+    finances: {
+      ...f,
+      baseRevenue: base,
+      weeklyIncome: sponsorTvPerRound(base, state.leagueId, tier),
+      operatingCost: operatingCostPerRound(base),
+      wageCap: wageCap(base, state.leagueId, tier),
+    },
+  };
 }

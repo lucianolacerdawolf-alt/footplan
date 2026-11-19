@@ -52,3 +52,9 @@
 .divider {
   height: 1px; background: var(--border); margin: 2px 0;
 }
+
+/* Teto salarial */
+.capBar { height: 8px; border-radius: 4px; background: var(--code-bg); border: 1px solid var(--border); overflow: hidden; margin: 2px 0; }
+.capFill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s; }
+.capWarn { background: #f59e0b; }
+.capDanger { background: var(--negative); }

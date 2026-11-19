@@ -21,6 +21,7 @@ interface Props {
 function getResultMessage(result: { accepted: boolean; reason: string }): string {
   if (result.reason === 'window-closed') return 'A janela de transferências está fechada.';
   if (result.reason === 'insufficient-budget') return 'Orçamento insuficiente pra cobrir o valor em dinheiro oferecido.';
+  if (result.reason === 'wage-cap') return 'A diretoria vetou: com essa troca a folha salarial passa do teto.';
   const favorable = result.reason === 'value-favorable';
   if (result.accepted) {
     return favorable

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import type { Team } from '@/engine/types';
 import { computeStandings, type BracketState } from '@/engine/tournament';
 import { assignMarketValues, computeWageBill, computeWeeklyIncome, getLeaguePrizeMoney, getCupPrizeMoney } from '@/engine/transferMarket';
+import { sponsorTvPerRound, wageCap } from '@/engine/clubEconomy';
 import { generateBoardObjectives, evaluateBoardObjectives, createBoardObjectivesInboxMessage, createBoardObjectivesResultMessage } from '@/engine/boardObjectives';
 import { refreshFreeAgentPool } from '@/engine/freeAgentPool';
 import { refreshYouthPool, generateYouthIntake, canPromote } from '@/engine/youthAcademy';
@@ -11,7 +12,7 @@ import { CUP_RESULT_LABELS } from '@/engine/careerLabels';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/engine/seasonClosure';
 import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, computeMerchRevenue } from '@/engine/sponsors';
 import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, pairedDivisionId, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getYouthPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
-import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage, createContinentalQualificationMessage, createContinentalResultMessage, createYouthIntakeMessage, createYouthReadyMessage, createYouthReleasedMessage } from '@/engine/inbox';
+import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage, createContinentalQualificationMessage, createContinentalResultMessage, createYouthIntakeMessage, createYouthReadyMessage, createYouthReleasedMessage, createSeasonDebtMessage } from '@/engine/inbox';
 import { generateJobOffers } from '@/engine/jobMarket';
 import type { Screen } from '@/types/navigation';
 
@@ -52,6 +53,14 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       );
       newReputation = Math.max(0, Math.min(100, newReputation + objEval.totalRepDelta));
       const objectiveMessages: InboxMessage[] = [createBoardObjectivesResultMessage(objEval.results, objEval.totalRepDelta, objEval.warnings)];
+      // Temporada fechou no vermelho (antes dos prêmios): a diretoria cobra em reputação —
+      // 3 pontos + 1 por cada 5% da receita anual em dívida, até 10.
+      if (finances.budget < 0) {
+        const annualRevenue = (finances.baseRevenue ?? finances.weeklyIncome) * 52;
+        const repLoss = Math.min(10, 3 + Math.floor((-finances.budget / Math.max(1, annualRevenue)) / 0.05));
+        newReputation = Math.max(0, newReputation - repLoss);
+        objectiveMessages.push(createSeasonDebtMessage(finances.budget, repLoss, `Fim da temporada ${careerState.currentSeasonYear}`));
+      }
       const budgetAtStart = careerState.season.budgetAtSeasonStart ?? finances.budget;
       const leaguePrize = getLeaguePrizeMoney(careerState.leagueId, leaguePosition);
       const cupPrize = getCupPrizeMoney(careerState.leagueId, cupResult);
@@ -123,8 +132,11 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       }
 
       // Recalcula weeklyIncome com o multiplicador do novo tier
-      const baseIncome = computeWeeklyIncome(careerState.leagueId);
-      const sponsoredIncome = Math.round(baseIncome * getSponsorMultiplier(nextSponsorTier));
+      // Receita base do clube (tamanho) × patrocínio atual; saves sem base caem no antigo.
+      const econBase = finances.baseRevenue;
+      const sponsoredIncome = econBase
+        ? sponsorTvPerRound(econBase, careerState.leagueId, nextSponsorTier as SponsorTier)
+        : Math.round(computeWeeklyIncome(careerState.leagueId) * getSponsorMultiplier(nextSponsorTier));
       const merch = computeMerchRevenue(newReputation);
 
       // ── Copa continental (UCL/UEL/UECL) ──
@@ -219,7 +231,12 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
           },
           rosters: evolvedRosters,
           history: [...prev.history, entry],
-          finances: { budget: finances.budget + leaguePrize + cupPrize + goalBonuses + continentalPrize, wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch },
+          finances: {
+            ...finances,
+            budget: finances.budget + leaguePrize + cupPrize + goalBonuses + continentalPrize,
+            wageBill: computeWageBill(nextUserTeam), weeklyIncome: sponsoredIncome, merchRevenue: merch,
+            ...(econBase ? { wageCap: wageCap(econBase, careerState.leagueId, nextSponsorTier as SponsorTier) } : {}),
+          },
           inbox: [...(prev.inbox ?? []), ...objectiveMessages],
           freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(prev), prev.currentSeasonYear + 1, Math.random, departures),
           youthPool: nextYouthPool,
@@ -257,13 +274,18 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
     const newSponsor = generateSponsor(careerState.leagueId, careerState.season.league.userTeamId + '-neg', next);
     setCareerState(prev => {
       if (!prev) return prev;
-      const baseIncome = computeWeeklyIncome(prev.leagueId);
-      const sponsoredIncome = Math.round(baseIncome * getSponsorMultiplier(next));
+      const econBase = prev.finances?.baseRevenue;
+      const sponsoredIncome = econBase
+        ? sponsorTvPerRound(econBase, prev.leagueId, next as SponsorTier)
+        : Math.round(computeWeeklyIncome(prev.leagueId) * getSponsorMultiplier(next));
       return {
         ...prev,
         sponsorTier: next,
         sponsorName: newSponsor.name,
-        finances: prev.finances ? { ...prev.finances, weeklyIncome: sponsoredIncome } : prev.finances,
+        finances: prev.finances ? {
+          ...prev.finances, weeklyIncome: sponsoredIncome,
+          ...(econBase ? { wageCap: wageCap(econBase, prev.leagueId, next as SponsorTier) } : {}),
+        } : prev.finances,
       };
     });
     setToastMsg(`📈 Patrocínio renegociado! Novo tier: ${getSponsorLabel(next)} — ${newSponsor.name}`);

@@ -13,6 +13,7 @@ import type { UseCareerManagerReturn } from '../hooks/useCareerManager';
 import { getInbox, getFinances, getFreeAgentPool, getTransferList, getTransferHistory, isTransferWindowOpen, getJobOffers, getSponsorTier, getSponsorName, getYouthPool } from '../engine/career';
 import { getSponsorLabel, getNextTierUp, getSponsorMultiplier, getSponsorMinReputation, type SponsorTier } from '../engine/sponsors';
 import { getTicketRevenue } from '../engine/transferMarket';
+import { ticketPerHomeMatch } from '../engine/clubEconomy';
 import { hasMandatoryUnread } from '../engine/inbox';
 import { computeStandings } from '../engine/tournament';
 import { userLeagueSummary } from '../engine/careerSummary';
@@ -567,6 +568,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         freeAgents={getFreeAgentPool(p.career.careerState)}
         transferListPlayerIds={getTransferList(p.career.careerState)}
         budget={finances.budget}
+        wageCap={finances.wageCap}
         isWindowOpen={isTransferWindowOpen(p.career.careerState.season.league.currentRound)}
         onBuyPlayer={p.career.handleBuyPlayer}
         onListPlayerForSale={p.career.handleListPlayerForSale}
@@ -631,7 +633,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         seasonYear={cs.currentSeasonYear}
         sponsorLabel={getSponsorLabel(sponsorTier)}
         sponsorName={getSponsorName(cs)}
-        ticketRevenue={getTicketRevenue(cs.leagueId)}
+        ticketRevenue={getFinances(cs).baseRevenue ? ticketPerHomeMatch(getFinances(cs).baseRevenue!) : getTicketRevenue(cs.leagueId)}
+        roundsLeft={Math.max(0, lg.fixtures.length - lg.currentRound)}
         nextSponsorTier={nextTier}
         sponsorMultiplier={getSponsorMultiplier(sponsorTier)}
         nextTierReputation={nextTier ? getSponsorMinReputation(nextTier) : null}

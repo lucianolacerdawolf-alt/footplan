@@ -20,19 +20,25 @@ interface Props {
   squadSize?: number;
   avgOvr?: number;
   avgAge?: number;
+  /** Rodadas que faltam na liga — pra projeção do caixa no fim da temporada. */
+  roundsLeft?: number;
 }
 
 export default function FinancePanel({
   finances, sponsorLabel, sponsorName, ticketRevenue,
   sponsorMultiplier, nextTierLabel, nextTierReputation, currentReputation,
-  squadValue, squadSize, avgOvr, avgAge,
+  squadValue, squadSize, avgOvr, avgAge, roundsLeft,
 }: Props) {
   // Bilheteria estimada por semana: ~metade dos jogos são em casa, então a renda
   // por jogo em casa contribui em média com metade do valor a cada rodada. O bloco
   // "Por jogo em casa" mostra o valor cheio creditado a cada partida em casa.
   const estWeeklyTicket = ticketRevenue != null && ticketRevenue > 0 ? Math.round(ticketRevenue / 2) : 0;
   const weeklyIncomeTotal = finances.weeklyIncome + (finances.merchRevenue ?? 0) + estWeeklyTicket;
-  const net = weeklyIncomeTotal - finances.wageBill;
+  const opex = finances.operatingCost ?? 0;
+  const net = weeklyIncomeTotal - finances.wageBill - opex;
+  const cap = finances.wageCap;
+  const capPct = cap ? Math.min(100, Math.round((finances.wageBill / cap) * 100)) : 0;
+  const projected = roundsLeft != null ? finances.budget + net * roundsLeft : null;
   const annualWage = finances.wageBill * 52;
   const annualIncome = weeklyIncomeTotal * 52;
   const wagePctOfIncome = annualIncome > 0 ? Math.round((annualWage / annualIncome) * 100) : 0;
@@ -77,6 +83,12 @@ export default function FinancePanel({
           <span className={styles.rowLabel}>👔 Salários</span>
           <span className={styles.rowValue} style={{ color: 'var(--negative)' }}>-{formatMoney(finances.wageBill)}</span>
         </div>
+        {opex > 0 && (
+          <div className={styles.row}>
+            <span className={styles.rowLabel}>🏢 Estrutura e funcionários</span>
+            <span className={styles.rowValue} style={{ color: 'var(--negative)' }}>-{formatMoney(opex)}</span>
+          </div>
+        )}
         <div className={styles.divider} />
         <div className={styles.row}>
           <span className={styles.rowLabel}>📈 Saldo Semanal</span>
@@ -85,6 +97,34 @@ export default function FinancePanel({
           </span>
         </div>
       </div>
+
+      {/* Teto salarial da diretoria + projeção do caixa */}
+      {(cap || projected != null) && (
+        <div className={styles.breakdown}>
+          <div className={styles.sectionLabel}>Diretoria</div>
+          {cap ? (
+            <>
+              <div className={styles.row}>
+                <span className={styles.rowLabel}>📏 Teto salarial</span>
+                <span className={styles.rowValue}>{formatMoney(finances.wageBill)} de {formatMoney(cap)}/sem</span>
+              </div>
+              <div className={styles.capBar} role="progressbar" aria-valuenow={capPct} aria-valuemin={0} aria-valuemax={100} aria-label={`Folha em ${capPct}% do teto`}>
+                <div className={`${styles.capFill} ${capPct >= 95 ? styles.capDanger : capPct >= 85 ? styles.capWarn : ''}`} style={{ width: `${capPct}%` }} />
+              </div>
+              <div className={styles.rowSub}>
+                {capPct >= 100 ? 'No limite: a diretoria veta contratações e aumentos de salário.' : `Folga de ${formatMoney(cap - finances.wageBill)}/sem pra contratar ou renovar.`}
+              </div>
+            </>
+          ) : null}
+          {projected != null && (
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>🔮 Caixa no fim da temporada</span>
+              <span className={styles.rowValue} style={{ color: projected >= 0 ? 'var(--positive)' : 'var(--negative)', fontWeight: 800 }}>≈ {formatMoney(projected)}</span>
+            </div>
+          )}
+          {projected != null && <div className={styles.rowSub}>Sem contar prêmios e transferências. Fechar no vermelho custa reputação.</div>}
+        </div>
+      )}
 
       {/* Bilheteria — creditada por jogo em casa, fora do saldo semanal */}
       {ticketRevenue != null && ticketRevenue > 0 && (

@@ -4,9 +4,10 @@ import { allLeagues } from '../data/leagues';
 import { getAvgOvr } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import { formatMoney } from '../utils/formatMoney';
-import { calculateMarketValue } from '../engine/transferMarket';
+import { computeWageBill, calculateMarketValue } from '../engine/transferMarket';
 import { syncLeagueRoster } from '../services/rosterSync';
 import PlayerDetailModal from './PlayerDetailModal';
+import { withWage } from '../engine/clubEconomy';
 import styles from './TransferMarketScreen.module.css';
 import { ScreenHeader } from './ui';
 import { crestSrc } from '../utils/crest';
@@ -23,6 +24,8 @@ interface Props {
   /** Ids do próprio elenco atualmente na lista de venda. */
   transferListPlayerIds: string[];
   budget: number;
+  /** Teto semanal da folha (diretoria) — avisa antes de oferecer por quem estoura. */
+  wageCap?: number;
   isWindowOpen: boolean;
   onBuyPlayer: (playerId: string, fromTeamId: string, amount: number) => { success: boolean; reason: string };
   onListPlayerForSale: (playerId: string) => { success: boolean; reason: string };
@@ -56,6 +59,7 @@ function resultMessage(reason: string): string {
     case 'too-low': return '❌ Recusada — valor muito abaixo do mercado.';
     case 'window-closed': return 'A janela de transferências está fechada.';
     case 'insufficient-budget': return 'Orçamento insuficiente pra essa oferta.';
+    case 'wage-cap': return 'A diretoria vetou: o salário dele estoura o teto salarial do clube. Venda alguém ou renove por menos antes.';
     case 'seller-last-at-position': return 'Esse time não pode vender: ficaria sem nenhum jogador na posição.';
     case 'last-at-position': return 'Não é possível colocar à venda: você ficaria sem nenhum jogador nessa posição.';
     case 'listed': return '📋 Jogador colocado na lista de venda!';
@@ -73,7 +77,7 @@ function sortPlayers<T extends Player>(players: T[], sortBy: SortKey): T[] {
   });
 }
 
-function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
+function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, transferListPlayerIds, budget, wageCap, isWindowOpen, onBuyPlayer, onListPlayerForSale, onUnlistPlayerForSale, onSignFreeAgent, onRosterSynced, onProposeTrade }: Props) {
   const [activeTab, setActiveTab] = useState<'buy' | 'sell' | 'free-agents'>('buy');
   const [positionFilter, setPositionFilter] = useState<'ALL' | Position>('ALL');
   const [sortBy, setSortBy] = useState<SortKey>('ovr');
@@ -198,6 +202,9 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
     const max = mode === 'buy' ? 1.5 : 0.3;
     const amount = Math.round(marketValue * multiplier);
     const overBudget = amount > budget;
+    // Salário que ele vai ganhar e se a folha nova passa do teto da diretoria.
+    const wage = withWage(player).weeklyWage ?? 0;
+    const overCap = !!wageCap && computeWageBill(userTeam) + wage > wageCap;
     return (
       <div className={styles.offerCard}>
         <div className={styles.offerRow}>
@@ -212,11 +219,15 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
         </div>
         {mode === 'buy' && multiplier >= 1.5 && <span className={styles.irresistibleBadge}>Oferta Irrecusável</span>}
         <div className={styles.offerActions}>
-          <button className={styles.confirmBtn} disabled={overBudget} onClick={onConfirm}>
+          <button className={styles.confirmBtn} disabled={overBudget || overCap} onClick={onConfirm}>
             {mode === 'buy' ? 'Confirmar Oferta' : 'Assinar Contrato'}
           </button>
           <button className={styles.cancelBtn} onClick={() => setExpandedId(null)}>Cancelar</button>
         </div>
+        <span className={overCap ? styles.warnText : styles.wageText}>
+          Salário: {formatMoney(wage)}/sem{wageCap ? ` · folha ficaria ${formatMoney(computeWageBill(userTeam) + wage)} de ${formatMoney(wageCap)}` : ''}
+        </span>
+        {overCap && <span className={styles.warnText}>A diretoria vai vetar: estoura o teto salarial.</span>}
         {overBudget && <span className={styles.warnText}>Ultrapassa o orçamento disponível.</span>}
         {feedback?.playerId === player.id && (
           <span className={feedback.success ? styles.successText : styles.warnText}>{feedback.message}</span>

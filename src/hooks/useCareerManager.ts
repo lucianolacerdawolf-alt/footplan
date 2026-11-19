@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueDefinition } from '../data/leagues/types';
-import { assignMarketValues, computeWageBill, initialBudget, computeWeeklyIncome } from '../engine/transferMarket';
+import { assignMarketValues, computeWageBill } from '../engine/transferMarket';
+import { baseWeeklyRevenue, clubInitialBudget, sponsorTvPerRound, operatingCostPerRound, wageCap } from '../engine/clubEconomy';
 import { createWelcomeMessage, createYouthIntakeMessage } from '../engine/inbox';
 import { generateYouthIntake, promoteYouthPlayer, canPromote } from '../engine/youthAcademy';
 import { generateFreeAgentPool } from '../engine/freeAgentPool';
@@ -12,7 +13,8 @@ import { usePersistedState } from './usePersistedState';
 import { useCloudSave } from './useCloudSave';
 import { getRosterSyncInfo, getLoadedLeagueTeams } from '../services/rosterSync';
 import { copyShirtNumbers, normalizeTeamsShirtNumbers } from '../utils/shirtNumbers';
-import { generateSponsor, getStartingTier, getSponsorMultiplier } from '../engine/sponsors';
+import { ensureEconomy } from '../engine/career';
+import { generateSponsor, getStartingTier } from '../engine/sponsors';
 import { isValidCareerState, assignInitialAges, assignInitialContracts, createCareerSeason, pairedDivisionId, getYouthPool, type CareerState } from '../engine/career';
 import { useCareerMatchFlow } from './career/useCareerMatchFlow';
 import { useTransferManager } from './career/useTransferManager';
@@ -117,9 +119,9 @@ export function useCareerManager({
         const localValid = prev !== null && isValidCareerState(prev);
         // Save vindo da nuvem pode ser anterior à correção das camisas (#90+ / "1º livre"):
         // passa pela mesma correção do save local.
-        if (!localValid) return withFreshShirtNumbers(cloud.state);
+        if (!localValid) return withFreshShirtNumbers(ensureEconomy(cloud.state));
         // Só sobrescreve quando o cloud é estritamente mais novo que o save local.
-        return (Number.isFinite(cloudUpdatedAt) && cloudUpdatedAt > localSavedAt) ? withFreshShirtNumbers(cloud.state) : prev;
+        return (Number.isFinite(cloudUpdatedAt) && cloudUpdatedAt > localSavedAt) ? withFreshShirtNumbers(ensureEconomy(cloud.state)) : prev;
       });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,15 +162,14 @@ export function useCareerManager({
     // segue — só não fica "achatado" com os valores de mercado dos outros times.
     const userTeamWithValues = rosters[leagueDef.id].find(t => t.id === userTeam.id) ?? assignInitialContracts([assignMarketValues(cloneTeam(userTeam))])[0];
     const { league, cup } = createCareerSeason(userTeamWithValues, rosters[leagueDef.id], leagueDef, Math.random, rosters[pairedDivisionId(leagueDef.id) ?? ''] ?? []);
-    const budget = initialBudget(leagueDef.id);
+    // Economia por tamanho de clube (clubEconomy.ts): receita, caixa inicial e teto
+    // salarial partem da folha do clube — antes eram iguais pra toda a liga.
+    const base = baseWeeklyRevenue(userTeamWithValues, leagueDef.id);
+    const budget = clubInitialBudget(userTeamWithValues, rosters[leagueDef.id], leagueDef.id);
     const trimmedName = managerName.trim().slice(0, 24) || 'Técnico';
     const startingTier = getStartingTier(leagueDef.id);
     const sponsor = generateSponsor(leagueDef.id, userTeam.id, startingTier);
-    // O tier inicial (ex.: Global na PL) precisa refletir no patrocínio já na 1ª
-    // temporada. Fim de temporada (useCareerSeason) e renegociação já aplicam o
-    // multiplicador; a criação da carreira não aplicava, então um patrocínio Global
-    // pagava como Local (base sem multiplicador). Agora bate com o resto do jogo.
-    const weeklyIncome = Math.round(computeWeeklyIncome(leagueDef.id) * getSponsorMultiplier(startingTier));
+    const weeklyIncome = sponsorTvPerRound(base, leagueDef.id, startingTier);
     const boardObj = generateBoardObjectives(league, 0, 1);
     const youthIntake = generateYouthIntake(1);
     const newState: CareerState = {
@@ -179,7 +180,10 @@ export function useCareerManager({
       season: { league, cup, tradesUsedThisSeason: 0, budgetAtSeasonStart: budget, userGoalScorers: {} },
       rosters,
       history: [],
-      finances: { budget, wageBill: computeWageBill(userTeamWithValues), weeklyIncome },
+      finances: {
+        budget, wageBill: computeWageBill(userTeamWithValues), weeklyIncome,
+        baseRevenue: base, operatingCost: operatingCostPerRound(base), wageCap: wageCap(base, leagueDef.id, startingTier),
+      },
       inbox: [createWelcomeMessage(trimmedName, budget, 'Temporada 1'), createBoardObjectivesInboxMessage(boardObj), createYouthIntakeMessage(youthIntake.map(p => p.name), 'Temporada 1')],
       freeAgentPool: generateFreeAgentPool(),
       youthPool: youthIntake,
@@ -241,7 +245,8 @@ export function useCareerManager({
   // (#90+ do sync antigo, depois "1º número livre"). Quando os elencos atualizados
   // carregam, copia o número de cada jogador (mesmo id) — real ou "sem número".
   const refreshShirtNumbers = useCallback(() => {
-    setCareerState(prev => (prev ? withFreshShirtNumbers(prev) : prev));
+    // Também converte saves antigos pra economia por tamanho de clube (ensureEconomy).
+    setCareerState(prev => (prev ? withFreshShirtNumbers(ensureEconomy(prev)) : prev));
   }, [setCareerState]);
 
   return {

@@ -15,6 +15,8 @@ import styles from './TrophyRoomScreen.module.css';
 import { ScreenHeader } from './ui';
 
 interface Props {
+  /** Rodadas restantes da liga (projeção do caixa no painel de finanças). */
+  roundsLeft?: number;
   history: CareerSeasonHistoryEntry[];
   /** Só passado no Modo Carreira (única forma de uso desta tela hoje) — vira a aba "Meu Clube". */
   finances?: ClubFinances;
@@ -96,7 +98,7 @@ function transferAmountDisplay(record: TransferRecord): { text: string; color?: 
   return { text: `-${formatMoney(record.amount)}`, color: 'var(--negative)' };
 }
 
-function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputation, userSquad, startersOvr, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
+function TrophyRoomScreen({ roundsLeft, history, finances, transfers, currentSeason, reputation, userSquad, startersOvr, onRenewContract, userTeamName, userTeamLogo, stadium, leagueName, leagueFlag, seasonYear, sponsorLabel, sponsorName, ticketRevenue, nextSponsorTier, sponsorMultiplier, nextTierReputation, capacity, morale, onRenegotiateSponsor }: Props) {
   const [expandedYear, setExpandedYear] = useState<number | null>(null);
   const [renewingPlayer, setRenewingPlayer] = useState<Player | null>(null);
   const ordered = [...history].sort((a, b) => a.year - b.year);
@@ -209,6 +211,7 @@ function TrophyRoomScreen({ history, finances, transfers, currentSeason, reputat
         squadSize={squadStats?.size}
         avgOvr={squadStats?.avgOvr}
         avgAge={squadStats?.avgAge}
+        roundsLeft={roundsLeft}
       />}
 
       {onRenegotiateSponsor && nextSponsorTier && (

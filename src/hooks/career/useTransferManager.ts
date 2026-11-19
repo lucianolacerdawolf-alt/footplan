@@ -3,6 +3,7 @@ import type { Player, Team } from '@/engine/types';
 import { computeWageBill, evaluateCashTransfer, netSellRevenue } from '@/engine/transferMarket';
 import { formatMoney } from '@/utils/formatMoney';
 import { createTransferAcceptedMessage, createTransferOutCompletedMessage, createTransferRejectedMessage } from '@/engine/inbox';
+import { exceedsWageCap, withWage } from '@/engine/clubEconomy';
 import { getFinances, getInbox, getTransferList, getTransferHistory, isTransferWindowOpen, evaluateTradeOffer, getFreeAgentPool, renewPlayerContract, canRenewContract, evaluateRenewalOffer, type CareerState, type InboxMessage, type TransferRecord, type ContractRenewalOptions } from '@/engine/career';
 
 interface UseTransferManagerParams {
@@ -32,6 +33,11 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
     const requestedPlayer = opponentTeam.squad.find(p => p.id === requestedPlayerId);
     if (!offeredPlayer || !requestedPlayer) return { accepted: false, reason: 'invalid-players' };
 
+    // Teto salarial da diretoria: a troca não pode estourar a folha.
+    const incomingTrade = withWage(requestedPlayer);
+    if (exceedsWageCap(finances, computeWageBill(userTeam) - (offeredPlayer.weeklyWage ?? 0) + (incomingTrade.weeklyWage ?? 0))) {
+      return { accepted: false, reason: 'wage-cap' };
+    }
     const result = evaluateTradeOffer(offeredPlayer, requestedPlayer, opponentTeam.squad, careerState.manager.reputation, Math.random, cashOffered);
     // A rejected offer does not consume a trade slot — the cap is charged only on
     // acceptance (Claude's Discretion resolution, see PLAN.md task 2 note on D-06).
@@ -43,7 +49,7 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
     const offeredPlayerWithoutGoal = { ...offeredPlayer, contractGoal: undefined };
     const swapSquad = (teams: Team[]): Team[] => teams.map(t => {
       if (t.id === userTeam.id) {
-        return { ...t, squad: [...t.squad.filter(p => p.id !== offeredPlayerId), requestedPlayer] };
+        return { ...t, squad: [...t.squad.filter(p => p.id !== offeredPlayerId), incomingTrade] };
       }
       if (t.id === opponentTeam.id) {
         return { ...t, squad: [...t.squad.filter(p => p.id !== requestedPlayerId), offeredPlayerWithoutGoal] };
@@ -121,16 +127,23 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
     if (samePositionCount <= 1) return { success: false, reason: 'seller-last-at-position' };
     const sellerNeedsPlayer = samePositionCount <= 2;
 
+    // Jogador de outra liga vinha sem salário (só a liga do usuário tinha salários
+    // calculados) — contratava-se uma estrela sem custo na folha.
+    const incoming = withWage(player);
+    if (exceedsWageCap(finances, computeWageBill(userTeam) + (incoming.weeklyWage ?? 0))) {
+      return { success: false, reason: 'wage-cap' };
+    }
+
     const evalResult = evaluateCashTransfer(player, amount, sellerNeedsPlayer);
     if (!evalResult.accepted) return { success: false, reason: evalResult.reason };
 
     const isSameLeague = sellerLeagueId === careerState.leagueId;
-    const addToUser = (teams: Team[]): Team[] => teams.map(t => t.id === userTeam.id ? { ...t, squad: [...t.squad, player] } : t);
+    const addToUser = (teams: Team[]): Team[] => teams.map(t => t.id === userTeam.id ? { ...t, squad: [...t.squad, incoming] } : t);
     // Time e liga vendedores só aparecem em season.league/cup.teams quando fazem parte
     // da própria liga do usuário (esses dois arrays são um espelho de rosters[leagueId]).
     const moveSquadSameLeague = (teams: Team[]): Team[] => teams.map(t => {
       if (t.id === sellerTeam!.id) return { ...t, squad: t.squad.filter(p => p.id !== playerId) };
-      if (t.id === userTeam.id) return { ...t, squad: [...t.squad, player] };
+      if (t.id === userTeam.id) return { ...t, squad: [...t.squad, incoming] };
       return t;
     });
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
@@ -192,6 +205,9 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
 
     const leagueRoster = careerState.rosters[careerState.leagueId];
     const userTeam = leagueRoster.find(t => t.id === careerState.season.league.userTeamId)!;
+    if (exceedsWageCap(finances, computeWageBill(userTeam) + (withWage(player).weeklyWage ?? 0))) {
+      return { success: false, reason: 'wage-cap' };
+    }
     const addToSquad = (teams: Team[]): Team[] => teams.map(t => t.id === userTeam.id ? { ...t, squad: [...t.squad, player] } : t);
     const dateLabel = `Temporada ${careerState.currentSeasonYear} · Rodada ${careerState.season.league.currentRound + 1}`;
     const record: TransferRecord = {
@@ -380,6 +396,12 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
 
     const finances = getFinances(careerState);
     const { player: renewed, cost } = renewPlayerContract(player, options.years, options);
+    // Aumento de salário na renovação não pode estourar o teto (reduzir sempre pode).
+    const newBill = computeWageBill(userTeam) - (player.weeklyWage ?? 0) + (renewed.weeklyWage ?? 0);
+    if ((renewed.weeklyWage ?? 0) > (player.weeklyWage ?? 0) && exceedsWageCap(finances, newBill)) {
+      setToastMsg(`🚫 A diretoria vetou: o novo salário de ${player.name} estoura o teto salarial.`);
+      return;
+    }
     if (cost > finances.budget) {
       setToastMsg(`⚠️ Sem orçamento para renovar ${player.name}: custa €${(cost / 1_000_000).toFixed(1)}M.`);
       return;

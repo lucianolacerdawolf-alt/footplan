@@ -170,3 +170,21 @@ export function createYouthReleasedMessage(names: string[], date: string): Inbox
     body: `${names.join(', ')} chegaram aos 20 anos sem ser promovidos e deixaram o clube.`,
   });
 }
+
+/** Caixa ficou negativo numa rodada: a diretoria avisa (uma vez, quando cruza o zero). */
+export function createNegativeBudgetMessage(budget: number, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: true, type: 'BOARD_UPDATE',
+    subject: '⚠️ Contas no vermelho',
+    body: `O caixa do clube está em €${(budget / 1_000_000).toFixed(1)}M. Enquanto estiver negativo não há dinheiro pra contratar. Venda jogadores ou reduza a folha salarial — se a temporada terminar no vermelho, a diretoria vai cobrar (reputação).`,
+  });
+}
+
+/** Temporada terminou no vermelho: perda de reputação. */
+export function createSeasonDebtMessage(budget: number, repLoss: number, date: string): InboxMessage {
+  return makeMessage({
+    date, isMandatory: true, type: 'BOARD_UPDATE',
+    subject: '📉 Temporada fechou no prejuízo',
+    body: `O clube terminou a temporada com €${(budget / 1_000_000).toFixed(1)}M em caixa. A diretoria descontou ${repLoss} de reputação e espera as contas equilibradas na próxima temporada.`,
+  });
+}

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { renderHook, act } from '@testing-library/react';
+import { ticketPerHomeMatch, operatingCostPerRound } from '../../engine/clubEconomy';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useCareerManager } from '../useCareerManager';
 import { makeTeam } from '@/components/__tests__/testFixtures';
@@ -134,6 +135,8 @@ describe('D-06: trade cap removido', () => {
     // of 0.02, independent of the offer's actual favorability. This makes all 4
     // proposals deterministically accepted, no retry loop or flake risk.
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.01);
+    // Este teste é sobre o limite de trocas, não sobre o teto salarial (clubEconomy).
+    act(() => { result.current.setCareerState(prev => prev ? { ...prev, finances: { ...prev.finances!, wageCap: undefined } } : prev); });
 
     let lastResult: { accepted: boolean; reason: string } | undefined;
     for (let i = 0; i < 4; i++) {
@@ -407,19 +410,18 @@ describe('Finanças e Inbox (Modo Carreira)', () => {
     const before = result.current.careerState!.finances!;
     const leg = result.current.careerState!.season.league;
     const fixture = leg.fixtures[leg.currentRound].find(f => f.homeTeamId === leg.userTeamId || f.awayTeamId === leg.userTeamId);
-    const expectedTicketRevenue = fixture?.homeTeamId === leg.userTeamId ? getTicketRevenue(leagueId) : 0;
+    // Economia por tamanho de clube: bilheteria = metade da receita base; estrutura debitada.
+    const expectedTicketRevenue = fixture?.homeTeamId === leg.userTeamId ? ticketPerHomeMatch(before.baseRevenue!) : 0;
+    void leagueId;
 
     act(() => {
       result.current.handleNextCareerLeagueRound();
     });
     const after = result.current.careerState!.finances!;
 
-    expect(after.budget).toBe(before.budget + before.weeklyIncome + expectedTicketRevenue - after.wageBill);
-    if (fixture?.homeTeamId === leg.userTeamId) {
-      expect(expectedTicketRevenue).toBe(getTicketRevenue(leagueId));
-    } else {
-      expect(expectedTicketRevenue).toBe(0);
-    }
+    expect(before.baseRevenue).toBeGreaterThan(0);
+    expect(before.operatingCost).toBe(operatingCostPerRound(before.baseRevenue!));
+    expect(after.budget).toBe(before.budget + before.weeklyIncome + expectedTicketRevenue - after.wageBill - before.operatingCost!);
   });
 
   it('bloqueia handleNextCareerLeagueRound enquanto houver mensagem obrigatória não lida', () => {
@@ -559,7 +561,8 @@ describe('handleCareerBracketMatchResult — bilheteria', () => {
     });
 
     const budgetAfter = result.current.careerState!.finances!.budget;
-    const expectedTicket = isHome ? getTicketRevenue(leagueId) : 0;
+    const expectedTicket = isHome ? ticketPerHomeMatch(result.current.careerState!.finances!.baseRevenue!) : 0;
+    void leagueId;
     expect(budgetAfter).toBe(budgetBefore + expectedTicket);
   });
 });
@@ -644,6 +647,9 @@ describe('handleBuyPlayer', () => {
     const oppTeam = result.current.careerState!.rosters[leagueId].find(t => t.id === opponentTeamId)!;
     const player = oppTeam.squad.find(p => oppTeam.squad.filter(q => q.position === p.position).length > 2)!;
     const amount = Math.ceil((player.marketValue ?? 0) * 1.5); // premium-offer — aceite garantido, determinístico
+    // Caixa inicial agora depende do tamanho do clube (clubEconomy); este teste é sobre a
+    // mecânica da transferência, então garante caixa e tira o teto salarial.
+    act(() => { result.current.setCareerState(prev => prev ? { ...prev, finances: { ...prev.finances!, budget: 500_000_000, wageCap: undefined } } : prev); });
     const budgetBefore = result.current.careerState!.finances!.budget;
 
     let res: { success: boolean; reason: string } | undefined;

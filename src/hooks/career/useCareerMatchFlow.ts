@@ -9,9 +9,10 @@ import { moraleDelta, applyMoraleToTeam } from '@/engine/morale';
 import { applyMatchFatigue } from '@/engine/fitness';
 import { applyMatchCards, clearSuspensions } from '@/engine/discipline';
 import { computeWageBill, getTicketRevenue, calculateMarketValue } from '@/engine/transferMarket';
+import { ticketPerHomeMatch } from '@/engine/clubEconomy';
 import {
   createInjuryMessage, createMatchPreviewMessage, createTransferWindowMessage, createTransferOfferMessage, hasMandatoryUnread,
-  createDerbyPreviewMessage,
+  createDerbyPreviewMessage, createNegativeBudgetMessage,
 } from '@/engine/inbox';
 import { getDerbyName } from '@/engine/rivalries';
 import { tallyUserGoals, mergeGoalTally } from '@/engine/seasonClosure';
@@ -142,7 +143,10 @@ export function useCareerMatchFlow({
     // Bilheteria: a rodada que está terminando (leg.currentRound, antes do incremento
     // pra `next`) é o jogo já disputado — creditar se foi em casa.
     const justPlayedFixture = leg.fixtures[leg.currentRound].find(f => f.homeTeamId === leg.userTeamId || f.awayTeamId === leg.userTeamId);
-    const ticketRevenue = justPlayedFixture?.homeTeamId === leg.userTeamId ? getTicketRevenue(careerState.leagueId) : 0;
+    // Bilheteria e custo de estrutura proporcionais ao tamanho do clube (clubEconomy.ts).
+    const econBase = getFinances(careerState).baseRevenue;
+    const ticketRevenue = justPlayedFixture?.homeTeamId === leg.userTeamId
+      ? (econBase ? ticketPerHomeMatch(econBase) : getTicketRevenue(careerState.leagueId)) : 0;
 
     const newMessages: InboxMessage[] = [];
     let eventBudgetDelta = 0;
@@ -239,13 +243,17 @@ export function useCareerMatchFlow({
       // um evento concorrente (ex: venda de jogador) era sobrescrito ao avançar a rodada.
       const prevFinances = getFinances(prev);
       const nextBudget = prevFinances.budget + prevFinances.weeklyIncome + ticketRevenue
-        + (prevFinances.merchRevenue ?? 0) - wageBill + eventBudgetDelta;
+        + (prevFinances.merchRevenue ?? 0) - wageBill - (prevFinances.operatingCost ?? 0) + eventBudgetDelta;
+      // Cruzou o zero nesta rodada: a diretoria avisa uma vez.
+      const debtWarning = prevFinances.budget >= 0 && nextBudget < 0
+        ? [createNegativeBudgetMessage(nextBudget, `Rodada ${next + 1}`)] : [];
+      const allNew = [...newMessages, ...debtWarning];
       return {
         ...prev,
         ...freeAgentPoolPatch,
         season: { ...prev.season, league: updatedState },
         finances: { ...prevFinances, budget: nextBudget, wageBill },
-        inbox: newMessages.length > 0 ? [...getInbox(prev), ...newMessages] : prev.inbox,
+        inbox: allNew.length > 0 ? [...getInbox(prev), ...allNew] : prev.inbox,
       };
     });
     // Fase 4 — sinais estruturais no avanço de rodada (banco/lista/contrato): o motor
@@ -477,7 +485,9 @@ export function useCareerMatchFlow({
     const home = cupState.teams.find(t => t.id === match.homeTeamId);
     const away = cupState.teams.find(t => t.id === match.awayTeamId);
     if (!home || !away) return;
-    const ticketRevenue = match.homeTeamId === cupState.userTeamId ? getTicketRevenue(careerState.leagueId) : 0;
+    const cupBase = getFinances(careerState).baseRevenue;
+    const ticketRevenue = match.homeTeamId === cupState.userTeamId
+      ? (cupBase ? ticketPerHomeMatch(cupBase) : getTicketRevenue(careerState.leagueId)) : 0;
     const updated = buildBracketMatchFromResult(match, result, home.id, away.id);
     let s = { ...cupState };
     s = updateStageMatch(s, pendingCareerBracketIdx, updated);

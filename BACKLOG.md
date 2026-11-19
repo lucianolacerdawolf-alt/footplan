@@ -62,7 +62,15 @@ Passei por: inicial, Online, Liga entre Amigos, escolha de liga/time/copa, táti
 
 **D. Economia**
 - ✅ As 5 grandes ligas começam com patrocínio Nacional (×1.8); Global (×2.5) vira meta de reputação 75. Carreiras já salvas mantêm o tier gravado.
-- ⏳ Pressão financeira de verdade (custos de estádio, bônus, salários subindo) continua em aberto. É decisão de design de jogo.
+- ✅ Pressão financeira (19/11) — `src/engine/clubEconomy.ts`. Medição antes (`scripts/economy-audit.ts`): receita igual pra toda a liga → Sunderland +€36M/temporada sem contratar, Real Madrid −€9M, West Ham quebrando. Agora:
+  - receita proporcional ao tamanho do clube (folha inicial ÷ 0,6): salários ≈ 60% da receita; estrutura/funcionários 25%; sobra pouco (PL: City +€8,8M, Palace +€5,8M, Sunderland +€2,5M por temporada sem contratar);
+  - caixa inicial proporcional ao tamanho (40%–250% do padrão da liga);
+  - teto salarial da diretoria (75% da receita, sobe com o patrocínio): contratação, troca e aumento na renovação que estourem são vetados; o mercado avisa antes e mostra o salário;
+  - jogador comprado de outra liga entrava com salário ZERO — agora ganha o salário do valor de mercado;
+  - caixa negativo: aviso da diretoria na rodada; temporada fechando no vermelho custa 3–10 de reputação;
+  - Meu Clube › Finanças: estrutura, teto salarial com barra, projeção do caixa no fim da temporada;
+  - saves antigos convertidos no carregamento (`ensureEconomy`), mantendo o caixa; patrocínio acima da reputação volta ao nível inicial.
+- ⏳ Ideias pra depois: bônus por vitória/gols no contrato pesando na folha, custo de viagens em copas continentais, investimento em estrutura (base/estádio) como decisão do jogador.
 
 ### Sugestões do playtest de estética, fluxo e mecânica (2026-11-17, fim do dia)
 
