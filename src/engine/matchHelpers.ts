@@ -7,6 +7,7 @@ import type { Team, Player, MatchEvent, Position, RandomFn, TeamStats } from './
 import { FORMATION_COUNTS } from './constants';
 import { INTENSITY_FATIGUE, MENTALITY_MODIFIERS } from './matchConfig';
 import { shuffle } from './rng';
+import { asPlayedInRole } from './outOfPosition';
 
 /** Aplica redução por fadiga (0-100): cada 100% de fadiga = 50% do atributo. */
 export function effective(attr: number, fatigue: number): number {
@@ -18,8 +19,10 @@ export function compressAttr(attr: number): number {
   return 30 + Math.pow((attr - 1) / 98, 0.7) * 65;
 }
 
+/** Jogadores na função `pos` — improvisados já vêm com os atributos descontados
+ *  (ver outOfPosition.ts). É por aqui que o motor lê o elenco. */
 export function getPlayersByPosition(players: Player[], pos: Position): Player[] {
-  return players.filter(p => p.position === pos);
+  return players.filter(p => p.position === pos).map(asPlayedInRole);
 }
 
 export function getGoalkeeper(players: Player[]): Player | null {

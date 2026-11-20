@@ -109,3 +109,26 @@ describe('Fora de posição (moveIntoSlot)', () => {
     expect(bestLineup(moved, playerOvr).squad.some(isOutOfPosition)).toBe(false);
   });
 });
+
+describe('Penalidade fora de posição (tela e motor)', () => {
+  it('craque improvisado perde força mesmo com atributo máximo alto', async () => {
+    const { playAs } = await import('../squadUtils');
+    const { getPlayersByPosition } = await import('../matchHelpers');
+    const team = getLeague('pl')!.teams[0];
+    for (const p of team.squad.filter(q => q.position === 'FWD')) {
+      expect(playerOvr(playAs(p, 'MID'))).toBeLessThan(playerOvr(p));
+      expect(playerOvr(playAs(p, 'DEF'))).toBeLessThan(playerOvr(playAs(p, 'MID')));
+    }
+    const fwd = team.squad.find(q => q.position === 'FWD')!;
+    const asDef = playAs(fwd, 'DEF');
+    const seen = getPlayersByPosition([asDef], 'DEF')[0];
+    expect(seen.attributes.finishing).toBeLessThan(fwd.attributes.finishing);
+  });
+
+  it('valor de mercado não cai por improviso', async () => {
+    const { playAs } = await import('../squadUtils');
+    const { calculateMarketValue } = await import('../transferMarket');
+    const fwd = getLeague('pl')!.teams[0].squad.find(q => q.position === 'FWD')!;
+    expect(calculateMarketValue(playAs(fwd, 'DEF'))).toBe(calculateMarketValue(fwd));
+  });
+});

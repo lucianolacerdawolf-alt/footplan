@@ -14,7 +14,9 @@ import { playerOvr } from '../utils/playerOvr';
  *  a de um FIFA real) fazia até jogadores medianos custarem 20-30M+, estourando os
  *  orçamentos de 5-45M das ligas — nenhuma compra premium (1.5×) cabia no orçamento de
  *  time nenhum. */
-export function calculateMarketValue(player: Player): number {
+export function calculateMarketValue(input: Player): number {
+  // Valor de mercado é pela posição de origem — improvisar no time não desvaloriza ninguém.
+  const player: Player = input.naturalPosition ? { ...input, position: input.naturalPosition, naturalPosition: undefined } : input;
   const age = player.age ?? 26;
   const baseOvr = playerOvr(player);
   const ageMultiplier = age <= 21 ? 1.5 : age <= 25 ? 1.3 : age <= 28 ? 1.1 : age <= 31 ? 0.9 : 0.6;

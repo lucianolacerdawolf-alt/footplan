@@ -5,6 +5,21 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 
 ---
 
+## 2026-11-20 (5) — Fora de posição não mudava a força
+
+### Entregue
+- **Bug:** o usuário trocava a posição e a força continuava igual. A causa é que `playerOvr` limita o resultado pelo MAIOR atributo do jogador, então craques davam o mesmo número em qualquer função (Saka 88 de atacante = 88 de zagueiro). O motor, que lê atributos direto, também não sentia diferença.
+- Novo `engine/outOfPosition.ts`: o improvisado perde 10% dos atributos numa linha vizinha, 22% pulando uma linha e 40% envolvendo goleiro. `asPlayedInRole` é usado no `playerOvr` (tela) e no `getPlayersByPosition` (porta de entrada do motor), então a tela e a partida usam a mesma conta.
+- Ex.: Saka 88 vira 79 de meia e 69 de zagueiro. Visto no app: Sarr 88 → 62 na zaga.
+- O `calculateMarketValue` usa a posição de origem: improvisar não desvaloriza ninguém.
+- +2 testes (762 passando).
+
+### Decidido e por quê
+- **Penalizar os atributos, e não só o número da tela.** Assim o efeito chega na partida.
+- **Percentuais escolhidos para dar uma queda visível de 8-25 pontos:** improvisar tem custo claro, mas jogar um meia na zaga ainda é viável.
+
+---
+
 ## 2026-11-20 (4) — Barra de oferta do Mercado
 
 ### Entregue

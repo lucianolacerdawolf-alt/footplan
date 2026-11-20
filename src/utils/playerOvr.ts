@@ -1,4 +1,5 @@
 import type { Player, Position } from '../engine/types';
+import { asPlayedInRole } from '../engine/outOfPosition';
 
 type AttributeKey = keyof Player['attributes'];
 type Subtype = 'CB' | 'FB' | 'CDM' | 'CM' | 'CAM' | 'W' | 'ST';
@@ -57,7 +58,9 @@ function computeOvr(a: Player['attributes'], weights: Record<string, number>, to
   return Math.min(99, maxAttr, Math.round(boosted));
 }
 
-export function playerOvr(p: Player): number {
+export function playerOvr(player: Player): number {
+  // Improvisado: rende menos na função nova (mesma conta do motor da partida).
+  const p = asPlayedInRole(player);
   const subtype = detectSubtype(p);
   const w = subtype ? (SUBTYPE_WEIGHTS[subtype] ?? WEIGHTS[p.position]) : (WEIGHTS[p.position] ?? WEIGHTS['MID']);
   const total = subtype ? (TOTALS[subtype] ?? TOTALS[p.position]) : (TOTALS[p.position] ?? TOTALS['MID']);
