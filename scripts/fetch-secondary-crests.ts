@@ -61,6 +61,11 @@ const SECOND_DIVISIONS: Record<string, string> = {
   bundesliga2: 'Germany',
   ligue2: 'France',
   ligaPortugal2: 'Portugal',
+  // Ligas novas (20/11) usam o mesmo gerador de times leves.
+  eredivisie: 'The Netherlands',
+  proLeague: 'Belgium',
+  saudiProLeague: 'Saudi-Arabia',
+  mls: 'United States',
 };
 
 const EXCLUDE = /\b(women|ladies|femin|frauen|femenino|feminino|fem|w)\b|\bu-?1[0-9]\b|\bu-?2[0-3]\b|youth|sub-?\d|junior|academy/i;

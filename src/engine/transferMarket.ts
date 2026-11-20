@@ -68,6 +68,10 @@ const INITIAL_BUDGET_BY_LEAGUE: Record<string, number> = {
   serieB: 5_000_000,
   ligue2: 4_000_000,
   ligaPortugal2: 2_500_000,
+  eredivisie: 14_000_000,
+  proLeague: 10_000_000,
+  saudiProLeague: 30_000_000,
+  mls: 12_000_000,
 };
 
 export function initialBudget(leagueId: string): number {
@@ -85,12 +89,38 @@ export function computeWeeklyIncome(leagueId: string): number {
  * é aceita; se o vendedor tem pouca profundidade na posição (≤2 jogadores), o limiar
  * sobe 30% antes de reavaliar.
  */
+// ── Mercados alternativos (20/11) ─────────────────────────────────────────────
+
+/** Holanda e Bélgica são vitrines: os clubes de lá vendem mais barato (jovens ainda mais). */
+export function leaguePriceFactor(leagueId: string | undefined, player: Player): number {
+  if (leagueId !== 'eredivisie' && leagueId !== 'proLeague') return 1;
+  return (player.age ?? 26) <= 23 ? 0.7 : 0.8;
+}
+
+/** Idade a partir da qual Arábia Saudita e MLS entram na disputa por um jogador à venda. */
+export const VETERAN_AGE = 29;
+
+/**
+ * Comprador "mercado alternativo" para um veterano que o usuário pôs à venda: a Arábia
+ * Saudita paga 1,3–1,8× o valor (60% das vezes), a MLS 1,1–1,3× (25%); no resto, segue
+ * a oferta normal. Devolve a liga compradora e o multiplicador, ou null.
+ */
+export function veteranMarketBid(player: Player, rng: () => number = Math.random): { leagueId: 'saudiProLeague' | 'mls'; multiplier: number } | null {
+  if ((player.age ?? 0) < VETERAN_AGE) return null;
+  const roll = rng();
+  if (roll < 0.6) return { leagueId: 'saudiProLeague', multiplier: 1.3 + rng() * 0.5 };
+  if (roll < 0.85) return { leagueId: 'mls', multiplier: 1.1 + rng() * 0.2 };
+  return null;
+}
+
 export function evaluateCashTransfer(
   player: Player,
   offeredAmount: number,
   sellerNeedsPlayer: boolean,
+  /** Desconto da liga do vendedor (leaguePriceFactor) — Holanda/Bélgica aceitam menos. */
+  priceFactor = 1,
 ): { accepted: boolean; reason: string } {
-  const marketValue = calculateMarketValue(player);
+  const marketValue = calculateMarketValue(player) * priceFactor;
   const premium = marketValue * 1.5;
   if (offeredAmount >= premium) return { accepted: true, reason: 'premium-offer' };
 
@@ -124,6 +154,10 @@ const PRIZE_MONEY: Record<string, { league: Record<number, number>; cup: Record<
   serieB: { league: { 1: 1_200_000, 2: 800_000, 3: 500_000, 4: 300_000, 5: 200_000, 6: 100_000 }, cup: { champion: 300_000, 'runner-up': 150_000, semifinal: 80_000 } },
   ligue2: { league: { 1: 1_000_000, 2: 600_000, 3: 400_000, 4: 250_000, 5: 150_000, 6: 100_000 }, cup: { champion: 250_000, 'runner-up': 150_000, semifinal: 80_000 } },
   ligaPortugal2: { league: { 1: 500_000, 2: 300_000, 3: 200_000, 4: 150_000, 5: 100_000, 6: 50_000 }, cup: { champion: 150_000, 'runner-up': 80_000, semifinal: 40_000 } },
+  eredivisie: { league: { 1: 2_500_000, 2: 1_500_000, 3: 1_000_000, 4: 700_000, 5: 400_000, 6: 250_000 }, cup: { champion: 500_000, 'runner-up': 300_000, semifinal: 150_000 } },
+  proLeague: { league: { 1: 2_000_000, 2: 1_200_000, 3: 800_000, 4: 500_000, 5: 300_000, 6: 200_000 }, cup: { champion: 400_000, 'runner-up': 250_000, semifinal: 120_000 } },
+  saudiProLeague: { league: { 1: 4_000_000, 2: 2_500_000, 3: 1_500_000, 4: 1_000_000, 5: 600_000, 6: 400_000 }, cup: { champion: 800_000, 'runner-up': 500_000, semifinal: 250_000 } },
+  mls: { league: { 1: 2_500_000, 2: 1_500_000, 3: 1_000_000, 4: 700_000, 5: 400_000, 6: 250_000 }, cup: { champion: 500_000, 'runner-up': 300_000, semifinal: 150_000 } },
 };
 
 export function getLeaguePrizeMoney(leagueId: string, position: number): number {
@@ -140,6 +174,7 @@ const TICKET_REVENUE_PER_HOME_MATCH: Record<string, number> = {
   bundesliga: 600_000, ligue1: 400_000, ligaPortugal: 200_000,
   championship: 150_000, laliga2: 100_000, bundesliga2: 120_000,
   serieB: 80_000, ligue2: 70_000, ligaPortugal2: 40_000,
+  eredivisie: 180_000, proLeague: 120_000, saudiProLeague: 100_000, mls: 250_000,
 };
 
 export function getTicketRevenue(leagueId: string): number {

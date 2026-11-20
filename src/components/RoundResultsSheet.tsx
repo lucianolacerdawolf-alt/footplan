@@ -12,21 +12,31 @@ interface Props {
   fixtures: LeagueFixture[][];
   teams: Team[];
   userTeamId: string;
+  /** MLS: posição e setas dentro da conferência do usuário. */
+  conferences?: { name: string; teamIds: string[] }[] | null;
   onClose: () => void;
 }
 
 /** Resultados da rodada que acabou de ser simulada sozinha: todos os placares e quanto
  *  cada time subiu ou caiu na tabela — antes os outros jogos saíam em silêncio. */
-export default function RoundResultsSheet({ round, fixtures, teams, userTeamId, onClose }: Props) {
+export default function RoundResultsSheet({ round, fixtures, teams, userTeamId, conferences, onClose }: Props) {
   const ref = useModalFocus<HTMLDivElement>(true, onClose);
   const byId = useMemo(() => new Map(teams.map(t => [t.id, t])), [teams]);
   const { moves, userPos } = useMemo(() => {
+    const groupOf = (id: string) => conferences?.find(c => c.teamIds.includes(id))?.teamIds;
+    const inGroup = (id: string) => (s: { teamId: string }) => { const g = groupOf(id); return !g || g.includes(s.teamId); };
+    const userGroup = inGroup(userTeamId);
+    const rank = (list: { teamId: string }[], id: string) => list.filter(inGroup(id)).findIndex(s => s.teamId === id) + 1;
     const before = computeStandings(teams, fixtures.slice(0, round));
     const after = computeStandings(teams, fixtures.slice(0, round + 1));
+    if (conferences) {
+      const m = new Map(after.map(s => [s.teamId, round === 0 ? 0 : rank(before, s.teamId) - rank(after, s.teamId)]));
+      return { moves: m, userPos: after.filter(userGroup).findIndex(s => s.teamId === userTeamId) + 1 };
+    }
     const posBefore = new Map(before.map((s, i) => [s.teamId, i + 1]));
     const m = new Map(after.map((s, i) => [s.teamId, round === 0 ? 0 : (posBefore.get(s.teamId) ?? i + 1) - (i + 1)]));
     return { moves: m, userPos: after.findIndex(s => s.teamId === userTeamId) + 1 };
-  }, [teams, fixtures, round, userTeamId]);
+  }, [teams, fixtures, round, userTeamId, conferences]);
   const userMove = moves.get(userTeamId) ?? 0;
 
   const crest = (id: string) => <img src={crestSrc(byId.get(id)?.logoUrl)} alt="" className={styles.crest} />;
@@ -40,7 +50,7 @@ export default function RoundResultsSheet({ round, fixtures, teams, userTeamId, 
       <div ref={ref} className={styles.card} role="dialog" aria-modal="true" aria-label={`Resultados da rodada ${round + 1}`} onClick={e => e.stopPropagation()}>
         <div className={styles.kicker}>Rodada {round + 1} · resultados</div>
         <div className={styles.userLine}>
-          Você está em <b>{userPos}º</b>
+          Você está em <b>{userPos}º</b>{conferences ? ' na conferência' : ''}
           {userMove !== 0 && <span className={userMove > 0 ? styles.up : styles.down}> {userMove > 0 ? `▲ subiu ${userMove}` : `▼ caiu ${-userMove}`}</span>}
           {userMove === 0 && round > 0 && <span className={styles.muted}> (manteve a posição)</span>}
         </div>

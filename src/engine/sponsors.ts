@@ -36,6 +36,10 @@ const SPONSOR_POOLS: Record<string, string[]> = {
   italy:     ['Banca Tirrena', 'Pastificio Aurora', 'Vespina', 'Assicurazioni Duomo', 'Caffè Leone', 'Energia Ligure', 'Scommesse Sole', 'Telecom Adria', 'Moto Riviera', 'Gelati Fiore'],
   france:    ['Banque Lumière', 'Aéro Provence', 'Énergie Loire', 'Fromagerie Mont-Blanc', 'Assurances Seine', 'Télécom Azur', 'Paris Pronos', 'Autos Garonne', 'Vins Bordelune', 'Rail Atlantique'],
   portugal:  ['Cerveja Atlântica', 'Banco Lusitano', 'Tejo Telecom', 'Seguros Douro', 'Energia Minho', 'Apostas Galo', 'Conservas Mar Azul', 'Voa Açores', 'Café Barlavento', 'Auto Algarve'],
+  netherlands: ['Polder Bank', 'Tulpvlucht', 'Hollandia Zuivel', 'Grachten Verzekering', 'Molenaar Energie', 'Delfts Blauw Telecom', 'Oranje Wedden', 'Zeeland Logistiek', 'Kaasboer', 'Fietsfabriek'],
+  belgium:     ['Banque Ardenne', 'Brasserie Trappist', 'Antwerp Diamant', 'Flandria Assur', 'Chocolaterie Royale', 'Meuse Énergie', 'Gaufre & Co', 'Bruxelles Mobile', 'Paris Sportif Liège', 'Escaut Logistique'],
+  saudi:       ['Najd Petroleum', 'Red Sea Air', 'Al-Waha Bank', 'Desert Falcon Telecom', 'Riyadh Real Estate', 'Hijaz Logistics', 'Oasis Energy', 'Dune Motors', 'Gulf Pearl', 'Sahara Foods'],
+  usa:         ['Liberty Wireless', 'Great Plains Bank', 'Pacific Brew Co.', 'Interstate Insurance', 'Silicon Bay', 'Lone Star Energy', 'Eagle Air', 'Atlantic Auto', 'Main Street Bet', 'Rocky Mountain Water'],
 };
 
 // Chaves precisam bater com os LeagueDefinition.id reais (serieA, serieB,
@@ -48,6 +52,7 @@ const COUNTRY_BY_LEAGUE: Record<string, string> = {
   serieA: 'italy', serieB: 'italy',
   ligue1: 'france', ligue2: 'france',
   ligaPortugal: 'portugal', ligaPortugal2: 'portugal',
+  eredivisie: 'netherlands', proLeague: 'belgium', saudiProLeague: 'saudi', mls: 'usa',
 };
 
 // As 5 grandes começam em Nacional (×1.8), não no topo: o Global (×2.5) vira meta de
@@ -57,6 +62,7 @@ const LEAGUE_STARTING_TIER: Record<string, SponsorTier> = {
   pl: 'national', laliga: 'national', bundesliga: 'national', serieA: 'national', ligue1: 'national',
   ligaPortugal: 'regional', championship: 'regional',
   laliga2: 'local', bundesliga2: 'local', serieB: 'local', ligue2: 'local', ligaPortugal2: 'local',
+  eredivisie: 'regional', proLeague: 'regional', saudiProLeague: 'regional', mls: 'regional',
 };
 
 const TIER_ORDER: SponsorTier[] = ['local', 'regional', 'national', 'global'];

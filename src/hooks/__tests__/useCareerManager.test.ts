@@ -67,7 +67,7 @@ describe('handleStartCareer (D-01, D-13)', () => {
     });
 
     expect(result.current.careerState).not.toBeNull();
-    expect(Object.keys(result.current.careerState!.rosters).length).toBe(12);
+    expect(Object.keys(result.current.careerState!.rosters).length).toBe(16);
     expect(result.current.careerState!.season.cup.roundOf16.length).toBe(8);
     expect(result.current.careerState!.season.league.phase).toBe('playing');
     // .age is only populated by assignInitialAges on the seeded/aged clone path —

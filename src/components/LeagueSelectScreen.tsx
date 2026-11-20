@@ -11,6 +11,7 @@ const LEAGUE_ORDER: Record<string, number> = {
   serieA: 6, serieB: 7,
   ligue1: 8, ligue2: 9,
   ligaPortugal: 10, ligaPortugal2: 11,
+  eredivisie: 12, proLeague: 13, saudiProLeague: 14, mls: 15,
 };
 
 export interface ResumableSave {

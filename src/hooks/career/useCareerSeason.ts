@@ -7,6 +7,7 @@ import { generateBoardObjectives, evaluateBoardObjectives, createBoardObjectives
 import { refreshFreeAgentPool } from '@/engine/freeAgentPool';
 import { refreshYouthPool, generateYouthIntake, canPromote } from '@/engine/youthAcademy';
 import { getLeague, allLeagues } from '@/data/leagues';
+import { isLeaguePlayoff } from '@/engine/continentalCups';
 import { determineUserContinentalCup, getContinentalPrizeMoney, getQualifiedTeams, createContinentalBracket } from '@/engine/continentalCups';
 import { CUP_RESULT_LABELS } from '@/engine/careerLabels';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/engine/seasonClosure';
@@ -33,12 +34,18 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
   const handleAdvanceSeason = useCallback(() => {
     if (!careerState) return;
     if (careerState.season.league.phase !== 'done' || careerState.season.cup.stage !== 'champion') return;
+    // MLS: o playoff decide o campeão — a temporada só fecha depois dele.
+    const isPlayoffSeason = isLeaguePlayoff(careerState.season.continentalCupId);
+    if (isPlayoffSeason && careerState.season.continentalCup?.stage !== 'champion') return;
 
     try {
       const standings = computeStandings(careerState.season.league.teams, careerState.season.league.fixtures);
       const leaguePosition = standings.findIndex(s => s.teamId === careerState.season.league.userTeamId) + 1;
       const totalTeams = careerState.season.league.teams.length;
-      const leagueChampion = leaguePosition === 1;
+      // Liga com playoff (MLS): campeão é quem vence o playoff, não o 1º da tabela.
+      const leagueChampion = isPlayoffSeason
+        ? careerState.season.continentalCup?.championId === careerState.season.league.userTeamId
+        : leaguePosition === 1;
       const cupChampion = careerState.season.cup.championId === careerState.season.league.userTeamId;
       const cupResult = deriveCupResult(careerState.season.cup, careerState.season.league.userTeamId);
       const reputationDelta = computeReputationDelta({ leagueChampion, cupChampion, leaguePosition, totalTeams });
@@ -161,8 +168,10 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         ));
         // Conquistas continentais avaliadas no fechamento — robusto tanto pra quem
         // jogou quanto pra quem simulou a final (o caminho por-partida só dispara ao jogar).
-        unlockAchievement('continental_participant');
-        if (ccResult === 'champion') {
+        // O playoff da MLS usa este fluxo, mas não é copa continental: não conta conquista
+        // nem "título continental" (o título dele já entrou como título da liga).
+        if (!isPlayoffSeason) unlockAchievement('continental_participant');
+        if (ccResult === 'champion' && !isPlayoffSeason) {
           wonContinental = true;
           newReputation = Math.min(100, newReputation + continentalTitleRep(endingContinentalId));
           if (endingContinentalId === 'ucl') unlockAchievement('continental_champion');

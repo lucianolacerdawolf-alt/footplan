@@ -8,7 +8,7 @@ import type { ContinentalCupDef } from './continentalCups';
 import type { PressStance } from './boardConfidence';
 import type { ScoutingState } from './scouting';
 import type { CareerTotals } from './careerMilestones';
-import { createBracket, generateLeagueSchedule } from './tournament';
+import { createBracket } from './tournament';
 import { generatePlayer, generateRandomName } from '../data/leagues/generateTeam';
 import { playerOvr } from '../utils/playerOvr';
 import { calculateMarketValue, calculateWeeklyWage, computeWageBill, renewalCost } from './transferMarket';
@@ -19,6 +19,7 @@ import { shuffle } from './rng';
 import { simularKnockout } from './matchEngine';
 import { getStartingTier, generateSponsor, getSponsorMinReputation, type SponsorTier } from './sponsors';
 import { initialReputation, REPUTATION_SEED_VERSION } from './reputation';
+import { scheduleForLeague } from './conferenceSeason';
 
 // =============================================================================
 // TIPOS — Modo Carreira
@@ -642,7 +643,8 @@ export function createCareerSeason(
 ): { league: LeagueState; cup: BracketState } {
   const rest = leagueTeams.filter(t => t.id !== userTeam.id).map(t => cloneTeam(t));
   const teams = [cloneTeam(userTeam), ...rest];
-  const fixtures = generateLeagueSchedule(teams);
+  // MLS: calendário por conferência (engine/conferenceSeason.ts); demais: todos contra todos.
+  const fixtures = scheduleForLeague(leagueDef, teams);
   const league: LeagueState = { teams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' };
 
   const leagueIds = new Set(leagueTeams.map(t => t.id));

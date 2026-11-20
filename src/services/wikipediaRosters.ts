@@ -21,7 +21,15 @@ const SEASON_ARTICLE: Record<string, string> = {
   serieB: 'Serie B',
   ligue2: 'Ligue 2',
   ligaPortugal2: 'Liga Portugal 2',
+  // Ligas novas (20/11). Eredivisie fica aqui como reserva (a fonte principal é a football-data).
+  eredivisie: 'Eredivisie',
+  proLeague: 'Belgian Pro League',
+  saudiProLeague: 'Saudi Pro League',
+  mls: 'Major League Soccer season',
 };
+
+/** Ligas com temporada no ano civil: o artigo é "2026 Major League Soccer season". */
+const CALENDAR_YEAR = new Set(['mls']);
 
 export function isWikipediaLeagueMapped(leagueId: string): boolean {
   return leagueId in SEASON_ARTICLE;
@@ -85,7 +93,7 @@ function hashId(s: string): number {
 export async function fetchWikipediaLeague(leagueId: string, log: (m: string) => void = () => {}): Promise<RemoteTeam[]> {
   const base = SEASON_ARTICLE[leagueId];
   if (!base) throw new Error(`Liga "${leagueId}" sem artigo mapeado na Wikipedia.`);
-  const season = `${seasonLabel()} ${base}`;
+  const season = CALENDAR_YEAR.has(leagueId) ? `${new Date().getFullYear()} ${base}` : `${seasonLabel()} ${base}`;
   const seasonText = await wikitext(season);
   if (!seasonText) throw new Error(`Artigo "${season}" não encontrado na Wikipedia.`);
 
@@ -98,7 +106,7 @@ export async function fetchWikipediaLeague(leagueId: string, log: (m: string) =>
     const fromTpl = tplText ? parseSeasonClubs(tplText) : [];
     if (fromTpl.length > clubs.length) clubs = fromTpl;
   }
-  if (clubs.length < 16) throw new Error(`Só ${clubs.length} times achados em "${season}".`);
+  if (clubs.length < 14) throw new Error(`Só ${clubs.length} times achados em "${season}".`);
 
   const teams: RemoteTeam[] = [];
   for (const club of clubs) {

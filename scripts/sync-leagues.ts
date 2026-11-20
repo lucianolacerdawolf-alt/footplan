@@ -73,7 +73,7 @@ async function main() {
     const league = getLeague(id);
     if (!league) { results.push({ id, source: 'inexistente', teams: 0, players: 0 }); continue; }
     try {
-      const res = await syncLeagueRoster(league, { force: true });
+      const res = await syncLeagueRoster(league, { force: true, wikipedia: true });
       const teams = res.league.teams;
       const players = teams.reduce((s, t) => s + t.squad.length, 0);
       results.push({ id, source: res.source, teams: teams.length, players, error: res.error });

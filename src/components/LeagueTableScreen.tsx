@@ -8,6 +8,7 @@ import styles from './LeagueTableScreen.module.css';
 import { crestSrc } from '../utils/crest';
 import { ScreenHeader } from './ui';
 import PositionChart from './PositionChart';
+import { effectiveConferences } from '../engine/conferenceSeason';
 
 function getRecentForm(teamId: string, fixtures: LeagueFixture[][]): ('W' | 'D' | 'L')[] {
   const results: ('W' | 'D' | 'L')[] = [];
@@ -33,6 +34,8 @@ function teamById(teams: Team[], id: string): Team {
 }
 
 function getZoneColor(pos: number, league: LeagueDefinition): string {
+  // Liga com playoff (MLS): a tabela é por conferência e a zona é a dos playoffs.
+  if (league.playoffSpots) return pos <= league.playoffSpots ? '#1d9bf0' : 'transparent';
   const clEnd = league.europeanSlots.championsLeague;
   const elEnd = clEnd + league.europeanSlots.europaLeague;
   const ecolEnd = elEnd + league.europeanSlots.conferenceLeague;
@@ -115,7 +118,15 @@ function FormDots({ form }: { form: ('W' | 'D' | 'L')[] }) {
 export function StandingsTable({ standings, teams, userTeamId, league, fixtures, plain }: { standings: Standing[]; teams: Team[]; userTeamId: string; league: LeagueDefinition; fixtures?: LeagueFixture[][]; /** Recorte casa/fora: sem zonas nem setas. */ plain?: boolean }) {
   const showForm = !!fixtures;
   const [openId, setOpenId] = useState<string | null>(null);
-  const prev = useMemo(() => (fixtures && !plain ? previousPositions(teams, fixtures) : null), [teams, fixtures, plain]);
+  // Posição anterior relativa ao MESMO grupo exibido (tabela da conferência na MLS).
+  const prev = useMemo(() => {
+    if (!fixtures || plain) return null;
+    const all = previousPositions(teams, fixtures);
+    if (!all) return null;
+    const ids = new Set(standings.map(s => s.teamId));
+    const ordered = [...all.entries()].filter(([id]) => ids.has(id)).sort((a, b) => a[1] - b[1]);
+    return new Map(ordered.map(([id], i) => [id, i + 1]));
+  }, [teams, fixtures, plain, standings]);
   const cols = showForm ? 13 : 12;
   return (
     <table className={styles.table}>
@@ -217,6 +228,7 @@ interface Props {
 function LeagueTableScreen({ state, league, onBack }: Props) {
   const { teams, userTeamId, fixtures } = state;
   const standings: Standing[] = computeStandings(teams, fixtures);
+  const conferences = useMemo(() => effectiveConferences(league, teams), [league, teams]);
   const [view, setView] = useState<'table' | 'scorers' | 'chart'>('table');
   const [split, setSplit] = useState<Split>('all');
   const shown = useMemo(() => (split === 'all' ? standings : splitStandings(teams, fixtures, split)), [split, standings, teams, fixtures]);
@@ -256,13 +268,26 @@ function LeagueTableScreen({ state, league, onBack }: Props) {
             ))}
           </div>
           <div className={`${styles.standingsScroll} fit-scroll`}>
-            <StandingsTable standings={shown} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} plain={split !== 'all'} />
+            {conferences ? conferences.map(c => (
+              <div key={c.name} className={styles.confBlock}>
+                <div className={styles.confTitle}>Conferência {c.name}</div>
+                <StandingsTable standings={shown.filter(s => c.teamIds.includes(s.teamId))} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} plain={split !== 'all'} />
+              </div>
+            )) : (
+              <StandingsTable standings={shown} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} plain={split !== 'all'} />
+            )}
           </div>
           <div className={styles.zoneLegend}>
-            <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions
-            <span className={styles.zoneDot} style={{ background: '#e85d04' }} />Europa
-            <span className={styles.zoneDot} style={{ background: '#38a169' }} />Conference
-            <span className={styles.zoneDot} style={{ background: '#e53e3e' }} />Rebaixamento
+            {league.playoffSpots ? (
+              <><span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Playoffs ({league.playoffSpots} melhores de cada conferência)</>
+            ) : (
+              <>
+                <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions
+                <span className={styles.zoneDot} style={{ background: '#e85d04' }} />Europa
+                <span className={styles.zoneDot} style={{ background: '#38a169' }} />Conference
+                <span className={styles.zoneDot} style={{ background: '#e53e3e' }} />Rebaixamento
+              </>
+            )}
           </div>
           <div className={styles.tableHint}>Toque num time para ver casa/fora, últimos jogos e o próximo adversário. ▲▼ = mudança desde a rodada anterior.</div>
         </>

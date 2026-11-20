@@ -21,7 +21,7 @@ import { getAvgOvr } from '../utils/teamUtils';
 export type ContinentalResult =
   | 'champion' | 'runner-up' | 'semifinal' | 'quarterfinal' | 'roundOf16' | 'not-played';
 
-export type ContinentalCupId = 'ucl' | 'uel' | 'uecl';
+export type ContinentalCupId = 'ucl' | 'uel' | 'uecl' | 'mlsPlayoff';
 
 export interface ContinentalCupDef {
   id: ContinentalCupId;
@@ -70,8 +70,25 @@ export const CONTINENTAL_CUPS: ContinentalCupDef[] = [
   },
 ];
 
+/** Playoff da MLS: usa o mesmo fluxo das copas continentais (chave de 16, tela da copa,
+ *  próximo jogo na Central), mas só abre depois da temporada regular e vale o título da
+ *  liga. Fica FORA de CONTINENTAL_CUPS: não é vaga de classificação por posição. */
+export const MLS_PLAYOFF: ContinentalCupDef = {
+  id: 'mlsPlayoff', name: 'Playoffs da MLS', shortName: 'Playoffs',
+  logo: '🏆', color: '#1d2d5c', totalTeams: 16,
+  qualificationKey: 'championsLeague',
+  prizeMoney: {
+    champion: 3_000_000, runnerUp: 1_500_000,
+    semifinal: 800_000, quarterfinal: 400_000, roundOf16: 200_000,
+  },
+};
+
+export function isLeaguePlayoff(id: string | undefined): boolean {
+  return id === MLS_PLAYOFF.id;
+}
+
 export function getContinentalCup(id: string): ContinentalCupDef | undefined {
-  return CONTINENTAL_CUPS.find(c => c.id === id);
+  return [...CONTINENTAL_CUPS, MLS_PLAYOFF].find(c => c.id === id);
 }
 
 /**

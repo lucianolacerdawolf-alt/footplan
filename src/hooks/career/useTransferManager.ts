@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import type { Player, Team } from '@/engine/types';
-import { computeWageBill, evaluateCashTransfer, netSellRevenue } from '@/engine/transferMarket';
+import { computeWageBill, evaluateCashTransfer, leaguePriceFactor, netSellRevenue } from '@/engine/transferMarket';
 import { formatMoney } from '@/utils/formatMoney';
 import { createTransferAcceptedMessage, createTransferOutCompletedMessage, createTransferRejectedMessage } from '@/engine/inbox';
 import { exceedsWageCap, withWage } from '@/engine/clubEconomy';
@@ -134,7 +134,7 @@ export function useTransferManager({ careerState, setCareerState, setToastMsg }:
       return { success: false, reason: 'wage-cap' };
     }
 
-    const evalResult = evaluateCashTransfer(player, amount, sellerNeedsPlayer);
+    const evalResult = evaluateCashTransfer(player, amount, sellerNeedsPlayer, leaguePriceFactor(sellerLeagueId, player));
     if (!evalResult.accepted) return { success: false, reason: evalResult.reason };
 
     const isSameLeague = sellerLeagueId === careerState.leagueId;

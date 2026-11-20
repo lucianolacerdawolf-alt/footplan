@@ -6,15 +6,19 @@ import { assignMarketValues, computeWageBill, getLeaguePrizeMoney } from '../src
 import { baseWeeklyRevenue, clubInitialBudget, projectedRoundBalance, wageCap } from '../src/engine/clubEconomy';
 import { getAvgOvr } from '../src/utils/teamUtils';
 import { initialReputation } from '../src/engine/reputation';
+import { getLeague } from '../src/data/leagues';
+import { scheduleForLeague } from '../src/engine/conferenceSeason';
 import { getSponsorMultiplier, computeMerchRevenue, tierForReputation } from '../src/engine/sponsors';
 import { sponsorTvPerRound } from '../src/engine/clubEconomy';
 import type { Team } from '../src/engine/types';
 
 const snap = JSON.parse(readFileSync('public/rosters-snapshot.json', 'utf8')) as { rosters: Record<string, Team[]> };
 const fmt = (n: number) => `€${(n / 1e6).toFixed(1)}M`;
-for (const lid of ['pl', 'laliga', 'championship', 'serieB']) {
-  const teams = snap.rosters[lid].map(t => assignMarketValues(t)).sort((a, b) => getAvgOvr(b) - getAvgOvr(a));
-  const rounds = (teams.length - 1) * 2;
+for (const lid of ['pl', 'laliga', 'championship', 'serieB', 'eredivisie', 'proLeague', 'saudiProLeague', 'mls']) {
+  // Ligas sem elenco no snapshot ainda (as novas, antes do 1º sync) usam o elenco estático.
+  const teams = (snap.rosters[lid] ?? getLeague(lid)?.teams ?? []).map(t => assignMarketValues(t)).sort((a, b) => getAvgOvr(b) - getAvgOvr(a));
+  // Rodadas reais do calendário (MLS tem conferências: 34, não 58).
+  const rounds = scheduleForLeague(getLeague(lid), teams).length;
   console.log(`\n${lid}: ${rounds} rodadas`);
   for (const [label, idx] of [['grande', 0], ['médio', Math.floor(teams.length / 2)], ['pequeno', teams.length - 1]] as const) {
     const t = teams[idx];

@@ -8,7 +8,7 @@ import {
 import { moraleDelta, applyMoraleToTeam } from '@/engine/morale';
 import { applyMatchFatigue } from '@/engine/fitness';
 import { applyMatchCards, clearSuspensions } from '@/engine/discipline';
-import { computeWageBill, getTicketRevenue, calculateMarketValue } from '@/engine/transferMarket';
+import { computeWageBill, getTicketRevenue, calculateMarketValue, veteranMarketBid } from '@/engine/transferMarket';
 import { ticketPerHomeMatch } from '@/engine/clubEconomy';
 import {
   createInjuryMessage, createMatchPreviewMessage, createTransferWindowMessage, createTransferOfferMessage, hasMandatoryUnread,
@@ -29,6 +29,9 @@ import { playerOvr } from '@/utils/playerOvr';
 import { getStageMatches, updateStageMatch } from '@/engine/bracketHelpers';
 import { saveLiveMatchMeta } from '@/utils/liveMatchPersistence';
 import { youthRoundGrowth } from '@/engine/youthAcademy';
+import { effectiveConferences, buildConferencePlayoff } from '@/engine/conferenceSeason';
+import { MLS_PLAYOFF } from '@/engine/continentalCups';
+import { getLeague } from '@/data/leagues';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult, extractScorers } from '../shared/matchHandlers';
 import { maybeGetCareerEvent } from '@/engine/careerEvents';
 import { GIANT_KILL_OVR_GAP, GIANT_KILL_REP_CAP, getFinances, getInbox, getYouthPool, isTransferWindowOpen, getTransferList, type CareerState, type InboxMessage, type RoundSummary } from '@/engine/career';
@@ -255,15 +258,47 @@ export function useCareerMatchFlow({
         const player = userTeamAfter.squad.find(p => p.id === playerId);
         if (!player || allOtherTeams.length === 0) continue;
         if (Math.random() >= 0.35) continue;
-        const eagerBidders = allOtherTeams.filter(t => getAvgOvr(t) < playerOvr(player) + 3);
-        const pool = eagerBidders.length > 0 ? eagerBidders : allOtherTeams;
-        const cpu = pool[Math.floor(Math.random() * pool.length)];
         const marketValue = calculateMarketValue(player);
-        const offeredAmount = Math.round(marketValue * (0.7 + Math.random() * 0.6)); // 0.7–1.3×
+        // Veterano (29+): Arábia Saudita e MLS pagam acima do valor (transferMarket.veteranMarketBid).
+        const vet = veteranMarketBid(player);
+        const vetPool = vet ? (careerState.rosters[vet.leagueId] ?? []).filter(t => t.id !== leg.userTeamId) : [];
+        let cpu: (typeof allOtherTeams)[number];
+        let offeredAmount: number;
+        if (vet && vetPool.length > 0) {
+          cpu = vetPool[Math.floor(Math.random() * vetPool.length)];
+          offeredAmount = Math.round(marketValue * vet.multiplier);
+        } else {
+          const eagerBidders = allOtherTeams.filter(t => getAvgOvr(t) < playerOvr(player) + 3);
+          const pool = eagerBidders.length > 0 ? eagerBidders : allOtherTeams;
+          cpu = pool[Math.floor(Math.random() * pool.length)];
+          offeredAmount = Math.round(marketValue * (0.7 + Math.random() * 0.6)); // 0.7–1.3×
+        }
         newMessages.push(createTransferOfferMessage(
           cpu.name, player.id, player.name, player.position, playerOvr(player), marketValue, offeredAmount, cpu.id, dateLabel,
         ));
         pendingOfferPlayerIds.add(playerId);
+      }
+    }
+    // MLS: fim da temporada regular → playoff (no lugar da copa continental, que a MLS
+    // não tem). Só existe se o usuário se classificou; senão a temporada acaba aqui.
+    let playoffPatch: Partial<CareerState> = {};
+    const leagueDefNow = getLeague(careerState.leagueId);
+    const confs = phase === 'done' ? effectiveConferences(leagueDefNow, variedTeams) : null;
+    if (confs && leagueDefNow) {
+      const bracket = buildConferencePlayoff({ ...leg, teams: variedTeams }, confs, leagueDefNow.playoffSpots ?? 8, MLS_PLAYOFF.name, careerState.leagueId);
+      if (bracket) {
+        playoffPatch = { season: { ...careerState.season, continentalCup: bracket, continentalCupId: MLS_PLAYOFF.id, continentalCupDef: MLS_PLAYOFF } };
+        newMessages.push({
+          id: crypto.randomUUID(), type: 'BOARD_UPDATE', isRead: false, isMandatory: false, date: dateLabel,
+          subject: '🏆 Classificado para os playoffs!',
+          body: 'Fim da temporada regular: seu time está nos playoffs da MLS. É mata-mata em jogo único até a MLS Cup — quem vence o playoff é o campeão da liga.',
+        });
+      } else {
+        newMessages.push({
+          id: crypto.randomUUID(), type: 'BOARD_UPDATE', isRead: false, isMandatory: false, date: dateLabel,
+          subject: 'Fora dos playoffs',
+          body: `Fim da temporada regular: seu time não ficou entre os ${leagueDefNow.playoffSpots ?? 8} melhores da conferência e está fora dos playoffs.`,
+        });
       }
     }
     // Backfill defensivo: carreiras salvas antes desta feature não têm freeAgentPool.
@@ -386,7 +421,7 @@ export function useCareerMatchFlow({
       return {
         ...prev,
         ...freeAgentPoolPatch,
-        season: { ...prev.season, league: updatedState },
+        season: { ...prev.season, ...(playoffPatch.season ? { continentalCup: playoffPatch.season.continentalCup, continentalCupId: playoffPatch.season.continentalCupId, continentalCupDef: playoffPatch.season.continentalCupDef } : {}), league: updatedState },
         finances: { ...prevFinances, budget: nextBudget, wageBill },
         inbox: allNew.length > 0 ? [...getInbox(prev), ...allNew] : prev.inbox,
         boardConfidence: confAfter,

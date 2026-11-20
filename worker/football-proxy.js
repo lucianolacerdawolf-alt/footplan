@@ -21,7 +21,7 @@
 //      pra VITE_FOOTBALL_PROXY_URL no .env (local) e nas variáveis de build do deploy do site —
 //      o mesmo proxy/URL serve as 3 fontes de dados.
 
-const ALLOWED_CODES = new Set(['PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'ELC', 'BL2', 'FL2', 'SB', 'SPL', 'PPL2']);
+const ALLOWED_CODES = new Set(['PL', 'PD', 'BL1', 'SA', 'FL1', 'PPL', 'ELC', 'BL2', 'FL2', 'SB', 'SPL', 'PPL2', 'DED']);
 
 // Rotas RapidAPI liberadas por esse proxy — pares [host, base] + allowlist de paths.
 // Antes o regex aceitava QUALQUER path sob sportapi7/apifootball (qualquer pessoa

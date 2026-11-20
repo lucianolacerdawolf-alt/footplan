@@ -4,7 +4,7 @@ import { allLeagues } from '../data/leagues';
 import { getAvgOvr } from '../utils/teamUtils';
 import { playerOvr } from '../utils/playerOvr';
 import { formatMoney } from '../utils/formatMoney';
-import { computeWageBill, calculateMarketValue } from '../engine/transferMarket';
+import { computeWageBill, calculateMarketValue, leaguePriceFactor } from '../engine/transferMarket';
 import { syncLeagueRoster } from '../services/rosterSync';
 import PlayerDetailModal from './PlayerDetailModal';
 import { ovrText, visibleOvr, type ScoutingState } from '../engine/scouting';
@@ -169,8 +169,15 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
     setMultiplier(defaultMultiplier);
   };
 
+  // Holanda/Bélgica vendem mais barato (transferMarket.leaguePriceFactor): o preço pedido
+  // na tela e o mínimo aceito já vêm com o desconto da liga do vendedor.
+  const leagueOfTeam = (teamId: string): string | undefined =>
+    Object.entries(rosters).find(([, ts]) => ts.some(t => t.id === teamId))?.[0];
+  const askPrice = (p: Player, teamId: string): number =>
+    Math.round((p.marketValue ?? calculateMarketValue(p)) * leaguePriceFactor(leagueOfTeam(teamId), p));
+
   const handleBuy = (player: Player, teamId: string) => {
-    const marketValue = player.marketValue ?? calculateMarketValue(player);
+    const marketValue = askPrice(player, teamId);
     const amount = Math.round(marketValue * multiplier);
     const res = onBuyPlayer(player.id, teamId, amount);
     setFeedback({ playerId: player.id, message: resultMessage(res.reason), success: res.success });
@@ -247,7 +254,8 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
     const overCap = !!wageCap && computeWageBill(userTeam) + wage > wageCap;
     const sellerNeeds = !!seller && seller.squad.filter(q => q.position === player.position).length <= 2;
     const sellerLast = !!seller && seller.squad.filter(q => q.position === player.position).length <= 1;
-    const minAccept = Math.ceil(calculateMarketValue(player) * 0.85 * (sellerNeeds ? 1.3 : 1));
+    const factor = seller ? leaguePriceFactor(leagueOfTeam(seller.id), player) : 1;
+    const minAccept = Math.ceil(calculateMarketValue(player) * factor * 0.85 * (sellerNeeds ? 1.3 : 1));
     const accepts = amount >= minAccept;
     const minPct = Math.min(max, minAccept / marketValue);
     const markLeft = `${((minPct - min) / (max - min)) * 100}%`;
@@ -272,6 +280,9 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
               </div>
               <span className={styles.offerAmount}>{formatMoney(amount)}</span>
             </div>
+            {factor < 1 && (
+              <span className={styles.wageText}>🏷️ Liga vitrine: preço {Math.round((1 - factor) * 100)}% abaixo do valor{(player.age ?? 26) <= 23 ? ' (jovem até 23 anos)' : ''}.</span>
+            )}
             <span className={sellerLast ? styles.warnText : accepts ? styles.successText : styles.warnText}>
               {sellerLast
                 ? 'Não vendem: é o último dessa posição no elenco deles.'
@@ -393,7 +404,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
               {searchQuery.length >= 2 ? (
                 <div className={styles.teamGroup}>
                   {visibleHits.map(({ player: p, team, leagueId }) => {
-                    const marketValue = p.marketValue ?? calculateMarketValue(p);
+                    const marketValue = askPrice(p, team.id);
                     const league = leagueMeta(leagueId);
                     return (
                       <div key={p.id} className={styles.playerRow}>
@@ -449,7 +460,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                     <div className={styles.teamGroup}>
                       {leagueHits.length === 0 && <div className={styles.emptyState}>Nenhum jogador com esses filtros.</div>}
                       {leagueHits.map(({ player: p, team }) => {
-                        const marketValue = p.marketValue ?? calculateMarketValue(p);
+                        const marketValue = askPrice(p, team.id);
                         return (
                           <div key={p.id} className={styles.playerRow}>
                             <div className={styles.playerRowFlex}>
@@ -489,7 +500,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                   <button className={styles.backLink} onClick={() => setBuyTeamId(null)}>← {buyTeam.name}</button>
                   <div className={styles.teamGroup}>
                     {buyTeamSquad.map(p => {
-                      const marketValue = p.marketValue ?? calculateMarketValue(p);
+                      const marketValue = askPrice(p, buyTeam.id);
                       return (
                         <div key={p.id} className={styles.playerRow}>
                           <div className={styles.playerRowFlex}>

@@ -30,6 +30,12 @@ export const LEAGUE_RATING: Record<string, { ref: number; target: number }> = {
   serieB: { ref: 74, target: 67 },
   ligue2: { ref: 75, target: 66 },
   ligaPortugal2: { ref: 71, target: 63 },
+  // Ligas novas (20/11): `ref` estimado como o das outras ligas sincronizadas — re-medir
+  // a mediana bruta depois do primeiro rosters:sync e ajustar.
+  eredivisie: { ref: 73, target: 71 },
+  proLeague: { ref: 72, target: 69 },
+  saudiProLeague: { ref: 74, target: 70 },
+  mls: { ref: 72, target: 68 },
 };
 
 export function calibratedOvr(ovr: number, leagueId: string): number {

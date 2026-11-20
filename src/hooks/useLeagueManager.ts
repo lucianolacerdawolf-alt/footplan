@@ -2,11 +2,12 @@ import { useState, useCallback, useEffect } from 'react';
 import type { Team, MatchResult } from '../engine/types';
 import type { LeagueState, LeagueFixture } from '../engine/tournament';
 import {
-  generateLeagueSchedule, simularFixtureAuto, simularRodadaAuto,
+  simularFixtureAuto, simularRodadaAuto,
   recoverFatigue, applyPostMatchInjuries, randomizeCPUTactics,
 } from '../engine/tournament';
 import { moraleDelta, applyMoraleToTeam } from '../engine/morale';
 import { cloneTeam } from '../utils/teamUtils';
+import { scheduleForLeague } from '../engine/conferenceSeason';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, extractScorers } from './shared/matchHandlers';
 import type { LeagueDefinition } from '../data/leagues/types';
 import { usePersistedState } from './usePersistedState';
@@ -63,7 +64,7 @@ export function useLeagueManager({
     const all = league.teams.map(t => cloneTeam(t));
     const rest = all.filter(t => t.id !== userTeam.id);
     const teams = [userTeam, ...rest];
-    const fixtures = generateLeagueSchedule(teams);
+    const fixtures = scheduleForLeague(league, teams);
     setLeagueState({ teams, userTeamId: userTeam.id, fixtures, currentRound: 0, phase: 'playing' });
     setScreen('league');
   }, [league, setScreen, setLeagueState]);

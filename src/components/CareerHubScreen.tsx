@@ -9,6 +9,7 @@ import { computeStandings } from '../engine/tournament';
 import { getStageMatches } from '../engine/bracketHelpers';
 import { CUP_STAGE_LABELS } from '../engine/careerLabels';
 import { isCupStageOpen } from '../engine/cupSchedule';
+import { isLeaguePlayoff } from '../engine/continentalCups';
 import { canPromote } from '../engine/youthAcademy';
 import { playerOvr } from '../utils/playerOvr';
 import { getStarterCount } from '../engine/squadUtils';
@@ -105,7 +106,7 @@ function determineNextMatch(state: CareerState): NextMatch {
   const totalRounds = league.fixtures.length;
   const leagueDone = league.phase === 'done';
   const cc = season.continentalCup;
-  if (cc && cc.stage !== 'champion' && isCupStageOpen(cc.stage, league.currentRound, totalRounds, leagueDone, 'continental')) {
+  if (cc && cc.stage !== 'champion' && isCupStageOpen(cc.stage, league.currentRound, totalRounds, leagueDone, isLeaguePlayoff(season.continentalCupId) ? 'playoff' : 'continental')) {
     const stageMatches = getStageMatches(cc);
     const userMatch = stageMatches.find(m =>
       !m.played && (m.homeTeamId === userId || m.awayTeamId === userId));
@@ -181,7 +182,9 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
   const standings = computeStandings(state.season.league.teams, state.season.league.fixtures);
   const userPosition = standings.findIndex(s => s.teamId === state.season.league.userTeamId) + 1;
   const cupStageLabel = CUP_STAGE_LABELS[state.season.cup.stage] ?? state.season.cup.stage;
-  const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion';
+  // MLS: a temporada só fecha depois do playoff (ele decide o campeão).
+  const playoffPending = isLeaguePlayoff(state.season.continentalCupId) && state.season.continentalCup?.stage !== 'champion';
+  const seasonReady = state.season.league.phase === 'done' && state.season.cup.stage === 'champion' && !playoffPending;
   // Demitido: nada de jogo até aceitar uma proposta (ou recomeçar).
   const sacked = state.sacked;
   const nextMatch = sacked ? null : determineNextMatch(state);

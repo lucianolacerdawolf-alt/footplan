@@ -15,8 +15,9 @@ const PLAYABLE: Exclude<BracketStage, 'champion'>[] = ['roundOf16', 'quarterfina
 export function cupStageOpensAtRound(
   stage: BracketStage,
   totalRounds: number,
-  kind: 'domestic' | 'continental' = 'domestic',
+  kind: 'domestic' | 'continental' | 'playoff' = 'domestic',
 ): number {
+  if (kind === 'playoff') return totalRounds;
   const idx = PLAYABLE.indexOf(stage as (typeof PLAYABLE)[number]);
   if (idx < 0) return 0;
   const slot = totalRounds / (PLAYABLE.length + 1);
@@ -30,7 +31,7 @@ export function isCupStageOpen(
   currentRound: number,
   totalRounds: number,
   leagueDone: boolean,
-  kind: 'domestic' | 'continental' = 'domestic',
+  kind: 'domestic' | 'continental' | 'playoff' = 'domestic',
 ): boolean {
   if (leagueDone || stage === 'champion') return true;
   return currentRound >= cupStageOpensAtRound(stage, totalRounds, kind);
@@ -40,9 +41,10 @@ export function isCupStageOpen(
 export function cupLockMessage(
   stage: BracketStage,
   league: { currentRound: number; fixtures: unknown[]; phase: string },
-  kind: 'domestic' | 'continental' = 'domestic',
+  kind: 'domestic' | 'continental' | 'playoff' = 'domestic',
 ): string | undefined {
   const total = league.fixtures.length;
+  if (kind === 'playoff' && league.phase !== 'done') return 'Os playoffs começam depois da última rodada da temporada regular.';
   if (isCupStageOpen(stage, league.currentRound, total, league.phase === 'done', kind)) return undefined;
   return `Esta fase abre depois da rodada ${cupStageOpensAtRound(stage, total, kind)} da liga.`;
 }

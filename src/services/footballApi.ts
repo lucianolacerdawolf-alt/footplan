@@ -28,6 +28,7 @@ export const COMPETITION_CODES: Record<string, string> = {
   ligue1: 'FL1',
   ligaPortugal: 'PPL',
   championship: 'ELC',
+  eredivisie: 'DED',
 };
 
 export interface RemotePlayer {

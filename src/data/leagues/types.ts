@@ -25,4 +25,9 @@ export interface LeagueDefinition {
   };
   cpuProfile: CpuProfile;
   relegationSpots: number;
+  /** Liga dividida em conferências (MLS): temporada regular com jogos dentro da
+   *  conferência (turno e returno) + um turno contra a outra, e depois playoff com os
+   *  `playoffSpots` melhores de cada conferência. Ausente = todos contra todos. */
+  conferences?: { name: string; teamIds: string[] }[];
+  playoffSpots?: number;
 }

@@ -44,6 +44,7 @@ import YouthAcademyScreen from './YouthAcademyScreen';
 import FriendLeagueScreen from './FriendLeagueScreen';
 import { getLeague } from '../data/leagues';
 import { cupLockMessage } from '../engine/cupSchedule';
+import { isLeaguePlayoff } from '../engine/continentalCups';
 import { getStageMatches } from '../engine/bracketHelpers';
 
 /** Próximo adversário do usuário — usado no "Oponente" da tela de Elenco/Táticas, que
@@ -761,7 +762,7 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         onEditTactics={p.career.handleEditContinentalTactics}
         onBack={p.nav.toHub}
         hideTopNav
-        lockedMessage={p.career.careerState ? cupLockMessage(cc.stage, p.career.careerState.season.league, 'continental') : undefined}
+        lockedMessage={p.career.careerState ? cupLockMessage(cc.stage, p.career.careerState.season.league, isLeaguePlayoff(p.career.careerState.season.continentalCupId) ? 'playoff' : 'continental') : undefined}
       />
     );
   },

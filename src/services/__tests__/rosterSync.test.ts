@@ -510,15 +510,15 @@ describe('syncAllLeagueRosters', () => {
     const result = await syncAllLeagueRosters();
 
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(result.leagueCount).toBe(12);
+    expect(result.leagueCount).toBe(16);
     expect(result.sources.pl).toBe('static');
   });
 
   it('com force, retorna as 12 ligas (mesmo com fontes indisponíveis, não quebra)', async () => {
     const result = await syncAllLeagueRosters({ force: true });
 
-    expect(result.leagueCount).toBe(12);
-    expect(Object.keys(result.rosters).length).toBe(12);
+    expect(result.leagueCount).toBe(16);
+    expect(Object.keys(result.rosters).length).toBe(16);
     // Sem fontes configuradas, cada liga cai pra estática — nunca null.
     expect(Object.values(result.rosters).every(teams => Array.isArray(teams) && teams.length > 0)).toBe(true);
   });

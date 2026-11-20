@@ -5,6 +5,47 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 
 ---
 
+## 2026-11-20 (10) — 4 ligas novas: Eredivisie, Pro League, Saudi Pro League e MLS
+
+### Entregue
+- **Ligas** (`src/data/leagues/{eredivisie,proLeague,saudiProLeague,mls}.ts`), no padrão leve das 2ª divisões (`makeSecondDivisionTeam`):
+
+  | Liga | Times | Vagas UEFA |
+  |---|---|---|
+  | Eredivisie | 18 | 2 UCL / 1 UEL / 1 UECL |
+  | Bélgica | 16 | 1 / 1 / 1 |
+  | Arábia | 18 | sem vaga |
+  | MLS | 30 | sem vaga |
+
+  Nenhuma tem par de divisão (`relegationSpots: 0`); a copa nacional completa com a própria liga.
+- **Tabelas por liga atualizadas:** patrocinadores (pools novos por país), caixa inicial, premiação, bilheteria, peso da reputação, calibração de notas, ordem na seleção de ligas, scripts de camisa e escudo.
+- **MLS** (`engine/conferenceSeason.ts`):
+  - Leste e Oeste com 15 clubes cada. Turno e returno dentro da conferência; os dois que folgam na rodada se enfrentam; +4 rodadas só Leste × Oeste. Total: 34 rodadas, 34 jogos por clube.
+  - Playoff com os 8 melhores de cada conferência (1×8, 4×5, 2×7, 3×6) e conferências separadas até a final. Reaproveita o fluxo das copas continentais (`MLS_PLAYOFF` em `continentalCups.ts`, fora de `CONTINENTAL_CUPS`), que a MLS não tem.
+  - O playoff só abre depois da temporada regular (`cupSchedule` kind `'playoff'`). A temporada só fecha depois dele, e o campeão da liga é quem vence o playoff.
+  - Não conta conquista nem reputação continental.
+  - Tabela, setas e folha de resultados por conferência. Quem não se classifica recebe uma mensagem e não tem playoff.
+- **Mercado:**
+  - `veteranMarketBid`: jogador do usuário com 29+ na lista de venda recebe oferta da Arábia (60%, 1,3–1,8× o valor) ou da MLS (25%, 1,1–1,3×).
+  - `leaguePriceFactor`: clubes holandeses e belgas vendem por 80% do valor (70% para jovens até 23). Vale no `evaluateCashTransfer` e na tela, com o aviso "Liga vitrine".
+- **Elencos reais:** Eredivisie pela football-data (`DED`, também liberado no worker), Bélgica/Arábia/MLS pela Wikipedia (MLS com artigo de ano civil). Dry-run: 18/465, 16/472, 18/582, 30/696 times/jogadores, todos ao vivo. O `sync-leagues.ts` passou a usar a Wikipedia também.
+- **Escudos:** `fetch-secondary-crests` com os países novos.
+- **Economia (`economy-audit`, agora com as 4 ligas e o calendário real da MLS):** todas positivas. Al-Hilal: caixa €75M, +€6,4M/temporada. Inter Miami: +€3,3M/temporada.
+- **Testes:** 11 novos (`newLeagues.test.ts`); 4 testes antigos ajustados de "12 ligas" para 16. 777 passando.
+
+### Decidido e por quê
+- **Playoff da MLS no slot da copa continental.** Ganha de graça a tela de chave, o próximo jogo na Central, a simulação dos outros e a premiação.
+- **Desconto holandês/belga só na compra.** Fica fora do `calculateMarketValue` global, para não desvalorizar jogadores que já são do usuário.
+
+### Pendente
+- **Publicar elencos:** a tarefa diária das 10h publica as 4 ligas no Supabase sozinha. Até lá, o jogo usa os elencos gerados (offline).
+- **Worker:** o proxy (`worker/football-proxy.js`) precisa de deploy para liberar o `DED` no cliente. O sync roda direto com a chave, sem o proxy.
+- **Calibração de notas:** o `ref` das 4 ligas foi estimado; re-medir a mediana bruta depois do 1º sync publicado.
+- **Modo Campeonato:** a MLS não tem playoff; o campeão é o 1º da tabela geral. O playoff existe só na carreira.
+- **Mercado de Treinador:** as ligas novas entram como qualquer liga, sem regra especial de "carreira alternativa" (o usuário não pediu).
+
+---
+
 ## 2026-11-20 (9) — Lanternas começam com 20–30 e patrocínio inicial pelo clube
 
 ### Entregue

@@ -10,6 +10,10 @@ export { bundesliga2 } from './bundesliga2';
 export { serieB } from './serieB';
 export { ligue2 } from './ligue2';
 export { ligaPortugal2 } from './ligaPortugal2';
+export { eredivisie } from './eredivisie';
+export { proLeague } from './proLeague';
+export { saudiProLeague } from './saudiProLeague';
+export { mls } from './mls';
 export type { LeagueDefinition } from './types';
 
 import { premierLeague } from './premierLeague';
@@ -24,11 +28,16 @@ import { bundesliga2 } from './bundesliga2';
 import { serieB } from './serieB';
 import { ligue2 } from './ligue2';
 import { ligaPortugal2 } from './ligaPortugal2';
+import { eredivisie } from './eredivisie';
+import { proLeague } from './proLeague';
+import { saudiProLeague } from './saudiProLeague';
+import { mls } from './mls';
 import type { LeagueDefinition } from './types';
 
 export const allLeagues: LeagueDefinition[] = [
   premierLeague, laLiga, bundesliga, serieA, ligue1, ligaPortugal,
   championship, laliga2, bundesliga2, serieB, ligue2, ligaPortugal2,
+  eredivisie, proLeague, saudiProLeague, mls,
 ];
 
 export function getLeague(id: string): LeagueDefinition | undefined {

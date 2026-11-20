@@ -12,6 +12,7 @@ import { getAvgOvr } from '../utils/teamUtils';
 const LEAGUE_WEIGHT: Record<string, number> = {
   pl: 1, laliga: 0.95, bundesliga: 0.9, serieA: 0.9, ligue1: 0.8, ligaPortugal: 0.65,
   championship: 0.45, laliga2: 0.4, bundesliga2: 0.4, serieB: 0.4, ligue2: 0.35, ligaPortugal2: 0.3,
+  eredivisie: 0.7, proLeague: 0.6, saudiProLeague: 0.55, mls: 0.5,
 };
 
 /** Tamanho do clube na liga: 100 = o mais forte, 0 = o mais fraco. */

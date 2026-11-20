@@ -28,6 +28,8 @@ const LEAGUE_HINT: Record<string, string> = {
   serieA: 'Italian football club', serieB: 'Italian football club',
   ligue1: 'French football club', ligue2: 'French football club',
   ligaPortugal: 'Portuguese football club', ligaPortugal2: 'Portuguese football club',
+  eredivisie: 'Dutch football club', proLeague: 'Belgian football club',
+  saudiProLeague: 'Saudi football club', mls: 'American soccer club',
 };
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));

@@ -31,6 +31,6 @@ describe('calibração das notas por liga', () => {
 
   it('liga desconhecida não muda nada', () => {
     const t = getLeague('pl')!.teams;
-    expect(calibrateLeagueTeams(t, 'mls')).toBe(t);
+    expect(calibrateLeagueTeams(t, 'liga-inexistente')).toBe(t);
   });
 });
