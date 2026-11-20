@@ -29,7 +29,8 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - ✅ Liga entre Amigos: sem emoji no título e conteúdo em cartões, como Configurações/Perfil.
 - ✅ Tela inicial rolava ~23px em 375×720 (faixa entre 700 e 780px de altura): rótulos "Jogar"/"Próximo jogo" saem nessa faixa.
 - ✅ Aviso "✓ Progresso salvo" quebrava em 2 linhas.
-- ⏳ **Ficou (🟢):** a tela da partida antes do apito usa estilo próprio ("← Voltar", botões em MAIÚSCULAS) diferente do resto; telas fora da carreira rolam 4px sem conteúdo visível (não achei a origem — nenhum elemento passa da tela).
+- ✅ Tela da partida antes do apito: Voltar, Jogar e Simular agora usam os botões padrão do app (antes "← Voltar" e JOGAR/SIMULAR em maiúsculas, estilo próprio); texto da cronologia vazia explica as duas opções.
+- ✅ Rolagem de 4px: era a animação de entrada das telas (`fpScreenFade`, começava 4px abaixo com `translateY`). Agora é só opacidade.
 
 ### Revisão de código + testes (2026-11-19) — ✅ feita
 

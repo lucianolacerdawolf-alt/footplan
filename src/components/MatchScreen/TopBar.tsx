@@ -1,4 +1,5 @@
 import type { Team } from '@/engine/types';
+import { Button, Icon } from '../ui';
 
 interface Props {
   home: Team;
@@ -24,9 +25,10 @@ export default function TopBar({
 }: Props) {
   return (
     <header className="match-topbar">
-      <button className="back-btn" onClick={onBack} disabled={simulating && !paused}>
-        &larr; Voltar
-      </button>
+      {/* Mesmo Voltar do cabeçalho das outras telas (ScreenHeader). */}
+      <Button variant="ghost" size="sm" className="back-btn-ui" onClick={onBack} disabled={simulating && !paused} aria-label="Voltar">
+        <Icon name="arrow-left" size={14} /> Voltar
+      </Button>
       <span className="match-title">{home.abbreviation} vs {away.abbreviation}</span>
       <span className="match-formations">{home.strategy.formation} x {away.strategy.formation}</span>
       <div className="speed-control" role="group" aria-label="Velocidade do replay">

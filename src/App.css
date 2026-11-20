@@ -747,9 +747,11 @@
 }
 
 /* ── Fase 1: fade entre telas ─────────────────────────────────────── */
+/* Só opacidade: o translateY(4px) que havia aqui deixava a página 4px mais alta que a
+   tela durante a entrada (e de vez quando a animação não roda), com barra de rolagem. */
 @keyframes fpScreenFade {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 /* Sem will-change/transform persistente: qualquer um dos dois transforma .screen-fade no
    containing block dos overlays `position: fixed` das telas (pausa, intervalo, modais).
@@ -1218,7 +1220,7 @@
 /* Cabeçalho das táticas: o botão glow largo cortava "Carreira"/"Táticas" ("CARRE…") */
 .setup-screen.fit-screen header .setup-confirm-btn { padding: 8px 14px; min-height: 40px; font-size: 13px; }
 /* Barra da partida no celular: nada quebra linha; o título "ARS vs CHE" é que encolhe */
-.match-topbar .speed-btn, .match-topbar .back-btn { white-space: nowrap; }
+.match-topbar .speed-btn, .match-topbar .back-btn, .match-topbar .back-btn-ui { white-space: nowrap; flex-shrink: 0; }
 @media (max-width: 400px) {
   .match-topbar { gap: 4px; }
   .match-topbar .back-btn { padding: 6px 8px; }

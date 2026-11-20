@@ -60,7 +60,7 @@ export default function CommentaryFeed({ events, homeTeamId }: Props) {
           <p className="feed-hidden">+ {hidden} eventos anteriores</p>
         )}
         {events.length === 0 && (
-          <p className="feed-empty">Pressione &quot;JOGAR&quot; para começar...</p>
+          <p className="feed-empty">Toque em “Jogar” para acompanhar a partida ou em “Simular” para ver só o resultado.</p>
         )}
       </div>
     </div>

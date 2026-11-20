@@ -4,7 +4,7 @@ import type { GameMode } from './TeamSelectionScreen';
 import { cloneTeam } from '../utils/teamUtils';
 import { getStarterCount } from '../engine/squadUtils';
 import TacticPresets from './shared/TacticPresets';
-import { Button } from './ui';
+import { Button, Icon } from './ui';
 import TacticEditor from './shared/TacticEditor';
 import type { SubWindow, LiveMatchSnapshot } from '../utils/liveMatchPersistence';
 import { saveLiveMatch, clearLiveMatch, serializeMatchState, deserializeMatchState, loadLiveMatchMeta, clearLiveMatchMeta } from '../utils/liveMatchPersistence';
@@ -813,15 +813,16 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
               online && !online.isHost
                 ? <span style={{ fontSize: 12, opacity: 0.55, fontFamily: 'var(--mono)' }}>Aguardando host simular...</span>
                 : <>
-                    <button className="simulate-btn" onClick={handleStartLive} disabled={simulating}>
-                      JOGAR
-                    </button>
-                    {/* Online não tem SIMULAR: o caminho rápido não manda nada pro outro lado
+                    {/* Mesmos botões do resto do app (antes JOGAR/SIMULAR em maiúsculas, estilo próprio). */}
+                    <Button glow onClick={handleStartLive} disabled={simulating}>
+                      <Icon name="play" size={15} /> Jogar
+                    </Button>
+                    {/* Online não tem Simular: o caminho rápido não manda nada pro outro lado
                         e o guest ficava preso em "Aguardando host simular". */}
                     {!online && (
-                      <button className="simulate-btn" onClick={handleFastSim} disabled={simulating}>
-                        SIMULAR
-                      </button>
+                      <Button variant="secondary" onClick={handleFastSim} disabled={simulating}>
+                        Simular
+                      </Button>
                     )}
                   </>
             ) : phase === 'done' && (isKnockout ? knockoutResult : result) ? (
