@@ -141,7 +141,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       const sponsoredIncome = econBase
         ? sponsorTvPerRound(econBase, careerState.leagueId, nextSponsorTier as SponsorTier)
         : Math.round(computeWeeklyIncome(careerState.leagueId) * getSponsorMultiplier(nextSponsorTier));
-      const merch = computeMerchRevenue(newReputation);
+      const merch = computeMerchRevenue(newReputation, finances.baseRevenue);
 
       // ── Copa continental (UCL/UEL/UECL) ──
       // 1) Premiação da copa continental da temporada que ENCERROU (se o usuário disputou).

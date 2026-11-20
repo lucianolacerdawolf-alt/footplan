@@ -6,6 +6,7 @@ import { baseWeeklyRevenue, clubInitialBudget, sponsorTvPerRound, operatingCostP
 import { createWelcomeMessage, createYouthIntakeMessage, createMilestoneMessage } from '../engine/inbox';
 import { getCareerTotals, newlyReachedMilestones } from '../engine/careerMilestones';
 import { getScouting, scoutPlayer } from '../engine/scouting';
+import { initialReputation } from '../engine/reputation';
 import { generateYouthIntake, promoteYouthPlayer, canPromote, YOUTH_MAX_LOANS } from '../engine/youthAcademy';
 import { generateFreeAgentPool } from '../engine/freeAgentPool';
 import { generateBoardObjectives, createBoardObjectivesInboxMessage } from '../engine/boardObjectives';
@@ -172,12 +173,15 @@ export function useCareerManager({
     const startingTier = getStartingTier(leagueDef.id);
     const sponsor = generateSponsor(leagueDef.id, userTeam.id, startingTier);
     const weeklyIncome = sponsorTvPerRound(base, leagueDef.id, startingTier);
-    const boardObj = generateBoardObjectives(league, 0, 1);
+    // Reputação de partida pelo clube e pela liga (antes era 0 até no Arsenal).
+    const startRep = initialReputation(userTeamWithValues, rosters[leagueDef.id], leagueDef.id);
+    const boardObj = generateBoardObjectives(league, startRep, 1);
     const youthIntake = generateYouthIntake(1);
     const newState: CareerState = {
       version: 1,
       leagueId: leagueDef.id,
-      manager: { name: trimmedName, reputation: 0 },
+      manager: { name: trimmedName, reputation: startRep },
+      reputationSeeded: true,
       currentSeasonYear: 1,
       season: { league, cup, tradesUsedThisSeason: 0, budgetAtSeasonStart: budget, userGoalScorers: {} },
       rosters,

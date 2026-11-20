@@ -5,6 +5,28 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 
 ---
 
+## 2026-11-20 (8) — Reputação inicial pelo tamanho do clube
+
+### Entregue
+- **Problema:** todo técnico começava com reputação 0, até no Arsenal.
+- **Novo `engine/reputation.ts`:** `initialReputation = 5 + 55 × peso da liga × tamanho do clube na liga` (ranking por força média). Maior da Premier ≈ 60, meio ≈ 30-40, lanterna 5, maior da Championship ≈ 30.
+- **Carreira nova:** já nasce com essa reputação; os objetivos da diretoria também partem dela.
+- **Trocar de clube (`applyClubChange`):** a reputação nunca cai, e um clube maior empurra até 80% do patamar dele (`reputationAfterMove`).
+- **Saves antigos:** ajuste único em `seedReputation` (chamado dentro de `ensureEconomy`, que roda em todo carregamento, local e nuvem). A reputação só sobe até o patamar do clube atual, e a flag `reputationSeeded` impede repetir. No save de teste (Crystal Palace), foi de 0 → 42.
+- **`computeMerchRevenue`:** agora proporcional ao clube (10% da receita base × reputação/100). Ver "Decidido".
+- O `ReputationPanel` explica de onde vem o ponto de partida.
+- `economy-audit` agora mostra reputação inicial, patrocínio na temporada 2 e produtos.
+- +2 testes; o teste de `applyClubChange` foi atualizado para a regra nova. 764 passando.
+
+### Decidido e por quê
+- **Produtos proporcionais ao clube.** A auditoria mostrou que a renda de produtos era €6K por ponto de reputação, igual em qualquer liga. Com a reputação inicial, um grande da Serie B faturaria €6,2M/temporada em produtos contra €1,3M de lucro normal. Agora dá €0,2M nele e €3,6M num grande da Premier.
+- **Sem bloquear subir de nível no ajuste do save.** O aviso "Sua reputação subiu de nível" pode aparecer uma vez no primeiro carregamento, e isso é esperado.
+
+### Pendente / observado
+- **Patrocínio de clube médio/pequeno das ligas grandes cai de nível no fim da 1ª temporada:** o nível inicial "nacional" pede reputação 50. Isso já acontecia antes (com reputação 0 caía para todos, inclusive os grandes); agora os grandes mantêm. Vale revisar se o nível inicial deveria depender do clube.
+
+---
+
 ## 2026-11-20 (7) — Modal de renovação não fechava
 
 ### Entregue

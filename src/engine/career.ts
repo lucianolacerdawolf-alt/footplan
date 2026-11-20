@@ -18,6 +18,7 @@ import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
 import { simularKnockout } from './matchEngine';
 import { getStartingTier, generateSponsor, getSponsorMinReputation, type SponsorTier } from './sponsors';
+import { initialReputation } from './reputation';
 
 // =============================================================================
 // TIPOS — Modo Carreira
@@ -156,6 +157,8 @@ export interface CareerState {
   youthFocusId?: string;
   /** Jovens emprestados nesta temporada (evoluem mais rápido; voltam no fim dela). */
   youthLoanIds?: string[];
+  /** A reputação já partiu do tamanho do clube (carreira nova ou save ajustado uma vez). */
+  reputationSeeded?: boolean;
   /** Reputação ganha nesta temporada vencendo times bem mais fortes (limite GIANT_KILL_REP_CAP). */
   seasonGiantKills?: number;
   transferHistory?: TransferRecord[];
@@ -757,7 +760,26 @@ export function deriveCupResult(cup: BracketState, userTeamId: string): CareerSe
 /** Saves anteriores à economia por tamanho de clube (19/11/2026) não têm receita base,
  *  custo operacional nem teto: calcula a partir da folha atual do clube do usuário e
  *  ajusta o patrocínio por rodada pra nova escala. O caixa atual é mantido. */
-export function ensureEconomy(state: CareerState): CareerState {
+/**
+ * Saves anteriores a 20/11 começaram com reputação 0 em qualquer clube. Ajuste ÚNICO:
+ * sobe até o patamar do clube atual (nunca baixa) e marca o save pra não repetir.
+ */
+export function seedReputation(state: CareerState): CareerState {
+  if (state.reputationSeeded) return state;
+  const teams = state.rosters[state.leagueId] ?? state.season.league.teams;
+  const userTeam = teams.find(t => t.id === state.season.league.userTeamId);
+  if (!userTeam) return { ...state, reputationSeeded: true };
+  const floor = initialReputation(userTeam, teams, state.leagueId);
+  return {
+    ...state,
+    reputationSeeded: true,
+    manager: { ...state.manager, reputation: Math.max(state.manager.reputation, floor) },
+  };
+}
+
+export function ensureEconomy(input: CareerState): CareerState {
+  // Todo save carregado passa por aqui: aproveita pra fazer o ajuste único de reputação.
+  const state = seedReputation(input);
   const f = state.finances;
   if (!f || f.baseRevenue) return state;
   const userTeam = state.rosters[state.leagueId]?.find(t => t.id === state.season.league.userTeamId);

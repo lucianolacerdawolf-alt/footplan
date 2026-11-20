@@ -156,8 +156,10 @@ describe('applyClubChange', () => {
     expect(next.leagueId).toBe('laliga');
     expect(next.season.league.userTeamId).toBe(laligaTeamId);
     // Preservados
-    expect(next.manager).toEqual(state.manager);
-    expect(next.manager.reputation).toBe(30);
+    expect(next.manager.name).toBe(state.manager.name);
+    // Reputação nunca cai na troca; clube maior empurra até 80% do patamar dele (reputation.ts).
+    expect(next.manager.reputation).toBeGreaterThanOrEqual(30);
+    expect(next.reputationSeeded).toBe(true);
     expect(next.history).toBe(state.history);
     expect(next.rosters).toBe(state.rosters);
     expect(next.currentSeasonYear).toBe(2);

@@ -71,7 +71,16 @@ export function generateSponsor(leagueId: string, teamId: string, tier: SponsorT
   return { tier, name, multiplier: TIER_CONFIG[tier].multiplier };
 }
 
-export function computeMerchRevenue(reputation: number): number {
+/**
+ * Renda de produtos por rodada. Com a receita base do clube, é 10% dela × reputação/100
+ * — proporcional ao tamanho do clube. Antes era fixa por ponto de reputação (€6K), igual
+ * pra qualquer liga: com a reputação inicial pelo clube (20/11) um grande da Serie B
+ * faturaria 5× o próprio lucro só com camisas. Sem base (saves muito antigos), a conta velha.
+ */
+export function computeMerchRevenue(reputation: number, baseWeeklyRevenue?: number): number {
+  if (baseWeeklyRevenue && baseWeeklyRevenue > 0) {
+    return Math.round(baseWeeklyRevenue * 0.1 * (reputation / 100) / 1000) * 1000;
+  }
   return Math.round(reputation * 6000 / 1000) * 1000;
 }
 

@@ -11,6 +11,7 @@ import { generateBoardObjectives } from './boardObjectives';
 import { getLeague } from '../data/leagues';
 import { shuffle } from './rng';
 import { CONFIDENCE_START } from './boardConfidence';
+import { initialReputation, reputationAfterMove } from './reputation';
 
 /**
  * Reputação mínima do manager pra ser sondado por um clube, dado o prestígio dele
@@ -87,12 +88,15 @@ export function applyClubChange(state: CareerState, offer: JobOffer): CareerStat
   const base = baseWeeklyRevenue(newUserTeam, offer.leagueId);
   const startingTier = getStartingTier(offer.leagueId);
   const sponsor = generateSponsor(offer.leagueId, offer.clubId, startingTier);
-  const boardObj = generateBoardObjectives(league, state.manager.reputation, state.currentSeasonYear);
+  // Clube maior empurra a reputação até 80% do patamar dele; nunca baixa.
+  const reputation = reputationAfterMove(state.manager.reputation, initialReputation(newUserTeam, roster, offer.leagueId));
+  const boardObj = generateBoardObjectives(league, reputation, state.currentSeasonYear);
 
   const next: CareerState = {
     version: 1,
     leagueId: offer.leagueId,
-    manager: { ...state.manager },
+    manager: { ...state.manager, reputation },
+    reputationSeeded: true,
     currentSeasonYear: state.currentSeasonYear,
     season: { league, cup, tradesUsedThisSeason: 0, budgetAtSeasonStart: budget, userGoalScorers: {} },
     rosters: state.rosters,

@@ -84,6 +84,12 @@ export default function ReputationPanel({ reputation, leaguePosition, totalTeams
           {nextUnlock && <> · próximo desbloqueio em {nextUnlock.at}: {nextUnlock.text.toLowerCase()}</>}
         </div>
 
+        <p className={styles.note}>
+          O ponto de partida vem do clube que você assume: quanto maior o clube e mais forte a liga,
+          maior a reputação inicial (o maior da Premier League começa em ~60). Trocar por um clube
+          maior também empurra a sua reputação para cima — ela nunca cai por mudar de clube.
+        </p>
+
         <h3 className={styles.h3}>Como subir</h3>
         <p className={styles.note}>Durante a temporada:</p>
         <ul className={styles.rules}>

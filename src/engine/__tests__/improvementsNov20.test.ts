@@ -132,3 +132,26 @@ describe('Penalidade fora de posição (tela e motor)', () => {
     expect(calculateMarketValue(playAs(fwd, 'DEF'))).toBe(calculateMarketValue(fwd));
   });
 });
+
+describe('Reputação inicial pelo clube', () => {
+  it('maior da Premier > meio > lanterna; segunda divisão pesa menos', async () => {
+    const { initialReputation } = await import('../reputation');
+    const pl = getLeague('pl')!.teams;
+    const { getAvgOvr } = await import('@/utils/teamUtils');
+    const ranked = [...pl].sort((a, b) => getAvgOvr(b) - getAvgOvr(a));
+    const top = initialReputation(ranked[0], pl, 'pl');
+    const mid = initialReputation(ranked[Math.floor(ranked.length / 2)], pl, 'pl');
+    const bottom = initialReputation(ranked[ranked.length - 1], pl, 'pl');
+    expect(top).toBe(60);
+    expect(mid).toBeGreaterThan(bottom);
+    expect(top).toBeGreaterThan(mid);
+    expect(bottom).toBe(5);
+    expect(initialReputation(ranked[0], pl, 'championship')).toBeLessThan(top);
+  });
+
+  it('reputationAfterMove nunca baixa e sobe até 80% do clube novo', async () => {
+    const { reputationAfterMove } = await import('../reputation');
+    expect(reputationAfterMove(70, 60)).toBe(70);
+    expect(reputationAfterMove(10, 60)).toBe(48);
+  });
+});
