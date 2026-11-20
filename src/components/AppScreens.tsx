@@ -44,6 +44,26 @@ import YouthAcademyScreen from './YouthAcademyScreen';
 import FriendLeagueScreen from './FriendLeagueScreen';
 import { getLeague } from '../data/leagues';
 import { cupLockMessage } from '../engine/cupSchedule';
+import { getStageMatches } from '../engine/bracketHelpers';
+
+/** Próximo adversário do usuário — usado no "Oponente" da tela de Elenco/Táticas, que
+ *  abre com o próprio time nos dois lados (não há partida marcada). Antes o botão
+ *  mostrava o seu time como "oponente". */
+function nextLeagueOpponent(lg: LeagueState | undefined | null): Team | null {
+  if (!lg || lg.phase === 'done') return null;
+  for (let r = lg.currentRound; r < lg.fixtures.length; r++) {
+    const f = lg.fixtures[r]?.find(x => !x.played && (x.homeTeamId === lg.userTeamId || x.awayTeamId === lg.userTeamId));
+    if (f) return lg.teams.find(t => t.id === (f.homeTeamId === lg.userTeamId ? f.awayTeamId : f.homeTeamId)) ?? null;
+  }
+  return null;
+}
+function nextBracketOpponent(b: BracketState | undefined | null): Team | null {
+  if (!b || b.stage === 'champion') return null;
+  const matches = getStageMatches(b);
+  const m = matches.find(x => !x.played && (x.homeTeamId === b.userTeamId || x.awayTeamId === b.userTeamId));
+  if (!m) return null;
+  return b.teams.find(t => t.id === (m.homeTeamId === b.userTeamId ? m.awayTeamId : m.homeTeamId)) ?? null;
+}
 
 function getResumableSaves(): ResumableSave[] {
   const results: ResumableSave[] = [];
@@ -364,6 +384,12 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         isTacticsOnly={p.isTournamentEntry}
         lockAway={p.matchContext !== 'regular' || p.gameMode === 'cpu'}
         userIsHome={userIsHome}
+        opponentOverride={!p.isTournamentEntry ? undefined
+          : p.isCareerMode
+            ? (p.matchContext === 'league'
+              ? nextLeagueOpponent(p.career.careerState?.season.league)
+              : nextBracketOpponent(p.career.careerState?.season.cup) ?? nextBracketOpponent(p.career.careerState?.season.continentalCup))
+            : p.matchContext === 'league' ? nextLeagueOpponent(p.leagueState) : nextBracketOpponent(p.bracketState)}
         goesToPreview={p.matchContext === 'league' || p.matchContext === 'bracket'}
         onRenewContract={p.isCareerMode && p.isTournamentEntry ? (playerId, options) => p.career.handleRenewContract(playerId, options) : undefined}
         currentSeasonYear={p.career.careerState?.currentSeasonYear}
@@ -596,6 +622,9 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         youthPlayers={getYouthPool(cs)}
         squadSize={userTeam?.squad.length ?? 0}
         onPromote={p.career.handlePromoteYouthPlayer}
+        focusId={cs.youthFocusId}
+        onFocus={p.career.handleSetYouthFocus}
+        onRelease={p.career.handleReleaseYouth}
         onBack={p.nav.toHub}
       />
     );

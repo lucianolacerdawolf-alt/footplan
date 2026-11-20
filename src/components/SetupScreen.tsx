@@ -65,6 +65,9 @@ interface Props {
    *  Default true preserva o comportamento antigo pros modos sem esse conceito. */
   userIsHome?: boolean;
   isTacticsOnly?: boolean;
+  /** Adversário real quando a tela abre só pra editar o elenco (os dois lados são o seu
+   *  time). undefined = usa o outro lado; null = sem próximo jogo, esconde o botão. */
+  opponentOverride?: Team | null;
   mode?: 'single' | 'league' | 'cup' | 'career' | 'online';
   goesToPreview?: boolean;
   /** Fase 1 — renova contrato na carreira (passado só no Modo Carreira, modo "Gerenciar
@@ -99,7 +102,7 @@ import ContractRenewalModal from './ContractRenewalModal';
 import { crestSrc } from '../utils/crest';
 import { shirtTag } from '../utils/shirtNumbers';
 
-export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, mode, goesToPreview, onRenewContract, currentSeasonYear, budget }: Props) {
+export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAway, onStartMatch, onBack, lockAway, userIsHome = true, isTacticsOnly, opponentOverride, mode, goesToPreview, onRenewContract, currentSeasonYear, budget }: Props) {
   const [homeTeam, setHomeTeam] = useState<Team>(() => {
     const t = cloneTeam(initialHome);
     if (!t.strategy) t.strategy = { formation: '4-3-3', mentality: 'possession', intensity: 'medium', defensiveLine: 'normal', width: 'normal' };
@@ -386,8 +389,10 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
             Moral {morale > 0 ? '+' : ''}{morale}
           </span>
         )}
-        <p className="setup-info-text">{getTacticalInsight(lockAway ? myTeam : homeTeam, lockAway ? theirTeam : awayTeam)}</p>
-        <Button size="sm" variant="secondary" onClick={() => setShowOpponentAnalysis(true)}>Oponente</Button>
+        <p className="setup-info-text">{getTacticalInsight(lockAway ? myTeam : homeTeam, opponentOverride ?? (lockAway ? theirTeam : awayTeam))}</p>
+        {opponentOverride !== null && (
+          <Button size="sm" variant="secondary" onClick={() => setShowOpponentAnalysis(true)}>Oponente</Button>
+        )}
       </div>
 
       {!lockAway && (
@@ -430,9 +435,9 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
 
       {showOpponentAnalysis && (
         <OpponentAnalysisModal
-          opponent={lockAway ? theirTeam : awayTeam}
+          opponent={opponentOverride ?? (lockAway ? theirTeam : awayTeam)}
           userTeam={lockAway ? myTeam : homeTeam}
-          h2h={getH2H(myTeam.id, (lockAway ? theirTeam : awayTeam).id)}
+          h2h={getH2H(myTeam.id, (opponentOverride ?? (lockAway ? theirTeam : awayTeam)).id)}
           onClose={() => setShowOpponentAnalysis(false)}
         />
       )}

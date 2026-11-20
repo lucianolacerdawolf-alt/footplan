@@ -31,6 +31,12 @@ export default function InboxPanel({ messages, onMarkRead, onAcceptTransferOffer
       <div className={styles.title}>
         📨 Caixa de Entrada
         {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
+        {/* Obrigatórias ficam de fora: essas precisam ser abertas (travam o avanço de rodada). */}
+        {messages.filter(m => !m.isRead && !m.isMandatory).length > 1 && (
+          <button className={styles.markAll} onClick={() => messages.forEach(m => { if (!m.isRead && !m.isMandatory) onMarkRead(m.id); })}>
+            Marcar lidas
+          </button>
+        )}
       </div>
       {messages.length === 0 ? (
         <div className={styles.empty}>Nenhuma mensagem por enquanto.</div>

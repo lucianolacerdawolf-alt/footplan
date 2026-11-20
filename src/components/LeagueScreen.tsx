@@ -1,4 +1,4 @@
-import { memo, useState, useMemo } from 'react';
+import { memo, useState, useMemo, useEffect } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -80,6 +80,17 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
       </div>
     );
   }, [fixtures, userTeamId]);
+
+  // Seu jogo da rodada terminou → os outros jogos saem sozinhos (antes ficavam esperando
+  // o toque em "Simular Todos"). Também fica antes do retorno antecipado, pela ordem dos hooks.
+  const roundNow = phase === 'done' ? undefined : fixtures[currentRound];
+  const userFx = roundNow?.find(f => f.homeTeamId === userTeamId || f.awayTeamId === userTeamId);
+  const autoSimOthers = !!userFx?.played && !!roundNow?.some(f => !f.played);
+  useEffect(() => {
+    if (!autoSimOthers || simulating) return;
+    runSim(() => onSimulateRound(currentRound));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSimOthers, currentRound]);
 
   if (phase === 'done') {
     const standings = computeStandings(teams, fixtures);

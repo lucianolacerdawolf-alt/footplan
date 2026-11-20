@@ -19,6 +19,7 @@ import type { PressConferenceQuestion } from '../engine/pressConference';
 import type { Team } from '../engine/types';
 import type { CloudStatus } from '../hooks/useCloudSave';
 import InboxPanel from './InboxPanel';
+import ReputationPanel, { reputationLevel } from './ReputationPanel';
 import ConversationsPanel from './ConversationsPanel';
 import PreMatchPrepCard from './PreMatchPrepCard';
 import SocialFeedCard from './SocialFeedCard';
@@ -201,6 +202,7 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
   // só simula e para no aviso de sempre.
   const [pendingAdvance, setPendingAdvance] = useState(false);
   const [hubTab, setHubTab] = useState<'inbox' | 'season' | 'club'>('inbox');
+  const [showRep, setShowRep] = useState(false);
   useEffect(() => {
     if (!pendingAdvance || !roundComplete) return;
     setPendingAdvance(false);
@@ -330,6 +332,15 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
 
   return (
     <div className={`${styles.screen} app-screen fit-screen`}>
+      {showRep && (
+        <ReputationPanel
+          reputation={state.manager.reputation}
+          leaguePosition={gamesPlayed > 0 ? userPosition : null}
+          totalTeams={state.season.league.teams.length}
+          pendingObjectiveRep={(boardObj?.objectives ?? []).filter(o => o.achieved === undefined).reduce((n, o) => n + o.reward, 0)}
+          onClose={() => setShowRep(false)}
+        />
+      )}
       {/* Topo compacto: voltar + identidade do clube numa linha. Estádio e patrocínio
           ficam no Meu Clube — aqui só o que orienta a decisão de agora. */}
       {userTeam && (
@@ -341,8 +352,14 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
           <div className={styles.topInfo}>
             <h1 className={styles.clubName}>{userTeam.name}</h1>
             <span className={styles.clubMeta}>
-              {league.name} · T{state.currentSeasonYear} · <Icon name="star" size={11} /> {state.manager.reputation} rep
+              {league.name} · T{state.currentSeasonYear}
             </span>
+            <button type="button" className={styles.repChip} onClick={() => setShowRep(true)} aria-label={`Reputação ${state.manager.reputation} de 100 — ver como subir`}>
+              <span className={styles.repStar} aria-hidden="true">★</span>
+              <span className={styles.repValue}>{state.manager.reputation}</span>
+              <span className={styles.repLevel}>{reputationLevel(state.manager.reputation).label}</span>
+              <span className={styles.repInfo} aria-hidden="true">?</span>
+            </button>
           </div>
           <div className={`${styles.confChip} ${styles[`conf_${conf.tone}`]}`} title={`Confiança da diretoria: ${conf.label}`} aria-label={`Confiança da diretoria ${confidence}%`}>
             <span className={styles.confLabel}>Diretoria</span>

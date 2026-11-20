@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import type { Player } from '../engine/types';
 import { playerOvr } from '../utils/playerOvr';
-import { canPromote, scoutEstimate, YOUTH_PROMOTE_MIN_AGE, YOUTH_PROMOTE_MIN_OVR, YOUTH_RELEASE_AGE } from '../engine/youthAcademy';
+import { canPromote, scoutEstimate, seasonsUntilReady, YOUTH_PROMOTE_MIN_AGE, YOUTH_PROMOTE_MIN_OVR, YOUTH_RELEASE_AGE } from '../engine/youthAcademy';
 import { Button } from './ui';
 import styles from './YouthAcademyScreen.module.css';
 import { ScreenHeader } from './ui';
@@ -10,6 +10,10 @@ interface Props {
   youthPlayers: Player[];
   squadSize: number;
   onPromote: (playerId: string) => void;
+  /** Jovem com treino focado nesta temporada (um por vez). */
+  focusId?: string;
+  onFocus?: (playerId: string) => void;
+  onRelease?: (playerId: string) => void;
   onBack: () => void;
 }
 
@@ -26,9 +30,18 @@ function keyAttrs(p: Player): string {
   }
 }
 
-function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, onBack }: Props) {
-  const [confirming, setConfirming] = useState<Player | null>(null);
+function readyText(p: Player): string {
+  const n = seasonsUntilReady(p);
+  if (n === null) return 'O olheiro acha difícil ele chegar ao profissional';
+  return `Previsão: pronto em ~${n} temporada${n > 1 ? 's' : ''}`;
+}
+
+type Confirm = { kind: 'promote' | 'release'; player: Player };
+
+function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, focusId, onFocus, onRelease, onBack }: Props) {
+  const [confirming, setConfirming] = useState<Confirm | null>(null);
   const sorted = [...youthPlayers].sort((a, b) => scoutEstimate(b).max - scoutEstimate(a).max);
+  const focused = youthPlayers.find(p => p.id === focusId);
 
   return (
     <div className={`${styles.screen} app-screen fit-screen`}>
@@ -36,8 +49,17 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, onBack }: Prop
 
       <p className={styles.intro}>
         {youthPlayers.length} {youthPlayers.length === 1 ? 'jovem' : 'jovens'} na base · elenco profissional com {squadSize} jogadores.
-        O olheiro estima o potencial; o real só aparece com o tempo.
+        Sobem ao profissional com {YOUTH_PROMOTE_MIN_AGE}+ anos e força {YOUTH_PROMOTE_MIN_OVR}+. Todos evoluem na virada da temporada.
       </p>
+
+      {onFocus && youthPlayers.length > 0 && (
+        <div className={styles.focusBox}>
+          🎯 <strong>Treino focado:</strong>{' '}
+          {focused
+            ? <>{focused.name} — evolui uma etapa a mais no fim da temporada.</>
+            : <>escolha 1 jovem para evoluir mais rápido nesta temporada.</>}
+        </div>
+      )}
 
       {sorted.length === 0 && <p className={styles.empty}>Nenhum jovem na base. A próxima captação chega no fim da temporada.</p>}
 
@@ -47,11 +69,12 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, onBack }: Prop
           const est = scoutEstimate(p);
           const ready = canPromote(p);
           const left = Math.max(0, YOUTH_RELEASE_AGE - (p.age ?? 0));
+          const isFocus = p.id === focusId;
           return (
-            <li key={p.id} className={`${styles.card} ${ready ? styles.cardReady : ''}`}>
+            <li key={p.id} className={`${styles.card} ${ready ? styles.cardReady : ''} ${isFocus ? styles.cardFocus : ''}`}>
               <div className={styles.row}>
                 <span className={styles.pos}>{POS_LABEL[p.position]}</span>
-                <span className={styles.name}>{p.name}</span>
+                <span className={styles.name}>{isFocus && '🎯 '}{p.name}</span>
                 <span className={styles.age}>{p.age} anos</span>
                 <span className={styles.ovr} aria-label={`força ${ovr}`}>{ovr}</span>
               </div>
@@ -64,13 +87,20 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, onBack }: Prop
                 </div>
                 <span className={styles.potValue}>{est.min}–{est.max}</span>
               </div>
+              <div className={styles.hint}>
+                {ready
+                  ? 'Pronto para subir ao profissional.'
+                  : <>{readyText(p)} · {left > 0 ? `dispensado em ${left} temporada${left > 1 ? 's' : ''} se não subir` : 'última temporada na base'}</>}
+              </div>
               <div className={styles.footer}>
-                {ready ? (
-                  <Button size="sm" onClick={() => setConfirming(p)}>Promover ao profissional</Button>
-                ) : (
-                  <span className={styles.hint}>
-                    Sobe com {YOUTH_PROMOTE_MIN_AGE}+ anos e força {YOUTH_PROMOTE_MIN_OVR}+ · {left > 0 ? `dispensado em ${left} temporada${left > 1 ? 's' : ''} se não subir` : 'última temporada na base'}
-                  </span>
+                {ready && <Button size="sm" onClick={() => setConfirming({ kind: 'promote', player: p })}>Promover</Button>}
+                {onFocus && !ready && (
+                  <Button size="sm" variant={isFocus ? 'primary' : 'secondary'} onClick={() => onFocus(p.id)}>
+                    {isFocus ? '🎯 Em treino focado' : 'Treino focado'}
+                  </Button>
+                )}
+                {onRelease && (
+                  <Button size="sm" variant="ghost" onClick={() => setConfirming({ kind: 'release', player: p })}>Dispensar</Button>
                 )}
               </div>
             </li>
@@ -79,12 +109,18 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, onBack }: Prop
       </ul>
 
       {confirming && (
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true" aria-label="Confirmar promoção">
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true" aria-label={confirming.kind === 'promote' ? 'Confirmar promoção' : 'Confirmar dispensa'}>
           <div className={styles.modal}>
-            <p>Promover <strong>{confirming.name}</strong> ao elenco profissional? Ele assina contrato de 3 temporadas.</p>
+            {confirming.kind === 'promote'
+              ? <p>Promover <strong>{confirming.player.name}</strong> ao elenco profissional? Ele assina contrato de 3 temporadas.</p>
+              : <p>Dispensar <strong>{confirming.player.name}</strong> da base? Ele sai do clube e não volta.</p>}
             <div className={styles.modalActions}>
               <Button variant="secondary" onClick={() => setConfirming(null)}>Cancelar</Button>
-              <Button onClick={() => { onPromote(confirming.id); setConfirming(null); }}>Promover</Button>
+              <Button onClick={() => {
+                if (confirming.kind === 'promote') onPromote(confirming.player.id);
+                else onRelease?.(confirming.player.id);
+                setConfirming(null);
+              }}>{confirming.kind === 'promote' ? 'Promover' : 'Dispensar'}</Button>
             </div>
           </div>
         </div>

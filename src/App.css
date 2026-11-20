@@ -429,6 +429,7 @@
  * de momentum/posse. A abreviação NÃO é tingida com team.color: cores de clube vão
  * de #000000 a #FFFFFF, então tingir texto pequeno sobre fundo escuro deixava times
  * de cor escura ilegíveis — e o opacity: 0.45 que havia aqui piorava todos. */
+.score-crest { width: 22px; height: 22px; object-fit: contain; flex-shrink: 0; }
 .score-label { font-size: 12px; font-weight: 800; color: var(--text-primary); font-family: var(--heading); letter-spacing: 0.3px; }
 .score-num {
   font-size: 26px; font-weight: 800; font-family: var(--mono); color: var(--text-primary);
@@ -1160,8 +1161,10 @@
    o painel tático pode crescer — a área do campo rola em vez de esticar a página. */
 .match-screen { height: 100dvh; min-height: 0; overflow: hidden; }
 .match-screen > * { flex-shrink: 0; }
-.match-screen > .match-pitch-area { flex-shrink: 1; min-height: 0; overflow-y: auto; }
-.match-screen > .commentary-feed { flex: 1 1 auto; min-height: 120px; }
+.match-screen > .match-pitch-area { flex-shrink: 0; }
+/* Quem encolhe quando falta altura é a narração (rola por dentro) — antes era a área dos
+   botões, que ficava com 0px e escondia Estatísticas/Continuar atrás do campo no fim do jogo. */
+.match-screen > .commentary-feed { flex: 1 1 0; min-height: 96px; }
 
 /* Intervalo / pausa no celular: tela cheia, botão de continuar sempre visível embaixo */
 @media (max-width: 640px) {

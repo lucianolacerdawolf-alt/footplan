@@ -484,6 +484,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       {/* Placar + Tempo */}
       <div className="match-scorebar">
         <div className="score-side home" style={{ borderLeftColor: home.color }}>
+          <img src={crestSrc(home.logoUrl)} alt="" className="score-crest" />
           <span className="score-label">{home.abbreviation}</span>
           <span className="score-num" key={`h-${goalAnimKey}`}>{started ? homeScore : '–'}</span>
         </div>
@@ -494,6 +495,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
         <div className="score-side away" style={{ borderRightColor: away.color }}>
           <span className="score-num" key={`a-${goalAnimKey}`}>{started ? awayScore : '–'}</span>
           <span className="score-label">{away.abbreviation}</span>
+          <img src={crestSrc(away.logoUrl)} alt="" className="score-crest" />
         </div>
       </div>
 

@@ -367,10 +367,10 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
               ) : !buyLeagueId ? (
                 <div className={styles.leagueGrid}>
                   {allLeagues.map(l => (
-                    <button key={l.id} className={styles.leagueCard} onClick={() => setBuyLeagueId(l.id)}>
+                    <button key={l.id} className={`${styles.leagueCard} ${l.id === userLeagueId ? styles.leagueCardOwn : ''}`} onClick={() => setBuyLeagueId(l.id)}>
                       <img src={crestSrc(l.logo)} alt={l.name} className={styles.leagueLogo} />
-                      <span className={styles.leagueName}>{l.name}{l.id === userLeagueId ? ' (sua liga)' : ''}</span>
-                      <span className={styles.leagueMeta}>{(rosters[l.id] ?? l.teams).length} times</span>
+                      <span className={styles.leagueName}>{l.name}</span>
+                      <span className={styles.leagueMeta}>{l.id === userLeagueId ? 'sua liga · ' : ''}{(rosters[l.id] ?? l.teams).length} times</span>
                     </button>
                   ))}
                 </div>

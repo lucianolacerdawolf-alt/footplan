@@ -152,6 +152,8 @@ export interface CareerState {
   freeAgentPool?: Player[];
   /** Categorias de base: jovens 15-19 anos com potencial escondido (ver youthAcademy.ts). */
   youthPool?: Player[];
+  /** Jovem da base com "treino focado" nesta temporada (evolui uma etapa extra no fim). */
+  youthFocusId?: string;
   transferHistory?: TransferRecord[];
   // Jogadores que o usuário colocou à venda — a cada rodada com a janela aberta,
   // qualquer time do jogo pode fazer uma oferta (ver handleNextCareerLeagueRound).

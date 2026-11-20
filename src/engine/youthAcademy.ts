@@ -56,9 +56,29 @@ export function progressYouthPlayer(player: Player, rng: () => number = Math.ran
   };
 }
 
+/** Jovem escolhido como "foco do treino": evolui uma etapa extra na virada da temporada
+ *  (a idade sobe só uma vez). Só um por temporada — a escolha zera no fim dela. */
+export function progressFocusedYouth(player: Player, rng: () => number = Math.random): Player {
+  const once = progressYouthPlayer(player, rng);
+  return { ...progressYouthPlayer(once, rng), age: once.age };
+}
+
+/** Temporadas até o jovem poder subir (idade e força), estimando a evolução pelo
+ *  potencial do olheiro. null = provavelmente não chega lá antes de ser dispensado. */
+export function seasonsUntilReady(player: Player): number | null {
+  if (canPromote(player)) return 0;
+  let sim: Player = { ...player, potential: scoutEstimate(player).min + Math.round((scoutEstimate(player).max - scoutEstimate(player).min) / 2) };
+  for (let n = 1; n <= YOUTH_RELEASE_AGE - (player.age ?? 16); n++) {
+    sim = progressYouthPlayer(sim, () => 0.5);
+    if ((sim.age ?? 0) >= YOUTH_RELEASE_AGE) return null;
+    if (canPromote(sim)) return n;
+  }
+  return null;
+}
+
 /** Fim de temporada: evolui todos e dispensa quem chegou aos 20 sem ser promovido. */
-export function refreshYouthPool(existing: Player[], rng: () => number = Math.random): { remaining: Player[]; released: Player[] } {
-  const progressed = existing.map(p => progressYouthPlayer(p, rng));
+export function refreshYouthPool(existing: Player[], rng: () => number = Math.random, focusId?: string): { remaining: Player[]; released: Player[] } {
+  const progressed = existing.map(p => (p.id === focusId ? progressFocusedYouth(p, rng) : progressYouthPlayer(p, rng)));
   return {
     remaining: progressed.filter(p => (p.age ?? 0) < YOUTH_RELEASE_AGE),
     released: progressed.filter(p => (p.age ?? 0) >= YOUTH_RELEASE_AGE),

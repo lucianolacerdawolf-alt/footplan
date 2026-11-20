@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useState } from 'react';
 import type { Team } from '../engine/types';
 import type { BracketState, BracketMatch, PlayableStage } from '../engine/tournament';
 import styles from './BracketScreen.module.css';
@@ -105,6 +105,17 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
     setSimulating(true);
     setTimeout(() => { onSimulateOthers(); setSimulating(false); }, 250);
   };
+
+  // Rodada "de verdade": terminou o seu jogo da fase, os outros jogos da fase saem
+  // sozinhos — antes ficava esperando o toque em "Simular Outros".
+  const stageMatches = stage === 'champion' ? [] : getStageMatches(state);
+  const userStageMatch = stageMatches.find(m => m.homeTeamId === userTeamId || m.awayTeamId === userTeamId);
+  const autoSimOthers = !lockedMessage && !!userStageMatch?.played && stageMatches.some(m => !m.played && m !== userStageMatch);
+  useEffect(() => {
+    if (!autoSimOthers || simulating) return;
+    runSimOthers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoSimOthers]);
 
   if (stage === 'champion' && championId) {
     const champion = teamById(teams, championId)!;

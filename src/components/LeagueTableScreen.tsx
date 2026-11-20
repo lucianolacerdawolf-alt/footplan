@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from 'react';
+import { Fragment, memo, useMemo, useState } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueState, Standing, LeagueFixture } from '../engine/tournament';
 import type { LeagueDefinition } from '../data/leagues/types';
@@ -43,8 +43,61 @@ function getZoneColor(pos: number, league: LeagueDefinition): string {
   return 'transparent';
 }
 
+interface TeamDetail {
+  home: [number, number, number];
+  away: [number, number, number];
+  next: { opponentId: string; atHome: boolean; round: number } | null;
+}
+
+function teamDetail(teamId: string, fixtures: LeagueFixture[][]): TeamDetail {
+  const home: [number, number, number] = [0, 0, 0];
+  const away: [number, number, number] = [0, 0, 0];
+  let next: TeamDetail['next'] = null;
+  fixtures.forEach((round, r) => {
+    for (const f of round) {
+      const isHome = f.homeTeamId === teamId;
+      if (!isHome && f.awayTeamId !== teamId) continue;
+      if (!f.played || f.homeScore == null || f.awayScore == null) {
+        if (!next) next = { opponentId: isHome ? f.awayTeamId : f.homeTeamId, atHome: isHome, round: r + 1 };
+        continue;
+      }
+      const mine = isHome ? f.homeScore : f.awayScore;
+      const theirs = isHome ? f.awayScore : f.homeScore;
+      const rec = isHome ? home : away;
+      rec[mine > theirs ? 0 : mine === theirs ? 1 : 2]++;
+    }
+  });
+  return { home, away, next };
+}
+
+/** Posição de cada time antes da última rodada jogada — pra seta de subiu/desceu. */
+function previousPositions(teams: Team[], fixtures: LeagueFixture[][]): Map<string, number> | null {
+  let last = -1;
+  fixtures.forEach((round, r) => { if (round.some(f => f.played)) last = r; });
+  if (last <= 0) return null;
+  const before = computeStandings(teams, fixtures.slice(0, last));
+  return new Map(before.map((s, i) => [s.teamId, i + 1]));
+}
+
+const rec = (r: [number, number, number]) => `${r[0]}V ${r[1]}E ${r[2]}D`;
+
+function FormDots({ form }: { form: ('W' | 'D' | 'L')[] }) {
+  return (
+    <>
+      {form.map((r, idx) => (
+        <span key={idx} className={`${styles.formDot} ${r === 'W' ? styles.formWin : r === 'D' ? styles.formDraw : styles.formLoss}`}>
+          {r === 'W' ? 'V' : r === 'D' ? 'E' : 'D'}
+        </span>
+      ))}
+    </>
+  );
+}
+
 export function StandingsTable({ standings, teams, userTeamId, league, fixtures }: { standings: Standing[]; teams: Team[]; userTeamId: string; league: LeagueDefinition; fixtures?: LeagueFixture[][] }) {
   const showForm = !!fixtures;
+  const [openId, setOpenId] = useState<string | null>(null);
+  const prev = useMemo(() => (fixtures ? previousPositions(teams, fixtures) : null), [teams, fixtures]);
+  const cols = showForm ? 13 : 12;
   return (
     <table className={styles.table}>
       <thead>
@@ -53,8 +106,9 @@ export function StandingsTable({ standings, teams, userTeamId, league, fixtures 
           <th className={styles.thPos}>#</th>
           <th className={styles.thTeam}>Clube</th>
           <th className={styles.thPts}>Pts</th>
-          <th>J</th><th className={styles.colExtra}>V</th><th className={styles.colExtra}>E</th><th className={styles.colExtra}>D</th>
+          <th>J</th><th>V</th><th>E</th><th>D</th>
           <th className={styles.colExtra}>GP</th><th className={styles.colExtra}>GC</th><th className={styles.thSg}>SG</th>
+          <th className={styles.colExtra} title="Aproveitamento dos pontos disputados">%</th>
           {showForm && <th className={`${styles.thForm} ${styles.colExtra}`}>Forma</th>}
         </tr>
       </thead>
@@ -65,32 +119,67 @@ export function StandingsTable({ standings, teams, userTeamId, league, fixtures 
           const isUser = s.teamId === userTeamId;
           const sg = s.goalsFor - s.goalsAgainst;
           const form = fixtures ? getRecentForm(s.teamId, fixtures) : null;
+          const pct = s.played > 0 ? Math.round((s.points / (s.played * 3)) * 100) : 0;
+          const before = prev?.get(s.teamId);
+          const move = before ? before - pos : 0;
+          const open = openId === s.teamId;
+          const detail = open && fixtures ? teamDetail(s.teamId, fixtures) : null;
+          const nextOpp = detail?.next ? teams.find(t => t.id === detail.next!.opponentId) : null;
           return (
-            <tr key={s.teamId} className={`${styles.row} ${isUser ? styles.rowUser : ''}`}>
+            <Fragment key={s.teamId}>
+            <tr
+              className={`${styles.row} ${isUser ? styles.rowUser : ''} ${fixtures ? styles.rowClickable : ''} ${open ? styles.rowOpen : ''}`}
+              onClick={fixtures ? () => setOpenId(open ? null : s.teamId) : undefined}
+              aria-expanded={fixtures ? open : undefined}
+            >
               <td className={styles.tdZone} style={{ background: getZoneColor(pos, league) }} />
-              <td className={styles.tdPos}>{pos}</td>
+              <td className={styles.tdPos}>
+                {pos}
+                {move !== 0 && <span className={move > 0 ? styles.moveUp : styles.moveDown} title={move > 0 ? `Subiu ${move}` : `Caiu ${-move}`}>{move > 0 ? '▲' : '▼'}</span>}
+              </td>
               <td className={styles.tdTeam}>
                 <img src={crestSrc(team.logoUrl)} alt={team.abbreviation} className={styles.tableCrest} />
                 <span className={styles.teamName}>{team.name}</span>
+                <span className={styles.teamAbbr}>{team.abbreviation}</span>
               </td>
               <td className={styles.tdPts}>{s.points}</td>
               <td>{s.played}</td>
-              <td className={styles.colExtra}>{s.won}</td>
-              <td className={styles.colExtra}>{s.drawn}</td>
-              <td className={styles.colExtra}>{s.lost}</td>
+              <td>{s.won}</td>
+              <td>{s.drawn}</td>
+              <td>{s.lost}</td>
               <td className={styles.colExtra}>{s.goalsFor}</td>
               <td className={styles.colExtra}>{s.goalsAgainst}</td>
               <td className={sg >= 0 ? styles.sgPos : styles.sgNeg}>{sg > 0 ? '+' : ''}{sg}</td>
+              <td className={styles.colExtra}>{pct}</td>
               {showForm && form && (
                 <td className={`${styles.tdForm} ${styles.colExtra}`}>
-                  {form.map((r, idx) => (
-                    <span key={idx} className={`${styles.formDot} ${r === 'W' ? styles.formWin : r === 'D' ? styles.formDraw : styles.formLoss}`}>
-                      {r === 'W' ? 'V' : r === 'D' ? 'E' : 'D'}
-                    </span>
-                  ))}
+                  <FormDots form={form} />
                 </td>
               )}
             </tr>
+            {detail && (
+              <tr className={styles.detailRow}>
+                <td colSpan={cols}>
+                  <div className={styles.detailGrid}>
+                    <div><span>Gols</span><b>{s.goalsFor} pró · {s.goalsAgainst} contra</b></div>
+                    <div><span>Aproveitamento</span><b>{pct}%</b></div>
+                    <div><span>Em casa</span><b>{rec(detail.home)}</b></div>
+                    <div><span>Fora</span><b>{rec(detail.away)}</b></div>
+                    <div className={styles.detailWide}>
+                      <span>Últimos 5</span>
+                      <b className={styles.detailForm}>{form && form.length > 0 ? <FormDots form={form} /> : '—'}</b>
+                    </div>
+                    <div className={styles.detailWide}>
+                      <span>Próximo jogo</span>
+                      <b>{nextOpp && detail.next
+                        ? <>Rodada {detail.next.round} · {detail.next.atHome ? 'em casa' : 'fora'} vs <img src={crestSrc(nextOpp.logoUrl)} alt="" className={styles.detailCrest} /> {nextOpp.name}</>
+                        : 'Temporada encerrada'}</b>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            )}
+            </Fragment>
           );
         })}
       </tbody>
@@ -148,6 +237,7 @@ function LeagueTableScreen({ state, league, onBack }: Props) {
             <span className={styles.zoneDot} style={{ background: '#38a169' }} />Conference
             <span className={styles.zoneDot} style={{ background: '#e53e3e' }} />Rebaixamento
           </div>
+          <div className={styles.tableHint}>Toque num time para ver casa/fora, últimos jogos e o próximo adversário. ▲▼ = mudança desde a rodada anterior.</div>
         </>
       ) : (
         <div className="fit-scroll">

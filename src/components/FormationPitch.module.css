@@ -133,3 +133,55 @@
 .benchOvr { font-weight: 800; white-space: nowrap; }
 .up { color: var(--win); }
 .down { color: var(--loss); }
+
+/* ── Arrastar e soltar ─────────────────────────────────────────────────── */
+/* touch-action: none só nos jogadores — o resto da tela continua rolando com o dedo. */
+.player, .benchChip { touch-action: none; user-select: none; -webkit-user-select: none; }
+.dragging { opacity: 0.35; }
+.dropTarget { background: rgba(250, 204, 21, 0.25); box-shadow: 0 0 0 2px #facc15; }
+.ghost {
+  position: fixed;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: #fff;
+  pointer-events: none;
+  transform: translate(-50%, -60%) scale(1.12);
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.45));
+}
+.notice {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--warning, #facc15) 14%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warning, #facc15) 50%, transparent);
+  color: var(--text-primary);
+}
+.benchStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 6px;
+}
+.benchChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: grab;
+}
+.benchChip:hover { border-color: var(--accent); }
+.benchChipOut { opacity: 0.55; }
+.chipPos { flex-shrink: 0; padding: 1px 4px; border-radius: 4px; font-size: 9.5px; font-weight: 800; }
+.chipName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-weight: 600; }
+.chipOvr { flex-shrink: 0; font-weight: 800; }

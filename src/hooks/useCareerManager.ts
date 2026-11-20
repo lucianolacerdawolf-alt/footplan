@@ -224,6 +224,29 @@ export function useCareerManager({
     setToastMsg(`✅ ${youth.name} promovido ao elenco profissional!`);
   }, [careerState, setCareerState, setToastMsg]);
 
+  // Base: escolhe o jovem com treino focado (toque de novo tira o foco).
+  const handleSetYouthFocus = useCallback((playerId: string) => {
+    if (!careerState) return;
+    const youth = getYouthPool(careerState).find(p => p.id === playerId);
+    if (!youth) return;
+    const removing = careerState.youthFocusId === playerId;
+    setCareerState(prev => prev ? { ...prev, youthFocusId: removing ? undefined : playerId } : prev);
+    setToastMsg(removing ? `${youth.name} saiu do treino focado.` : `🎯 ${youth.name} terá treino focado — evolui mais no fim da temporada.`);
+  }, [careerState, setCareerState, setToastMsg]);
+
+  // Base: dispensa um jovem (abre espaço e tira da lista).
+  const handleReleaseYouth = useCallback((playerId: string) => {
+    if (!careerState) return;
+    const youth = getYouthPool(careerState).find(p => p.id === playerId);
+    if (!youth) return;
+    setCareerState(prev => prev ? {
+      ...prev,
+      youthPool: getYouthPool(prev).filter(p => p.id !== playerId),
+      youthFocusId: prev.youthFocusId === playerId ? undefined : prev.youthFocusId,
+    } : prev);
+    setToastMsg(`${youth.name} foi dispensado da base.`);
+  }, [careerState, setCareerState, setToastMsg]);
+
   // Olheiros: gasta um relatório da rodada pra revelar um jogador de fora.
   const handleScoutPlayer = useCallback((playerId: string): boolean => {
     if (!careerState) return false;
@@ -296,6 +319,8 @@ export function useCareerManager({
     refreshShirtNumbers,
     handleStartCareer,
     handlePromoteYouthPlayer,
+    handleSetYouthFocus,
+    handleReleaseYouth,
     handleScoutPlayer,
     handleDismissRoundSummary,
     rosterLastUpdatedAt,

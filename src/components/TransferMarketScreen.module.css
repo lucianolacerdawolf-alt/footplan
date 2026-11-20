@@ -140,36 +140,38 @@
 }
 .backLink:hover { text-decoration: underline; }
 
+/* Grade de ligas: 3 por linha no celular (antes caía pra 1 por linha abaixo de 420px
+   e as 12 ligas viravam uma lista comprida), 4 em telas maiores. */
 .leagueGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
   gap: 8px;
+}
+@media (min-width: 640px) {
+  .leagueGrid { grid-template-columns: repeat(4, 1fr); }
 }
 
 .leagueCard {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 10px 12px;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 6px;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--code-bg);
-  color: var(--text-primary);
   cursor: pointer;
-  text-align: left;
-  font-family: var(--sans);
-  transition: border-color 0.15s, background 0.15s;
+  font-family: inherit;
 }
 .leagueCard:hover { border-color: var(--accent-border); background: var(--social-bg); }
+.leagueCardOwn { border-color: var(--accent-border); }
 
 .leagueLogo { width: 36px; height: 36px; object-fit: contain; }
-.leagueName { font-size: 12px; font-weight: 700; color: var(--text-h); }
+.leagueName { font-size: 11.5px; font-weight: 700; color: var(--text-h); line-height: 1.2; overflow-wrap: anywhere; }
 .leagueMeta { font-size: 10px; color: var(--text-secondary); }
-
-@media (max-width: 420px) {
-  .leagueGrid { grid-template-columns: 1fr; }
-}
 
 .filterBar {
   display: flex;

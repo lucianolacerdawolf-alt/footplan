@@ -202,7 +202,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       // Categorias de base: evolui quem está lá, dispensa quem chegou aos 20 e recebe a
       // captação do ano. O usuário decide quem promover (tela Categorias de Base).
       const nextSeasonLabel = `Temporada ${careerState.currentSeasonYear + 1}`;
-      const { remaining: youthRemaining, released: youthReleased } = refreshYouthPool(getYouthPool(careerState));
+      const { remaining: youthRemaining, released: youthReleased } = refreshYouthPool(getYouthPool(careerState), Math.random, careerState.youthFocusId);
       const youthIntake = generateYouthIntake(careerState.currentSeasonYear + 1);
       const nextYouthPool = [...youthRemaining, ...youthIntake];
       objectiveMessages.push(createYouthIntakeMessage(youthIntake.map(p => p.name), nextSeasonLabel));
@@ -259,6 +259,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
           inbox: [...(prev.inbox ?? []), ...objectiveMessages],
           freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(prev), prev.currentSeasonYear + 1, Math.random, departures),
           youthPool: nextYouthPool,
+          youthFocusId: undefined,
           sponsorTier: nextSponsorTier,
           sponsorName: nextSponsorName,
           boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },
