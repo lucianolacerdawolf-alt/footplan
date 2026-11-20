@@ -78,7 +78,29 @@ describe('Mercado com olheiros', () => {
     search('Estrangeiro Atacante');
     fireEvent.click(screen.getByText('Estrangeiro Atacante').closest('button')!);
     expect(screen.getByText('A diretoria vai vetar: estoura o teto salarial.')).toBeInTheDocument();
-    expect(screen.getByText('Confirmar Oferta')).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Oferecer / })).toBeDisabled();
+  });
+
+  it('último da posição: avisa que não vendem e trava a oferta', () => {
+    renderMarket();
+    search('Estrangeiro Atacante');
+    fireEvent.click(screen.getByText('Estrangeiro Atacante').closest('button')!);
+    expect(screen.getByText(/Não vendem: é o último dessa posição/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Oferecer / })).toBeDisabled();
+  });
+
+  it('a barra da oferta diz na hora se o clube aceita ou recusa', () => {
+    // 4 atacantes no elenco: sem a cobrança extra de quem tem pouca gente na posição.
+    const fwd = foreign.squad.find(p => p.position === 'FWD')!;
+    const deep = { ...foreign, squad: [...foreign.squad, ...[1, 2, 3].map(i => ({ ...fwd, id: `${fwd.id}-x${i}`, name: `Reserva ${i}` }))] };
+    renderMarket({ rosters: { ...rosters, laliga: [deep] }, scouting: undefined });
+    search('Estrangeiro Atacante');
+    fireEvent.click(screen.getByText('Estrangeiro Atacante').closest('button')!);
+    const slider = screen.getByLabelText('Valor da oferta, em % do valor de mercado');
+    fireEvent.change(slider, { target: { value: '0.7' } });
+    expect(screen.getByText(/Recusam: o mínimo é/)).toBeInTheDocument();
+    fireEvent.change(slider, { target: { value: '1.5' } });
+    expect(screen.getByText(/Aceitam essa oferta/)).toBeInTheDocument();
   });
 
   it('sem olheiros configurados (saves de teste antigos), tudo fica visível', () => {

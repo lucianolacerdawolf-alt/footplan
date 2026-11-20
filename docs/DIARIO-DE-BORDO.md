@@ -5,6 +5,23 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 
 ---
 
+## 2026-11-20 (4) — Barra de oferta do Mercado
+
+### Entregue
+- **Agente livre:** a barra (a "luva") saiu. Ela não mudava nada: o `handleSignFreeAgent` assina sempre e só debitava o valor escolhido. Agora o card diz "sem custo de transferência — você paga só o salário" e assina por €0.
+- **Comprar de clube:** a barra ganhou rótulo ("Sua oferta ao X · N% do valor"), uma marca verde no mínimo que o clube aceita e uma linha que responde na hora "✓ Aceitam" / "✗ Recusam: o mínimo é €X". Quando é o último jogador da posição, avisa que não vendem e trava o botão. O botão mostra o valor ("Oferecer €X").
+- A regra exibida é a mesma de `evaluateCashTransfer`: 85% do valor; 110,5% se o vendedor tem só 2 na posição. O mínimo é calculado com `calculateMarketValue`, como no motor.
+- +2 testes de tela (760 passando).
+
+### Decidido e por quê
+- **Tirar a luva em vez de dar efeito a ela.** Dar efeito exigiria criar uma regra nova de recusa para agentes livres. Uma barra que custa dinheiro sem fazer nada era pior que nenhuma.
+- **Selo "Oferta Irrecusável" (150%) removido.** Pela regra, 150% não muda nada em relação ao mínimo aceito.
+
+### Pendente
+- Não visto no app: a janela de transferências está fechada no save de teste. A tela está coberta por teste de componente.
+
+---
+
 ## 2026-11-20 (3) — Arrastar titular para outra posição
 
 ### Entregue

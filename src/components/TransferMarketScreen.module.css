@@ -410,3 +410,14 @@
 .leagueTop { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: var(--text-secondary); font-family: var(--mono); }
 .leagueTopCrest { width: 13px; height: 13px; object-fit: contain; }
 .leagueViewTabs { display: flex; gap: 6px; margin: 4px 0 8px; }
+
+/* Card de oferta: rótulo, % do valor, marca do mínimo aceito */
+.offerLabel { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.offerPct { font-family: var(--mono); color: var(--text-secondary); }
+.sliderWrap { position: relative; flex: 1; display: flex; align-items: center; }
+.sliderWrap .slider { width: 100%; }
+.acceptMark {
+  position: absolute; top: 50%; width: 2px; height: 16px; transform: translate(-50%, -50%);
+  background: var(--win, #4ade80); border-radius: 1px; pointer-events: none; opacity: 0.9;
+}
+.freeNote { font-size: 12.5px; color: var(--text-primary); }

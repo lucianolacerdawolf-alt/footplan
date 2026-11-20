@@ -178,9 +178,8 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
   };
 
   const handleSign = (player: Player) => {
-    const marketValue = player.marketValue ?? calculateMarketValue(player);
-    const amount = Math.round(marketValue * multiplier);
-    const res = onSignFreeAgent(player.id, amount);
+    // Agente livre não cobra transferência (a antiga "luva" não mudava nada).
+    const res = onSignFreeAgent(player.id, 0);
     setFeedback({ playerId: player.id, message: resultMessage(res.reason), success: res.success });
     if (res.success) setExpandedId(null);
   };
@@ -233,30 +232,60 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
     : [];
   const cheapestVisible = Math.min(...visiblePlayerValues, Infinity);
 
-  const renderOfferCard = (player: Player, marketValue: number, mode: 'buy' | 'sign', onConfirm: () => void) => {
-    const min = mode === 'buy' ? 0.7 : 0;
-    const max = mode === 'buy' ? 1.5 : 0.3;
-    const amount = Math.round(marketValue * multiplier);
+  // Card da oferta. Comprar: a barra escolhe quanto oferecer (70% a 150% do valor de
+  // mercado) e a linha de baixo diz na hora se o clube aceita — a regra é fixa (ver
+  // evaluateCashTransfer): a partir de 85% do valor aceitam; se o time tem só 2 na
+  // posição, exigem 110,5%. Agente livre: não tem barra — a "luva" que havia ali não
+  // mudava nada (o jogador assina de qualquer jeito) e só gastava dinheiro.
+  const renderOfferCard = (player: Player, marketValue: number, mode: 'buy' | 'sign', onConfirm: () => void, seller?: Team) => {
+    const min = 0.7;
+    const max = 1.5;
+    const amount = mode === 'buy' ? Math.round(marketValue * multiplier) : 0;
     const overBudget = amount > budget;
     // Salário que ele vai ganhar e se a folha nova passa do teto da diretoria.
     const wage = withWage(player).weeklyWage ?? 0;
     const overCap = !!wageCap && computeWageBill(userTeam) + wage > wageCap;
+    const sellerNeeds = !!seller && seller.squad.filter(q => q.position === player.position).length <= 2;
+    const sellerLast = !!seller && seller.squad.filter(q => q.position === player.position).length <= 1;
+    const minAccept = Math.ceil(calculateMarketValue(player) * 0.85 * (sellerNeeds ? 1.3 : 1));
+    const accepts = amount >= minAccept;
+    const minPct = Math.min(max, minAccept / marketValue);
+    const markLeft = `${((minPct - min) / (max - min)) * 100}%`;
     return (
       <div className={styles.offerCard}>
-        <div className={styles.offerRow}>
-          <input
-            type="range" min={min} max={max} step={0.05}
-            value={multiplier}
-            onChange={e => setMultiplier(Number(e.target.value))}
-            className={styles.slider}
-            aria-label={mode === 'buy' ? 'Multiplicador da oferta' : 'Luva de contratação'}
-          />
-          <span className={styles.offerAmount}>{formatMoney(amount)}</span>
-        </div>
-        {mode === 'buy' && multiplier >= 1.5 && <span className={styles.irresistibleBadge}>Oferta Irrecusável</span>}
+        {mode === 'buy' ? (
+          <>
+            <div className={styles.offerLabel}>
+              <span>Sua oferta ao {seller?.name ?? 'clube'}</span>
+              <span className={styles.offerPct}>{Math.round(multiplier * 100)}% do valor</span>
+            </div>
+            <div className={styles.offerRow}>
+              <div className={styles.sliderWrap}>
+                <input
+                  type="range" min={min} max={max} step={0.05}
+                  value={multiplier}
+                  onChange={e => setMultiplier(Number(e.target.value))}
+                  className={styles.slider}
+                  aria-label="Valor da oferta, em % do valor de mercado"
+                />
+                {!sellerLast && minPct > min && <span className={styles.acceptMark} style={{ left: markLeft }} title={`Mínimo que aceitam: ${formatMoney(minAccept)}`} aria-hidden="true" />}
+              </div>
+              <span className={styles.offerAmount}>{formatMoney(amount)}</span>
+            </div>
+            <span className={sellerLast ? styles.warnText : accepts ? styles.successText : styles.warnText}>
+              {sellerLast
+                ? 'Não vendem: é o último dessa posição no elenco deles.'
+                : accepts
+                  ? `✓ Aceitam essa oferta${sellerNeeds ? ' (eles têm pouca gente na posição, por isso cobram mais)' : ''}.`
+                  : `✗ Recusam: o mínimo é ${formatMoney(minAccept)}${sellerNeeds ? ' — têm só 2 na posição e cobram mais' : ' (85% do valor)'}. Arraste a barra para a direita.`}
+            </span>
+          </>
+        ) : (
+          <div className={styles.freeNote}>Agente livre: sem custo de transferência — você paga só o salário.</div>
+        )}
         <div className={styles.offerActions}>
-          <button className={styles.confirmBtn} disabled={overBudget || overCap} onClick={onConfirm}>
-            {mode === 'buy' ? 'Confirmar Oferta' : 'Assinar Contrato'}
+          <button className={styles.confirmBtn} disabled={overBudget || overCap || (mode === 'buy' && sellerLast)} onClick={onConfirm}>
+            {mode === 'buy' ? `Oferecer ${formatMoney(amount)}` : 'Assinar Contrato'}
           </button>
           <button className={styles.cancelBtn} onClick={() => setExpandedId(null)}>Cancelar</button>
         </div>
@@ -378,7 +407,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                           </button>
                           {renderInfoBtn(p, { teamName: team.name, leagueFlag: league?.flag })}
                         </div>
-                        {expandedId === p.id && renderOfferCard(p, marketValue, 'buy', () => handleBuy(p, team.id))}
+                        {expandedId === p.id && renderOfferCard(p, marketValue, 'buy', () => handleBuy(p, team.id), team)}
                       </div>
                     );
                   })}
@@ -433,7 +462,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                               </button>
                               {renderInfoBtn(p, { teamName: team.name, leagueFlag: leagueMeta(buyLeagueId)?.flag })}
                             </div>
-                            {expandedId === p.id && renderOfferCard(p, marketValue, 'buy', () => handleBuy(p, team.id))}
+                            {expandedId === p.id && renderOfferCard(p, marketValue, 'buy', () => handleBuy(p, team.id), team)}
                           </div>
                         );
                       })}
@@ -473,7 +502,7 @@ function TransferMarketScreen({ userTeam, userLeagueId, rosters, freeAgents, tra
                             </button>
                             {renderInfoBtn(p, { teamName: buyTeam.name, leagueFlag: leagueMeta(buyLeagueId)?.flag })}
                           </div>
-                          {expandedId === p.id && renderOfferCard(p, marketValue, 'buy', () => handleBuy(p, buyTeam.id))}
+                          {expandedId === p.id && renderOfferCard(p, marketValue, 'buy', () => handleBuy(p, buyTeam.id), buyTeam)}
                         </div>
                       );
                     })}
