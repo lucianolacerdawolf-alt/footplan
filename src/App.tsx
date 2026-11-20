@@ -22,6 +22,7 @@ import { useOnlineMatch } from './hooks/useOnlineMatch';
 import { useResumePrompt } from './hooks/useResumePrompt';
 import { renderScreen, type AppScreensProps } from './components/AppScreens';
 import Toast from './components/Toast';
+import IntroSplash, { shouldShowIntro } from './components/IntroSplash';
 import CareerTabBar from './components/CareerTabBar';
 import { preloadAllRosters, withLoadedTeams } from './services/rosterSync';
 import { loadDaily, STREAK_ACHIEVEMENTS } from './engine/dailyGoals';
@@ -37,6 +38,8 @@ function App() {
   const [gameMode, setGameMode] = useState<GameMode>('cpu');
   const [lastResult, setLastResult] = useState<MatchResult | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  // Abertura curtinha só na primeira vez que o app abre (IntroSplash).
+  const [showIntro, setShowIntro] = useState(shouldShowIntro);
   const notifySave = useCallback(() => setToastMsg('✓ Progresso salvo'), []);
   const dismissToast = useCallback(() => setToastMsg(null), []);
 
@@ -451,6 +454,7 @@ function App() {
         />
       )}
       <Toast message={toastMsg} duration={toastMsg?.startsWith('⚠') ? 6000 : 2000} onDismiss={dismissToast} />
+      {showIntro && <IntroSplash onDone={() => setShowIntro(false)} />}
       {resumePrompt && (
         <div className="resume-overlay" onClick={() => setResumePrompt(null)} role="presentation">
           <div className="resume-modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="resume-title">

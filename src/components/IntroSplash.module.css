@@ -1,0 +1,122 @@
+/* Linha do tempo (ms): campo 0–900 · jogadores 450–950 · passes 1000–2000 ·
+   gol 1950 · marca 1900–2500 · saída 2900–3300 (IntroSplash.tsx: EXIT_AT/TOTAL). */
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 3dvh, 28px);
+  padding: 24px 16px;
+  background: radial-gradient(ellipse at 50% 40%, #0c1a2b 0%, var(--bg) 70%);
+  cursor: pointer;
+  overflow: hidden;
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+.leaving { opacity: 0; transform: scale(1.04); pointer-events: none; }
+
+.skip {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 14px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pitch { width: min(56vw, 34dvh, 260px); height: auto; overflow: visible; }
+
+/* Campo se desenha (pathLength=1 → dasharray 1 em qualquer forma). */
+.lines * {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0.55;
+  animation: draw 900ms cubic-bezier(.6,.05,.3,1) forwards;
+}
+.lines :nth-child(2) { animation-delay: 150ms; }
+.lines :nth-child(3) { animation-delay: 250ms; }
+.lines :nth-child(4), .lines :nth-child(5) { animation-delay: 350ms; }
+.lines :nth-child(6) { animation-delay: 500ms; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+/* Jogadores entram com um "pop". */
+.player {
+  fill: var(--text-primary);
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  animation: pop 320ms cubic-bezier(.3,1.6,.5,1) forwards;
+}
+@keyframes pop { to { transform: scale(1); } }
+
+/* Rastro dos passes acompanha a bola. */
+.passLine {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw 1000ms linear 1000ms forwards;
+  filter: drop-shadow(0 0 3px var(--accent));
+}
+
+.ball {
+  fill: #fff;
+  filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
+}
+
+/* Gol: clarão na meta. */
+.goalFlash {
+  fill: var(--accent);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: flash 600ms ease-out 1950ms forwards;
+}
+@keyframes flash {
+  0% { opacity: 0.9; transform: scale(0.4); }
+  100% { opacity: 0; transform: scale(3); }
+}
+
+.brand { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.wordmark {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(44px, 9dvh, 72px);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 0.95;
+  color: var(--text-primary);
+  clip-path: inset(0 100% 0 0);
+  animation: reveal 550ms cubic-bezier(.7,0,.3,1) 1900ms forwards;
+}
+.wordmark span { color: var(--accent); }
+@keyframes reveal { to { clip-path: inset(0 0 0 0); } }
+
+.tagline {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-secondary);
+  opacity: 0;
+  animation: tag 600ms ease-out 2250ms forwards;
+}
+@keyframes tag { to { opacity: 1; letter-spacing: 4px; } }

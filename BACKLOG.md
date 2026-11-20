@@ -17,6 +17,12 @@ Cada item pendente vem com **Por que sobrou**, **O que envolve** e **Posso retom
 - **O que envolve:** a partir de ~900px de largura, Central em duas colunas (próximo jogo + preparação | mensagens/temporada/clube), Táticas com campinho ao lado do Estilo, Meu Clube com finanças ao lado de contratos; grades de times/ligas com mais colunas; testar em 768×1024 e 1280×800.
 - **Posso retomar quando:** houver tráfego relevante de tablet/desktop (ver analytics) ou antes de divulgar a versão web.
 
+### Abertura na primeira vez (2026-11-19) — ✅ feita
+
+- ✅ `IntroSplash`: ~3s em SVG + CSS (sem vídeo): campo se desenha, jogadores entram em formação, a bola troca passes até o gol (clarão) e a marca FOOTPLAN aparece. Toque em qualquer lugar ou "Pular" encerra.
+- Só na primeira abertura (`fp:introSeen`); não aparece pra quem ativou "reduzir movimento" no aparelho; "Apagar dados do jogo" faz ela voltar. Timers garantem o fim mesmo se o navegador pausar as animações.
+- ⏳ Não conferida num Android de verdade (a bola usa `animateMotion` do SVG, suportado no WebView).
+
 ### Revisão das telas: saídas, coerência e organização (2026-11-19, 375×720) — ✅ feita
 
 - Percorridas todas as telas (carreira, partida única, campeonato, copa, online, liga entre amigos, configurações, perfil, conquistas, estatísticas). Toda tela tem saída: botão Voltar nas subtelas, barra de baixo nas abas da carreira, e a partida tem Voltar / "Menu principal".
