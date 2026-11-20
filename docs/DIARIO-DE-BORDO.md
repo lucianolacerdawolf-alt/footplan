@@ -5,6 +5,22 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 
 ---
 
+## 2026-11-20 (9) — Lanternas começam com 20–30 e patrocínio inicial pelo clube
+
+### Entregue
+- **Reputação inicial (v2):** `15 + 15 × peso + 30 × peso × tamanho`. Lanterna da Premier 30, meio ~45, maior 60. Segundas divisões vão de ~20 a ~35. Ninguém começa do zero, como o usuário pediu.
+- **Patrocínio de largada pelo tamanho do clube:** `tierForReputation(reputação inicial)` dá local <25, regional 25+, nacional 50+, global 75+. É gravado em `finances.sponsorStartTier`.
+  - A receita é relativa ao nível de largada do próprio clube (`tierFactor(..., startTier)`), então começar "regional" numa liga de padrão "nacional" não tira dinheiro. A receita continua vindo da base do clube.
+  - O patrocínio nunca cai abaixo do nível de largada (`tierAbove` no fim da temporada). Antes, médios e pequenos das ligas grandes perdiam €3–6M/temporada no fim da 1ª.
+- **Saves:** `reputationSeedVersion = 2` reajusta uma vez, só para cima, quem já tinha sido ajustado na v1. Save de teste: 42 → 50, com o aviso de subida de nível. Saves antigos sem `sponsorStartTier` usam o nível padrão da liga como piso.
+- `economy-audit`: nenhum clube perde patrocínio na temporada 2.
+- +2 testes. 766 passando.
+
+### Decidido e por quê
+- **Nível de patrocínio pela reputação inicial, com receita relativa à largada do clube.** Dar nível maior aos grandes multiplicando a receita (×1,39 do global) enriqueceria demais os grandes (+€16M/temporada). Assim o nível mostra o porte do clube, e o dinheiro continua proporcional a ele.
+
+---
+
 ## 2026-11-20 (8) — Reputação inicial pelo tamanho do clube
 
 ### Entregue

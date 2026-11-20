@@ -145,7 +145,7 @@ describe('Reputação inicial pelo clube', () => {
     expect(top).toBe(60);
     expect(mid).toBeGreaterThan(bottom);
     expect(top).toBeGreaterThan(mid);
-    expect(bottom).toBe(5);
+    expect(bottom).toBe(30);
     expect(initialReputation(ranked[0], pl, 'championship')).toBeLessThan(top);
   });
 
@@ -153,5 +153,36 @@ describe('Reputação inicial pelo clube', () => {
     const { reputationAfterMove } = await import('../reputation');
     expect(reputationAfterMove(70, 60)).toBe(70);
     expect(reputationAfterMove(10, 60)).toBe(48);
+  });
+});
+
+describe('Patrocínio inicial pelo tamanho do clube', () => {
+  it('nível pela reputação inicial e receita da largada igual à base do clube', async () => {
+    const { tierForReputation, tierAbove } = await import('../sponsors');
+    const { sponsorTvPerRound } = await import('../clubEconomy');
+    expect(tierForReputation(30)).toBe('regional');
+    expect(tierForReputation(60)).toBe('national');
+    expect(tierForReputation(20)).toBe('local');
+    expect(tierForReputation(80)).toBe('global');
+    expect(tierAbove('national', 'regional')).toBe(true);
+    expect(tierAbove('regional', 'regional')).toBe(false);
+    // Começar em "regional" numa liga cujo padrão é "nacional" não tira dinheiro da largada.
+    expect(sponsorTvPerRound(1_000_000, 'pl', 'regional', 'regional')).toBe(sponsorTvPerRound(1_000_000, 'pl'));
+    // Subir um nível a partir da largada do clube rende mais.
+    expect(sponsorTvPerRound(1_000_000, 'pl', 'national', 'regional')).toBeGreaterThan(sponsorTvPerRound(1_000_000, 'pl', 'regional', 'regional'));
+  });
+
+  it('save ajustado na regra v1 é reajustado (só pra cima) na v2', async () => {
+    const { seedReputation } = await import('../career');
+    const team = getLeague('pl')!.teams[0];
+    const fake = {
+      leagueId: 'pl', rosters: { pl: getLeague('pl')!.teams },
+      season: { league: { userTeamId: team.id, teams: getLeague('pl')!.teams } },
+      manager: { name: 'T', reputation: 5 }, reputationSeeded: true,
+    } as unknown as Parameters<typeof seedReputation>[0];
+    const out = seedReputation(fake);
+    expect(out.manager.reputation).toBeGreaterThanOrEqual(30);
+    expect(out.reputationSeedVersion).toBe(2);
+    expect(seedReputation(out)).toBe(out);
   });
 });

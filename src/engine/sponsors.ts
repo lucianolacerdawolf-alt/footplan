@@ -59,6 +59,20 @@ const LEAGUE_STARTING_TIER: Record<string, SponsorTier> = {
   laliga2: 'local', bundesliga2: 'local', serieB: 'local', ligue2: 'local', ligaPortugal2: 'local',
 };
 
+const TIER_ORDER: SponsorTier[] = ['local', 'regional', 'national', 'global'];
+
+/** Maior nível de patrocínio que a reputação alcança (local 0, regional 25, nacional 50, global 75). */
+export function tierForReputation(reputation: number): SponsorTier {
+  let tier: SponsorTier = 'local';
+  for (const t of TIER_ORDER) if (reputation >= TIER_CONFIG[t].minReputation) tier = t;
+  return tier;
+}
+
+/** a está acima de b na escala local < regional < nacional < global? */
+export function tierAbove(a: SponsorTier, b: SponsorTier): boolean {
+  return TIER_ORDER.indexOf(a) > TIER_ORDER.indexOf(b);
+}
+
 export function getStartingTier(leagueId: string): SponsorTier {
   return LEAGUE_STARTING_TIER[leagueId] ?? 'local';
 }

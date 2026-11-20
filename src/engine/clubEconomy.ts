@@ -31,14 +31,17 @@ export function baseWeeklyRevenue(team: Team, leagueId: string): number {
   return Math.max(floor, Math.round(wage / WAGE_SHARE));
 }
 
-/** Quanto o patrocinador atual paga a mais/menos que o da largada (sobe com a reputação). */
-function tierFactor(leagueId: string, tier: SponsorTier | undefined): number {
-  const start = getSponsorMultiplier(getStartingTier(leagueId));
+/** Quanto o patrocinador atual paga a mais/menos que o da largada DO CLUBE (sobe com a
+ *  reputação). O nível de largada depende do tamanho do clube (`startTier`); saves antigos
+ *  sem ele usam o nível padrão da liga. A receita da largada continua proporcional ao clube
+ *  (vem da `base`), então o nível inicial não muda o dinheiro — só o quanto ainda dá pra subir. */
+function tierFactor(leagueId: string, tier: SponsorTier | undefined, startTier?: SponsorTier): number {
+  const start = getSponsorMultiplier(startTier ?? getStartingTier(leagueId));
   return tier ? getSponsorMultiplier(tier) / start : 1;
 }
 
-export function sponsorTvPerRound(base: number, leagueId: string, tier?: SponsorTier): number {
-  return Math.round(base * SPONSOR_TV_SHARE * tierFactor(leagueId, tier));
+export function sponsorTvPerRound(base: number, leagueId: string, tier?: SponsorTier, startTier?: SponsorTier): number {
+  return Math.round(base * SPONSOR_TV_SHARE * tierFactor(leagueId, tier, startTier));
 }
 
 export function ticketPerHomeMatch(base: number): number {
@@ -50,8 +53,8 @@ export function operatingCostPerRound(base: number): number {
 }
 
 /** Teto semanal da folha definido pela diretoria (cresce com o patrocínio). */
-export function wageCap(base: number, leagueId: string, tier?: SponsorTier): number {
-  return Math.round(base * WAGE_CAP_SHARE * tierFactor(leagueId, tier));
+export function wageCap(base: number, leagueId: string, tier?: SponsorTier, startTier?: SponsorTier): number {
+  return Math.round(base * WAGE_CAP_SHARE * tierFactor(leagueId, tier, startTier));
 }
 
 /** Orçamento de transferências inicial: o padrão da liga ajustado ao tamanho do clube

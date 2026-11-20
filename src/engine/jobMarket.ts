@@ -6,12 +6,12 @@ import {
 import { getAvgOvr } from '../utils/teamUtils';
 import { computeWageBill } from './transferMarket';
 import { baseWeeklyRevenue, clubInitialBudget, sponsorTvPerRound, operatingCostPerRound, wageCap } from './clubEconomy';
-import { getStartingTier, generateSponsor } from './sponsors';
+import { generateSponsor, tierForReputation } from './sponsors';
 import { generateBoardObjectives } from './boardObjectives';
 import { getLeague } from '../data/leagues';
 import { shuffle } from './rng';
 import { CONFIDENCE_START } from './boardConfidence';
-import { initialReputation, reputationAfterMove } from './reputation';
+import { initialReputation, reputationAfterMove, REPUTATION_SEED_VERSION } from './reputation';
 
 /**
  * Reputação mínima do manager pra ser sondado por um clube, dado o prestígio dele
@@ -86,7 +86,7 @@ export function applyClubChange(state: CareerState, offer: JobOffer): CareerStat
   const { league, cup } = createCareerSeason(newUserTeam, roster, leagueDef, Math.random, state.rosters[pairedDivisionId(offer.leagueId) ?? ''] ?? []);
   const budget = clubInitialBudget(newUserTeam, roster, offer.leagueId);
   const base = baseWeeklyRevenue(newUserTeam, offer.leagueId);
-  const startingTier = getStartingTier(offer.leagueId);
+  const startingTier = tierForReputation(initialReputation(newUserTeam, roster, offer.leagueId));
   const sponsor = generateSponsor(offer.leagueId, offer.clubId, startingTier);
   // Clube maior empurra a reputação até 80% do patamar dele; nunca baixa.
   const reputation = reputationAfterMove(state.manager.reputation, initialReputation(newUserTeam, roster, offer.leagueId));
@@ -97,13 +97,14 @@ export function applyClubChange(state: CareerState, offer: JobOffer): CareerStat
     leagueId: offer.leagueId,
     manager: { ...state.manager, reputation },
     reputationSeeded: true,
+    reputationSeedVersion: REPUTATION_SEED_VERSION,
     currentSeasonYear: state.currentSeasonYear,
     season: { league, cup, tradesUsedThisSeason: 0, budgetAtSeasonStart: budget, userGoalScorers: {} },
     rosters: state.rosters,
     history: state.history,
     finances: {
-      budget, wageBill: computeWageBill(newUserTeam), weeklyIncome: sponsorTvPerRound(base, offer.leagueId, startingTier),
-      baseRevenue: base, operatingCost: operatingCostPerRound(base), wageCap: wageCap(base, offer.leagueId, startingTier),
+      budget, wageBill: computeWageBill(newUserTeam), weeklyIncome: sponsorTvPerRound(base, offer.leagueId, startingTier, startingTier),
+      baseRevenue: base, operatingCost: operatingCostPerRound(base), wageCap: wageCap(base, offer.leagueId, startingTier, startingTier), sponsorStartTier: startingTier,
     },
     // Ofertas de transferência eram do clube antigo — descartar evita um botão
     // "Aceitar" apontando pra um jogador que já não está no elenco.

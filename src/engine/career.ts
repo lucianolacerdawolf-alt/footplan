@@ -18,7 +18,7 @@ import { cloneTeam } from '../utils/teamUtils';
 import { shuffle } from './rng';
 import { simularKnockout } from './matchEngine';
 import { getStartingTier, generateSponsor, getSponsorMinReputation, type SponsorTier } from './sponsors';
-import { initialReputation } from './reputation';
+import { initialReputation, REPUTATION_SEED_VERSION } from './reputation';
 
 // =============================================================================
 // TIPOS — Modo Carreira
@@ -65,6 +65,9 @@ export interface ClubFinances {
   operatingCost?: number;
   /** Teto semanal da folha salarial definido pela diretoria. */
   wageCap?: number;
+  /** Nível de patrocínio com que o clube começou (pelo tamanho dele). O patrocínio nunca
+   *  cai abaixo dele. Ausente em saves antigos = nível padrão da liga. */
+  sponsorStartTier?: SponsorTier;
 }
 
 export interface InboxMessage {
@@ -159,6 +162,8 @@ export interface CareerState {
   youthLoanIds?: string[];
   /** A reputação já partiu do tamanho do clube (carreira nova ou save ajustado uma vez). */
   reputationSeeded?: boolean;
+  /** Versão da regra de reputação inicial aplicada (ver REPUTATION_SEED_VERSION). */
+  reputationSeedVersion?: number;
   /** Reputação ganha nesta temporada vencendo times bem mais fortes (limite GIANT_KILL_REP_CAP). */
   seasonGiantKills?: number;
   transferHistory?: TransferRecord[];
@@ -765,14 +770,16 @@ export function deriveCupResult(cup: BracketState, userTeamId: string): CareerSe
  * sobe até o patamar do clube atual (nunca baixa) e marca o save pra não repetir.
  */
 export function seedReputation(state: CareerState): CareerState {
-  if (state.reputationSeeded) return state;
+  const applied = state.reputationSeedVersion ?? (state.reputationSeeded ? 1 : 0);
+  if (applied >= REPUTATION_SEED_VERSION) return state;
   const teams = state.rosters[state.leagueId] ?? state.season.league.teams;
   const userTeam = teams.find(t => t.id === state.season.league.userTeamId);
-  if (!userTeam) return { ...state, reputationSeeded: true };
+  if (!userTeam) return { ...state, reputationSeeded: true, reputationSeedVersion: REPUTATION_SEED_VERSION };
   const floor = initialReputation(userTeam, teams, state.leagueId);
   return {
     ...state,
     reputationSeeded: true,
+    reputationSeedVersion: REPUTATION_SEED_VERSION,
     manager: { ...state.manager, reputation: Math.max(state.manager.reputation, floor) },
   };
 }

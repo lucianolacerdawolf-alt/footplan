@@ -86,7 +86,7 @@ export default function ReputationPanel({ reputation, leaguePosition, totalTeams
 
         <p className={styles.note}>
           O ponto de partida vem do clube que você assume: quanto maior o clube e mais forte a liga,
-          maior a reputação inicial (o maior da Premier League começa em ~60). Trocar por um clube
+          maior a reputação inicial (na Premier League vai de ~30 no lanterna a ~60 no maior; ninguém começa do zero). O nível do patrocinador também parte daí e nunca cai abaixo do inicial. Trocar por um clube
           maior também empurra a sua reputação para cima — ela nunca cai por mudar de clube.
         </p>
 

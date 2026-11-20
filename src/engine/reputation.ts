@@ -23,14 +23,18 @@ export function clubStatureIn(team: Team, leagueTeams: Team[]): number {
 }
 
 /**
- * Reputação de quem assume o clube: 5 + 55 × peso da liga × tamanho do clube.
- * Ex.: maior da Premier ≈ 60, meio da Premier ≈ 33, lanterna da Premier ≈ 5,
- * maior da Championship ≈ 30.
+ * Reputação de quem assume o clube: 15 + 15 × peso da liga + 30 × peso × tamanho do clube.
+ * Ninguém começa do zero: lanterna da Premier 30, meio da Premier 45, maior da Premier 60;
+ * segundas divisões vão de ~20 (lanterna) a ~35 (maior).
  */
 export function initialReputation(team: Team, leagueTeams: Team[], leagueId: string): number {
   const weight = LEAGUE_WEIGHT[leagueId] ?? 0.5;
-  return Math.round(5 + 55 * weight * (clubStatureIn(team, leagueTeams) / 100));
+  return Math.round(15 + 15 * weight + 30 * weight * (clubStatureIn(team, leagueTeams) / 100));
 }
+
+/** Versão da regra de reputação inicial — saves ajustados com uma versão anterior são
+ *  reajustados uma vez (só pra cima). v1: 5–60; v2 (20/11): lanternas começam em 20–30. */
+export const REPUTATION_SEED_VERSION = 2;
 
 /** Ao trocar de clube: a reputação não cai, mas um clube maior empurra até 80% do patamar dele. */
 export function reputationAfterMove(current: number, newClubInitial: number): number {

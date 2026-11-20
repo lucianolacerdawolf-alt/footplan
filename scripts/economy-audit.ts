@@ -6,7 +6,7 @@ import { assignMarketValues, computeWageBill, getLeaguePrizeMoney } from '../src
 import { baseWeeklyRevenue, clubInitialBudget, projectedRoundBalance, wageCap } from '../src/engine/clubEconomy';
 import { getAvgOvr } from '../src/utils/teamUtils';
 import { initialReputation } from '../src/engine/reputation';
-import { getStartingTier, getSponsorMinReputation, getNextTierDown, getSponsorMultiplier, computeMerchRevenue, type SponsorTier } from '../src/engine/sponsors';
+import { getSponsorMultiplier, computeMerchRevenue, tierForReputation } from '../src/engine/sponsors';
 import { sponsorTvPerRound } from '../src/engine/clubEconomy';
 import type { Team } from '../src/engine/types';
 
@@ -28,9 +28,9 @@ for (const lid of ['pl', 'laliga', 'championship', 'serieB']) {
     // Reputação inicial (reputation.ts) e o que ela faz com o patrocínio no fim da 1ª temporada
     // (sem títulos): abaixo do mínimo do nível inicial, o patrocínio cai um nível.
     const rep = initialReputation(t, teams, lid);
-    const tier0 = getStartingTier(lid) as SponsorTier;
-    const tier1 = rep < getSponsorMinReputation(tier0) ? (getNextTierDown(tier0) ?? tier0) : tier0;
-    const sponsorDelta = (sponsorTvPerRound(base, lid, tier1) - sponsorTvPerRound(base, lid, tier0)) * rounds;
+    const tier0 = tierForReputation(rep);
+    const tier1 = tier0; // nunca cai abaixo do nível de largada do clube
+    const sponsorDelta = (sponsorTvPerRound(base, lid, tier1, tier0) - sponsorTvPerRound(base, lid, tier0, tier0)) * rounds;
     console.log(`  ${label.padEnd(8)} reputação inicial ${rep} · patrocínio ${tier0}→${tier1} na temp. 2 (${fmt(sponsorDelta)}/temp) · produtos ${fmt(computeMerchRevenue(rep, base) * rounds)}/temp`);
     void getSponsorMultiplier;
     console.log(`  ${label.padEnd(8)} ${t.name.padEnd(18)} caixa inicial ${fmt(clubInitialBudget(t, teams, lid))} · saldo/temporada ${fmt(season)} (+ prêmio ${fmt(prize)}) · folha ${fmt(wage)}/sem, teto ${fmt(cap)} (folga ${fmt(cap - wage)}/sem)`);
