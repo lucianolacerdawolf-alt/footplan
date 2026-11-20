@@ -3,7 +3,7 @@ import type { Team, Player, Strategy, Mentality, Intensity, DefensiveLine, Width
 import { MENTALITY_LABELS, INTENSITY_LABELS, DEFENSIVE_LINE_LABELS, WIDTH_LABELS } from '../engine/types';
 import { cloneTeam } from '../utils/teamUtils';
 import { MENTALITIES, INTENSITIES, DEF_LINES, WIDTHS, FORMATION_COUNTS } from '../engine/constants';
-import { isPlayerUnavailable, rebalanceForFormation, getStarterCount } from '../engine/squadUtils';
+import { isPlayerUnavailable, rebalanceForFormation, getStarterCount, bestLineup } from '../engine/squadUtils';
 import { Button, ScreenHeader } from './ui';
 import { FORMATION_BONUS, getTacticalHardCounter } from '../engine/matchConfig';
 import TacticLabel from './TacticLabel';
@@ -426,6 +426,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
               onSelect={setEditSelected}
               onSwap={editSwap}
               onFormation={f => editStrategy({ ...editTeam.strategy, formation: f })}
+              onAutoPick={() => (editing === 'away' ? setAwayTeam : setHomeTeam)(prev => bestLineup(prev, playerOvr))}
             />
           </>
         )}

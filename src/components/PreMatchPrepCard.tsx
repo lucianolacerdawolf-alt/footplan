@@ -26,6 +26,18 @@ export default function PreMatchPrepCard({
 }: Props) {
   const pressModalRef = useModalFocus<HTMLDivElement>(!!pressQuestion, onClosePress);
 
+  // Tudo feito: vira uma linha só, liberando a altura da tela pras mensagens.
+  if (trainingDone && pressDone && !pressQuestion) {
+    return (
+      <div className={`${styles.card} ${styles.cardDone}`} role="status">
+        <div className={styles.title}>
+          <span>Preparação</span>
+          <span className={styles.status}>✓ Treino · ✓ Coletiva — pronto pro jogo</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.card}>
       <div className={styles.title}>

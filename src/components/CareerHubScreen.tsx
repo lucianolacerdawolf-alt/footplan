@@ -19,6 +19,8 @@ import type { PressConferenceQuestion } from '../engine/pressConference';
 import type { Team } from '../engine/types';
 import type { CloudStatus } from '../hooks/useCloudSave';
 import InboxPanel from './InboxPanel';
+import OpponentAnalysisModal from './OpponentAnalysisModal';
+import { useH2H } from '../hooks/useH2H';
 import ReputationPanel, { reputationLevel } from './ReputationPanel';
 import ConversationsPanel from './ConversationsPanel';
 import PreMatchPrepCard from './PreMatchPrepCard';
@@ -203,6 +205,21 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
   const [pendingAdvance, setPendingAdvance] = useState(false);
   const [hubTab, setHubTab] = useState<'inbox' | 'season' | 'club'>('inbox');
   const [showRep, setShowRep] = useState(false);
+  const [showOpponent, setShowOpponent] = useState(false);
+  const { get: getH2H } = useH2H();
+  // Aviso de subida de nível da reputação: compara com o último nível já visto (por técnico).
+  const repLevel = reputationLevel(state.manager.reputation);
+  const [levelUp, setLevelUp] = useState<string | null>(null);
+  useEffect(() => {
+    const key = `fp:repLevelSeen:${state.manager.name}`;
+    try {
+      const raw = localStorage.getItem(key);
+      const seen = raw === null ? null : Number(raw);
+      if (seen !== null && repLevel.index > seen) setLevelUp(repLevel.label);
+      localStorage.setItem(key, String(repLevel.index));
+    } catch { /* sem storage: sem aviso */ }
+  }, [repLevel.index, repLevel.label, state.manager.name]);
+  const [msgFilter, setMsgFilter] = useState<'all' | 'players' | 'board'>('all');
   useEffect(() => {
     if (!pendingAdvance || !roundComplete) return;
     setPendingAdvance(false);
@@ -332,14 +349,24 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
 
   return (
     <div className={`${styles.screen} app-screen fit-screen`}>
+      {showOpponent && opponentTeam && userTeam && (
+        <OpponentAnalysisModal opponent={opponentTeam} userTeam={userTeam} h2h={getH2H(userTeam.id, opponentTeam.id)} onClose={() => setShowOpponent(false)} />
+      )}
       {showRep && (
         <ReputationPanel
           reputation={state.manager.reputation}
           leaguePosition={gamesPlayed > 0 ? userPosition : null}
           totalTeams={state.season.league.teams.length}
           pendingObjectiveRep={(boardObj?.objectives ?? []).filter(o => o.achieved === undefined).reduce((n, o) => n + o.reward, 0)}
+          seasonGiantKills={state.seasonGiantKills ?? 0}
           onClose={() => setShowRep(false)}
         />
+      )}
+      {levelUp && (
+        <button type="button" className={styles.levelUp} onClick={() => { setLevelUp(null); setShowRep(true); }}>
+          ⭐ Sua reputação subiu de nível: <b>{levelUp}</b> — toque para ver o que destravou
+          <span className={styles.levelUpClose} role="button" aria-label="Fechar" onClick={e => { e.stopPropagation(); setLevelUp(null); }}>✕</span>
+        </button>
       )}
       {/* Topo compacto: voltar + identidade do clube numa linha. Estádio e patrocínio
           ficam no Meu Clube — aqui só o que orienta a decisão de agora. */}
@@ -407,6 +434,11 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
                     </span>
                   )}
                 </div>
+              )}
+              {opponentTeam && userTeam && (
+                <button type="button" className={styles.scoutBtn} onClick={() => setShowOpponent(true)}>
+                  🔍 Ver adversário
+                </button>
               )}
               <Button size="lg" onClick={() => {
                 if (nextMatch.type === 'league') onPlayNext();
@@ -489,18 +521,27 @@ function CareerHubScreen({ state, league, onViewContinental, onPlayNext, onPlayN
         {hubTab === 'inbox' && (
           <>
           {onRespondConversation && getPlayerConversations(state).length > 0 && (
+            <div className={styles.msgFilter} role="group" aria-label="Filtrar mensagens">
+              {([['all', 'Tudo', unreadCount + convCount], ['players', 'Atletas', convCount], ['board', 'Diretoria e clube', unreadCount]] as const).map(([k, l, n]) => (
+                <button key={k} className={`${styles.msgFilterBtn} ${msgFilter === k ? styles.msgFilterOn : ''}`} aria-pressed={msgFilter === k} onClick={() => setMsgFilter(k)}>
+                  {l}{n > 0 && <span className={styles.msgFilterBadge}>{n}</span>}
+                </button>
+              ))}
+            </div>
+          )}
+          {msgFilter !== 'board' && onRespondConversation && getPlayerConversations(state).length > 0 && (
             <ConversationsPanel
               conversations={getPlayerConversations(state)}
               onRespond={onRespondConversation}
             />
           )}
 
-          <InboxPanel
+          {msgFilter !== 'players' && <InboxPanel
             messages={inbox}
             onMarkRead={onMarkInboxRead}
             onAcceptTransferOffer={onAcceptTransferOffer}
             onRejectTransferOffer={onRejectTransferOffer}
-          />
+          />}
           </>
         )}
         {hubTab === 'season' && (

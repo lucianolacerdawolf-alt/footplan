@@ -7,6 +7,7 @@ import TopScorersTable from './TopScorersTable';
 import styles from './LeagueTableScreen.module.css';
 import { crestSrc } from '../utils/crest';
 import { ScreenHeader } from './ui';
+import PositionChart from './PositionChart';
 
 function getRecentForm(teamId: string, fixtures: LeagueFixture[][]): ('W' | 'D' | 'L')[] {
   const results: ('W' | 'D' | 'L')[] = [];
@@ -79,6 +80,24 @@ function previousPositions(teams: Team[], fixtures: LeagueFixture[][]): Map<stri
   return new Map(before.map((s, i) => [s.teamId, i + 1]));
 }
 
+type Split = 'all' | 'home' | 'away';
+
+/** Tabela só com os jogos em casa (ou só fora) de cada time. */
+function splitStandings(teams: Team[], fixtures: LeagueFixture[][], split: Exclude<Split, 'all'>): Standing[] {
+  const map = new Map<string, Standing>(teams.map(t => [t.id, { teamId: t.id, points: 0, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0 }]));
+  for (const round of fixtures) for (const f of round) {
+    if (!f.played || f.homeScore == null || f.awayScore == null) continue;
+    const id = split === 'home' ? f.homeTeamId : f.awayTeamId;
+    const gf = split === 'home' ? f.homeScore : f.awayScore;
+    const ga = split === 'home' ? f.awayScore : f.homeScore;
+    const s = map.get(id);
+    if (!s) continue;
+    s.played++; s.goalsFor += gf; s.goalsAgainst += ga;
+    if (gf > ga) { s.won++; s.points += 3; } else if (gf === ga) { s.drawn++; s.points++; } else s.lost++;
+  }
+  return [...map.values()].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || b.goalsFor - a.goalsFor);
+}
+
 const rec = (r: [number, number, number]) => `${r[0]}V ${r[1]}E ${r[2]}D`;
 
 function FormDots({ form }: { form: ('W' | 'D' | 'L')[] }) {
@@ -93,10 +112,10 @@ function FormDots({ form }: { form: ('W' | 'D' | 'L')[] }) {
   );
 }
 
-export function StandingsTable({ standings, teams, userTeamId, league, fixtures }: { standings: Standing[]; teams: Team[]; userTeamId: string; league: LeagueDefinition; fixtures?: LeagueFixture[][] }) {
+export function StandingsTable({ standings, teams, userTeamId, league, fixtures, plain }: { standings: Standing[]; teams: Team[]; userTeamId: string; league: LeagueDefinition; fixtures?: LeagueFixture[][]; /** Recorte casa/fora: sem zonas nem setas. */ plain?: boolean }) {
   const showForm = !!fixtures;
   const [openId, setOpenId] = useState<string | null>(null);
-  const prev = useMemo(() => (fixtures ? previousPositions(teams, fixtures) : null), [teams, fixtures]);
+  const prev = useMemo(() => (fixtures && !plain ? previousPositions(teams, fixtures) : null), [teams, fixtures, plain]);
   const cols = showForm ? 13 : 12;
   return (
     <table className={styles.table}>
@@ -132,7 +151,7 @@ export function StandingsTable({ standings, teams, userTeamId, league, fixtures 
               onClick={fixtures ? () => setOpenId(open ? null : s.teamId) : undefined}
               aria-expanded={fixtures ? open : undefined}
             >
-              <td className={styles.tdZone} style={{ background: getZoneColor(pos, league) }} />
+              <td className={styles.tdZone} style={{ background: plain ? 'transparent' : getZoneColor(pos, league) }} />
               <td className={styles.tdPos}>
                 {pos}
                 {move !== 0 && <span className={move > 0 ? styles.moveUp : styles.moveDown} title={move > 0 ? `Subiu ${move}` : `Caiu ${-move}`}>{move > 0 ? '▲' : '▼'}</span>}
@@ -198,7 +217,9 @@ interface Props {
 function LeagueTableScreen({ state, league, onBack }: Props) {
   const { teams, userTeamId, fixtures } = state;
   const standings: Standing[] = computeStandings(teams, fixtures);
-  const [view, setView] = useState<'table' | 'scorers'>('table');
+  const [view, setView] = useState<'table' | 'scorers' | 'chart'>('table');
+  const [split, setSplit] = useState<Split>('all');
+  const shown = useMemo(() => (split === 'all' ? standings : splitStandings(teams, fixtures, split)), [split, standings, teams, fixtures]);
   const scorers = useMemo(() => {
     const map = new Map<string, { name: string; goals: number; team: string }>();
     for (const round of fixtures) {
@@ -224,12 +245,18 @@ function LeagueTableScreen({ state, league, onBack }: Props) {
       <div className={styles.viewTabs} role="tablist">
         <button role="tab" aria-selected={view === 'table'} className={`${styles.viewTab} ${view === 'table' ? styles.viewTabOn : ''}`} onClick={() => setView('table')}>Tabela</button>
         <button role="tab" aria-selected={view === 'scorers'} className={`${styles.viewTab} ${view === 'scorers' ? styles.viewTabOn : ''}`} onClick={() => setView('scorers')}>Artilheiros</button>
+        <button role="tab" aria-selected={view === 'chart'} className={`${styles.viewTab} ${view === 'chart' ? styles.viewTabOn : ''}`} onClick={() => setView('chart')}>Campanha</button>
       </div>
 
       {view === 'table' ? (
         <>
+          <div className={styles.splitRow} role="group" aria-label="Recorte da tabela">
+            {([['all', 'Geral'], ['home', 'Casa'], ['away', 'Fora']] as const).map(([k, l]) => (
+              <button key={k} className={`${styles.splitBtn} ${split === k ? styles.splitOn : ''}`} aria-pressed={split === k} onClick={() => setSplit(k)}>{l}</button>
+            ))}
+          </div>
           <div className={`${styles.standingsScroll} fit-scroll`}>
-            <StandingsTable standings={standings} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} />
+            <StandingsTable standings={shown} teams={teams} userTeamId={userTeamId} league={league} fixtures={fixtures} plain={split !== 'all'} />
           </div>
           <div className={styles.zoneLegend}>
             <span className={styles.zoneDot} style={{ background: '#1d9bf0' }} />Champions
@@ -239,6 +266,10 @@ function LeagueTableScreen({ state, league, onBack }: Props) {
           </div>
           <div className={styles.tableHint}>Toque num time para ver casa/fora, últimos jogos e o próximo adversário. ▲▼ = mudança desde a rodada anterior.</div>
         </>
+      ) : view === 'chart' ? (
+        <div className="fit-scroll">
+          <PositionChart teams={teams} fixtures={fixtures} teamId={userTeamId} />
+        </div>
       ) : (
         <div className="fit-scroll">
           <TopScorersTable scorers={scorers} />

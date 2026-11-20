@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useDragSwap } from '../hooks/useDragSwap';
 import type { Formation, Player, Team } from '../engine/types';
 import { pitchRows } from '../utils/pitchRows';
 import { FORMATIONS, FORMATION_COUNTS } from '../engine/constants';
@@ -23,7 +24,6 @@ function shortName(name: string): string {
 }
 
 const POS_LABEL: Record<Player['position'], string> = { GK: 'goleiro', DEF: 'defensor', MID: 'meia', FWD: 'atacante' };
-const DRAG_THRESHOLD = 8;
 
 interface Props {
   team: Team;
@@ -32,19 +32,17 @@ interface Props {
   /** Troca dois jogadores de lugar no elenco (índices no squad). */
   onSwap: (benchIdx: number, starterIdx: number) => void;
   onFormation?: (f: Formation) => void;
+  /** "Escalar melhores": monta o time mais forte disponível na formação atual. */
+  onAutoPick?: () => void;
   disabled?: boolean;
 }
 
-interface DragState {
-  id: string;
-  startX: number;
-  startY: number;
-  x: number;
-  y: number;
-  active: boolean;
+/** Cansaço visível no campinho: só a partir de 40% (abaixo disso não pesa no jogo). */
+function fatigueTone(f: number): 'mid' | 'high' | null {
+  return f >= 70 ? 'high' : f >= 40 ? 'mid' : null;
 }
 
-export default function FormationPitch({ team, selectedId, onSelect, onSwap, onFormation, disabled }: Props) {
+export default function FormationPitch({ team, selectedId, onSelect, onSwap, onFormation, onAutoPick, disabled }: Props) {
   const formation = team.strategy.formation;
   const counts = FORMATION_COUNTS[formation];
   const starterCount = 1 + counts.DEF + counts.MID + counts.FWD;
@@ -55,22 +53,13 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
   const selected = selectedIdx >= 0 && selectedIdx < starterCount ? team.squad[selectedIdx] : null;
   const options = selected ? bench.filter(p => p.position === selected.position) : [];
 
-  const [drag, setDrag] = useState<DragState | null>(null);
-  const [overId, setOverId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Depois de um arrasto o navegador ainda dispara o click — ignora esse.
-  const suppressClick = useRef(false);
 
   const flash = (msg: string) => {
     if (noticeTimer.current) clearTimeout(noticeTimer.current);
     setNotice(msg);
     noticeTimer.current = setTimeout(() => setNotice(null), 2600);
-  };
-
-  const targetAt = (x: number, y: number): string | null => {
-    const el = document.elementFromPoint(x, y)?.closest('[data-player-id]');
-    return el?.getAttribute('data-player-id') ?? null;
   };
 
   const dropOn = (fromId: string, toId: string) => {
@@ -95,46 +84,20 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
     onSelect(null);
   };
 
-  const dragProps = (p: Player) => ({
-    'data-player-id': p.id,
-    onPointerDown: (e: React.PointerEvent) => {
-      if (disabled || e.button !== 0) return;
-      // Captura já no toque: com mouse, um movimento rápido saía do botão antes do limiar.
-      (e.currentTarget as Element).setPointerCapture?.(e.pointerId);
-      setDrag({ id: p.id, startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY, active: false });
-    },
-    onPointerMove: (e: React.PointerEvent) => {
-      if (!drag || drag.id !== p.id) return;
-      const moved = Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY) > DRAG_THRESHOLD;
-      setDrag({ ...drag, x: e.clientX, y: e.clientY, active: drag.active || moved });
-      if (drag.active || moved) {
-        const t = targetAt(e.clientX, e.clientY);
-        setOverId(t && t !== p.id ? t : null);
-      }
-    },
-    onPointerUp: (e: React.PointerEvent) => {
-      if (!drag || drag.id !== p.id) return;
-      if (drag.active) {
-        suppressClick.current = true;
-        const t = targetAt(e.clientX, e.clientY);
-        if (t) dropOn(p.id, t);
-      }
-      setDrag(null);
-      setOverId(null);
-    },
-    onPointerCancel: () => { setDrag(null); setOverId(null); },
-  });
-
-  const consumeSuppressed = () => {
-    if (!suppressClick.current) return false;
-    suppressClick.current = false;
-    return true;
-  };
-
-  const dragged = drag?.active ? team.squad.find(p => p.id === drag.id) : null;
+  const { dragProps: dragFor, consumeClick: consumeSuppressed, draggingId, ghost, overId } = useDragSwap(dropOn, disabled);
+  const dragProps = (p: Player) => dragFor(p.id);
+  const dragged = draggingId ? team.squad.find(p => p.id === draggingId) : null;
 
   return (
     <div className={styles.wrap}>
+      {onAutoPick && !disabled && (
+        <div className={styles.toolsRow}>
+          <button type="button" className={styles.autoBtn} onClick={() => { onAutoPick(); onSelect(null); flash('Time mais forte escalado (descontando cansaço, sem lesionados/suspensos).'); }}>
+            ⚡ Escalar melhores
+          </button>
+          <span className={styles.legend}><span className={styles.legendBar} /> cansaço <span className={styles.legendCard} /> 2 amarelos</span>
+        </div>
+      )}
       {onFormation && (
         <div className={styles.formations} role="group" aria-label="Formação">
           {FORMATIONS.map(f => (
@@ -173,14 +136,20 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
                     if (selected && p.id !== selected.id && p.position === selected.position) { dropOn(selected.id, p.id); return; }
                     onSelect(p.id === selectedId ? null : p.id);
                   }}
-                  aria-label={`${p.name}, ${p.position}, ${playerOvr(p)}${out ? ', indisponível' : ''}`}
+                  aria-label={`${p.name}, ${p.position}, ${playerOvr(p)}${out ? ', indisponível' : ''}${(p.currentFatigue ?? 0) >= 40 ? `, cansaço ${Math.round(p.currentFatigue ?? 0)}%` : ''}`}
                 >
                   <span className={`${styles.shirt} ${styles[`pos${p.position}`]}`}>
                     {shirtBadge(p)}
                     {out && <span className={styles.alert} aria-hidden="true">!</span>}
+                    {!out && (p.yellowCardsThisSeason ?? 0) >= 2 && <span className={styles.cardWarn} title={`${p.yellowCardsThisSeason} amarelos — mais um e é suspenso`} aria-hidden="true" />}
                   </span>
                   <span className={styles.name}>{shortName(p.name)}</span>
                   <span className={styles.ovr}>{playerOvr(p)}</span>
+                  {fatigueTone(p.currentFatigue ?? 0) && (
+                    <span className={`${styles.fatigue} ${styles[`fatigue_${fatigueTone(p.currentFatigue ?? 0)}`]}`} title={`Cansaço ${Math.round(p.currentFatigue ?? 0)}%`}>
+                      <span style={{ width: `${Math.min(100, p.currentFatigue ?? 0)}%` }} />
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -251,8 +220,8 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
         </div>
       )}
 
-      {dragged && drag && (
-        <div className={styles.ghost} style={{ left: drag.x, top: drag.y }} aria-hidden="true">
+      {dragged && ghost && (
+        <div className={styles.ghost} style={{ left: ghost.x, top: ghost.y }} aria-hidden="true">
           <span className={`${styles.shirt} ${styles[`pos${dragged.position}`]}`}>{shirtBadge(dragged)}</span>
           <span className={styles.name}>{shortName(dragged.name)}</span>
         </div>

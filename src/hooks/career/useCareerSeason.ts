@@ -11,7 +11,7 @@ import { determineUserContinentalCup, getContinentalPrizeMoney, getQualifiedTeam
 import { CUP_RESULT_LABELS } from '@/engine/careerLabels';
 import { computeUserSeasonRecord, deriveTopScorer, isManagerOfSeason } from '@/engine/seasonClosure';
 import { type SponsorTier, getSponsorMultiplier, getSponsorLabel, getSponsorMinReputation, getNextTierUp, getNextTierDown, generateSponsor, computeMerchRevenue } from '@/engine/sponsors';
-import { deriveCupResult, computeReputationDelta, progressAllLeagues, createCareerSeason, pairedDivisionId, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getYouthPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
+import { deriveCupResult, computeReputationDelta, continentalTitleRep, progressAllLeagues, createCareerSeason, pairedDivisionId, expireContracts, evaluateContractGoals, getContractSeasonsLeft, getFinances, getFreeAgentPool, getYouthPool, getSponsorTier, getSponsorName, type CareerState, type CareerSeasonHistoryEntry, type InboxMessage } from '@/engine/career';
 import { createContractExpiringMessage, createContractDepartureMessage, createContractGoalBonusMessage, createContinentalQualificationMessage, createContinentalResultMessage, createYouthIntakeMessage, createYouthReadyMessage, createYouthReleasedMessage, createSeasonDebtMessage } from '@/engine/inbox';
 import { generateJobOffers } from '@/engine/jobMarket';
 import { CONFIDENCE_START, CONFIDENCE_SACK, seasonEndConfidence, generateSackedOffers } from '@/engine/boardConfidence';
@@ -162,6 +162,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
         unlockAchievement('continental_participant');
         if (ccResult === 'champion') {
           wonContinental = true;
+          newReputation = Math.min(100, newReputation + continentalTitleRep(endingContinentalId));
           if (endingContinentalId === 'ucl') unlockAchievement('continental_champion');
           else if (endingContinentalId === 'uel') unlockAchievement('europa_king');
           else if (endingContinentalId === 'uecl') unlockAchievement('conference_king');
@@ -202,7 +203,7 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
       // Categorias de base: evolui quem está lá, dispensa quem chegou aos 20 e recebe a
       // captação do ano. O usuário decide quem promover (tela Categorias de Base).
       const nextSeasonLabel = `Temporada ${careerState.currentSeasonYear + 1}`;
-      const { remaining: youthRemaining, released: youthReleased } = refreshYouthPool(getYouthPool(careerState), Math.random, careerState.youthFocusId);
+      const { remaining: youthRemaining, released: youthReleased } = refreshYouthPool(getYouthPool(careerState), Math.random, careerState.youthFocusId, careerState.youthLoanIds);
       const youthIntake = generateYouthIntake(careerState.currentSeasonYear + 1);
       const nextYouthPool = [...youthRemaining, ...youthIntake];
       objectiveMessages.push(createYouthIntakeMessage(youthIntake.map(p => p.name), nextSeasonLabel));
@@ -260,6 +261,8 @@ export function useCareerSeason({ careerState, setCareerState, setScreen, setToa
           freeAgentPool: refreshFreeAgentPool(getFreeAgentPool(prev), prev.currentSeasonYear + 1, Math.random, departures),
           youthPool: nextYouthPool,
           youthFocusId: undefined,
+          youthLoanIds: undefined,
+          seasonGiantKills: undefined,
           sponsorTier: nextSponsorTier,
           sponsorName: nextSponsorName,
           boardObjectives: { ...nextBoardObj, streakBad: objEval.newStreak },

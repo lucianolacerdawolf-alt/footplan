@@ -6,7 +6,7 @@ import { baseWeeklyRevenue, clubInitialBudget, sponsorTvPerRound, operatingCostP
 import { createWelcomeMessage, createYouthIntakeMessage, createMilestoneMessage } from '../engine/inbox';
 import { getCareerTotals, newlyReachedMilestones } from '../engine/careerMilestones';
 import { getScouting, scoutPlayer } from '../engine/scouting';
-import { generateYouthIntake, promoteYouthPlayer, canPromote } from '../engine/youthAcademy';
+import { generateYouthIntake, promoteYouthPlayer, canPromote, YOUTH_MAX_LOANS } from '../engine/youthAcademy';
 import { generateFreeAgentPool } from '../engine/freeAgentPool';
 import { generateBoardObjectives, createBoardObjectivesInboxMessage } from '../engine/boardObjectives';
 import { cloneTeam } from '../utils/teamUtils';
@@ -234,6 +234,22 @@ export function useCareerManager({
     setToastMsg(removing ? `${youth.name} saiu do treino focado.` : `🎯 ${youth.name} terá treino focado — evolui mais no fim da temporada.`);
   }, [careerState, setCareerState, setToastMsg]);
 
+  // Base: empresta (ou cancela o empréstimo de) um jovem até o fim da temporada.
+  const handleToggleYouthLoan = useCallback((playerId: string) => {
+    if (!careerState) return;
+    const youth = getYouthPool(careerState).find(p => p.id === playerId);
+    if (!youth) return;
+    const loans = careerState.youthLoanIds ?? [];
+    const onLoan = loans.includes(playerId);
+    if (!onLoan && loans.length >= YOUTH_MAX_LOANS) { setToastMsg(`Limite de ${YOUTH_MAX_LOANS} empréstimos por temporada.`); return; }
+    setCareerState(prev => prev ? {
+      ...prev,
+      youthLoanIds: onLoan ? (prev.youthLoanIds ?? []).filter(id => id !== playerId) : [...(prev.youthLoanIds ?? []), playerId],
+      youthFocusId: !onLoan && prev.youthFocusId === playerId ? undefined : prev.youthFocusId,
+    } : prev);
+    setToastMsg(onLoan ? `${youth.name} voltou do empréstimo.` : `✈️ ${youth.name} emprestado até o fim da temporada — vai jogar e evoluir mais rápido.`);
+  }, [careerState, setCareerState, setToastMsg]);
+
   // Base: dispensa um jovem (abre espaço e tira da lista).
   const handleReleaseYouth = useCallback((playerId: string) => {
     if (!careerState) return;
@@ -243,6 +259,7 @@ export function useCareerManager({
       ...prev,
       youthPool: getYouthPool(prev).filter(p => p.id !== playerId),
       youthFocusId: prev.youthFocusId === playerId ? undefined : prev.youthFocusId,
+      youthLoanIds: (prev.youthLoanIds ?? []).filter(id => id !== playerId),
     } : prev);
     setToastMsg(`${youth.name} foi dispensado da base.`);
   }, [careerState, setCareerState, setToastMsg]);
@@ -321,6 +338,7 @@ export function useCareerManager({
     handlePromoteYouthPlayer,
     handleSetYouthFocus,
     handleReleaseYouth,
+    handleToggleYouthLoan,
     handleScoutPlayer,
     handleDismissRoundSummary,
     rosterLastUpdatedAt,

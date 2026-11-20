@@ -9,6 +9,7 @@ import styles from './LeagueScreen.module.css';
 import { Button, ScreenHeader } from './ui';
 import { crestSrc } from '../utils/crest';
 import { teamTextColor } from '../utils/teamTextColor';
+import RoundResultsSheet from './RoundResultsSheet';
 
 function squadHealth(team: Team) {
   const counts = FORMATION_COUNTS[team.strategy.formation];
@@ -86,9 +87,12 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
   const roundNow = phase === 'done' ? undefined : fixtures[currentRound];
   const userFx = roundNow?.find(f => f.homeTeamId === userTeamId || f.awayTeamId === userTeamId);
   const autoSimOthers = !!userFx?.played && !!roundNow?.some(f => !f.played);
+  // Depois da simulação automática, abre os resultados da rodada (placares + tabela).
+  const [resultsRound, setResultsRound] = useState<number | null>(null);
   useEffect(() => {
     if (!autoSimOthers || simulating) return;
-    runSim(() => onSimulateRound(currentRound));
+    const r = currentRound;
+    runSim(() => { onSimulateRound(r); setResultsRound(r); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoSimOthers, currentRound]);
 
@@ -246,6 +250,9 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
           </>
         )}
       </div>
+      {resultsRound !== null && fixtures[resultsRound] && (
+        <RoundResultsSheet round={resultsRound} fixtures={fixtures} teams={teams} userTeamId={userTeamId} onClose={() => setResultsRound(null)} />
+      )}
     </div>
   );
 }

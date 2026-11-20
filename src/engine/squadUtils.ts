@@ -51,3 +51,26 @@ export function rebalanceForFormation(team: Team, formation: Formation): Team {
   ];
   return { ...team, squad: [...starters, ...bench], strategy: { ...team.strategy, formation } };
 }
+
+/** Força efetiva pra escalação: OVR descontado do cansaço (mesma conta do intervalo). */
+function lineupScore(p: Player, ovr: (p: Player) => number): number {
+  return ovr(p) * (1 - (p.currentFatigue ?? 0) / 200);
+}
+
+/**
+ * "Escalar melhores": mantém a formação e põe como titular, em cada posição, os mais
+ * fortes DISPONÍVEIS (lesionado/suspenso nunca entra), descontando o cansaço. O resto
+ * vira banco na mesma ordem de força.
+ */
+export function bestLineup(team: Team, ovr: (p: Player) => number): Team {
+  const counts = FORMATION_COUNTS[team.strategy.formation];
+  const byPos = (pos: Player['position']) => {
+    const list = team.squad.filter(p => p.position === pos);
+    const avail = list.filter(p => !isPlayerUnavailable(p)).sort((a, b) => lineupScore(b, ovr) - lineupScore(a, ovr));
+    return [...avail, ...list.filter(isPlayerUnavailable)];
+  };
+  const gk = byPos('GK'), def = byPos('DEF'), mid = byPos('MID'), fwd = byPos('FWD');
+  const starters = [...gk.slice(0, 1), ...def.slice(0, counts.DEF), ...mid.slice(0, counts.MID), ...fwd.slice(0, counts.FWD)];
+  const bench = [...gk.slice(1), ...def.slice(counts.DEF), ...mid.slice(counts.MID), ...fwd.slice(counts.FWD)];
+  return { ...team, squad: [...starters, ...bench] };
+}

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { computeReputationDelta } from '../engine/career';
+import { computeReputationDelta, GIANT_KILL_OVR_GAP, GIANT_KILL_REP_CAP } from '../engine/career';
 import { useModalFocus } from '../hooks/useModalFocus';
 import { Button } from './ui';
 import styles from './ReputationPanel.module.css';
@@ -37,7 +37,7 @@ export function reputationLevel(rep: number) {
   let idx = 0;
   LEVELS.forEach((l, i) => { if (rep >= l.min) idx = i; });
   const next = LEVELS[idx + 1];
-  return { label: LEVELS[idx].label, nextLabel: next?.label ?? null, nextAt: next?.min ?? 100, from: LEVELS[idx].min };
+  return { index: idx, label: LEVELS[idx].label, nextLabel: next?.label ?? null, nextAt: next?.min ?? 100, from: LEVELS[idx].min };
 }
 
 interface Props {
@@ -47,10 +47,12 @@ interface Props {
   totalTeams: number;
   /** Soma das recompensas dos objetivos da diretoria ainda em aberto. */
   pendingObjectiveRep: number;
+  /** Quantos +1 de "vitória sobre time mais forte" já vieram nesta temporada. */
+  seasonGiantKills?: number;
   onClose: () => void;
 }
 
-export default function ReputationPanel({ reputation, leaguePosition, totalTeams, pendingObjectiveRep, onClose }: Props) {
+export default function ReputationPanel({ reputation, leaguePosition, totalTeams, pendingObjectiveRep, seasonGiantKills, onClose }: Props) {
   const ref = useModalFocus<HTMLDivElement>(true, onClose);
   // O foco vai pro botão "Entendi" (último) e o navegador rolava a folha até o fim.
   useEffect(() => { const t = setTimeout(() => ref.current?.scrollTo({ top: 0 }), 0); return () => clearTimeout(t); }, [ref]);
@@ -83,10 +85,15 @@ export default function ReputationPanel({ reputation, leaguePosition, totalTeams
         </div>
 
         <h3 className={styles.h3}>Como subir</h3>
-        <p className={styles.note}>A reputação é calculada no <b>fim de cada temporada</b>:</p>
+        <p className={styles.note}>Durante a temporada:</p>
+        <ul className={styles.rules}>
+          <li><span>Vencer na liga um time bem mais forte (força {GIANT_KILL_OVR_GAP}+ acima)</span><b className={styles.pos}>+1</b></li>
+        </ul>
+        <p className={styles.note}>Até {GIANT_KILL_REP_CAP} por temporada{seasonGiantKills !== undefined ? <> · nesta: <b>{seasonGiantKills}/{GIANT_KILL_REP_CAP}</b></> : null}. No <b>fim de cada temporada</b>:</p>
         <ul className={styles.rules}>
           <li><span>Campeão da liga</span><b className={styles.pos}>+15</b></li>
           <li><span>Campeão da copa nacional</span><b className={styles.pos}>+10</b></li>
+          <li><span>Campeão continental (Champions / Europa / Conference)</span><b className={styles.pos}>+15 / +10 / +7</b></li>
           <li><span>Terminar entre os {third} primeiros (sem ser campeão)</span><b className={styles.pos}>+3</b></li>
           <li><span>Cada objetivo da diretoria cumprido</span><b className={styles.pos}>+recompensa</b></li>
           <li><span>Terminar entre os {third} últimos</span><b className={styles.neg}>−3</b></li>

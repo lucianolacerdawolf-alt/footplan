@@ -160,3 +160,5 @@
 /* Celular baixo: o modal da coletiva não passa da tela. */
 .modal { max-height: calc(100dvh - 24px); overflow-y: auto; padding: clamp(16px, 3dvh, 28px) 18px clamp(14px, 2.4dvh, 22px); }
 .modalIcon { font-size: clamp(32px, 6dvh, 48px); }
+
+.cardDone { padding-top: 6px; padding-bottom: 6px; }

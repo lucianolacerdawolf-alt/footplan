@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import type { Player } from '../engine/types';
 import { playerOvr } from '../utils/playerOvr';
-import { canPromote, scoutEstimate, seasonsUntilReady, YOUTH_PROMOTE_MIN_AGE, YOUTH_PROMOTE_MIN_OVR, YOUTH_RELEASE_AGE } from '../engine/youthAcademy';
+import { canPromote, scoutEstimate, seasonsUntilReady, YOUTH_PROMOTE_MIN_AGE, YOUTH_PROMOTE_MIN_OVR, YOUTH_RELEASE_AGE, YOUTH_MAX_LOANS } from '../engine/youthAcademy';
 import { Button } from './ui';
 import styles from './YouthAcademyScreen.module.css';
 import { ScreenHeader } from './ui';
@@ -14,6 +14,9 @@ interface Props {
   focusId?: string;
   onFocus?: (playerId: string) => void;
   onRelease?: (playerId: string) => void;
+  /** Jovens emprestados nesta temporada (voltam no fim dela). */
+  loanIds?: string[];
+  onToggleLoan?: (playerId: string) => void;
   onBack: () => void;
 }
 
@@ -38,7 +41,7 @@ function readyText(p: Player): string {
 
 type Confirm = { kind: 'promote' | 'release'; player: Player };
 
-function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, focusId, onFocus, onRelease, onBack }: Props) {
+function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, focusId, onFocus, onRelease, loanIds = [], onToggleLoan, onBack }: Props) {
   const [confirming, setConfirming] = useState<Confirm | null>(null);
   const sorted = [...youthPlayers].sort((a, b) => scoutEstimate(b).max - scoutEstimate(a).max);
   const focused = youthPlayers.find(p => p.id === focusId);
@@ -49,7 +52,7 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, focusId, onFoc
 
       <p className={styles.intro}>
         {youthPlayers.length} {youthPlayers.length === 1 ? 'jovem' : 'jovens'} na base · elenco profissional com {squadSize} jogadores.
-        Sobem ao profissional com {YOUTH_PROMOTE_MIN_AGE}+ anos e força {YOUTH_PROMOTE_MIN_OVR}+. Todos evoluem na virada da temporada.
+        Sobem ao profissional com {YOUTH_PROMOTE_MIN_AGE}+ anos e força {YOUTH_PROMOTE_MIN_OVR}+. Evoluem um pouco a cada rodada e dão o salto maior na virada da temporada.
       </p>
 
       {onFocus && youthPlayers.length > 0 && (
@@ -70,11 +73,12 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, focusId, onFoc
           const ready = canPromote(p);
           const left = Math.max(0, YOUTH_RELEASE_AGE - (p.age ?? 0));
           const isFocus = p.id === focusId;
+          const onLoan = loanIds.includes(p.id);
           return (
             <li key={p.id} className={`${styles.card} ${ready ? styles.cardReady : ''} ${isFocus ? styles.cardFocus : ''}`}>
               <div className={styles.row}>
                 <span className={styles.pos}>{POS_LABEL[p.position]}</span>
-                <span className={styles.name}>{isFocus && '🎯 '}{p.name}</span>
+                <span className={styles.name}>{isFocus && '🎯 '}{onLoan && '✈️ '}{p.name}</span>
                 <span className={styles.age}>{p.age} anos</span>
                 <span className={styles.ovr} aria-label={`força ${ovr}`}>{ovr}</span>
               </div>
@@ -88,15 +92,24 @@ function YouthAcademyScreen({ youthPlayers, squadSize, onPromote, focusId, onFoc
                 <span className={styles.potValue}>{est.min}–{est.max}</span>
               </div>
               <div className={styles.hint}>
-                {ready
+                {onLoan
+                  ? 'Emprestado até o fim da temporada: joga e evolui ~3× mais rápido por rodada.'
+                  : ready
                   ? 'Pronto para subir ao profissional.'
                   : <>{readyText(p)} · {left > 0 ? `dispensado em ${left} temporada${left > 1 ? 's' : ''} se não subir` : 'última temporada na base'}</>}
               </div>
               <div className={styles.footer}>
-                {ready && <Button size="sm" onClick={() => setConfirming({ kind: 'promote', player: p })}>Promover</Button>}
-                {onFocus && !ready && (
+                {ready && !onLoan && <Button size="sm" onClick={() => setConfirming({ kind: 'promote', player: p })}>Promover</Button>}
+                {onFocus && !ready && !onLoan && (
                   <Button size="sm" variant={isFocus ? 'primary' : 'secondary'} onClick={() => onFocus(p.id)}>
                     {isFocus ? '🎯 Em treino focado' : 'Treino focado'}
+                  </Button>
+                )}
+                {onToggleLoan && !ready && (
+                  <Button size="sm" variant="secondary" disabled={!onLoan && loanIds.length >= YOUTH_MAX_LOANS}
+                    title={!onLoan && loanIds.length >= YOUTH_MAX_LOANS ? `Máximo de ${YOUTH_MAX_LOANS} empréstimos` : undefined}
+                    onClick={() => onToggleLoan(p.id)}>
+                    {onLoan ? 'Cancelar empréstimo' : '✈️ Emprestar'}
                   </Button>
                 )}
                 {onRelease && (

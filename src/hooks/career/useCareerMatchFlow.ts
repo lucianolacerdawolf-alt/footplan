@@ -28,9 +28,10 @@ import { getStarterCount } from '@/engine/squadUtils';
 import { playerOvr } from '@/utils/playerOvr';
 import { getStageMatches, updateStageMatch } from '@/engine/bracketHelpers';
 import { saveLiveMatchMeta } from '@/utils/liveMatchPersistence';
+import { youthRoundGrowth } from '@/engine/youthAcademy';
 import { recordLeagueFixtureResult, applyLeagueRoundMoraleAndInjuries, simulateAllCpuBracketMatches, buildBracketMatchFromResult, extractScorers } from '../shared/matchHandlers';
 import { maybeGetCareerEvent } from '@/engine/careerEvents';
-import { getFinances, getInbox, isTransferWindowOpen, getTransferList, type CareerState, type InboxMessage, type RoundSummary } from '@/engine/career';
+import { GIANT_KILL_OVR_GAP, GIANT_KILL_REP_CAP, getFinances, getInbox, getYouthPool, isTransferWindowOpen, getTransferList, type CareerState, type InboxMessage, type RoundSummary } from '@/engine/career';
 import type { ConversationContext } from '@/engine/playerConversations';
 import type { Screen } from '@/types/navigation';
 import type { AchievementEvalInput } from '../useAchievements';
@@ -392,6 +393,10 @@ export function useCareerMatchFlow({
         careerTotals: matchScore ? addMatchToTotals(getCareerTotals(prev), matchScore.us, matchScore.them) : prev.careerTotals,
         pressStance: stanceUsed ? undefined : prev.pressStance,
         scouting: refreshScouting(prev.scouting),
+        youthPool: getYouthPool(prev).map(y => youthRoundGrowth(
+          y, updatedState.fixtures.length, Math.random,
+          (prev.youthLoanIds ?? []).includes(y.id) ? 3 : prev.youthFocusId === y.id ? 2 : 1,
+        )),
         roundSummary,
         ...sackPatch,
       };
@@ -437,8 +442,18 @@ export function useCareerMatchFlow({
       // aplicados 2x).
       const prevFixture = prev.season.league.fixtures[roundIdx]?.[fixtureIdx];
       if (!prevFixture || prevFixture.played) return prev;
+      // Reputação durante a temporada: vencer time bem mais forte rende +1 (com teto).
+      const giantKill = userScore > oppScore && (prev.seasonGiantKills ?? 0) < GIANT_KILL_REP_CAP && (() => {
+        const me = leg.teams.find(t => t.id === leg.userTeamId);
+        const opp = leg.teams.find(t => t.id === (userIsHome ? fixture.awayTeamId : fixture.homeTeamId));
+        return !!me && !!opp && getAvgOvr(opp) - getAvgOvr(me) >= GIANT_KILL_OVR_GAP;
+      })();
       return {
         ...prev,
+        ...(giantKill ? {
+          manager: { ...prev.manager, reputation: Math.min(100, prev.manager.reputation + 1) },
+          seasonGiantKills: (prev.seasonGiantKills ?? 0) + 1,
+        } : {}),
         season: {
           ...prev.season, league: updatedState,
           userGoalScorers: mergeGoalTally(prev.season.userGoalScorers, goalScorers),
@@ -446,6 +461,13 @@ export function useCareerMatchFlow({
         inbox: newInjuryMessages.length > 0 ? [...getInbox(prev), ...newInjuryMessages] : prev.inbox,
       };
     });
+    {
+      const me = leg.teams.find(t => t.id === leg.userTeamId);
+      const opp = leg.teams.find(t => t.id === (userIsHome ? fixture.awayTeamId : fixture.homeTeamId));
+      if (userScore > oppScore && me && opp && getAvgOvr(opp) - getAvgOvr(me) >= GIANT_KILL_OVR_GAP && (careerState.seasonGiantKills ?? 0) < GIANT_KILL_REP_CAP) {
+        setToastMsg(`⭐ +1 de reputação: vitória sobre o ${opp.name}, time bem mais forte!`);
+      }
+    }
     // Fase 4 — conversa pós-jogo: derrota pesada/dérbi → 'form', vitória → 'praise'.
     if (generateConversation) {
       generateConversation({

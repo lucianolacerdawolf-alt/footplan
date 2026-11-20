@@ -76,9 +76,37 @@ export function seasonsUntilReady(player: Player): number | null {
   return null;
 }
 
+/** Máximo de jovens emprestados ao mesmo tempo. */
+export const YOUTH_MAX_LOANS = 2;
+
+/**
+ * Evolução durante a temporada (a cada rodada da liga): chance de +1 de força na direção
+ * do potencial. Antes a base só mexia na virada da temporada e a tela parecia parada.
+ * Esperado por temporada ≈ 15% do que falta pro potencial (o salto maior continua no fim
+ * da temporada); treino focado dobra a chance, empréstimo (minutos de jogo) triplica.
+ */
+export function youthRoundGrowth(player: Player, roundsInSeason: number, rng: () => number = Math.random, boost: 1 | 2 | 3 = 1): Player {
+  const current = playerOvr(player);
+  const potential = player.potential ?? current + 10;
+  const gap = potential - current;
+  if (gap <= 0) return player;
+  const chance = Math.min(0.9, (gap * 0.15 * boost) / Math.max(1, roundsInSeason));
+  if (rng() >= chance) return player;
+  const scale = (current + 1) / current;
+  const a = player.attributes;
+  const s = (v: number) => Math.max(1, Math.min(99, Math.round(v * scale)));
+  return {
+    ...player,
+    attributes: {
+      speed: s(a.speed), stamina: s(a.stamina), passing: s(a.passing), finishing: s(a.finishing),
+      tackling: s(a.tackling), dribbling: s(a.dribbling), vision: s(a.vision), positioning: s(a.positioning),
+    },
+  };
+}
+
 /** Fim de temporada: evolui todos e dispensa quem chegou aos 20 sem ser promovido. */
-export function refreshYouthPool(existing: Player[], rng: () => number = Math.random, focusId?: string): { remaining: Player[]; released: Player[] } {
-  const progressed = existing.map(p => (p.id === focusId ? progressFocusedYouth(p, rng) : progressYouthPlayer(p, rng)));
+export function refreshYouthPool(existing: Player[], rng: () => number = Math.random, focusId?: string, loanIds: string[] = []): { remaining: Player[]; released: Player[] } {
+  const progressed = existing.map(p => (p.id === focusId || loanIds.includes(p.id) ? progressFocusedYouth(p, rng) : progressYouthPlayer(p, rng)));
   return {
     remaining: progressed.filter(p => (p.age ?? 0) < YOUTH_RELEASE_AGE),
     released: progressed.filter(p => (p.age ?? 0) >= YOUTH_RELEASE_AGE),

@@ -91,7 +91,7 @@
 :global(.fit-screen).screen { gap: 8px; }
 :global(.fit-screen) .standingsScroll { max-height: none; flex: 1 1 auto; }
 .viewTabs {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;
   padding: 3px; border-radius: 10px; background: var(--code-bg); border: 1px solid var(--border);
 }
 .viewTab {
@@ -121,3 +121,10 @@
 .detailForm { gap: 3px; }
 .detailCrest { width: 18px; height: 18px; object-fit: contain; }
 .tableHint { font-size: 10.5px; color: var(--text-secondary); padding: 0 4px; }
+
+.splitRow { display: flex; gap: 6px; }
+.splitBtn {
+  padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent;
+  color: var(--text-secondary); font-family: var(--sans); font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.splitOn { background: var(--accent); border-color: var(--accent); color: #04131a; }

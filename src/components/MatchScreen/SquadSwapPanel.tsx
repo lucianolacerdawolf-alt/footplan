@@ -3,6 +3,7 @@ import { getStarterCount } from '@/engine/squadUtils';
 import { playerOvr } from '@/utils/playerOvr';
 import { fireClick } from '@/utils/fireClick';
 import { shirtTag } from '../../utils/shirtNumbers';
+import { useDragSwap } from '@/hooks/useDragSwap';
 
 interface SquadSwapPanelProps {
   team: Team;
@@ -34,9 +35,32 @@ export default function SquadSwapPanel({
   const showFatigue = !!fatigueMap;
   const fatigueOf = (p: Player) => fatigueMap?.[p.id] ?? p.currentFatigue ?? 0;
 
+  // Arrastar um reserva até um titular (ou o contrário) faz a substituição — mesma regra
+  // do toque: só entre jogadores da mesma posição.
+  const dropOn = (fromId: string, toId: string) => {
+    const a = team.squad.findIndex(p => p.id === fromId);
+    const b = team.squad.findIndex(p => p.id === toId);
+    if (a < 0 || b < 0) return;
+    const aBench = a >= starterCount, bBench = b >= starterCount;
+    if (aBench === bBench || team.squad[a].position !== team.squad[b].position) return;
+    const benchIdx = aBench ? a : b, starterIdx = aBench ? b : a;
+    const starterId = team.squad[starterIdx].id;
+    onSwap(benchIdx, starterIdx);
+    setPick(null);
+    if (injuredIds.includes(starterId)) setInjuredIds?.(prev => prev.filter(id => id !== starterId));
+  };
+  const { dragProps, consumeClick, draggingId, overId, ghost } = useDragSwap(dropOn, disabled);
+  const ghostPlayer = draggingId ? team.squad.find(p => p.id === draggingId) : null;
+
   return (
     <div className="ht-squad-col">
       <strong style={{ color: accentColor, fontSize: 11 }}>{title}</strong>
+      {!disabled && <div className="ht-drag-hint">Toque em dois jogadores, ou segure ⠿ e arraste o reserva até o titular</div>}
+      {ghostPlayer && ghost && (
+        <div className="ht-drag-ghost" style={{ left: ghost.x, top: ghost.y }} aria-hidden="true">
+          {shirtTag(ghostPlayer)} {ghostPlayer.name}
+        </div>
+      )}
       <div className="ht-sub-group-label">Titulares</div>
       {starters.map((p, i) => {
         const isPicked = p.id === pick;
@@ -47,12 +71,13 @@ export default function SquadSwapPanel({
         const fatigueColor = fatigue > 70 ? 'var(--negative)' : fatigue > 45 ? 'var(--warning)' : 'var(--positive)';
         return (
           <div key={p.id}
-            className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap && !disabled ? 'clickable' : ''} ${isInjured ? 'injured' : ''}`}
+            data-player-id={p.id}
+            className={`ht-squad-row ${isPicked ? 'picked' : ''} ${canSwap && !disabled ? 'clickable' : ''} ${isInjured ? 'injured' : ''} ${overId === p.id ? 'drop-over' : ''} ${draggingId === p.id ? 'drag-src' : ''}`}
             style={isInjured ? { opacity: 0.5, textDecoration: 'line-through' } : undefined}
             role="button"
             tabIndex={0}
             onClick={() => {
-              if (disabled) return;
+              if (disabled || consumeClick()) return;
               if (isInjured && pick && pickIsBench && pickPlayer && pickPlayer.position === p.position) {
                 onSwap(pickIdx, i);
                 setPick(null);
@@ -65,6 +90,7 @@ export default function SquadSwapPanel({
               }
             }}
             onKeyDown={e => fireClick(e)}>
+            {!disabled && <span className="sq-grip" {...dragProps(p.id)} title="Arraste para substituir" aria-hidden="true">⠿</span>}
             <span className="sq-num">{shirtTag(p)}</span>
             <span className="sq-name">{p.name}</span>
             <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>
@@ -83,11 +109,12 @@ export default function SquadSwapPanel({
         const effOvr = Math.round(playerOvr(p) * (1 - fatigue / 200));
         return (
           <div key={p.id}
-            className={`ht-squad-row ${isPicked ? 'picked' : ''}`}
+            data-player-id={p.id}
+            className={`ht-squad-row ${isPicked ? 'picked' : ''} ${overId === p.id ? 'drop-over' : ''} ${draggingId === p.id ? 'drag-src' : ''}`}
             role="button"
             tabIndex={0}
             onClick={() => {
-              if (disabled) return;
+              if (disabled || consumeClick()) return;
               if (pick && !pickIsBench && pickPlayer && pickPlayer.position === p.position) {
                 onSwap(pickIdx, bi);
                 setPick(null);
@@ -96,6 +123,7 @@ export default function SquadSwapPanel({
               }
             }}
             onKeyDown={e => fireClick(e)}>
+            {!disabled && <span className="sq-grip" {...dragProps(p.id)} title="Arraste para substituir" aria-hidden="true">⠿</span>}
             <span className="sq-num">{shirtTag(p)}</span>
             <span className="sq-name">{p.name}</span>
             <span className={`sq-pos pos-${p.position.toLowerCase()}`}>{p.position}</span>

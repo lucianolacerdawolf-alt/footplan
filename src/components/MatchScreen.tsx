@@ -38,6 +38,7 @@ import MatchPitch from './MatchScreen/MatchPitch';
 import { trackDailyMatch } from '../engine/dailyGoals';
 import PenaltyShootoutOverlay from './MatchScreen/PenaltyShootoutOverlay';
 import SquadSwapPanel from './MatchScreen/SquadSwapPanel';
+import FinalWhistleCard from './MatchScreen/FinalWhistleCard';
 import { teamTextColor } from '../utils/teamTextColor';
 
 interface Props {
@@ -544,7 +545,7 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
       })()}
 
       {/* Timeline de gols */}
-      {started && replayEvents.some(e => e.type === 'goal') && (
+      {started && phase !== 'done' && replayEvents.some(e => e.type === 'goal') && (
         <div className="goal-timeline">
           {replayEvents.filter(e => e.type === 'goal').map((e, idx) => {
             const isHome = e.teamId === initialHome.id;
@@ -576,6 +577,11 @@ export default function MatchScreen({ homeTeam: initialHome, awayTeam: initialAw
             </div>
             {(() => { const s = teamStadium(home); return <div className="prematch-stadium">🏟️ {s.name}{s.capacity ? ` · ${s.capacity.toLocaleString('pt-BR')} lugares` : ''}</div>; })()}
             </>
+          )}
+
+          {/* Apito final: resumo curto (gols, finalizações, melhor em campo) */}
+          {phase === 'done' && (isKnockout ? knockoutResult : result) && (
+            <FinalWhistleCard result={(isKnockout ? knockoutResult : result)!} />
           )}
 
           {/* Intervalo */}

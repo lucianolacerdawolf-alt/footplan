@@ -154,6 +154,10 @@ export interface CareerState {
   youthPool?: Player[];
   /** Jovem da base com "treino focado" nesta temporada (evolui uma etapa extra no fim). */
   youthFocusId?: string;
+  /** Jovens emprestados nesta temporada (evoluem mais rápido; voltam no fim dela). */
+  youthLoanIds?: string[];
+  /** Reputação ganha nesta temporada vencendo times bem mais fortes (limite GIANT_KILL_REP_CAP). */
+  seasonGiantKills?: number;
   transferHistory?: TransferRecord[];
   // Jogadores que o usuário colocou à venda — a cada rodada com a janela aberta,
   // qualquer time do jogo pode fazer uma oferta (ver handleNextCareerLeagueRound).
@@ -685,6 +689,15 @@ export function evaluateTradeOffer(
 // =============================================================================
 
 /** Delta de reputação ao fim de temporada — títulos dominam, posição na tabela ajusta a margem. */
+/** Título continental também conta pra reputação (antes só liga e copa nacional contavam). */
+export function continentalTitleRep(cupId: string | undefined): number {
+  return cupId === 'ucl' ? 15 : cupId === 'uel' ? 10 : cupId === 'uecl' ? 7 : 0;
+}
+
+/** Vitória sobre time bem mais forte (força média 4+ acima) rende +1, até este limite por temporada. */
+export const GIANT_KILL_OVR_GAP = 4;
+export const GIANT_KILL_REP_CAP = 5;
+
 export function computeReputationDelta(input: {
   leagueChampion: boolean;
   cupChampion: boolean;

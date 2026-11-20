@@ -625,6 +625,8 @@ export const screenMap: Record<Screen, ScreenRenderer> = {
         focusId={cs.youthFocusId}
         onFocus={p.career.handleSetYouthFocus}
         onRelease={p.career.handleReleaseYouth}
+        loanIds={cs.youthLoanIds ?? []}
+        onToggleLoan={p.career.handleToggleYouthLoan}
         onBack={p.nav.toHub}
       />
     );

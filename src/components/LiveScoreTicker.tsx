@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Team } from '../engine/types';
 import type { LeagueFixture } from '../engine/tournament';
 import styles from './LiveScoreTicker.module.css';
+import { crestSrc } from '../utils/crest';
 
 interface Props {
   fixtures: LeagueFixture[];
@@ -47,6 +48,8 @@ export default function LiveScoreTicker({ fixtures, teams, userTeamIds, clockSec
           id: f.id,
           homeAbbr: byId.get(f.homeTeamId)?.abbreviation ?? '???',
           awayAbbr: byId.get(f.awayTeamId)?.abbreviation ?? '???',
+          homeCrest: crestSrc(byId.get(f.homeTeamId)?.logoUrl),
+          awayCrest: crestSrc(byId.get(f.awayTeamId)?.logoUrl),
           homeScore: goals.filter(g => g.side === 'home').length,
           awayScore: goals.filter(g => g.side === 'away').length,
         };
@@ -61,7 +64,7 @@ export default function LiveScoreTicker({ fixtures, teams, userTeamIds, clockSec
       <div className={styles.tickerScroll}>
         {scores.map(s => (
           <span key={s.id} className={styles.tickerItem}>
-            {s.homeAbbr} <strong>{s.homeScore}</strong> – <strong>{s.awayScore}</strong> {s.awayAbbr}
+            <img src={s.homeCrest} alt="" className={styles.crest} />{s.homeAbbr} <strong>{s.homeScore}</strong> – <strong>{s.awayScore}</strong> {s.awayAbbr}<img src={s.awayCrest} alt="" className={styles.crest} />
           </span>
         ))}
       </div>
