@@ -439,7 +439,8 @@ function TrophyRoomScreen({ milestones, roundsLeft, history, finances, transfers
           player={renewingPlayer}
           budget={finances?.budget ?? 0}
           currentSeasonYear={seasonYear ?? 0}
-          onConfirm={(options) => onRenewContract(renewingPlayer.id, options)}
+          // Fecha ao confirmar (a tela do Elenco já fazia isso; aqui ficava aberta mesmo renovado).
+          onConfirm={(options) => { onRenewContract(renewingPlayer.id, options); setRenewingPlayer(null); }}
           onClose={() => setRenewingPlayer(null)}
         />
       )}

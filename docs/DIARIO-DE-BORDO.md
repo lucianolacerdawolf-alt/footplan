@@ -5,6 +5,15 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 
 ---
 
+## 2026-11-20 (7) — Modal de renovação não fechava
+
+### Entregue
+- **Bug:** em Meu Clube → Contratos (`TrophyRoomScreen`), confirmar a renovação salvava o contrato, mas o modal continuava aberto. O `onConfirm` só chamava `onRenewContract` e nunca limpava o `renewingPlayer`. A versão da tela de Elenco (`SetupScreen.confirmRenewal`) já fechava.
+- Agora o modal fecha ao confirmar. Quando a renovação é barrada (teto salarial, orçamento), o toast explica o motivo.
+- O teste de renovação do `TrophyRoomScreen` passou a checar que o modal some. 762 passando.
+
+---
+
 ## 2026-11-20 (6) — Fim do botão "Simular Todos"
 
 ### Entregue

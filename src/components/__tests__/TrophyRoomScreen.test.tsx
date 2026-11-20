@@ -215,6 +215,8 @@ describe('TrophyRoomScreen', () => {
     fireEvent.click(screen.getByText('+50%'));
     fireEvent.click(screen.getByText('Confirmar Renovação'));
     expect(onRenewContract).toHaveBeenCalledWith('p1', expect.objectContaining({ years: 1 }));
+    // Regressão: o modal ficava aberto mesmo depois da renovação dar certo.
+    expect(screen.queryByText('Anos de contrato')).not.toBeInTheDocument();
   });
 
   it('não abre o modal para jogador que renovou na safra atual (cooldown)', () => {
