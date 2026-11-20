@@ -116,3 +116,5 @@
 .prelimWinner { color: var(--positive); font-weight: 700; }
 
 :global(.fit-screen) > .bracketBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; }
+
+.autoHint { font-size: 11px; color: var(--text-secondary); font-style: italic; }

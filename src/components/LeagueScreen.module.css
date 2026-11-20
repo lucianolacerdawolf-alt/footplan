@@ -122,3 +122,5 @@
 
 :global(.fit-screen) > .doneTable { flex: 1 1 auto; }
 :global(.fit-screen) .champion { padding: 8px 0; }
+
+.autoHint { font-size: 11px; color: var(--text-secondary); font-style: italic; }

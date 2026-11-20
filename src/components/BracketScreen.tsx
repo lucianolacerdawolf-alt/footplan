@@ -159,10 +159,9 @@ function BracketScreen({ state, onPlayMatch, onSimulateMatch, onSimulateOthers, 
       <div className={`${styles.stageBlock} ${isActive ? styles.stageBlockActive : ''}`}>
         <div className={styles.stageLabelRow}>
           <span className={styles.stageLabel}>{label}</span>
+          {/* Sem botão: os outros jogos da fase saem sozinhos quando o seu termina. */}
           {othersPending && (
-            <button className={styles.simAllBtn} onClick={runSimOthers} disabled={simulating}>
-              {simulating ? 'Simulando…' : 'Simular Outros'}
-            </button>
+            <span className={styles.autoHint}>{simulating ? 'Simulando…' : 'Saem quando seu jogo terminar'}</span>
           )}
         </div>
         {matches.map((m, idx) => (

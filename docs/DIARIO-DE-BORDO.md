@@ -5,6 +5,17 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 
 ---
 
+## 2026-11-20 (6) — Fim do botão "Simular Todos"
+
+### Entregue
+- Com os outros jogos já automáticos (desde a entrada 1), os botões "Simular Todos" (liga) e "Simular Outros" (copas) só confundiam. Saíram. No lugar fica o aviso "Saem quando seu jogo terminar" (ou "Simulando…").
+- O teste do `BracketScreen` agora cobre o comportamento novo: nada roda antes do seu jogo e a simulação dispara sozinha depois dele. 762 passando. Visto no app (liga da carreira).
+
+### Decidido e por quê
+- **Sem "simular os outros antes do meu jogo".** Na vida real os jogos da rodada são simultâneos, e a partida ao vivo já simula os outros quando começa (o ticker da rodada).
+
+---
+
 ## 2026-11-20 (5) — Fora de posição não mudava a força
 
 ### Entregue

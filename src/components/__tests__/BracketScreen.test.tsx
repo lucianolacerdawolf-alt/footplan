@@ -51,18 +51,17 @@ describe('BracketScreen — fase de mata-mata', () => {
     expect(away.id).toBe(state.roundOf16[0].awayTeamId);
   });
 
-  it('"Simular Outros" aciona onSimulateOthers (com os outros 7 jogos pendentes)', async () => {
+  it('sem botão "Simular Outros": antes do seu jogo nada roda; depois dele, os outros saem sozinhos', async () => {
     const state = makeRoundOf16();
     const onSimulateOthers = vi.fn();
-    render(
-      <BracketScreen
-        state={state}
-        onPlayMatch={vi.fn()} onSimulateMatch={vi.fn()} onSimulateOthers={onSimulateOthers}
-        onEditTactics={vi.fn()} onBack={vi.fn()}
-      />
-    );
+    const props = { onPlayMatch: vi.fn(), onSimulateMatch: vi.fn(), onSimulateOthers, onEditTactics: vi.fn(), onBack: vi.fn() };
+    const { rerender } = render(<BracketScreen state={state} {...props} />);
+    expect(screen.queryByText('Simular Outros')).not.toBeInTheDocument();
+    expect(screen.getByText('Saem quando seu jogo terminar')).toBeInTheDocument();
+    expect(onSimulateOthers).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByText('Simular Outros'));
+    const played = { ...state.roundOf16[0], played: true, homeScore: 2, awayScore: 0, winnerId: state.roundOf16[0].homeTeamId };
+    rerender(<BracketScreen state={{ ...state, roundOf16: [played, ...state.roundOf16.slice(1)] }} {...props} />);
     await waitFor(() => expect(onSimulateOthers).toHaveBeenCalledTimes(1));
   });
 

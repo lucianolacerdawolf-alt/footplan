@@ -209,10 +209,9 @@ function LeagueScreen({ state, league, onPlayMatch, onSimulateUserMatch, onSimul
         <div className={`${styles.section} ${styles.othersSection}`}>
           <div className={styles.sectionLabelRow}>
             <span className={styles.sectionLabel}>Outros Jogos</span>
+            {/* Sem botão: os outros jogos saem sozinhos quando o seu termina. */}
             {!othersComplete && (
-              <button className={styles.simAllBtn} onClick={() => runSim(() => onSimulateRound(currentRound))} disabled={simulating}>
-                {simulating ? 'Simulando…' : 'Simular Todos'}
-              </button>
+              <span className={styles.autoHint}>{simulating ? 'Simulando…' : 'Saem quando seu jogo terminar'}</span>
             )}
           </div>
           <div className={`${styles.othersList} fit-scroll`}>
