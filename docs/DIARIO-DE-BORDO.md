@@ -17,11 +17,15 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 ### Decidido e por quê
 - **Reaproveitar `position` como função em vez de mexer no motor.** O motor e o OVR já leem `position`, então a penalidade sai de graça pelos atributos (atacante na zaga tem desarme baixo). Mexer no motor seria uma mudança muito maior.
 
+### Publicado
+- **Site:** `footplan.pages.dev` publicado às 16:15 com tudo de hoje (`npm run build` + `npx --yes wrangler pages deploy dist --project-name=footplan` no terminal do usuário). Conferido: o bundle no ar tem "Escalar melhores" e "fora de posição".
+
 ### Pendente
-- **Celular sem as mudanças:** o site e o APK só recebem as mudanças com deploy manual (`npm run deploy` / `android:*`). Não há deploy automático no push (o CI só testa).
+- **APK:** continua na versão antiga até rodar `npm run android:apk`. Não existe deploy automático no push (o CI só testa).
 - **Improviso persiste no save:** um jogador escalado fora de posição continua assim nas telas de mercado e elenco até ir pro banco ou até "Escalar melhores".
 
 ### Armadilhas
+- **`npx wrangler` sem `--yes` trava:** o npx para no "Ok to proceed? (y)", e a aba do terminal não aceita resposta enquanto o comando roda. Usar `npx --yes`.
 - **Coordenadas do navegador interno em modo celular:** o frame do screenshot (469px) é 1,25× o CSS (375px). Para arrastar, pegue a posição real com `getBoundingClientRect` e multiplique.
 
 ---
