@@ -5,6 +5,27 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 
 ---
 
+## 2026-11-20 (3) — Arrastar titular para outra posição
+
+### Entregue
+- O usuário não conseguia arrastar um titular para a vaga de outro titular de posição diferente. Isso era a regra "só mesma posição", não um bug. Agora o jogador solto em cima de outro de outra posição assume a vaga **e a função** dele: passa a jogar "fora de posição".
+- `Player.naturalPosition` guarda a posição de origem. `position` vira a função que ele cumpre no time, e o `playerOvr` já recalcula a força pelos pesos da nova função (ex.: Sarr atacante 88 → 77 de meia).
+- Helpers em `squadUtils`: `moveIntoSlot`, `playAs`, `restoreNatural`, `isOutOfPosition`. Quem vai pro banco, "Escalar melhores" e a troca de formação devolvem todos à posição de origem.
+- No campinho: selo laranja com a posição de origem, força em laranja e aviso com o antes/depois.
+- Goleiro só troca com goleiro. +3 testes (758 passando). Visto no app: ida e volta funcionam.
+
+### Decidido e por quê
+- **Reaproveitar `position` como função em vez de mexer no motor.** O motor e o OVR já leem `position`, então a penalidade sai de graça pelos atributos (atacante na zaga tem desarme baixo). Mexer no motor seria uma mudança muito maior.
+
+### Pendente
+- **Celular sem as mudanças:** o site e o APK só recebem as mudanças com deploy manual (`npm run deploy` / `android:*`). Não há deploy automático no push (o CI só testa).
+- **Improviso persiste no save:** um jogador escalado fora de posição continua assim nas telas de mercado e elenco até ir pro banco ou até "Escalar melhores".
+
+### Armadilhas
+- **Coordenadas do navegador interno em modo celular:** o frame do screenshot (469px) é 1,25× o CSS (375px). Para arrastar, pegue a posição real com `getBoundingClientRect` e multiplique.
+
+---
+
 ## 2026-11-20 (2) — Melhorias sugeridas a partir dos 9 pontos
 
 ### Entregue

@@ -55,6 +55,10 @@ export interface Player {
   name: string;
   number: number;
   position: Position;
+  /** Posição de origem quando o técnico escalou o jogador FORA dela (arrastando no
+   *  campinho). Enquanto existir, `position` é a função que ele cumpre no time — a força
+   *  (playerOvr) é recalculada pra ela. Volta ao normal ao ir pro banco. */
+  naturalPosition?: Position;
   attributes: PlayerAttributes;
   currentFatigue: number; // Cansaço Atual (0-100, 0 = descansado)
   injuredRounds?: number; // > 0: jogador lesionado e indisponível

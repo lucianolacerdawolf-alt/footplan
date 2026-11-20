@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { getLeague } from '@/data/leagues';
-import { bestLineup, getStarterCount, isPlayerUnavailable } from '../squadUtils';
+import { bestLineup, getStarterCount, isPlayerUnavailable, moveIntoSlot, isOutOfPosition } from '../squadUtils';
 import { playerOvr } from '@/utils/playerOvr';
 import { continentalTitleRep } from '../career';
 import { generateYouthPlayer, youthRoundGrowth, refreshYouthPool } from '../youthAcademy';
@@ -72,5 +72,40 @@ describe('Base: evolução por rodada e empréstimo', () => {
     const b = { ...a, id: 'outro' };
     const { remaining } = refreshYouthPool([a, b], () => 0.5, undefined, [a.id]);
     expect(playerOvr(remaining.find(p => p.id === a.id)!)).toBeGreaterThan(playerOvr(remaining.find(p => p.id === 'outro')!));
+  });
+});
+
+describe('Fora de posição (moveIntoSlot)', () => {
+  const team = getLeague('pl')!.teams[0];
+  const n = getStarterCount(team.strategy.formation);
+  const idx = (pos: string) => team.squad.slice(0, n).findIndex(p => p.position === pos);
+
+  it('titular x titular de posições diferentes: trocam de vaga e de função, contagens iguais', () => {
+    const f = idx('FWD'), m = idx('MID');
+    const out = moveIntoSlot(team, f, m);
+    expect(out.squad[m].id).toBe(team.squad[f].id);
+    expect(out.squad[m].position).toBe('MID');
+    expect(out.squad[m].naturalPosition).toBe('FWD');
+    expect(out.squad[f].position).toBe('FWD');
+    expect(out.squad[f].naturalPosition).toBe('MID');
+    const count = (sq: typeof team.squad, pos: string) => sq.slice(0, n).filter(p => p.position === pos).length;
+    for (const pos of ['GK', 'DEF', 'MID', 'FWD']) expect(count(out.squad, pos)).toBe(count(team.squad, pos));
+  });
+
+  it('desfazer volta tudo ao natural; banco sempre volta à posição de origem', () => {
+    const f = idx('FWD'), m = idx('MID');
+    const back = moveIntoSlot(moveIntoSlot(team, f, m), f, m);
+    expect(back.squad[f].naturalPosition).toBeUndefined();
+    expect(back.squad[m].naturalPosition).toBeUndefined();
+    const moved = moveIntoSlot(team, f, m);
+    const benchIdx = moved.squad.findIndex((p, i) => i >= n && p.position === 'DEF');
+    const toBench = moveIntoSlot(moved, m, benchIdx);
+    expect(toBench.squad[benchIdx].position).toBe('FWD');
+    expect(isOutOfPosition(toBench.squad[benchIdx])).toBe(false);
+  });
+
+  it('escalar melhores desfaz improvisos', () => {
+    const moved = moveIntoSlot(team, idx('FWD'), idx('MID'));
+    expect(bestLineup(moved, playerOvr).squad.some(isOutOfPosition)).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ import { useDragSwap } from '../hooks/useDragSwap';
 import type { Formation, Player, Team } from '../engine/types';
 import { pitchRows } from '../utils/pitchRows';
 import { FORMATIONS, FORMATION_COUNTS } from '../engine/constants';
-import { isPlayerUnavailable } from '../engine/squadUtils';
+import { isPlayerUnavailable, isOutOfPosition, moveIntoSlot, naturalPosition, playAs } from '../engine/squadUtils';
 import { playerOvr } from '../utils/playerOvr';
 import styles from './FormationPitch.module.css';
 import { shirtBadge, shirtTag } from '../utils/shirtNumbers';
@@ -14,9 +14,9 @@ import { shirtBadge, shirtTag } from '../utils/shirtNumbers';
 // Dois jeitos de trocar:
 //  • toque num titular → os reservas da mesma posição aparecem embaixo → toque troca;
 //  • ARRASTE um jogador (titular ou reserva da faixa de baixo) e solte em cima de outro.
-// O motor não tem "jogador fora de posição": a formação é montada pela posição de cada
-// um, então a troca só vale entre jogadores da mesma posição (GK↔GK, DEF↔DEF…). Entre
-// dois titulares da mesma linha, arrastar troca o lugar deles na linha.
+// Arrastando pra cima de alguém de OUTRA posição, o jogador assume a vaga e a função do
+// outro ("fora de posição"): a força é recalculada pra nova função e o selo laranja
+// avisa. Goleiro só troca com goleiro. Quem vai pro banco volta à posição de origem.
 
 function shortName(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -32,6 +32,8 @@ interface Props {
   /** Troca dois jogadores de lugar no elenco (índices no squad). */
   onSwap: (benchIdx: number, starterIdx: number) => void;
   onFormation?: (f: Formation) => void;
+  /** Troca com mudança de função (fora de posição): recebe o elenco já reorganizado. */
+  onSquadChange?: (squad: Player[]) => void;
   /** "Escalar melhores": monta o time mais forte disponível na formação atual. */
   onAutoPick?: () => void;
   disabled?: boolean;
@@ -42,7 +44,7 @@ function fatigueTone(f: number): 'mid' | 'high' | null {
   return f >= 70 ? 'high' : f >= 40 ? 'mid' : null;
 }
 
-export default function FormationPitch({ team, selectedId, onSelect, onSwap, onFormation, onAutoPick, disabled }: Props) {
+export default function FormationPitch({ team, selectedId, onSelect, onSwap, onSquadChange, onFormation, onAutoPick, disabled }: Props) {
   const formation = team.strategy.formation;
   const counts = FORMATION_COUNTS[formation];
   const starterCount = 1 + counts.DEF + counts.MID + counts.FWD;
@@ -70,13 +72,28 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
     const pa = team.squad[a];
     const pb = team.squad[b];
     if (a >= starterCount && b >= starterCount) { flash('Solte o reserva em cima de um titular.'); return; }
-    if (pa.position !== pb.position) {
-      flash(`${shortName(pa.name)} é ${POS_LABEL[pa.position]} — só troca com outro ${POS_LABEL[pa.position]}.`);
-      return;
-    }
     const incoming = a >= starterCount ? pa : b >= starterCount ? pb : null;
     if (incoming && isPlayerUnavailable(incoming)) {
       flash(`${shortName(incoming.name)} está ${incoming.isSuspended ? 'suspenso' : 'lesionado'}.`);
+      return;
+    }
+    if (pa.position !== pb.position) {
+      if (pa.position === 'GK' || pb.position === 'GK') { flash('Goleiro só troca com goleiro.'); return; }
+      if (!onSquadChange) {
+        flash(`${shortName(pa.name)} é ${POS_LABEL[pa.position]} — só troca com outro ${POS_LABEL[pa.position]}.`);
+        return;
+      }
+      const next = moveIntoSlot(team, a, b);
+      onSquadChange(next.squad);
+      onSelect(null);
+      // Conta o que mudou pra quem entrou em campo numa função nova.
+      const mover = b < starterCount ? pa : pb;
+      const role = b < starterCount ? pb.position : pa.position;
+      const before = playerOvr(playAs(mover, naturalPosition(mover)));
+      const after = playerOvr(playAs(mover, role));
+      flash(role === naturalPosition(mover)
+        ? `${shortName(mover.name)} voltou a jogar de ${POS_LABEL[role]}.`
+        : `${shortName(mover.name)} agora joga de ${POS_LABEL[role]} (fora de posição): força ${before} → ${after}.`);
       return;
     }
     // onSwap(bench, starter): quando os dois são titulares a ordem não importa.
@@ -136,15 +153,17 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
                     if (selected && p.id !== selected.id && p.position === selected.position) { dropOn(selected.id, p.id); return; }
                     onSelect(p.id === selectedId ? null : p.id);
                   }}
-                  aria-label={`${p.name}, ${p.position}, ${playerOvr(p)}${out ? ', indisponível' : ''}${(p.currentFatigue ?? 0) >= 40 ? `, cansaço ${Math.round(p.currentFatigue ?? 0)}%` : ''}`}
+                  title={isOutOfPosition(p) ? `Fora de posição: é ${POS_LABEL[naturalPosition(p)]}, jogando de ${POS_LABEL[p.position]} (força ${playerOvr(playAs(p, naturalPosition(p)))} na posição dele)` : undefined}
+                  aria-label={`${p.name}, ${p.position}${isOutOfPosition(p) ? ` (fora de posição, é ${naturalPosition(p)})` : ''}, ${playerOvr(p)}${out ? ', indisponível' : ''}${(p.currentFatigue ?? 0) >= 40 ? `, cansaço ${Math.round(p.currentFatigue ?? 0)}%` : ''}`}
                 >
                   <span className={`${styles.shirt} ${styles[`pos${p.position}`]}`}>
                     {shirtBadge(p)}
                     {out && <span className={styles.alert} aria-hidden="true">!</span>}
+                    {isOutOfPosition(p) && <span className={styles.oop} aria-hidden="true">{naturalPosition(p)}</span>}
                     {!out && (p.yellowCardsThisSeason ?? 0) >= 2 && <span className={styles.cardWarn} title={`${p.yellowCardsThisSeason} amarelos — mais um e é suspenso`} aria-hidden="true" />}
                   </span>
                   <span className={styles.name}>{shortName(p.name)}</span>
-                  <span className={styles.ovr}>{playerOvr(p)}</span>
+                  <span className={`${styles.ovr} ${isOutOfPosition(p) ? styles.ovrOop : ''}`}>{playerOvr(p)}</span>
                   {fatigueTone(p.currentFatigue ?? 0) && (
                     <span className={`${styles.fatigue} ${styles[`fatigue_${fatigueTone(p.currentFatigue ?? 0)}`]}`} title={`Cansaço ${Math.round(p.currentFatigue ?? 0)}%`}>
                       <span style={{ width: `${Math.min(100, p.currentFatigue ?? 0)}%` }} />
@@ -191,7 +210,7 @@ export default function FormationPitch({ team, selectedId, onSelect, onSwap, onF
           )}
         </div>
       ) : (
-        !disabled && <div className={styles.hint}>Arraste um jogador para cima de outro da mesma posição, ou toque num titular para ver os reservas</div>
+        !disabled && <div className={styles.hint}>Arraste um jogador para cima de outro para trocar (em outra posição, ele passa a jogar fora de posição), ou toque num titular para ver os reservas</div>
       )}
 
       {!disabled && bench.length > 0 && (

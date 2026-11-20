@@ -427,6 +427,7 @@ export default function SetupScreen({ homeTeam: initialHome, awayTeam: initialAw
               onSwap={editSwap}
               onFormation={f => editStrategy({ ...editTeam.strategy, formation: f })}
               onAutoPick={() => (editing === 'away' ? setAwayTeam : setHomeTeam)(prev => bestLineup(prev, playerOvr))}
+              onSquadChange={squad => (editing === 'away' ? setAwayTeam : setHomeTeam)(prev => ({ ...prev, squad }))}
             />
           </>
         )}
