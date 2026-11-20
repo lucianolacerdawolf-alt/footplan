@@ -17,6 +17,9 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 - **Tirar a luva em vez de dar efeito a ela.** Dar efeito exigiria criar uma regra nova de recusa para agentes livres. Uma barra que custa dinheiro sem fazer nada era pior que nenhuma.
 - **Selo "Oferta Irrecusável" (150%) removido.** Pela regra, 150% não muda nada em relação ao mínimo aceito.
 
+### Publicado
+- **Site:** `footplan.pages.dev` publicado às ~16:40. Conferido: o chunk `TransferMarketScreen` no ar tem o texto novo e não tem mais a "Luva de contratação".
+
 ### Pendente
 - Não visto no app: a janela de transferências está fechada no save de teste. A tela está coberta por teste de componente.
 
