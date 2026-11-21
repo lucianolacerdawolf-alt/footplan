@@ -39,7 +39,8 @@ export const eredivisie: LeagueDefinition = {
   cupLogo: '',
   flag: '🇳🇱',
   color: '#f58220',
-  logo: '',
+  // Logo da liga (Wikipedia/Wikimedia), servido local depois do crests:download.
+  logo: 'https://upload.wikimedia.org/wikipedia/commons/8/81/VriendenLoterij_Eredivisie_Logo.png',
   totalRounds: 34,
   teams,
   europeanSlots: { championsLeague: 2, europaLeague: 1, conferenceLeague: 1 },

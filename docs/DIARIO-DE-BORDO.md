@@ -37,8 +37,21 @@ foi decidido e por quê, o que ficou pendente e as armadilhas operacionais.
 - **Playoff da MLS no slot da copa continental.** Ganha de graça a tela de chave, o próximo jogo na Central, a simulação dos outros e a premiação.
 - **Desconto holandês/belga só na compra.** Fica fora do `calculateMarketValue` global, para não desvalorizar jogadores que já são do usuário.
 
+### Escudos e logos (mesmo dia, depois da publicação das ligas)
+- **Logos das 4 ligas:** vêm da Wikipedia/Wikimedia (pedido do usuário). Eredivisie pelo `pageimages`; Bélgica, Arábia e MLS pelo arquivo do infobox.
+- **Escudos de 79 dos 82 clubes:**
+  - 61 pelo `fetch-secondary-crests`, com os países do TheSportsDB corrigidos: "The Netherlands", "Saudi Arabia" (sem hífen), "United States", e aliases como "PSV Eindhoven" e "Al Hilal".
+  - 18 pelo logo do infobox do artigo do clube na Wikipedia, gravados à mão no `secondDivisionCrests.ts`.
+  - Sem escudo: Al-Ahli, Al-Najma e Charlotte FC (a Wikipedia limitou as buscas).
+- `crests:download`: 83 imagens novas, 0 falhas, servidas localmente.
+- **Armadilhas:**
+  - Parar a tarefa em segundo plano NÃO matou o `vite-node` filho (Windows). Duas execuções simultâneas do gerador estouraram a cota do TheSportsDB. Matar pelo `CommandLine` antes de rodar de novo.
+  - O Wikimedia/Wikipedia devolve 429 depois de muitas chamadas seguidas. Espaçar as chamadas ou esperar.
+  - `python -I` ignora `PYTHONIOENCODING`, e o console cp1252 quebra com "✓". Usar ASCII nos prints.
+
 ### Pendente
-- **Publicar elencos:** a tarefa diária das 10h publica as 4 ligas no Supabase sozinha. Até lá, o jogo usa os elencos gerados (offline).
+- **Publicar elencos:** a tarefa diária das 10h publica as 4 ligas no Supabase sozinha.
+- **Escudos que faltam:** Al-Ahli, Al-Najma e Charlotte FC. Até lá, o jogo usa os elencos gerados (offline).
 - **Worker:** o proxy (`worker/football-proxy.js`) precisa de deploy para liberar o `DED` no cliente. O sync roda direto com a chave, sem o proxy.
 - **Calibração de notas:** o `ref` das 4 ligas foi estimado; re-medir a mediana bruta depois do 1º sync publicado.
 - **Modo Campeonato:** a MLS não tem playoff; o campeão é o 1º da tabela geral. O playoff existe só na carreira.

@@ -39,7 +39,8 @@ export const saudiProLeague: LeagueDefinition = {
   cupLogo: '',
   flag: '🇸🇦',
   color: '#006c35',
-  logo: '',
+  // Logo da liga (Wikipedia/Wikimedia), servido local depois do crests:download.
+  logo: 'https://upload.wikimedia.org/wikipedia/en/7/75/Roshn_Saudi_League_Logo.svg',
   totalRounds: 34,
   teams,
   europeanSlots: { championsLeague: 0, europaLeague: 0, conferenceLeague: 0 },

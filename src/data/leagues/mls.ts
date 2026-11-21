@@ -54,7 +54,8 @@ export const mls: LeagueDefinition = {
   cupLogo: '',
   flag: '🇺🇸',
   color: '#1d2d5c',
-  logo: '',
+  // Logo da liga (Wikipedia/Wikimedia), servido local depois do crests:download.
+  logo: 'https://upload.wikimedia.org/wikipedia/en/c/c7/Major_League_Soccer_logo.svg',
   // 14 adversários da conferência × 2 + 15 da outra × 1 = 43… recortado em
   // conferenceSeason pra 34 rodadas (turno e returno na conferência + metade da outra).
   totalRounds: 34,

@@ -36,7 +36,8 @@ export const proLeague: LeagueDefinition = {
   cupLogo: '',
   flag: '🇧🇪',
   color: '#c8102e',
-  logo: '',
+  // Logo da liga (Wikipedia/Wikimedia), servido local depois do crests:download.
+  logo: 'https://upload.wikimedia.org/wikipedia/commons/c/cb/Belgian_Pro_League_logo_%282020%2C_horizontal%29.svg',
   totalRounds: 30,
   teams,
   europeanSlots: { championsLeague: 1, europaLeague: 1, conferenceLeague: 1 },
